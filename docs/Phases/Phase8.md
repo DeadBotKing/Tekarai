@@ -1,6 +1,6 @@
 ============================================================
 
-MERYX ENTERPRISE PLATFORM
+TEKARAI ENTERPRISE PLATFORM
 
 PHASE 8 — COMMUNICATION PLATFORM
 
@@ -14,7 +14,7 @@ STATUS
 
 This phase defines the complete communication architecture
 
-inside Meryx.
+inside Tekarai.
 
 
 
@@ -260,15 +260,15 @@ Properties:
 
 \- description
 
-\- created\_at
+\- createdAt
 
-\- created\_by
+\- createdBy
 
-\- updated\_at
+\- updatedAt
 
-\- archived\_at
+\- archivedAt
 
-\- is\_active
+\- isActive
 
 
 
@@ -294,17 +294,17 @@ Properties:
 
 \- role
 
-\- joined\_at
+\- joinedAt
 
-\- left\_at
+\- leftAt
 
-\- is\_muted
+\- isMuted
 
-\- notification\_level
+\- notificationLevel
 
-\- last\_read\_message
+\- lastReadMessage
 
-\- is\_active
+\- isActive
 
 
 
@@ -346,19 +346,19 @@ Properties:
 
 \- sender
 
-\- message\_type
+\- messageType
 
 \- body
 
-\- reply\_to
+\- replyTo
 
-\- created\_at
+\- createdAt
 
-\- updated\_at
+\- updatedAt
 
-\- deleted\_at
+\- deletedAt
 
-\- edited\_at
+\- editedAt
 
 
 
@@ -426,7 +426,7 @@ Properties:
 
 \- reaction
 
-\- created\_at
+\- createdAt
 
 
 
@@ -906,7 +906,7 @@ Voice calls must use WebRTC.
 
 
 
-Meryx backend is NOT the audio transport.
+Tekarai backend is NOT the audio transport.
 
 
 
@@ -1100,7 +1100,7 @@ Other Participants
 
 
 
-Meryx controls:
+Tekarai controls:
 
 
 
@@ -1184,15 +1184,15 @@ Meeting properties:
 
 \- description
 
-\- scheduled\_start
+\- scheduledStart
 
-\- scheduled\_end
+\- scheduledEnd
 
-\- actual\_start
+\- actualStart
 
-\- actual\_end
+\- actualEnd
 
-\- meeting\_status
+\- meetingStatus
 
 
 
@@ -1374,7 +1374,7 @@ Do not implement official letters as:
 
 
 
-Message(message\_type="LETTER")
+Message(messageType="LETTER")
 
 
 
@@ -1788,7 +1788,7 @@ Example:
 
 
 
-client\_request\_id
+clientRequestId
 
 
 
@@ -1852,53 +1852,53 @@ Initial conceptual tables:
 
 
 
-communication\_conversations
+communicationConversations
 
-communication\_conversation\_participants
+communicationConversationParticipants
 
-communication\_messages
+communicationMessages
 
-communication\_message\_attachments
+communicationMessageAttachments
 
-communication\_message\_reactions
+communicationMessageReactions
 
-communication\_message\_mentions
+communicationMessageMentions
 
-communication\_message\_read\_states
+communicationMessageReadStates
 
-communication\_meetings
+communicationMeetings
 
-communication\_meeting\_participants
+communicationMeetingParticipants
 
-communication\_calls
+communicationCalls
 
-communication\_call\_participants
+communicationCallParticipants
 
-communication\_recordings
+communicationRecordings
 
-communication\_channels
+communicationChannels
 
-communication\_channel\_memberships
+communicationChannelMemberships
 
-communication\_pins
-
-
+communicationPins
 
 
 
-All tables must follow the global Meryx database standards:
+
+
+All tables must follow the global Tekarai database standards:
 
 
 
 \- UUID primary key
 
-\- created\_at
+\- createdAt
 
-\- updated\_at
+\- updatedAt
 
-\- created\_by where applicable
+\- createdBy where applicable
 
-\- updated\_by where applicable
+\- updatedBy where applicable
 
 \- soft-delete where appropriate
 
@@ -1930,11 +1930,11 @@ Conversation:
 
 
 
-tenant\_id
+tenantId
 
 type
 
-is\_active
+isActive
 
 
 
@@ -1944,11 +1944,11 @@ Participant:
 
 
 
-conversation\_id
+conversationId
 
-user\_id
+userId
 
-conversation\_id + user\_id
+conversationId + userId
 
 
 
@@ -1958,13 +1958,13 @@ Message:
 
 
 
-conversation\_id
+conversationId
 
-sender\_id
+senderId
 
-created\_at
+createdAt
 
-reply\_to\_id
+replyToId
 
 
 
@@ -1974,9 +1974,9 @@ ReadState:
 
 
 
-message\_id
+messageId
 
-user\_id
+userId
 
 
 
@@ -1986,9 +1986,9 @@ Meeting:
 
 
 
-tenant\_id
+tenantId
 
-scheduled\_start
+scheduledStart
 
 status
 
@@ -2000,11 +2000,11 @@ Call:
 
 
 
-meeting\_id
+meetingId
 
 status
 
-started\_at
+startedAt
 
 
 
@@ -2274,7 +2274,7 @@ Possible policy:
 
 \- admins may have elevated rights
 
-\- edited\_at recorded
+\- editedAt recorded
 
 \- audit record created
 
@@ -2600,21 +2600,21 @@ Metrics:
 
 
 
-messages\_per\_second
+messagesPerSecond
 
-active\_connections
+activeConnections
 
-active\_calls
+activeCalls
 
-active\_meetings
+activeMeetings
 
-websocket\_errors
+websocketErrors
 
-message\_delivery\_latency
+messageDeliveryLatency
 
-event\_processing\_latency
+eventProcessingLatency
 
-failed\_signaling\_requests
+failedSignalingRequests
 
 
 

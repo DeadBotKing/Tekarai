@@ -4,7 +4,7 @@ PHASE 12 — NOTIFICATIONS \& COMMUNICATION FOUNDATION
 
 
 
-در این فاز باید زیرساخت Enterprise برای Communication و Notification در Meryx طراحی و پیاده‌سازی شود.
+در این فاز باید زیرساخت Enterprise برای Communication و Notification در Tekarai طراحی و پیاده‌سازی شود.
 
 
 
@@ -12,7 +12,7 @@ PHASE 12 — NOTIFICATIONS \& COMMUNICATION FOUNDATION
 
 
 
-هدف این است که Meryx بتواند از یک هسته‌ی یکپارچه برای:
+هدف این است که Tekarai بتواند از یک هسته‌ی یکپارچه برای:
 
 
 
@@ -74,7 +74,7 @@ TaskService
 
 &#x20;   ↓
 
-send\_email()
+sendEmail()
 
 
 
@@ -200,11 +200,11 @@ Notification
 
 ├── severity
 
-├── source\_type
+├── sourceType
 
-├── source\_id
+├── sourceId
 
-├── created\_at
+├── createdAt
 
 └── metadata
 
@@ -404,7 +404,7 @@ Read شدن Notification نباید روی خود Notification ذخیره شود
 
 
 
-Notification.is\_read
+Notification.isRead
 
 
 
@@ -416,7 +416,7 @@ Notification.is\_read
 
 
 
-NotificationRecipient.is\_read
+NotificationRecipient.isRead
 
 
 
@@ -742,23 +742,23 @@ NotificationDelivery
 
 
 
-attempt\_number
+attemptNumber
 
-started\_at
+startedAt
 
-completed\_at
+completedAt
 
 status
 
 provider
 
-provider\_message\_id
+providerMessageId
 
-error\_code
+errorCode
 
-error\_message
+errorMessage
 
-response\_metadata
+responseMetadata
 
 
 
@@ -782,13 +782,13 @@ Retry نباید Hard-Code شود.
 
 
 
-max\_attempts = 5
+maxAttempts = 5
 
-initial\_delay = 30 sec
+initialDelay = 30 sec
 
 backoff = exponential
 
-max\_delay = 1 hour
+maxDelay = 1 hour
 
 
 
@@ -1186,9 +1186,9 @@ Notification باید بتواند به Source Object اشاره کند.
 
 
 
-source\_type = Task
+sourceType = Task
 
-source\_id = UUID
+sourceId = UUID
 
 
 
@@ -1196,9 +1196,9 @@ source\_id = UUID
 
 
 
-source\_type = Project
+sourceType = Project
 
-source\_id = UUID
+sourceId = UUID
 
 
 
@@ -1434,13 +1434,13 @@ User
 
 platform
 
-device\_id
+deviceId
 
-push\_token
+pushToken
 
-last\_seen
+lastSeen
 
-is\_active
+isActive
 
 
 
@@ -1490,21 +1490,21 @@ Notification Platform باید Metric داشته باشد.
 
 
 
-notifications\_created
+notificationsCreated
 
-notifications\_sent
+notificationsSent
 
-notifications\_failed
+notificationsFailed
 
-notifications\_delivered
+notificationsDelivered
 
-notifications\_retried
+notificationsRetried
 
-notification\_latency
+notificationLatency
 
-delivery\_latency
+deliveryLatency
 
-provider\_failure\_rate
+providerFailureRate
 
 12.37 Logging
 
@@ -1514,13 +1514,13 @@ Log باید شامل:
 
 
 
-tenant\_id
+tenantId
 
-notification\_id
+notificationId
 
-recipient\_id
+recipientId
 
-delivery\_id
+deliveryId
 
 channel
 
@@ -1528,7 +1528,7 @@ provider
 
 status
 
-correlation\_id
+correlationId
 
 timestamp
 
@@ -1558,9 +1558,9 @@ Notification Delivery باید Idempotent باشد.
 
 
 
-event\_id
+eventId
 
-idempotency\_key
+idempotencyKey
 
 
 
@@ -1822,7 +1822,7 @@ apps/
 
 &#x20;   │   ├── entities/
 
-&#x20;   │   ├── value\_objects/
+&#x20;   │   ├── valueObjects/
 
 &#x20;   │   ├── events/
 
@@ -1896,27 +1896,27 @@ apps/
 
 notifications
 
-notification\_recipients
+notificationRecipients
 
-notification\_templates
+notificationTemplates
 
-notification\_template\_versions
+notificationTemplateVersions
 
-notification\_channels
+notificationChannels
 
-notification\_preferences
+notificationPreferences
 
-notification\_deliveries
+notificationDeliveries
 
-notification\_attempts
+notificationAttempts
 
-notification\_schedules
+notificationSchedules
 
-notification\_devices
+notificationDevices
 
-notification\_rules
+notificationRules
 
-notification\_events
+notificationEvents
 
 
 
@@ -1932,13 +1932,13 @@ Indexهای مهم:
 
 
 
-tenant\_id
+tenantId
 
-recipient\_id
+recipientId
 
-created\_at
+createdAt
 
-is\_read
+isRead
 
 status
 
@@ -1946,9 +1946,9 @@ priority
 
 channel
 
-notification\_type
+notificationType
 
-scheduled\_at
+scheduledAt
 
 
 
@@ -1960,7 +1960,7 @@ Indexهای Composite باید بر اساس Query Pattern واقعی طراحی
 
 
 
-(tenant\_id, recipient\_id, created\_at)
+(tenantId, recipientId, createdAt)
 
 
 
@@ -1968,7 +1968,7 @@ Indexهای Composite باید بر اساس Query Pattern واقعی طراحی
 
 
 
-(tenant\_id, recipient\_id, is\_read)
+(tenantId, recipientId, isRead)
 
 
 
@@ -2082,7 +2082,7 @@ Business Ruleهای حیاتی نباید فقط در Serializer پیاده‌س
 
 
 
-❌ Notification.is\_read نباید برای Multi-Recipient استفاده شود.
+❌ Notification.isRead نباید برای Multi-Recipient استفاده شود.
 
 
 

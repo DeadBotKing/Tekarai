@@ -1,6 +1,6 @@
 ============================================================
 
-MERYX ENTERPRISE PLATFORM
+TEKARAI ENTERPRISE PLATFORM
 
 PHASE 10 — COMMUNICATION PLATFORM
 
@@ -14,7 +14,7 @@ PHASE OBJECTIVE
 
 
 
-در این فاز باید Communication Platform مریکس به‌صورت
+در این فاز باید Communication Platform Tekarai به‌صورت
 
 Enterprise Grade طراحی و پیاده‌سازی شود.
 
@@ -26,7 +26,7 @@ Communication نباید یک قابلیت فرعی داخل یک App ساده �
 
 Communication باید به‌عنوان یکی از Platform Capabilityهای
 
-اصلی Meryx طراحی شود.
+اصلی Tekarai طراحی شود.
 
 
 
@@ -318,7 +318,7 @@ Fields:
 
 id
 
-tenant\_id
+tenantId
 
 type
 
@@ -326,13 +326,13 @@ name
 
 description
 
-created\_by
+createdBy
 
-created\_at
+createdAt
 
-updated\_at
+updatedAt
 
-is\_active
+isActive
 
 metadata
 
@@ -390,27 +390,27 @@ Fields:
 
 id
 
-conversation\_id
+conversationId
 
-user\_id
+userId
 
 role
 
 status
 
-joined\_at
+joinedAt
 
-left\_at
+leftAt
 
-last\_read\_message\_id
+lastReadMessageId
 
-muted\_until
+mutedUntil
 
-notifications\_enabled
+notificationsEnabled
 
-created\_at
+createdAt
 
-updated\_at
+updatedAt
 
 
 
@@ -642,27 +642,27 @@ Fields:
 
 id
 
-tenant\_id
+tenantId
 
-conversation\_id
+conversationId
 
-sender\_id
+senderId
 
-message\_type
+messageType
 
 body
 
-reply\_to\_id
+replyToId
 
-thread\_root\_id
+threadRootId
 
-edited\_at
+editedAt
 
-deleted\_at
+deletedAt
 
-created\_at
+createdAt
 
-updated\_at
+updatedAt
 
 metadata
 
@@ -786,15 +786,15 @@ Fields:
 
 id
 
-message\_id
+messageId
 
-previous\_body
+previousBody
 
-new\_body
+newBody
 
-edited\_by
+editedBy
 
-edited\_at
+editedAt
 
 
 
@@ -854,13 +854,13 @@ Fields:
 
 id
 
-message\_id
+messageId
 
-user\_id
+userId
 
-reaction\_type
+reactionType
 
-created\_at
+createdAt
 
 
 
@@ -908,9 +908,9 @@ Thread باید Conversation را شلوغ نکند.
 
 
 
-reply\_to\_id
+replyToId
 
-thread\_root\_id
+threadRootId
 
 
 
@@ -984,17 +984,17 @@ Attachment
 
 id
 
-message\_id
+messageId
 
-document\_id
+documentId
 
-file\_name
+fileName
 
-mime\_type
+mimeType
 
 size
 
-created\_at
+createdAt
 
 
 
@@ -1070,19 +1070,19 @@ Presence Record می‌تواند شامل:
 
 
 
-user\_id
+userId
 
-tenant\_id
+tenantId
 
 status
 
-last\_seen\_at
+lastSeenAt
 
-connected\_at
+connectedAt
 
-device\_id
+deviceId
 
-connection\_id
+connectionId
 
 
 
@@ -1308,23 +1308,23 @@ Fields:
 
 id
 
-tenant\_id
+tenantId
 
-conversation\_id
+conversationId
 
-initiator\_id
+initiatorId
 
 type
 
 status
 
-started\_at
+startedAt
 
-ended\_at
+endedAt
 
 provider
 
-provider\_session\_id
+providerSessionId
 
 metadata
 
@@ -1372,17 +1372,17 @@ Fields:
 
 id
 
-call\_session\_id
+callSessionId
 
-user\_id
+userId
 
-joined\_at
+joinedAt
 
-left\_at
+leftAt
 
 status
 
-device\_id
+deviceId
 
 metadata
 
@@ -1416,15 +1416,15 @@ Operations:
 
 
 
-create\_session()
+createSession()
 
-join\_session()
+joinSession()
 
-leave\_session()
+leaveSession()
 
-end\_session()
+endSession()
 
-get\_session\_status()
+getSessionStatus()
 
 
 
@@ -1508,35 +1508,35 @@ Meeting باید شامل:
 
 id
 
-tenant\_id
+tenantId
 
-conversation\_id
+conversationId
 
 title
 
 description
 
-organizer\_id
+organizerId
 
-scheduled\_start
+scheduledStart
 
-scheduled\_end
+scheduledEnd
 
-actual\_start
+actualStart
 
-actual\_end
+actualEnd
 
 status
 
-meeting\_type
+meetingType
 
-join\_policy
+joinPolicy
 
-recording\_policy
+recordingPolicy
 
-created\_at
+createdAt
 
-updated\_at
+updatedAt
 
 
 
@@ -1578,21 +1578,21 @@ MeetingParticipant:
 
 id
 
-meeting\_id
+meetingId
 
-user\_id
+userId
 
 role
 
-invited\_at
+invitedAt
 
-joined\_at
+joinedAt
 
-left\_at
+leftAt
 
 status
 
-attendance\_duration
+attendanceDuration
 
 metadata
 
@@ -1708,15 +1708,15 @@ Fields:
 
 id
 
-meeting\_id
+meetingId
 
-started\_at
+startedAt
 
-ended\_at
+endedAt
 
 duration
 
-storage\_reference
+storageReference
 
 format
 
@@ -1724,9 +1724,9 @@ size
 
 status
 
-created\_by
+createdBy
 
-created\_at
+createdAt
 
 
 
@@ -1786,17 +1786,17 @@ Fields:
 
 id
 
-meeting\_id
+meetingId
 
 language
 
 status
 
-content\_reference
+contentReference
 
-created\_at
+createdAt
 
-updated\_at
+updatedAt
 
 
 
@@ -1836,13 +1836,13 @@ TranscriptSegment:
 
 id
 
-transcript\_id
+transcriptId
 
-speaker\_id
+speakerId
 
-start\_time
+startTime
 
-end\_time
+endTime
 
 text
 
@@ -2132,11 +2132,11 @@ Conversation:
 
 
 
-tenant\_id
+tenantId
 
-tenant\_id + type
+tenantId + type
 
-tenant\_id + created\_at
+tenantId + createdAt
 
 
 
@@ -2144,11 +2144,11 @@ Participant:
 
 
 
-conversation\_id
+conversationId
 
-user\_id
+userId
 
-conversation\_id + user\_id
+conversationId + userId
 
 
 
@@ -2156,13 +2156,13 @@ Message:
 
 
 
-conversation\_id + created\_at
+conversationId + createdAt
 
-sender\_id
+senderId
 
-reply\_to\_id
+replyToId
 
-thread\_root\_id
+threadRootId
 
 
 
@@ -2170,9 +2170,9 @@ Presence:
 
 
 
-tenant\_id + user\_id
+tenantId + userId
 
-user\_id + status
+userId + status
 
 
 
@@ -2180,9 +2180,9 @@ Meeting:
 
 
 
-tenant\_id + scheduled\_start
+tenantId + scheduledStart
 
-organizer\_id
+organizerId
 
 status
 
@@ -2192,9 +2192,9 @@ Call:
 
 
 
-conversation\_id
+conversationId
 
-initiator\_id
+initiatorId
 
 status
 
@@ -2584,11 +2584,11 @@ User فقط باید Eventهایی را دریافت کند که مجاز به �
 
 &#x20;   "version": 1,
 
-&#x20;   "tenant\_id": "...",
+&#x20;   "tenantId": "...",
 
-&#x20;   "conversation\_id": "...",
+&#x20;   "conversationId": "...",
 
-&#x20;   "message\_id": "...",
+&#x20;   "messageId": "...",
 
 &#x20;   "timestamp": "...",
 
@@ -2706,7 +2706,7 @@ cursor
 
 
 
-created\_at
+createdAt
 
 id
 
@@ -2832,23 +2832,23 @@ Communication باید Metrics داشته باشد.
 
 
 
-messages\_sent\_total
+messagesSentTotal
 
-messages\_failed\_total
+messagesFailedTotal
 
-active\_connections
+activeConnections
 
-active\_calls
+activeCalls
 
-active\_meetings
+activeMeetings
 
-websocket\_connections
+websocketConnections
 
-message\_delivery\_latency
+messageDeliveryLatency
 
-message\_processing\_latency
+messageProcessingLatency
 
-call\_failure\_rate
+callFailureRate
 
 
 
@@ -2990,7 +2990,7 @@ apps/
 
 &#x20;           entities/
 
-&#x20;           value\_objects/
+&#x20;           valueObjects/
 
 &#x20;           events/
 
@@ -3054,7 +3054,7 @@ apps/
 
 در صورت استفاده از معماری فعلی Repository،
 
-ساختار باید با Architecture Specification اصلی Meryx
+ساختار باید با Architecture Specification اصلی Tekarai
 
 هماهنگ شود.
 

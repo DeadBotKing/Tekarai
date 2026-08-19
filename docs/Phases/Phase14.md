@@ -1,6 +1,6 @@
 ============================================================
 
-MERYX — PHASE 14
+TEKARAI — PHASE 14
 
 COMMUNICATION PLATFORM
 
@@ -26,7 +26,7 @@ PURPOSE
 
 \-------
 
-در این فاز باید Communication Platform مریکس به‌صورت
+در این فاز باید Communication Platform Tekarai به‌صورت
 
 Enterprise-Grade طراحی و پیاده‌سازی شود.
 
@@ -40,7 +40,7 @@ Communication نباید یک Chat ساده باشد.
 
 Audit-able، Real-Time، Multi-Tenant و AI-Native برای کل
 
-Meryx Platform باشد.
+Tekarai Platform باشد.
 
 
 
@@ -518,17 +518,17 @@ Conversation باید حداقل اطلاعات زیر را داشته باشد:
 
 \- avatar
 
-\- created\_by
+\- createdBy
 
-\- created\_at
+\- createdAt
 
-\- updated\_at
+\- updatedAt
 
-\- archived\_at
+\- archivedAt
 
-\- deleted\_at
+\- deletedAt
 
-\- is\_active
+\- isActive
 
 
 
@@ -580,17 +580,17 @@ ConversationMember:
 
 \- role
 
-\- joined\_at
+\- joinedAt
 
-\- left\_at
+\- leftAt
 
-\- is\_active
+\- isActive
 
-\- muted\_until
+\- mutedUntil
 
-\- last\_read\_message
+\- lastReadMessage
 
-\- notification\_level
+\- notificationLevel
 
 
 
@@ -636,23 +636,23 @@ Message باید حداقل شامل:
 
 \- sender
 
-\- message\_type
+\- messageType
 
 \- content
 
-\- reply\_to
+\- replyTo
 
-\- thread\_root
+\- threadRoot
 
-\- created\_at
+\- createdAt
 
-\- edited\_at
+\- editedAt
 
-\- deleted\_at
+\- deletedAt
 
-\- is\_edited
+\- isEdited
 
-\- is\_deleted
+\- isDeleted
 
 
 
@@ -772,9 +772,9 @@ MessageDelivery:
 
 \- status
 
-\- delivered\_at
+\- deliveredAt
 
-\- read\_at
+\- readAt
 
 
 
@@ -830,13 +830,13 @@ MessageRevision:
 
 \- message
 
-\- previous\_content
+\- previousContent
 
-\- new\_content
+\- newContent
 
-\- edited\_by
+\- editedBy
 
-\- edited\_at
+\- editedAt
 
 
 
@@ -908,11 +908,11 @@ Message
 
 &#x20;  |
 
-&#x20;  +-- reply\_to
+&#x20;  +-- replyTo
 
 &#x20;  |
 
-&#x20;  +-- thread\_root
+&#x20;  +-- threadRoot
 
 
 
@@ -986,9 +986,9 @@ MessageReaction:
 
 \- user
 
-\- reaction\_type
+\- reactionType
 
-\- created\_at
+\- createdAt
 
 
 
@@ -1002,7 +1002,7 @@ Unique Constraint:
 
 
 
-(message, user, reaction\_type)
+(message, user, reactionType)
 
 
 
@@ -1028,11 +1028,11 @@ Forwarded Message باید Reference به Original Message داشته باشد.
 
 
 
-\- original\_message
+\- originalMessage
 
-\- forwarded\_by
+\- forwardedBy
 
-\- forwarded\_at
+\- forwardedAt
 
 
 
@@ -1062,17 +1062,17 @@ MessageAttachment:
 
 \- file
 
-\- file\_name
+\- fileName
 
-\- mime\_type
+\- mimeType
 
 \- size
 
 \- checksum
 
-\- storage\_key
+\- storageKey
 
-\- created\_at
+\- createdAt
 
 
 
@@ -1144,9 +1144,9 @@ Channel:
 
 \- owner
 
-\- created\_at
+\- createdAt
 
-\- archived\_at
+\- archivedAt
 
 
 
@@ -1414,15 +1414,15 @@ Call Session:
 
 \- conversation
 
-\- initiated\_by
+\- initiatedBy
 
 \- type
 
 \- status
 
-\- started\_at
+\- startedAt
 
-\- ended\_at
+\- endedAt
 
 
 
@@ -1494,7 +1494,7 @@ Server نباید Media Stream را Proxy کند مگر معماری آینده
 
 
 
-Meryx Server مسئول Signaling است.
+Tekarai Server مسئول Signaling است.
 
 
 
@@ -1526,7 +1526,7 @@ Caller
 
 &#x20;v
 
-Meryx
+Tekarai
 
 &#x20;|
 
@@ -1544,7 +1544,7 @@ Callee
 
 &#x20;v
 
-Meryx
+Tekarai
 
 &#x20;|
 
@@ -1584,21 +1584,21 @@ Meeting:
 
 \- organizer
 
-\- scheduled\_start
+\- scheduledStart
 
-\- scheduled\_end
+\- scheduledEnd
 
-\- actual\_start
+\- actualStart
 
-\- actual\_end
+\- actualEnd
 
 \- status
 
-\- meeting\_type
+\- meetingType
 
-\- recording\_policy
+\- recordingPolicy
 
-\- transcription\_policy
+\- transcriptionPolicy
 
 
 
@@ -1636,9 +1636,9 @@ MeetingParticipant:
 
 \- role
 
-\- joined\_at
+\- joinedAt
 
-\- left\_at
+\- leftAt
 
 \- status
 
@@ -1748,15 +1748,15 @@ MeetingRecording:
 
 \- meeting
 
-\- started\_at
+\- startedAt
 
-\- ended\_at
+\- endedAt
 
-\- storage\_key
+\- storageKey
 
 \- duration
 
-\- file\_size
+\- fileSize
 
 \- checksum
 
@@ -1894,7 +1894,7 @@ AI-generated content باید:
 
 \- confidence
 
-\- generated\_at
+\- generatedAt
 
 \- version
 
@@ -2432,7 +2432,7 @@ tenant
 
 type
 
-created\_at
+createdAt
 
 
 
@@ -2444,7 +2444,7 @@ conversation
 
 user
 
-is\_active
+isActive
 
 
 
@@ -2454,11 +2454,11 @@ Message:
 
 conversation
 
-created\_at
+createdAt
 
 sender
 
-message\_type
+messageType
 
 
 
@@ -2480,7 +2480,7 @@ Meeting:
 
 tenant
 
-scheduled\_start
+scheduledStart
 
 status
 
@@ -2538,7 +2538,7 @@ ConversationMember(conversation, user)
 
 
 
-MessageReaction(message, user, reaction\_type)
+MessageReaction(message, user, reactionType)
 
 
 
@@ -2602,21 +2602,21 @@ Event باید:
 
 
 
-\- event\_id
+\- eventId
 
-\- event\_type
+\- eventType
 
-\- aggregate\_id
+\- aggregateId
 
-\- tenant\_id
+\- tenantId
 
-\- occurred\_at
+\- occurredAt
 
-\- actor\_id
+\- actorId
 
 \- payload
 
-\- schema\_version
+\- schemaVersion
 
 
 
@@ -2652,7 +2652,7 @@ GET /conversations/{id}/
 
 POST /conversations/{id}/members/
 
-DELETE /conversations/{id}/members/{user\_id}/
+DELETE /conversations/{id}/members/{userId}/
 
 
 
@@ -2708,9 +2708,9 @@ API Versioning باید وجود داشته باشد.
 
 
 
-/ws/conversations/{conversation\_id}/
+/ws/conversations/{conversationId}/
 
-/ws/meetings/{meeting\_id}/
+/ws/meetings/{meetingId}/
 
 /ws/presence/
 
@@ -2722,9 +2722,9 @@ WebSocket Event Envelope:
 
 {
 
-&#x20;   "event\_id": "...",
+&#x20;   "eventId": "...",
 
-&#x20;   "event\_type": "...",
+&#x20;   "eventType": "...",
 
 &#x20;   "timestamp": "...",
 
@@ -2812,21 +2812,21 @@ Domain باید Business Rules را نگهداری کند.
 
 
 
-Conversation.can\_add\_member()
+Conversation.canAddMember()
 
-Conversation.can\_remove\_member()
+Conversation.canRemoveMember()
 
-Conversation.can\_send\_message()
+Conversation.canSendMessage()
 
-Message.can\_edit()
+Message.canEdit()
 
-Message.can\_delete()
+Message.canDelete()
 
-Meeting.can\_join()
+Meeting.canJoin()
 
-Meeting.can\_start()
+Meeting.canStart()
 
-Meeting.can\_record()
+Meeting.canRecord()
 
 
 
@@ -2996,7 +2996,7 @@ Logs باید Structured باشند.
 
 
 
-Communication یکی از حساس‌ترین Domainهای Meryx است.
+Communication یکی از حساس‌ترین Domainهای Tekarai است.
 
 
 
@@ -3690,7 +3690,7 @@ Phase 14 زمانی کامل است که:
 
 
 
-در پایان Phase 14، Meryx باید دارای یک Communication Platform
+در پایان Phase 14، Tekarai باید دارای یک Communication Platform
 
 Enterprise باشد که:
 
@@ -3698,7 +3698,7 @@ Enterprise باشد که:
 
 &#x20;                   ┌───────────────────────┐
 
-&#x20;                   │       MERYX           │
+&#x20;                   │       TEKARAI           │
 
 &#x20;                   │  Communication Core   │
 

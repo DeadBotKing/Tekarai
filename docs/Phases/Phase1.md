@@ -1,6 +1,6 @@
 ============================================================
 
-MERYX — PHASE 01
+TEKARAI — PHASE 01
 
 FOUNDATION \& REPOSITORY
 
@@ -16,7 +16,7 @@ PHASE 01 — FOUNDATION \& REPOSITORY
 
 PURPOSE:
 
-ساخت پایه‌ی فنی و Repository پروژه Meryx از صفر.
+ساخت پایه‌ی فنی و Repository پروژه Tekarai از صفر.
 
 
 
@@ -38,7 +38,7 @@ ERD نهایی، APIهای Business، AI، Workflow، Communication یا UI شو
 
 Product Name:
 
-Meryx
+Tekarai
 
 
 
@@ -86,11 +86,11 @@ Architectural Principles:
 
 
 
-Meryx باید یک محصول عمومی و قابل فروش باشد.
+Tekarai باید یک محصول عمومی و قابل فروش باشد.
 
 
 
-Meryx نباید به یک شرکت، کارخانه، صنعت یا مشتری خاص وابسته باشد.
+Tekarai نباید به یک شرکت، کارخانه، صنعت یا مشتری خاص وابسته باشد.
 
 
 
@@ -124,7 +124,7 @@ Core Platform نباید شامل منطق اختصاصی یک مشتری باش
 
 قابل توسعه و Production-Oriented داشته باشیم که بتواند
 
-تمام فازهای بعدی Meryx روی آن ساخته شوند.
+تمام فازهای بعدی Tekarai روی آن ساخته شوند.
 
 
 
@@ -176,7 +176,7 @@ Repository باید در نهایت ساختاری مشابه زیر داشته 
 
 
 
-meryx/
+tekarai/
 
 │
 
@@ -1158,7 +1158,7 @@ Python:
 
 
 
-snake\_case
+camelCase
 
 for functions and variables.
 
@@ -1172,7 +1172,7 @@ for classes.
 
 UPPER\_SNAKE\_CASE
 
-for constants.
+for framework-level constants only.
 
 
 
@@ -1184,7 +1184,7 @@ lowercase names.
 
 Database:
 
-snake\_case.
+camelCase.
 
 
 
@@ -1196,7 +1196,7 @@ REST-oriented naming.
 
 Files:
 
-snake\_case.
+camelCase.
 
 
 

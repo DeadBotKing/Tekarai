@@ -1,6 +1,6 @@
 PHASE 19 — SQL SERVER DATABASE ARCHITECTURE \& DATA PLATFORM
 
-MERYX IMPLEMENTATION SPECIFICATION
+TEKARAI IMPLEMENTATION SPECIFICATION
 
 
 
@@ -14,7 +14,7 @@ MERYX IMPLEMENTATION SPECIFICATION
 
 هدف Phase 19 طراحی و پیاده‌سازی معماری Database و Data Platform
 
-برای Meryx است.
+برای Tekarai است.
 
 
 
@@ -52,7 +52,7 @@ Database نباید صرفاً مجموعه‌ای از Tableها باشد.
 
 
 
-باید یک Data Foundation استاندارد برای تمام Platformهای Meryx
+باید یک Data Foundation استاندارد برای تمام Platformهای Tekarai
 
 فراهم کند.
 
@@ -68,7 +68,7 @@ Database نباید صرفاً مجموعه‌ای از Tableها باشد.
 
 
 
-Database اصلی Meryx:
+Database اصلی Tekarai:
 
 
 
@@ -120,7 +120,7 @@ Application نباید مستقیماً SQL Server را در تمام نقاط �
 
 
 
-Meryx Application
+Tekarai Application
 
 &#x20;       |
 
@@ -224,7 +224,7 @@ Database باید بر اساس اصول زیر ساخته شود:
 
 
 
-Meryx باید Multi-Tenant باشد.
+Tekarai باید Multi-Tenant باشد.
 
 
 
@@ -430,9 +430,9 @@ Base Fields:
 
 id
 
-created\_at
+createdAt
 
-updated\_at
+updatedAt
 
 
 
@@ -442,9 +442,9 @@ updated\_at
 
 
 
-created\_by
+createdBy
 
-updated\_by
+updatedBy
 
 
 
@@ -454,11 +454,11 @@ updated\_by
 
 
 
-deleted\_at
+deletedAt
 
-deleted\_by
+deletedBy
 
-is\_active
+isActive
 
 
 
@@ -476,7 +476,7 @@ Primary Key باید استاندارد و یکسان باشد.
 
 
 
-ترجیح معماری Meryx:
+ترجیح معماری Tekarai:
 
 
 
@@ -520,13 +520,13 @@ Entityهای مهم باید Audit Information داشته باشند.
 
 
 
-created\_at
+createdAt
 
-updated\_at
+updatedAt
 
-created\_by
+createdBy
 
-updated\_by
+updatedBy
 
 
 
@@ -536,9 +536,9 @@ updated\_by
 
 
 
-deleted\_at
+deletedAt
 
-deleted\_by
+deletedBy
 
 
 
@@ -570,7 +570,7 @@ DELETE
 
 
 
-deleted\_at
+deletedAt
 
 
 
@@ -636,7 +636,7 @@ Table:
 
 
 
-snake\_case
+camelCase
 
 
 
@@ -650,7 +650,7 @@ tenants
 
 projects
 
-project\_members
+projectMembers
 
 
 
@@ -660,7 +660,7 @@ Field:
 
 
 
-snake\_case
+camelCase
 
 
 
@@ -668,11 +668,11 @@ snake\_case
 
 
 
-created\_at
+createdAt
 
-tenant\_id
+tenantId
 
-updated\_by\_id
+updatedById
 
 
 
@@ -742,7 +742,7 @@ notifications
 
 
 
-project\_id = UUIDField()
+projectId = UUIDField()
 
 
 
@@ -834,7 +834,7 @@ SET\_NULL
 
 
 
-Meryx باید Relationshipها را دقیق تعریف کند.
+Tekarai باید Relationshipها را دقیق تعریف کند.
 
 
 
@@ -902,9 +902,9 @@ user
 
 role
 
-joined\_at
+joinedAt
 
-is\_active
+isActive
 
 
 
@@ -1014,7 +1014,7 @@ Tenant + Project Code
 
 
 
-tenant\_id
+tenantId
 
 \+
 
@@ -1334,7 +1334,7 @@ Administration
 
 
 
-ساختار نهایی باید با Domain Model Meryx هماهنگ باشد.
+ساختار نهایی باید با Domain Model Tekarai هماهنگ باشد.
 
 
 
@@ -1820,11 +1820,11 @@ Indexهای مهم معمولاً شامل:
 
 
 
-tenant\_id
+tenantId
 
-created\_at
+createdAt
 
-updated\_at
+updatedAt
 
 status
 
@@ -1876,7 +1876,7 @@ Storage
 
 
 
-tenant\_id + field
+tenantId + field
 
 
 
@@ -1890,7 +1890,7 @@ tenant\_id + field
 
 
 
-tenant\_id
+tenantId
 
 \+
 
@@ -1904,11 +1904,11 @@ status
 
 
 
-tenant\_id
+tenantId
 
 \+
 
-created\_at
+createdAt
 
 
 
@@ -2590,7 +2590,7 @@ Index Usage
 
 
 
-Meryx باید Database Health Check داشته باشد.
+Tekarai باید Database Health Check داشته باشد.
 
 
 
@@ -3166,7 +3166,7 @@ Deletion Policy
 
 
 
-Meryx باید ERD قابل نگهداری داشته باشد.
+Tekarai باید ERD قابل نگهداری داشته باشد.
 
 
 
@@ -3302,7 +3302,7 @@ backend/
 
 
 
-ساختار دقیق باید با App Architecture نهایی Meryx هماهنگ باشد.
+ساختار دقیق باید با App Architecture نهایی Tekarai هماهنگ باشد.
 
 
 
@@ -3390,17 +3390,17 @@ Database Configuration باید از Environment دریافت شود.
 
 
 
-DB\_ENGINE
+dbEngine
 
-DB\_NAME
+dbName
 
-DB\_HOST
+dbHost
 
-DB\_PORT
+dbPort
 
-DB\_USER
+dbUser
 
-DB\_PASSWORD
+dbPassword
 
 
 
@@ -3970,7 +3970,7 @@ DocumentVersion باید در صورت نیاز نگهداری شود.
 
 version
 
-updated\_at
+updatedAt
 
 
 
@@ -3994,35 +3994,35 @@ Phase 19 باید این مستندات را تولید کند:
 
 
 
-DATABASE\_ARCHITECTURE.md
+DatabaseArchitecture.md
 
 
 
-DATABASE\_SCHEMA.md
+DatabaseSchema.md
 
 
 
-DATABASE\_NAMING\_CONVENTION.md
+DatabaseNamingConvention.md
 
 
 
-DATABASE\_SECURITY.md
+DatabaseSecurity.md
 
 
 
-DATABASE\_MIGRATION\_POLICY.md
+DatabaseMigrationPolicy.md
 
 
 
-DATABASE\_BACKUP\_POLICY.md
+DatabaseBackupPolicy.md
 
 
 
-DATABASE\_PERFORMANCE.md
+DatabasePerformance.md
 
 
 
-DATABASE\_ERD
+databaseErd
 
 
 
@@ -4460,7 +4460,7 @@ Phase 19 فقط زمانی Done است که:
 
 
 
-در پایان Phase 19، Meryx باید یک Data Platform استاندارد داشته
+در پایان Phase 19، Tekarai باید یک Data Platform استاندارد داشته
 
 باشد که تمام Platformهای قبلی و آینده بتوانند روی آن قرار بگیرند.
 
@@ -4556,11 +4556,11 @@ Database نباید فقط محلی برای ذخیره Objectهای Python با
 
 
 
-Database باید یک Data Foundation واقعی برای Meryx باشد.
+Database باید یک Data Foundation واقعی برای Tekarai باشد.
 
 
 
-تمام طراحی باید به گونه‌ای انجام شود که Meryx بتواند در آینده:
+تمام طراحی باید به گونه‌ای انجام شود که Tekarai بتواند در آینده:
 
 
 

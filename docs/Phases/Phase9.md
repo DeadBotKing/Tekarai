@@ -1,6 +1,6 @@
 ============================================================
 
-MERYX ENTERPRISE PLATFORM
+TEKARAI ENTERPRISE PLATFORM
 
 PHASE 9 — NOTIFICATION PLATFORM
 
@@ -12,7 +12,7 @@ STATUS
 
 \------------------------------------------------------------
 
-This phase defines the complete Notification Platform of Meryx.
+This phase defines the complete Notification Platform of Tekarai.
 
 
 
@@ -212,7 +212,7 @@ notifications/
 
 The exact physical Django package structure may be adapted to
 
-the final Meryx repository architecture.
+the final Tekarai repository architecture.
 
 
 
@@ -244,7 +244,7 @@ Core properties:
 
 \- recipient
 
-\- notification\_type
+\- notificationType
 
 \- category
 
@@ -256,19 +256,19 @@ Core properties:
 
 \- source
 
-\- source\_type
+\- sourceType
 
-\- source\_id
+\- sourceId
 
-\- created\_at
+\- createdAt
 
-\- scheduled\_at
+\- scheduledAt
 
-\- expires\_at
+\- expiresAt
 
-\- read\_at
+\- readAt
 
-\- acknowledged\_at
+\- acknowledgedAt
 
 \- status
 
@@ -430,9 +430,9 @@ Example:
 
 
 
-source\_type = Task
+sourceType = Task
 
-source\_id = UUID
+sourceId = UUID
 
 
 
@@ -540,11 +540,11 @@ The source domain must NOT directly call:
 
 
 
-send\_email()
+sendEmail()
 
-send\_sms()
+sendSms()
 
-send\_push()
+sendPush()
 
 
 
@@ -1062,19 +1062,19 @@ Properties:
 
 \- platform
 
-\- device\_identifier
+\- deviceIdentifier
 
-\- push\_token
+\- pushToken
 
 \- provider
 
-\- created\_at
+\- createdAt
 
-\- last\_seen\_at
+\- lastSeenAt
 
-\- revoked\_at
+\- revokedAt
 
-\- is\_active
+\- isActive
 
 
 
@@ -1228,13 +1228,13 @@ Example:
 
 {
 
-&#x20;   task\_name,
+&#x20;   taskName,
 
-&#x20;   project\_name,
+&#x20;   projectName,
 
-&#x20;   due\_date,
+&#x20;   dueDate,
 
-&#x20;   assignee\_name
+&#x20;   assigneeName
 
 }
 
@@ -1416,9 +1416,9 @@ MeetingReminder:
 
 
 
-scheduled\_at =
+scheduledAt =
 
-meeting\_start - 15 minutes
+meetingStart - 15 minutes
 
 
 
@@ -1598,17 +1598,17 @@ Properties:
 
 \- status
 
-\- attempt\_count
+\- attemptCount
 
-\- last\_attempt\_at
+\- lastAttemptAt
 
-\- delivered\_at
+\- deliveredAt
 
-\- failed\_at
+\- failedAt
 
-\- error\_code
+\- errorCode
 
-\- error\_message
+\- errorMessage
 
 
 
@@ -1798,17 +1798,17 @@ Example:
 
 
 
-notification\_key =
+notificationKey =
 
-tenant\_id +
+tenantId +
 
-event\_type +
+eventType +
 
-event\_id +
+eventId +
 
-recipient\_id +
+recipientId +
 
-notification\_type
+notificationType
 
 
 
@@ -2108,33 +2108,33 @@ Initial conceptual tables:
 
 notifications
 
-notification\_deliveries
+notificationDeliveries
 
-notification\_preferences
+notificationPreferences
 
-notification\_preference\_rules
+notificationPreferenceRules
 
-notification\_templates
+notificationTemplates
 
-notification\_template\_versions
+notificationTemplateVersions
 
-notification\_policies
+notificationPolicies
 
-notification\_policy\_channels
+notificationPolicyChannels
 
-notification\_devices
+notificationDevices
 
-notification\_digests
+notificationDigests
 
-notification\_digest\_items
+notificationDigestItems
 
-notification\_schedules
-
-
+notificationSchedules
 
 
 
-All tables must follow global Meryx database standards:
+
+
+All tables must follow global Tekarai database standards:
 
 
 
@@ -2142,9 +2142,9 @@ All tables must follow global Meryx database standards:
 
 \- tenant relationship
 
-\- created\_at
+\- createdAt
 
-\- updated\_at
+\- updatedAt
 
 \- audit fields where appropriate
 
@@ -2172,11 +2172,11 @@ Notifications:
 
 
 
-tenant\_id
+tenantId
 
-recipient\_id
+recipientId
 
-created\_at
+createdAt
 
 status
 
@@ -2192,11 +2192,11 @@ Unread queries:
 
 
 
-recipient\_id
+recipientId
 
-read\_at
+readAt
 
-created\_at
+createdAt
 
 
 
@@ -2206,13 +2206,13 @@ Delivery:
 
 
 
-notification\_id
+notificationId
 
 channel
 
 status
 
-next\_attempt\_at
+nextAttemptAt
 
 
 
@@ -2222,13 +2222,13 @@ Preferences:
 
 
 
-tenant\_id
+tenantId
 
-user\_id
+userId
 
 category
 
-notification\_type
+notificationType
 
 
 
@@ -2238,9 +2238,9 @@ Devices:
 
 
 
-user\_id
+userId
 
-is\_active
+isActive
 
 platform
 
@@ -2252,9 +2252,9 @@ Idempotency:
 
 
 
-tenant\_id
+tenantId
 
-idempotency\_key
+idempotencyKey
 
 
 
@@ -2620,25 +2620,25 @@ Notification system should expose metrics such as:
 
 
 
-notifications\_created
+notificationsCreated
 
-notifications\_delivered
+notificationsDelivered
 
-notifications\_failed
+notificationsFailed
 
-delivery\_latency
+deliveryLatency
 
-read\_rate
+readRate
 
-acknowledgement\_rate
+acknowledgementRate
 
-channel\_usage
+channelUsage
 
-retry\_rate
+retryRate
 
-provider\_failure\_rate
+providerFailureRate
 
-notification\_volume
+notificationVolume
 
 
 
@@ -2662,21 +2662,21 @@ Structured logging must include:
 
 
 
-\- notification\_id
+\- notificationId
 
-\- tenant\_id
+\- tenantId
 
-\- recipient\_id
+\- recipientId
 
 \- channel
 
 \- provider
 
-\- delivery\_status
+\- deliveryStatus
 
 \- attempt
 
-\- correlation\_id
+\- correlationId
 
 
 
@@ -2702,7 +2702,7 @@ Every notification flow should support:
 
 
 
-correlation\_id
+correlationId
 
 
 
@@ -2710,7 +2710,7 @@ and where appropriate:
 
 
 
-causation\_id
+causationId
 
 
 
@@ -2722,15 +2722,15 @@ Example:
 
 TaskUpdated
 
-&#x20;   correlation\_id = X
+&#x20;   correlationId = X
 
 
 
 NotificationCreated
 
-&#x20;   correlation\_id = X
+&#x20;   correlationId = X
 
-&#x20;   causation\_id = TaskUpdatedEvent
+&#x20;   causationId = TaskUpdatedEvent
 
 
 

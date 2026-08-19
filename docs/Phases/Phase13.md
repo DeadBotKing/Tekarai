@@ -1,6 +1,6 @@
 PHASE 13 — AI PLATFORM \& INTELLIGENCE FOUNDATION
 
-MERYX ENTERPRISE PLATFORM
+TEKARAI ENTERPRISE PLATFORM
 
 STATUS: ARCHITECTURE → IMPLEMENTATION SPECIFICATION
 
@@ -14,15 +14,15 @@ STATUS: ARCHITECTURE → IMPLEMENTATION SPECIFICATION
 
 
 
-هدف فاز 13 طراحی و پیاده‌سازی Foundation کامل لایه AI در Meryx است.
+هدف فاز 13 طراحی و پیاده‌سازی Foundation کامل لایه AI در Tekarai است.
 
 
 
-AI در Meryx یک Feature جانبی یا Plugin ساده نیست.
+AI در Tekarai یک Feature جانبی یا Plugin ساده نیست.
 
 
 
-AI باید به عنوان یک Platform Capability در معماری اصلی Meryx قرار بگیرد و بتواند توسط Domainهای مختلف مانند:
+AI باید به عنوان یک Platform Capability در معماری اصلی Tekarai قرار بگیرد و بتواند توسط Domainهای مختلف مانند:
 
 
 
@@ -348,15 +348,15 @@ name
 
 code
 
-provider\_type
+providerType
 
-is\_active
+isActive
 
-configuration\_reference
+configurationReference
 
-created\_at
+createdAt
 
-updated\_at
+updatedAt
 
 
 
@@ -424,23 +424,23 @@ name
 
 code
 
-model\_type
+modelType
 
-context\_window
+contextWindow
 
-input\_capability
+inputCapability
 
-output\_capability
+outputCapability
 
-supports\_streaming
+supportsStreaming
 
-supports\_tools
+supportsTools
 
-supports\_embeddings
+supportsEmbeddings
 
-supports\_vision
+supportsVision
 
-is\_active
+isActive
 
 version
 
@@ -570,27 +570,27 @@ id
 
 tenant
 
-request\_type
+requestType
 
 capability
 
-requested\_by
+requestedBy
 
-source\_domain
+sourceDomain
 
-source\_entity\_type
+sourceEntityType
 
-source\_entity\_id
+sourceEntityId
 
 priority
 
 status
 
-created\_at
+createdAt
 
-started\_at
+startedAt
 
-completed\_at
+completedAt
 
 
 
@@ -598,11 +598,11 @@ completed\_at
 
 
 
-correlation\_id
+correlationId
 
-trace\_id
+traceId
 
-parent\_request\_id
+parentRequestId
 
 
 
@@ -664,17 +664,17 @@ status
 
 content
 
-structured\_data
+structuredData
 
-input\_tokens
+inputTokens
 
-output\_tokens
+outputTokens
 
-total\_tokens
+totalTokens
 
-latency\_ms
+latencyMs
 
-created\_at
+createdAt
 
 
 
@@ -802,19 +802,19 @@ version
 
 template
 
-system\_instruction
+systemInstruction
 
 variables
 
-output\_schema
+outputSchema
 
-model\_constraints
+modelConstraints
 
-created\_by
+createdBy
 
-created\_at
+createdAt
 
-is\_active
+isActive
 
 
 
@@ -830,7 +830,7 @@ is\_active
 
 
 
-AI بدون Context نباید به داده‌های Meryx دسترسی مستقیم داشته باشد.
+AI بدون Context نباید به داده‌های Tekarai دسترسی مستقیم داشته باشد.
 
 
 
@@ -992,7 +992,7 @@ Memory باید:
 
 
 
-AI Memory نباید جایگزین Database اصلی Meryx شود.
+AI Memory نباید جایگزین Database اصلی Tekarai شود.
 
 
 
@@ -1300,13 +1300,13 @@ AIProviderPort
 
 generate()
 
-generate\_structured()
+generateStructured()
 
 embed()
 
 stream()
 
-count\_tokens()
+countTokens()
 
 
 
@@ -1458,13 +1458,13 @@ Local Model
 
 
 
-input\_tokens
+inputTokens
 
-output\_tokens
+outputTokens
 
-total\_tokens
+totalTokens
 
-estimated\_cost
+estimatedCost
 
 currency
 
@@ -1506,15 +1506,15 @@ AI Platform باید زمان‌های زیر را ثبت کند:
 
 
 
-queue\_time
+queueTime
 
-context\_build\_time
+contextBuildTime
 
-provider\_time
+providerTime
 
-validation\_time
+validationTime
 
-total\_time
+totalTime
 
 
 
@@ -1636,15 +1636,15 @@ AI نباید بتواند:
 
 
 
-create\_task
+createTask
 
-search\_project
+searchProject
 
-get\_document
+getDocument
 
-create\_report
+createReport
 
-send\_notification
+sendNotification
 
 
 
@@ -1838,25 +1838,25 @@ AI Platform باید Metrics تولید کند.
 
 
 
-requests\_total
+requestsTotal
 
-requests\_failed
+requestsFailed
 
-tokens\_total
+tokensTotal
 
-cost\_total
+costTotal
 
-latency\_average
+latencyAverage
 
-latency\_p95
+latencyP95
 
-provider\_failures
+providerFailures
 
-model\_failures
+modelFailures
 
-fallback\_count
+fallbackCount
 
-feedback\_score
+feedbackScore
 
 
 
@@ -1962,7 +1962,7 @@ AIFeedbackReceived
 
 
 
-Eventها باید با Event Bus معماری Meryx هماهنگ باشند.
+Eventها باید با Event Bus معماری Tekarai هماهنگ باشند.
 
 
 
@@ -2472,7 +2472,7 @@ apps/
 
 &#x20;   │   ├── entities/
 
-&#x20;   │   ├── value\_objects/
+&#x20;   │   ├── valueObjects/
 
 &#x20;   │   ├── services/
 
@@ -2558,7 +2558,7 @@ apps/
 
 
 
-این ساختار باید با Architecture کلی Meryx تطبیق داده شود و بدون بررسی Phaseهای قبلی به صورت کورکورانه ساخته نشود.
+این ساختار باید با Architecture کلی Tekarai تطبیق داده شود و بدون بررسی Phaseهای قبلی به صورت کورکورانه ساخته نشود.
 
 
 
@@ -2920,7 +2920,7 @@ Phase 13 زمانی Done است که:
 
 &#x20;                   ┌─────────────────────┐
 
-&#x20;                   │   Meryx Domains     │
+&#x20;                   │   Tekarai Domains     │
 
 &#x20;                   │ Projects / HR / ... │
 

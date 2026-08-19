@@ -1,6 +1,6 @@
 PHASE 20 — CONFIGURATION MANAGEMENT \& ENVIRONMENT ARCHITECTURE
 
-MERYX IMPLEMENTATION SPECIFICATION
+TEKARAI IMPLEMENTATION SPECIFICATION
 
 
 
@@ -14,7 +14,7 @@ MERYX IMPLEMENTATION SPECIFICATION
 
 هدف Phase 20 طراحی و پیاده‌سازی یک Configuration System
 
-استاندارد، امن، قابل توسعه و Enterprise-grade برای Meryx است.
+استاندارد، امن، قابل توسعه و Enterprise-grade برای Tekarai است.
 
 
 
@@ -196,7 +196,7 @@ Application
 
 
 
-os.getenv("DATABASE\_URL")
+os.getenv("databaseUrl")
 
 
 
@@ -294,9 +294,9 @@ Observability Configuration
 
 
 
-APP\_NAME
+appName
 
-APP\_VERSION
+appVersion
 
 ENVIRONMENT
 
@@ -304,7 +304,7 @@ DEBUG
 
 TIMEZONE
 
-DEFAULT\_LANGUAGE
+defaultLanguage
 
 
 
@@ -390,17 +390,17 @@ Database Configuration باید شامل:
 
 
 
-DB\_ENGINE
+dbEngine
 
-DB\_NAME
+dbName
 
-DB\_HOST
+dbHost
 
-DB\_PORT
+dbPort
 
-DB\_USER
+dbUser
 
-DB\_PASSWORD
+dbPassword
 
 
 
@@ -410,11 +410,11 @@ DB\_PASSWORD
 
 
 
-DB\_CONN\_MAX\_AGE
+dbConnMaxAge
 
-DB\_CONNECT\_TIMEOUT
+dbConnectTimeout
 
-DB\_QUERY\_TIMEOUT
+dbQueryTimeout
 
 
 
@@ -1012,7 +1012,7 @@ Default
 
 
 
-DB\_HOST
+dbHost
 
 =
 
@@ -1434,7 +1434,7 @@ Enable / Disable Feature
 
 
 
-ENABLE\_NEW\_DASHBOARD
+enableNewDashboard
 
 
 
@@ -1492,15 +1492,15 @@ API Configuration شامل:
 
 
 
-API\_HOST
+apiHost
 
-API\_PORT
+apiPort
 
-API\_PREFIX
+apiPrefix
 
-API\_TIMEOUT
+apiTimeout
 
-API\_RATE\_LIMIT
+apiRateLimit
 
 
 
@@ -1654,13 +1654,13 @@ Secure by Default
 
 
 
-JWT\_ACCESS\_LIFETIME
+jwtAccessLifetime
 
-JWT\_REFRESH\_LIFETIME
+jwtRefreshLifetime
 
-JWT\_SIGNING\_KEY
+jwtSigningKey
 
-JWT\_ALGORITHM
+jwtAlgorithm
 
 
 
@@ -1726,9 +1726,9 @@ EMAIL\_HOST
 
 EMAIL\_PORT
 
-EMAIL\_USERNAME
+emailUsername
 
-EMAIL\_PASSWORD
+emailPassword
 
 EMAIL\_USE\_TLS
 
@@ -1786,13 +1786,13 @@ Cache Configuration شامل:
 
 
 
-CACHE\_BACKEND
+cacheBackend
 
-CACHE\_LOCATION
+cacheLocation
 
-CACHE\_TIMEOUT
+cacheTimeout
 
-CACHE\_MAX\_CONNECTIONS
+cacheMaxConnections
 
 
 
@@ -1816,15 +1816,15 @@ CACHE\_MAX\_CONNECTIONS
 
 
 
-REDIS\_HOST
+redisHost
 
-REDIS\_PORT
+redisPort
 
-REDIS\_DB
+redisDb
 
-REDIS\_PASSWORD
+redisPassword
 
-REDIS\_TIMEOUT
+redisTimeout
 
 
 
@@ -1848,15 +1848,15 @@ REDIS\_TIMEOUT
 
 
 
-BROKER\_URL
+brokerUrl
 
-RESULT\_BACKEND
+resultBackend
 
-WORKER\_CONCURRENCY
+workerConcurrency
 
-TASK\_TIMEOUT
+taskTimeout
 
-TASK\_RETRY\_LIMIT
+taskRetryLimit
 
 
 
@@ -1884,9 +1884,9 @@ MEDIA\_ROOT
 
 MEDIA\_URL
 
-STORAGE\_BACKEND
+storageBackend
 
-MAX\_UPLOAD\_SIZE
+maxUploadSize
 
 
 
@@ -1956,15 +1956,15 @@ Logging باید Configuration-driven باشد.
 
 
 
-LOG\_LEVEL
+logLevel
 
-LOG\_FORMAT
+logFormat
 
-LOG\_OUTPUT
+logOutput
 
-LOG\_FILE
+logFile
 
-STRUCTURED\_LOGGING
+structuredLogging
 
 
 
@@ -2178,11 +2178,11 @@ ENABLED=true/false
 
 
 
-CONNECT\_TIMEOUT
+connectTimeout
 
-READ\_TIMEOUT
+readTimeout
 
-TOTAL\_TIMEOUT
+totalTimeout
 
 
 
@@ -2206,11 +2206,11 @@ Retry باید Configuration داشته باشد:
 
 
 
-MAX\_RETRIES
+maxRetries
 
 BACKOFF
 
-MAX\_BACKOFF
+maxBackoff
 
 
 
@@ -2312,9 +2312,9 @@ Pagination باید:
 
 
 
-DEFAULT\_PAGE\_SIZE
+defaultPageSize
 
-MAX\_PAGE\_SIZE
+maxPageSize
 
 
 
@@ -2324,7 +2324,7 @@ MAX\_PAGE\_SIZE
 
 
 
-MAX\_PAGE\_SIZE باید برای جلوگیری از Abuse وجود داشته باشد.
+maxPageSize باید برای جلوگیری از Abuse وجود داشته باشد.
 
 
 
@@ -2342,11 +2342,11 @@ File Upload باید محدودیت داشته باشد:
 
 
 
-MAX\_FILE\_SIZE
+maxFileSize
 
-ALLOWED\_EXTENSIONS
+allowedExtensions
 
-ALLOWED\_MIME\_TYPES
+allowedMimeTypes
 
 
 
@@ -2486,7 +2486,7 @@ backend/
 
 
 
-ساختار نهایی می‌تواند با Architecture اصلی Meryx تطبیق داده شود.
+ساختار نهایی می‌تواند با Architecture اصلی Tekarai تطبیق داده شود.
 
 
 
@@ -2582,7 +2582,7 @@ Invalid configuration
 
 
 
-DATABASE\_PORT must be an integer between 1 and 65535.
+databasePort must be an integer between 1 and 65535.
 
 
 
@@ -2604,7 +2604,7 @@ Secretها هرگز نباید در Log نمایش داده شوند.
 
 
 
-DATABASE\_PASSWORD=123456
+databasePassword=123456
 
 
 
@@ -2614,7 +2614,7 @@ DATABASE\_PASSWORD=123456
 
 
 
-DATABASE\_PASSWORD=\[REDACTED]
+databasePassword=\[REDACTED]
 
 
 
@@ -2828,7 +2828,7 @@ Allowed Values
 
 
 
-CONFIGURATION\_REFERENCE.md
+ConfigurationReference.md
 
 
 
@@ -3102,19 +3102,19 @@ Tenant Settings باید Database-backed باشند.
 
 
 
-tenant\_settings
+tenantSettings
 
 
 
-tenant\_id
+tenantId
 
 key
 
 value
 
-created\_at
+createdAt
 
-updated\_at
+updatedAt
 
 
 
@@ -3610,7 +3610,7 @@ Serviceها نباید به Environment Variable مستقیم وابسته با�
 
 class EmailService:
 
-&#x20;   password = os.getenv("EMAIL\_PASSWORD")
+&#x20;   password = os.getenv("emailPassword")
 
 
 
@@ -3928,31 +3928,31 @@ Phase 20 باید حداقل این فایل‌ها را ایجاد کند:
 
 
 
-CONFIGURATION\_ARCHITECTURE.md
+ConfigurationArchitecture.md
 
 
 
-CONFIGURATION\_REFERENCE.md
+ConfigurationReference.md
 
 
 
-ENVIRONMENT\_CONFIGURATION.md
+EnvironmentConfiguration.md
 
 
 
-SECRET\_MANAGEMENT.md
+SecretManagement.md
 
 
 
-FEATURE\_FLAG\_POLICY.md
+FeatureFlagPolicy.md
 
 
 
-CONFIGURATION\_SECURITY.md
+ConfigurationSecurity.md
 
 
 
-CONFIGURATION\_MIGRATION\_POLICY.md
+ConfigurationMigrationPolicy.md
 
 
 
@@ -4366,7 +4366,7 @@ Database / External Systems
 
 
 
-Meryx باید بتواند با یک Codebase واحد:
+Tekarai باید بتواند با یک Codebase واحد:
 
 
 
@@ -4446,7 +4446,7 @@ SECURITY-SENSITIVE CONFIGURATION
 
 
 
-هدف نهایی Phase 20 این است که Meryx بتواند بدون تغییر Source Code
+هدف نهایی Phase 20 این است که Tekarai بتواند بدون تغییر Source Code
 
 و بدون Hard-code کردن اطلاعات محیطی، در هر Environment به شکل
 

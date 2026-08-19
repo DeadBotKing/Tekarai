@@ -1,17 +1,17 @@
-# Meryx Handoff Documentation Package
+# Tekarai Handoff Documentation Package
 
 ## Reading order
 
-1.  `MERYX_MASTER_IMPLEMENTATION_SPECIFICATION.md`
-2.  `ARCHITECTURE_HANDOFF.md`
-3.  `DATA_FLOW_DOCUMENTATION.md`
-4.  `DEVELOPMENT_RULES.md`
-5.  `EXECUTION_GUIDE.md`
+1.  `TekaraiMasterImplementationSpecification.md`
+2.  `ArchitectureHandoff.md`
+3.  `DataFlowDocumentation.md`
+4.  `DevelopmentRules.md`
+5.  `ExecutionGuide.md`
 6.  `Handoff.md`
 
 ## Starting assumption
 
-The previous Meryx implementation is lost and must be rebuilt from zero.
+The previous Tekarai implementation is lost and must be rebuilt from zero.
 
 ## Important scope note
 

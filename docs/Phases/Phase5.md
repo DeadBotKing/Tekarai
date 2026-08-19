@@ -1,6 +1,6 @@
 ============================================================
 
-MERYX — PHASE 05
+TEKARAI — PHASE 05
 
 DATABASE DICTIONARY + BUSINESS RULES
 
@@ -186,7 +186,7 @@ Fields:
 
 
 
-snake\_case
+camelCase
 
 
 
@@ -194,15 +194,15 @@ snake\_case
 
 
 
-created\_at
+createdAt
 
-updated\_at
+updatedAt
 
-tenant\_id
+tenantId
 
-employee\_id
+employeeId
 
-project\_id
+projectId
 
 
 
@@ -210,7 +210,7 @@ project\_id
 
 
 
-createdAt
+created\_at
 
 TenantId
 
@@ -356,7 +356,7 @@ NULL باید معنی مشخص داشته باشد.
 
 
 
-deleted\_at = NULL
+deletedAt = NULL
 
 
 
@@ -404,7 +404,7 @@ Default فقط زمانی تعریف شود که از نظر Domain منطقی �
 
 
 
-is\_active = TRUE
+isActive = TRUE
 
 
 
@@ -536,7 +536,7 @@ HYBRID:
 
 
 
-get\_project(project\_id, tenant\_id)
+getProject(projectId, tenantId)
 
 
 
@@ -544,7 +544,7 @@ get\_project(project\_id, tenant\_id)
 
 
 
-get\_project(project\_id)
+getProject(projectId)
 
 
 
@@ -576,7 +576,7 @@ Employee Number:
 
 
 
-UNIQUE(tenant\_id, employee\_number)
+UNIQUE(tenantId, employeeNumber)
 
 
 
@@ -584,7 +584,7 @@ Project Code:
 
 
 
-UNIQUE(tenant\_id, code)
+UNIQUE(tenantId, code)
 
 
 
@@ -592,7 +592,7 @@ Department Code:
 
 
 
-UNIQUE(tenant\_id, code)
+UNIQUE(tenantId, code)
 
 
 
@@ -930,15 +930,15 @@ ProjectMember باید:
 
 
 
-project\_id
+projectId
 
-employee/user\_id
+employee/userId
 
 role
 
-joined\_at
+joinedAt
 
-left\_at
+leftAt
 
 
 
@@ -1188,7 +1188,7 @@ Device Offline بودن باید بر اساس Policy تعریف شود.
 
 
 
-is\_online
+isOnline
 
 
 
@@ -1302,13 +1302,13 @@ caller
 
 participants
 
-started\_at
+startedAt
 
-ended\_at
+endedAt
 
 status
 
-call\_type
+callType
 
 
 
@@ -2282,7 +2282,7 @@ version
 
 
 
-row\_version
+rowVersion
 
 
 
@@ -2824,7 +2824,7 @@ Requirement
 
 
 
-DATABASE\_DICTIONARY.md
+DatabaseDictionary.md
 
 
 
@@ -2848,7 +2848,7 @@ DATABASE\_DICTIONARY.md
 
 
 
-ENTITY\_CATALOG.md
+EntityCatalog.md
 
 
 
@@ -2894,7 +2894,7 @@ Soft Delete
 
 
 
-FIELD\_CATALOG.md
+FieldCatalog.md
 
 
 
@@ -2944,7 +2944,7 @@ Description
 
 
 
-BUSINESS\_RULE\_CATALOG.md
+BusinessRuleCatalog.md
 
 
 
@@ -2968,7 +2968,7 @@ BUSINESS\_RULE\_CATALOG.md
 
 
 
-CONSTRAINT\_CATALOG.md
+ConstraintCatalog.md
 
 
 
@@ -3004,7 +3004,7 @@ Delete Policies
 
 
 
-INDEX\_CATALOG.md
+IndexCatalog.md
 
 
 
@@ -3040,7 +3040,7 @@ Query Pattern
 
 
 
-STATE\_MACHINE\_CATALOG.md
+StateMachineCatalog.md
 
 
 
@@ -3108,7 +3108,7 @@ Side Effects
 
 
 
-ERROR\_CODE\_CATALOG.md
+ErrorCodeCatalog.md
 
 
 
@@ -3576,51 +3576,51 @@ Phase 5 فقط زمانی Complete است که:
 
 
 
-DATABASE\_DICTIONARY.md
+DatabaseDictionary.md
 
 
 
-ENTITY\_CATALOG.md
+EntityCatalog.md
 
 
 
-FIELD\_CATALOG.md
+FieldCatalog.md
 
 
 
-BUSINESS\_RULE\_CATALOG.md
+BusinessRuleCatalog.md
 
 
 
-CONSTRAINT\_CATALOG.md
+ConstraintCatalog.md
 
 
 
-INDEX\_CATALOG.md
+IndexCatalog.md
 
 
 
-STATE\_MACHINE\_CATALOG.md
+StateMachineCatalog.md
 
 
 
-ERROR\_CODE\_CATALOG.md
+ErrorCodeCatalog.md
 
 
 
-DATA\_RETENTION\_POLICY.md
+DataRetentionPolicy.md
 
 
 
-DATABASE\_MIGRATION\_STRATEGY.md
+DatabaseMigrationStrategy.md
 
 
 
-DATABASE\_BACKUP\_STRATEGY.md
+DatabaseBackupStrategy.md
 
 
 
-DATA\_GOVERNANCE.md
+DataGovernance.md
 
 
 
@@ -3882,7 +3882,7 @@ DOMAIN IMPLEMENTATION ARCHITECTURE
 
 
 
-و سپس آماده ورود کنترل‌شده به پیاده‌سازی واقعی Meryx می‌شویم.
+و سپس آماده ورود کنترل‌شده به پیاده‌سازی واقعی Tekarai می‌شویم.
 
 
 

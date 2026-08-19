@@ -1,8 +1,8 @@
 ╔══════════════════════════════════════════════════════════════════════════════╗
 
-║                         MERYX — PHASE 06                                   ║
+║                              TEKARAI — PHASE 06                              ║
 
-║                  API ARCHITECTURE \& APPLICATION LAYER                       ║
+║                    API ARCHITECTURE \& APPLICATION LAYER                     ║
 
 ╚══════════════════════════════════════════════════════════════════════════════╝
 
@@ -334,7 +334,7 @@ backend/
 
 └── apps/
 
-&#x20;   └── <bounded\_context>/
+&#x20;   └── <boundedContext>/
 
 &#x20;       ├── domain/
 
@@ -344,7 +344,7 @@ backend/
 
 &#x20;       │   ├── queries/
 
-&#x20;       │   ├── use\_cases/
+&#x20;       │   ├── useCases/
 
 &#x20;       │   ├── dto/
 
@@ -418,7 +418,7 @@ CreateTenantCommand
 
 &#x20;   description
 
-&#x20;   actor\_id
+&#x20;   actorId
 
 
 
@@ -662,9 +662,9 @@ EmployeeRepository
 
 create()
 
-get\_by\_id()
+getById()
 
-find\_by\_code()
+findByCode()
 
 update()
 
@@ -694,7 +694,7 @@ domain/
 
 &#x20;   repositories/
 
-&#x20;       employee\_repository.py
+&#x20;       employeeRepository.py
 
 
 
@@ -702,7 +702,7 @@ infrastructure/
 
 &#x20;   repositories/
 
-&#x20;       django\_employee\_repository.py
+&#x20;       djangoEmployeeRepository.py
 
 
 
@@ -914,7 +914,7 @@ Error:
 
 
 
-Response Contract باید در کل Meryx یکسان باشد.
+Response Contract باید در کل Tekarai یکسان باشد.
 
 
 
@@ -1042,7 +1042,7 @@ Agent Authentication
 
 
 
-Meryx نباید فقط از:
+Tekarai نباید فقط از:
 
 
 
@@ -1110,7 +1110,7 @@ resource
 
 
 
-Meryx باید Multi-Tenant باشد.
+Tekarai باید Multi-Tenant باشد.
 
 
 
@@ -1196,19 +1196,19 @@ action
 
 resource
 
-resource\_id
+resourceId
 
 timestamp
 
 ip
 
-user\_agent
+userAgent
 
 before
 
 after
 
-correlation\_id
+correlationId
 
 
 
@@ -1286,7 +1286,7 @@ Pagination باید استاندارد باشد.
 
 
 
-?page=1\&page\_size=50
+?page=1\&pageSize=50
 
 
 
@@ -1340,11 +1340,11 @@ Searching
 
 
 
-?department\_id=...
+?departmentId=...
 
 
 
-?ordering=-created\_at
+?ordering=-createdAt
 
 
 
@@ -1584,7 +1584,7 @@ apps/
 
 &#x20;   │   ├── entities/
 
-&#x20;   │   ├── value\_objects/
+&#x20;   │   ├── valueObjects/
 
 &#x20;   │   ├── services/
 
@@ -1602,7 +1602,7 @@ apps/
 
 &#x20;   │   ├── queries/
 
-&#x20;   │   ├── use\_cases/
+&#x20;   │   ├── useCases/
 
 &#x20;   │   ├── dto/
 
@@ -1652,7 +1652,7 @@ apps/
 
 
 
-Django در Meryx باید Framework باشد، نه معماری.
+Django در Tekarai باید Framework باشد، نه معماری.
 
 
 
@@ -1756,9 +1756,9 @@ actor
 
 tenant
 
-correlation\_id
+correlationId
 
-request\_id
+requestId
 
 message
 
@@ -2068,7 +2068,7 @@ Code → مشکل → اصلاح معماری
 
 
 
-Meryx باید یک Application/API Foundation واقعی داشته باشد که بتواند
+Tekarai باید یک Application/API Foundation واقعی داشته باشد که بتواند
 
 Bounded Contextهای بعدی مانند:
 
@@ -2110,7 +2110,7 @@ Phase 06 نباید صرفاً چند فایل Django ایجاد کند.
 
 
 
-این فاز باید ستون فقرات اجرای Use Caseهای کل Meryx را ایجاد کند.
+این فاز باید ستون فقرات اجرای Use Caseهای کل Tekarai را ایجاد کند.
 
 
 

@@ -1,6 +1,6 @@
 ============================================================
 
-MERYX ENTERPRISE PLATFORM
+TEKARAI ENTERPRISE PLATFORM
 
 PHASE 3 — DOMAIN ARCHITECTURE
 
@@ -42,7 +42,7 @@ IMPORTANT:
 
 
 
-1\. چه Domainهایی در Meryx وجود دارند.
+1\. چه Domainهایی در Tekarai وجود دارند.
 
 2\. هر Domain چه مسئولیتی دارد.
 
@@ -86,7 +86,7 @@ IMPORTANT:
 
 
 
-Meryx یک Modular Monolith Enterprise است.
+Tekarai یک Modular Monolith Enterprise است.
 
 
 
@@ -166,7 +166,7 @@ Business Rule نباید داخل:
 
 
 
-تمام Domainهای Meryx باید در یکی از سه گروه زیر قرار گیرند.
+تمام Domainهای Tekarai باید در یکی از سه گروه زیر قرار گیرند.
 
 
 
@@ -214,7 +214,7 @@ Configuration
 
 
 
-قابلیت‌هایی که برای Meryx مهم هستند اما مزیت اصلی محصول نیستند.
+قابلیت‌هایی که برای Tekarai مهم هستند اما مزیت اصلی محصول نیستند.
 
 
 
@@ -244,7 +244,7 @@ Integration
 
 
 
-قابلیت‌هایی که ارزش اصلی Meryx را ایجاد می‌کنند.
+قابلیت‌هایی که ارزش اصلی Tekarai را ایجاد می‌کنند.
 
 
 
@@ -280,7 +280,7 @@ Enterprise Operations Intelligence
 
 
 
-Meryx باید حداقل Contextهای زیر را داشته باشد.
+Tekarai باید حداقل Contextهای زیر را داشته باشد.
 
 
 
@@ -1232,7 +1232,7 @@ Identity نباید صرفاً بر اساس Name باشد.
 
 
 
-Meryx از UUID به عنوان Primary Identifier استفاده می‌کند.
+Tekarai از UUID به عنوان Primary Identifier استفاده می‌کند.
 
 
 
@@ -1430,7 +1430,7 @@ AIService
 
 
 
-Meryx از ابتدا Multi-Tenant طراحی می‌شود.
+Tekarai از ابتدا Multi-Tenant طراحی می‌شود.
 
 
 
@@ -1594,7 +1594,7 @@ apps/
 
 
 
-domain\_name/
+domainName/
 
 
 
@@ -1602,7 +1602,7 @@ domain\_name/
 
 &#x20;       entities/
 
-&#x20;       value\_objects/
+&#x20;       valueObjects/
 
 &#x20;       aggregates/
 
@@ -2150,7 +2150,7 @@ AI / INTELLIGENCE
 
 
 
-Meryx نباید برای یک صنعت خاص Hard-Code شود.
+Tekarai نباید برای یک صنعت خاص Hard-Code شود.
 
 
 
@@ -2174,7 +2174,7 @@ Technology
 
 
 
-باید بتوانند روی Core Meryx ساخته شوند.
+باید بتوانند روی Core Tekarai ساخته شوند.
 
 
 
@@ -2182,7 +2182,7 @@ Technology
 
 
 
-Meryx Core
+Tekarai Core
 
 &#x20;   +
 
@@ -2194,7 +2194,7 @@ Manufacturing Pack
 
 
 
-Meryx Core
+Tekarai Core
 
 &#x20;   +
 
@@ -2206,7 +2206,7 @@ Pharmaceutical Pack
 
 
 
-Meryx Core
+Tekarai Core
 
 &#x20;   +
 
@@ -2236,21 +2236,21 @@ WinCC یک Integration / Industry Extension است.
 
 docs/architecture/
 
-&#x20;   DOMAIN\_ARCHITECTURE.md
+&#x20;   DomainArchitecture.md
 
-&#x20;   DOMAIN\_MAP.md
+&#x20;   DomainMap.md
 
-&#x20;   BOUNDED\_CONTEXTS.md
+&#x20;   BoundedContexts.md
 
-&#x20;   DOMAIN\_DEPENDENCIES.md
+&#x20;   DomainDependencies.md
 
-&#x20;   AGGREGATE\_CATALOG.md
+&#x20;   AggregateCatalog.md
 
-&#x20;   DOMAIN\_EVENTS.md
+&#x20;   DomainEvents.md
 
-&#x20;   VALUE\_OBJECT\_CATALOG.md
+&#x20;   ValueObjectCatalog.md
 
-&#x20;   DOMAIN\_RULES.md
+&#x20;   DomainRules.md
 
 
 
@@ -2390,7 +2390,7 @@ Phase 3 فقط زمانی COMPLETE است که:
 
 
 
-Meryx چه Domainهایی دارد؟
+Tekarai چه Domainهایی دارد؟
 
 
 

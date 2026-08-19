@@ -1,6 +1,6 @@
 ============================================================
 
-MERYX — PHASE 02
+TEKARAI — PHASE 02
 
 ARCHITECTURE \& ARCHITECTURAL DECISION RECORDS
 
@@ -24,7 +24,7 @@ PURPOSE:
 
 تبدیل Foundation ایجادشده در Phase 01 به یک Architecture Specification
 
-رسمی، قابل اجرا، قابل تست و قابل توسعه برای Meryx.
+رسمی، قابل اجرا، قابل تست و قابل توسعه برای Tekarai.
 
 
 
@@ -46,11 +46,11 @@ PURPOSE:
 
 
 
-Meryx یک Enterprise Operations Platform است.
+Tekarai یک Enterprise Operations Platform است.
 
 
 
-Meryx باید:
+Tekarai باید:
 
 
 
@@ -80,7 +80,7 @@ Meryx باید:
 
 
 
-Meryx نباید برای یک شرکت یا صنعت خاص طراحی شود.
+Tekarai نباید برای یک شرکت یا صنعت خاص طراحی شود.
 
 
 
@@ -124,7 +124,7 @@ MODULAR MONOLITH
 
 
 
-Meryx در ابتدا یک Modular Monolith خواهد بود.
+Tekarai در ابتدا یک Modular Monolith خواهد بود.
 
 
 
@@ -286,7 +286,7 @@ Testability by Design
 
 
 
-Meryx باید از Separation of Concerns واقعی استفاده کند.
+Tekarai باید از Separation of Concerns واقعی استفاده کند.
 
 
 
@@ -678,7 +678,7 @@ Django Repository Implementation
 
 
 
-Meryx باید به Domain/Capability Moduleهای مستقل تقسیم شود.
+Tekarai باید به Domain/Capability Moduleهای مستقل تقسیم شود.
 
 
 
@@ -862,7 +862,7 @@ Communication Domain
 
 
 
-Meryx باید Event Driven باشد.
+Tekarai باید Event Driven باشد.
 
 
 
@@ -976,7 +976,7 @@ Asynchronous مناسب برای:
 
 
 
-Meryx API First است.
+Tekarai API First است.
 
 
 
@@ -1142,7 +1142,7 @@ Security Monitoring
 
 
 
-Meryx باید Multi-Tenant باشد.
+Tekarai باید Multi-Tenant باشد.
 
 
 
@@ -1276,9 +1276,9 @@ Audit نباید صرفاً به:
 
 
 
-created\_at
+createdAt
 
-updated\_at
+updatedAt
 
 
 
@@ -1294,7 +1294,7 @@ updated\_at
 
 
 
-Meryx باید از ابتدا قابلیت:
+Tekarai باید از ابتدا قابلیت:
 
 
 
@@ -1538,7 +1538,7 @@ Identity Providers
 
 
 
-AI در Meryx یک Core Capability است.
+AI در Tekarai یک Core Capability است.
 
 
 
@@ -1598,7 +1598,7 @@ Provider می‌تواند در آینده تغییر کند.
 
 
 
-Meryx باید قابل Extension باشد.
+Tekarai باید قابل Extension باشد.
 
 
 
@@ -1640,7 +1640,7 @@ Configuration و Extension باید جایگزین Customer-specific forks شو�
 
 
 
-Meryx باید Offline Ready باشد.
+Tekarai باید Offline Ready باشد.
 
 
 
@@ -1678,7 +1678,7 @@ Offline Ready به معنی Offline-first بودن کل سیستم در Phase 02
 
 
 
-Meryx باید چند Client را پشتیبانی کند:
+Tekarai باید چند Client را پشتیبانی کند:
 
 
 
@@ -1878,7 +1878,7 @@ Django Framework است، نه Architecture.
 
 
 
-Meryx نباید:
+Tekarai نباید:
 
 
 
@@ -1928,25 +1928,25 @@ docs/
 
 ├── architecture/
 
-│   ├── system\_architecture.md
+│   ├── SystemArchitecture.md
 
-│   ├── layer\_architecture.md
+│   ├── LayerArchitecture.md
 
-│   ├── module\_architecture.md
+│   ├── ModuleArchitecture.md
 
-│   ├── dependency\_rules.md
+│   ├── DependencyRules.md
 
-│   ├── security\_architecture.md
+│   ├── SecurityArchitecture.md
 
-│   ├── multi\_tenancy\_architecture.md
+│   ├── MultiTenancyArchitecture.md
 
-│   ├── event\_architecture.md
+│   ├── EventArchitecture.md
 
-│   ├── integration\_architecture.md
+│   ├── IntegrationArchitecture.md
 
-│   ├── ai\_architecture.md
+│   ├── AIArchitecture.md
 
-│   └── extension\_architecture.md
+│   └── ExtensionArchitecture.md
 
 │
 
@@ -1980,7 +1980,7 @@ docs/
 
 ADR-001:
 
-Meryx as Enterprise Operations Platform
+Tekarai as Enterprise Operations Platform
 
 
 

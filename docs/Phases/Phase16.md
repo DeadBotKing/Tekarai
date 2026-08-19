@@ -1,6 +1,6 @@
 PHASE 16 — SELF-LEARNING PLATFORM
 
-MERYX IMPLEMENTATION SPECIFICATION
+TEKARAI IMPLEMENTATION SPECIFICATION
 
 
 
@@ -12,7 +12,7 @@ MERYX IMPLEMENTATION SPECIFICATION
 
 
 
-هدف Phase 16 ساخت Self-Learning Platform در Meryx است.
+هدف Phase 16 ساخت Self-Learning Platform در Tekarai است.
 
 
 
@@ -80,13 +80,13 @@ Observation
 
 ============================================================
 
-2\. جایگاه Self-Learning در معماری Meryx
+2\. جایگاه Self-Learning در معماری Tekarai
 
 ============================================================
 
 
 
-Self-Learning یک Platform مستقل در معماری Meryx است.
+Self-Learning یک Platform مستقل در معماری Tekarai است.
 
 
 
@@ -334,7 +334,7 @@ LearningExperience نشان‌دهنده یک تجربه واقعی سیستم �
 
 \- id
 
-\- tenant\_id
+\- tenantId
 
 \- source
 
@@ -344,9 +344,9 @@ LearningExperience نشان‌دهنده یک تجربه واقعی سیستم �
 
 \- action
 
-\- expected\_outcome
+\- expectedOutcome
 
-\- actual\_outcome
+\- actualOutcome
 
 \- reward
 
@@ -392,7 +392,7 @@ Dataset مجموعه‌ای از Experienceها یا Sampleهای قابل اس�
 
 \- id
 
-\- tenant\_id
+\- tenantId
 
 \- name
 
@@ -404,11 +404,11 @@ Dataset مجموعه‌ای از Experienceها یا Sampleهای قابل اس�
 
 \- status
 
-\- sample\_count
+\- sampleCount
 
-\- created\_at
+\- createdAt
 
-\- created\_by
+\- createdBy
 
 \- metadata
 
@@ -454,7 +454,7 @@ FAILED
 
 \- id
 
-\- dataset\_id
+\- datasetId
 
 \- input
 
@@ -462,7 +462,7 @@ FAILED
 
 \- context
 
-\- source\_experience\_id
+\- sourceExperienceId
 
 \- weight
 
@@ -494,25 +494,25 @@ Experiment برای اجرای یک فرآیند Learning مشخص است.
 
 \- id
 
-\- tenant\_id
+\- tenantId
 
 \- name
 
 \- description
 
-\- dataset\_version
+\- datasetVersion
 
 \- algorithm
 
 \- configuration
 
-\- baseline\_version
+\- baselineVersion
 
 \- status
 
-\- created\_at
+\- createdAt
 
-\- completed\_at
+\- completedAt
 
 
 
@@ -550,21 +550,21 @@ CANCELLED
 
 
 
-\- experiment\_id
+\- experimentId
 
-\- started\_at
+\- startedAt
 
-\- finished\_at
+\- finishedAt
 
 \- parameters
 
 \- environment
 
-\- dataset\_hash
+\- datasetHash
 
-\- code\_version
+\- codeVersion
 
-\- artifact\_id
+\- artifactId
 
 \- metrics
 
@@ -622,11 +622,11 @@ Artifact نتیجه یک Learning Run است.
 
 \- version
 
-\- storage\_uri
+\- storageUri
 
 \- checksum
 
-\- created\_by\_run
+\- createdByRun
 
 \- metadata
 
@@ -654,7 +654,7 @@ Artifact نتیجه یک Learning Run است.
 
 model:
 
-&#x20;   recommendation\_model
+&#x20;   recommendationModel
 
 
 
@@ -706,15 +706,15 @@ EvaluationResult شامل:
 
 \- latency
 
-\- error\_rate
+\- errorRate
 
-\- business\_metrics
+\- businessMetrics
 
-\- baseline\_comparison
+\- baselineComparison
 
-\- dataset\_version
+\- datasetVersion
 
-\- model\_version
+\- modelVersion
 
 
 
@@ -1038,7 +1038,7 @@ Feedback می‌تواند:
 
 \- id
 
-\- experience\_id
+\- experienceId
 
 \- type
 
@@ -1048,7 +1048,7 @@ Feedback می‌تواند:
 
 \- comment
 
-\- created\_at
+\- createdAt
 
 \- metadata
 
@@ -1112,7 +1112,7 @@ Approval شامل:
 
 
 
-\- artifact\_id
+\- artifactId
 
 \- reviewer
 
@@ -1582,67 +1582,67 @@ Domain نباید این تکنولوژی‌ها را بشناسد.
 
 
 
-learning\_experiences
+learningExperiences
 
 
 
-learning\_datasets
+learningDatasets
 
 
 
-learning\_samples
+learningSamples
 
 
 
-learning\_experiments
+learningExperiments
 
 
 
-learning\_runs
+learningRuns
 
 
 
-learning\_artifacts
+learningArtifacts
 
 
 
-model\_versions
+modelVersions
 
 
 
-policy\_versions
+policyVersions
 
 
 
-evaluation\_results
+evaluationResults
 
 
 
-validation\_results
+validationResults
 
 
 
-learning\_approvals
+learningApprovals
 
 
 
-learning\_deployments
+learningDeployments
 
 
 
-learning\_feedback
+learningFeedback
 
 
 
-learning\_metrics
+learningMetrics
 
 
 
-learning\_events
+learningEvents
 
 
 
-learning\_snapshots
+learningSnapshots
 
 
 
@@ -1656,7 +1656,7 @@ learning\_snapshots
 
 
 
-تمام داده‌های Learning که متعلق به Tenant هستند باید tenant\_id داشته باشند.
+تمام داده‌های Learning که متعلق به Tenant هستند باید tenantId داشته باشند.
 
 
 
@@ -1764,9 +1764,9 @@ Audit Log باید شامل:
 
 \- timestamp
 
-\- previous\_state
+\- previousState
 
-\- new\_state
+\- newState
 
 \- metadata
 
@@ -1934,13 +1934,13 @@ Event
 
 \- priority
 
-\- created\_at
+\- createdAt
 
-\- started\_at
+\- startedAt
 
-\- completed\_at
+\- completedAt
 
-\- retry\_count
+\- retryCount
 
 \- error
 
@@ -2068,7 +2068,7 @@ apps/
 
 &#x20;           entities/
 
-&#x20;           value\_objects/
+&#x20;           valueObjects/
 
 &#x20;           events/
 
@@ -2086,7 +2086,7 @@ apps/
 
 &#x20;           services/
 
-&#x20;           use\_cases/
+&#x20;           useCases/
 
 &#x20;           dto/
 
@@ -2130,7 +2130,7 @@ apps/
 
 
 
-اگر ساختار نهایی Meryx استاندارد متفاوتی دارد، ساختار موجود پروژه باید مبنا قرار گیرد و Architecture جدیدی بدون دلیل ایجاد نشود.
+اگر ساختار نهایی Tekarai استاندارد متفاوتی دارد، ساختار موجود پروژه باید مبنا قرار گیرد و Architecture جدیدی بدون دلیل ایجاد نشود.
 
 
 
@@ -2584,7 +2584,7 @@ Phase 16 فقط زمانی Done است که:
 
 
 
-\[ ] هیچ وابستگی Architectureای خلاف قوانین Meryx ایجاد نشده باشد.
+\[ ] هیچ وابستگی Architectureای خلاف قوانین Tekarai ایجاد نشده باشد.
 
 
 
@@ -2598,7 +2598,7 @@ Phase 16 فقط زمانی Done است که:
 
 
 
-در پایان این فاز Meryx باید دارای یک Self-Learning Platform
+در پایان این فاز Tekarai باید دارای یک Self-Learning Platform
 
 قابل توسعه، Versioned، Auditable، قابل Validation و قابل Rollback باشد.
 
@@ -2686,5 +2686,5 @@ Phase 16 نباید صرفاً یک ML Module باشد.
 
 این فاز باید یک زیرسیستم کامل برای مدیریت چرخه یادگیری،
 
-ارزیابی، انتشار، پایش و بازگشت نسخه‌های یادگیرنده در Meryx ایجاد کند.
+ارزیابی، انتشار، پایش و بازگشت نسخه‌های یادگیرنده در Tekarai ایجاد کند.
 

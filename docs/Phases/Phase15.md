@@ -1,6 +1,6 @@
 ============================================================
 
-MERYX — PHASE 15
+TEKARAI — PHASE 15
 
 NOTIFICATION PLATFORM
 
@@ -26,7 +26,7 @@ PURPOSE
 
 \-------
 
-در این فاز باید Notification Platform مریکس به‌صورت
+در این فاز باید Notification Platform Tekarai به‌صورت
 
 Enterprise-Grade، Multi-Tenant، Event-Driven، قابل توسعه،
 
@@ -102,7 +102,7 @@ Notification Platform یک Bounded Context مستقل است.
 
 
 
-Notification باید یک Infrastructure عمومی برای کل Meryx باشد.
+Notification باید یک Infrastructure عمومی برای کل Tekarai باشد.
 
 
 
@@ -386,19 +386,19 @@ Notification Entity باید حداقل شامل:
 
 \- status
 
-\- created\_at
+\- createdAt
 
-\- scheduled\_at
+\- scheduledAt
 
-\- expires\_at
+\- expiresAt
 
-\- sent\_at
+\- sentAt
 
-\- delivered\_at
+\- deliveredAt
 
-\- read\_at
+\- readAt
 
-\- failed\_at
+\- failedAt
 
 
 
@@ -648,9 +648,9 @@ Payload باید JSON-based و Versioned باشد.
 
 {
 
-&#x20;   "task\_id": "...",
+&#x20;   "taskId": "...",
 
-&#x20;   "project\_id": "...",
+&#x20;   "projectId": "...",
 
 &#x20;   "action": "assigned"
 
@@ -790,13 +790,13 @@ User Notification Settings باید شامل:
 
 \- channel
 
-\- notification\_type
+\- notificationType
 
-\- quiet\_hours
+\- quietHours
 
 \- frequency
 
-\- digest\_mode
+\- digestMode
 
 
 
@@ -1344,7 +1344,7 @@ Notification Creation باید Idempotent باشد.
 
 
 
-event\_id
+eventId
 
 
 
@@ -1486,7 +1486,7 @@ Template:
 
 \- tenant
 
-\- notification\_type
+\- notificationType
 
 \- channel
 
@@ -1592,11 +1592,11 @@ Template Engine باید Variable Injection داشته باشد.
 
 
 
-Hello {{ user\_name }}
+Hello {{ userName }}
 
 
 
-Task "{{ task\_title }}" has been assigned to you.
+Task "{{ taskTitle }}" has been assigned to you.
 
 
 
@@ -1692,15 +1692,15 @@ UserDevice:
 
 \- user
 
-\- device\_id
+\- deviceId
 
 \- platform
 
 \- token
 
-\- last\_seen
+\- lastSeen
 
-\- is\_active
+\- isActive
 
 
 
@@ -1764,15 +1764,15 @@ Subscription:
 
 \- endpoint
 
-\- public\_key
+\- publicKey
 
-\- auth\_secret
+\- authSecret
 
 \- user
 
-\- created\_at
+\- createdAt
 
-\- expires\_at
+\- expiresAt
 
 
 
@@ -1848,21 +1848,21 @@ NotificationDelivery:
 
 \- status
 
-\- provider\_message\_id
+\- providerMessageId
 
-\- attempt\_count
+\- attemptCount
 
-\- queued\_at
+\- queuedAt
 
-\- sent\_at
+\- sentAt
 
-\- delivered\_at
+\- deliveredAt
 
-\- failed\_at
+\- failedAt
 
-\- failure\_code
+\- failureCode
 
-\- failure\_message
+\- failureMessage
 
 
 
@@ -1932,7 +1932,7 @@ Provider
 
 &#x20;  v
 
-Meryx
+Tekarai
 
 &#x20;  |
 
@@ -1982,7 +1982,7 @@ Notification:
 
 
 
-scheduled\_at
+scheduledAt
 
 
 
@@ -2008,7 +2008,7 @@ Notification می‌تواند:
 
 
 
-expires\_at
+expiresAt
 
 
 
@@ -2640,13 +2640,13 @@ Business Rules باید در Domain قرار بگیرند.
 
 
 
-Notification.can\_send()
+Notification.canSend()
 
-Notification.can\_retry()
+Notification.canRetry()
 
-Notification.can\_cancel()
+Notification.canCancel()
 
-Notification.can\_expire()
+Notification.canExpire()
 
 
 
@@ -2654,7 +2654,7 @@ Preference.allows()
 
 Policy.allows()
 
-Delivery.can\_retry()
+Delivery.canRetry()
 
 
 
@@ -2802,15 +2802,15 @@ tenant
 
 recipient
 
-created\_at
+createdAt
 
 status
 
-read\_at
+readAt
 
-scheduled\_at
+scheduledAt
 
-notification\_type
+notificationType
 
 
 
@@ -2826,7 +2826,7 @@ status
 
 provider
 
-created\_at
+createdAt
 
 
 
@@ -2836,7 +2836,7 @@ Preference:
 
 user
 
-notification\_type
+notificationType
 
 channel
 
@@ -2848,7 +2848,7 @@ Template:
 
 tenant
 
-notification\_type
+notificationType
 
 channel
 
@@ -2866,7 +2866,7 @@ user
 
 platform
 
-is\_active
+isActive
 
 
 
@@ -2886,7 +2886,7 @@ Indexها باید بر اساس Query Pattern واقعی تکمیل شوند.
 
 
 
-UserDevice(user, device\_id)
+UserDevice(user, deviceId)
 
 
 
@@ -2894,7 +2894,7 @@ NotificationPreference(
 
 &#x20;   user,
 
-&#x20;   notification\_type,
+&#x20;   notificationType,
 
 &#x20;   channel
 
@@ -2908,7 +2908,7 @@ Template:
 
 tenant
 
-notification\_type
+notificationType
 
 channel
 
@@ -3094,13 +3094,13 @@ tenant
 
 recipient
 
-notification\_type
+notificationType
 
-source\_entity
+sourceEntity
 
-source\_event
+sourceEvent
 
-time\_window
+timeWindow
 
 
 
@@ -3942,7 +3942,7 @@ Phase 15 زمانی کامل است که:
 
 
 
-&#x20;                      MERYX
+&#x20;                      TEKARAI
 
 &#x20;                        |
 

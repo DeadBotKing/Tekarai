@@ -1,8 +1,8 @@
-# Meryx --- Handoff
+# Tekarai --- Handoff
 
 ## Start Here
 
-You are taking over development of Meryx.
+You are taking over development of Tekarai.
 
 Assume:
 
@@ -11,24 +11,24 @@ Assume:
 Do not assume previous source code, migrations, database tables, models,
 APIs, or configuration exist.
 
-Your job is to rebuild Meryx from zero according to the project
+Your job is to rebuild Tekarai from zero according to the project
 documents.
 
 ## Mandatory Reading Order
 
 Read these files in this order:
 
-1.  `MERYX_MASTER_IMPLEMENTATION_SPECIFICATION.md`
-2.  `ARCHITECTURE_HANDOFF.md`
-3.  `DATA_FLOW_DOCUMENTATION.md`
-4.  `DEVELOPMENT_RULES.md`
-5.  `EXECUTION_GUIDE.md`
+1.  `TekaraiMasterImplementationSpecification.md`
+2.  `ArchitectureHandoff.md`
+3.  `DataFlowDocumentation.md`
+4.  `DevelopmentRules.md`
+5.  `ExecutionGuide.md`
 
 Then inspect the repository.
 
 ## Product
 
-Meryx is a general-purpose Enterprise Operations Platform.
+Tekarai is a general-purpose Enterprise Operations Platform.
 
 Original reference environment:
 
@@ -36,7 +36,7 @@ Original reference environment:
 Pharmaceutical manufacturing / Ronak
 ```
 
-But Meryx itself must remain industry-neutral.
+But Tekarai itself must remain industry-neutral.
 
 ## Current State
 
@@ -159,7 +159,7 @@ The hierarchy is:
 ``` text
 Approved Architecture Decision Records
         ↓
-MERYX_MASTER_IMPLEMENTATION_SPECIFICATION.md
+TekaraiMasterImplementationSpecification.md
         ↓
 Architecture / Data Flow / Development Rules
         ↓
@@ -173,7 +173,7 @@ considered wrong until the architecture is explicitly changed.
 
 ## Final Objective
 
-Build Meryx as a production-grade enterprise platform that can evolve
+Build Tekarai as a production-grade enterprise platform that can evolve
 for 5--10+ years without requiring an architectural rewrite.
 
 The goal is not merely to make the application run.

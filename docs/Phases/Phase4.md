@@ -1,6 +1,6 @@
 ============================================================
 
-MERYX — PHASE 04
+TEKARAI — PHASE 04
 
 ENTERPRISE ERD \& DATABASE ARCHITECTURE
 
@@ -12,7 +12,7 @@ ENTERPRISE ERD \& DATABASE ARCHITECTURE
 
 
 
-در این فاز باید معماری کامل داده‌ای Meryx طراحی شود.
+در این فاز باید معماری کامل داده‌ای Tekarai طراحی شود.
 
 
 
@@ -20,7 +20,7 @@ ENTERPRISE ERD \& DATABASE ARCHITECTURE
 
 
 
-\- چه موجودیت‌هایی در Meryx وجود دارند.
+\- چه موجودیت‌هایی در Tekarai وجود دارند.
 
 \- هر موجودیت چه مسئولیتی دارد.
 
@@ -180,7 +180,7 @@ Database باید از قابلیت‌های استاندارد SQL Server اس�
 
 
 
-تمام Entityهای اصلی Meryx باید از UUID به عنوان Primary Key استفاده کنند.
+تمام Entityهای اصلی Tekarai باید از UUID به عنوان Primary Key استفاده کنند.
 
 
 
@@ -242,19 +242,19 @@ id UUID PRIMARY KEY
 
 id
 
-created\_at
+createdAt
 
-updated\_at
+updatedAt
 
-created\_by
+createdBy
 
-updated\_by
+updatedBy
 
-deleted\_at
+deletedAt
 
-deleted\_by
+deletedBy
 
-is\_active
+isActive
 
 
 
@@ -268,43 +268,43 @@ UUID Primary Key
 
 
 
-created\_at:
+createdAt:
 
 زمان ایجاد Entity
 
 
 
-updated\_at:
+updatedAt:
 
 آخرین زمان تغییر
 
 
 
-created\_by:
+createdBy:
 
 کاربری که Entity را ایجاد کرده است.
 
 
 
-updated\_by:
+updatedBy:
 
 آخرین کاربری که Entity را تغییر داده است.
 
 
 
-deleted\_at:
+deletedAt:
 
 زمان Soft Delete
 
 
 
-deleted\_by:
+deletedBy:
 
 کاربری که Soft Delete را انجام داده است.
 
 
 
-is\_active:
+isActive:
 
 وضعیت فعال بودن Entity
 
@@ -318,7 +318,7 @@ is\_active:
 
 
 
-Meryx نباید به صورت عمومی از Hard Delete استفاده کند.
+Tekarai نباید به صورت عمومی از Hard Delete استفاده کند.
 
 
 
@@ -334,7 +334,7 @@ Soft Delete
 
 
 
-deleted\_at != NULL
+deletedAt != NULL
 
 
 
@@ -342,7 +342,7 @@ deleted\_at != NULL
 
 
 
-is\_active = False
+isActive = False
 
 
 
@@ -382,7 +382,7 @@ Hard Delete فقط در موارد کاملاً مشخص و با Policy جداگ
 
 
 
-Meryx باید Multi-Tenant باشد.
+Tekarai باید Multi-Tenant باشد.
 
 
 
@@ -464,17 +464,17 @@ description
 
 status
 
-created\_at
+createdAt
 
-updated\_at
+updatedAt
 
-created\_by
+createdBy
 
-updated\_by
+updatedBy
 
-deleted\_at
+deletedAt
 
-deleted\_by
+deletedBy
 
 
 
@@ -1306,7 +1306,7 @@ Maintenance Approval
 
 
 
-Communication یکی از Domainهای اصلی Meryx است.
+Communication یکی از Domainهای اصلی Tekarai است.
 
 
 
@@ -1472,7 +1472,7 @@ Notification باید Event Driven باشد.
 
 
 
-Audit یکی از مهم‌ترین قسمت‌های Meryx است.
+Audit یکی از مهم‌ترین قسمت‌های Tekarai است.
 
 
 
@@ -1490,29 +1490,29 @@ AuditEvent
 
 id
 
-tenant\_id
+tenantId
 
-actor\_id
+actorId
 
 action
 
-entity\_type
+entityType
 
-entity\_id
+entityId
 
 timestamp
 
-ip\_address
+ipAddress
 
-user\_agent
+userAgent
 
-before\_state
+beforeState
 
-after\_state
+afterState
 
 metadata
 
-correlation\_id
+correlationId
 
 
 
@@ -1742,7 +1742,7 @@ External API
 
 
 
-Meryx نباید به کارخانه داروسازی وابسته شود.
+Tekarai نباید به کارخانه داروسازی وابسته شود.
 
 
 
@@ -1806,7 +1806,7 @@ Industry Specific
 
 
 
-WinCC نباید Core Meryx باشد.
+WinCC نباید Core Tekarai باشد.
 
 
 
@@ -1944,11 +1944,11 @@ Project.users
 
 role
 
-joined\_at
+joinedAt
 
-left\_at
+leftAt
 
-is\_active
+isActive
 
 
 
@@ -2018,7 +2018,7 @@ Organization.code
 
 
 
-Employee.employee\_number
+Employee.employeeNumber
 
 
 
@@ -2026,7 +2026,7 @@ Project.code
 
 
 
-Document.version\_number
+Document.versionNumber
 
 
 
@@ -2038,7 +2038,7 @@ Document.version\_number
 
 
 
-UNIQUE(tenant\_id, code)
+UNIQUE(tenantId, code)
 
 
 
@@ -2066,15 +2066,15 @@ Indexهای احتمالی:
 
 
 
-tenant\_id
+tenantId
 
-created\_at
+createdAt
 
-updated\_at
+updatedAt
 
-is\_active
+isActive
 
-deleted\_at
+deletedAt
 
 status
 
@@ -2086,11 +2086,11 @@ code
 
 
 
-tenant\_id + status
+tenantId + status
 
-tenant\_id + created\_at
+tenantId + createdAt
 
-tenant\_id + is\_active
+tenantId + isActive
 
 
 
@@ -2114,7 +2114,7 @@ tenant\_id + is\_active
 
 
 
-tenant\_id
+tenantId
 
 
 
@@ -2126,7 +2126,7 @@ tenant\_id
 
 
 
-INDEX(tenant\_id, ...)
+INDEX(tenantId, ...)
 
 
 
@@ -2142,11 +2142,11 @@ INDEX(tenant\_id, ...)
 
 
 
-created\_by
+createdBy
 
-updated\_by
+updatedBy
 
-deleted\_by
+deletedBy
 
 
 
@@ -2202,9 +2202,9 @@ EmployeeAssignment
 
 
 
-start\_date
+startDate
 
-end\_date
+endDate
 
 
 
@@ -2742,43 +2742,43 @@ Application User نباید DBA Permission داشته باشد.
 
 
 
-01\_ENTERPRISE\_ERD.md
+01EnterpriseERD.md
 
 
 
-02\_DOMAIN\_ERD.md
+02DomainERD.md
 
 
 
-03\_DATABASE\_DICTIONARY.md
+03DatabaseDictionary.md
 
 
 
-04\_ENTITY\_CATALOG.md
+04EntityCatalog.md
 
 
 
-05\_RELATIONSHIP\_CATALOG.md
+05RelationshipCatalog.md
 
 
 
-06\_INDEX\_STRATEGY.md
+06IndexStrategy.md
 
 
 
-07\_CONSTRAINT\_CATALOG.md
+07ConstraintCatalog.md
 
 
 
-08\_TENANCY\_MODEL.md
+08TenancyModel.md
 
 
 
-09\_AUDIT\_MODEL.md
+09AuditModel.md
 
 
 
-10\_DATA\_RETENTION\_POLICY.md
+10DataRetentionPolicy.md
 
 
 

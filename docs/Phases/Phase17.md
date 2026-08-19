@@ -1,6 +1,6 @@
 PHASE 17 — PROJECT INTELLIGENCE PLATFORM
 
-MERYX IMPLEMENTATION SPECIFICATION
+TEKARAI IMPLEMENTATION SPECIFICATION
 
 
 
@@ -12,7 +12,7 @@ MERYX IMPLEMENTATION SPECIFICATION
 
 
 
-هدف Phase 17 ساخت Project Intelligence Platform در Meryx است.
+هدف Phase 17 ساخت Project Intelligence Platform در Tekarai است.
 
 
 
@@ -20,7 +20,7 @@ Project Intelligence مسئول ایجاد قابلیت درک، تحلیل و �
 
 ساختار، وضعیت، وابستگی‌ها، تغییرات و رفتار پروژه‌های تحت مدیریت
 
-Meryx است.
+Tekarai است.
 
 
 
@@ -28,7 +28,7 @@ Meryx است.
 
 مشاهده و تحلیل کند و از اطلاعات آن یک تصویر ساختاریافته و قابل
 
-استفاده برای سایر بخش‌های Meryx تولید کند.
+استفاده برای سایر بخش‌های Tekarai تولید کند.
 
 
 
@@ -104,13 +104,13 @@ OBSERVATION
 
 ============================================================
 
-2\. جایگاه Project Intelligence در معماری Meryx
+2\. جایگاه Project Intelligence در معماری Tekarai
 
 ============================================================
 
 
 
-Project Intelligence یک Platform مستقل در Meryx است.
+Project Intelligence یک Platform مستقل در Tekarai است.
 
 
 
@@ -718,7 +718,7 @@ Snapshot B
 
 Added:
 
-&#x20;   file\_a.py
+&#x20;   fileA.py
 
 
 
@@ -730,7 +730,7 @@ Modified:
 
 Deleted:
 
-&#x20;   old\_service.py
+&#x20;   oldService.py
 
 
 
@@ -1748,71 +1748,71 @@ Relational ذخیره شوند.
 
 
 
-project\_snapshots
+projectSnapshots
 
 
 
-project\_files
+projectFiles
 
 
 
-project\_file\_hashes
+projectFileHashes
 
 
 
-project\_analyses
+projectAnalyses
 
 
 
-project\_analysis\_results
+projectAnalysisResults
 
 
 
-project\_dependencies
+projectDependencies
 
 
 
-project\_architectures
+projectArchitectures
 
 
 
-project\_knowledge
+projectKnowledge
 
 
 
-project\_knowledge\_nodes
+projectKnowledgeNodes
 
 
 
-project\_knowledge\_edges
+projectKnowledgeEdges
 
 
 
-project\_insights
+projectInsights
 
 
 
-project\_recommendations
+projectRecommendations
 
 
 
-project\_decisions
+projectDecisions
 
 
 
-project\_context\_packages
+projectContextPackages
 
 
 
-project\_states
+projectStates
 
 
 
-project\_changes
+projectChanges
 
 
 
-project\_resume
+projectResume
 
 
 
@@ -1864,7 +1864,7 @@ Decision
 
 
 
-tenant\_id
+tenantId
 
 
 
@@ -2026,7 +2026,7 @@ POST   /projects/{id}/intelligence/compare/
 
 این Endpointها فقط Contract هستند و باید با API Architecture
 
-اصلی Meryx هماهنگ شوند.
+اصلی Tekarai هماهنگ شوند.
 
 
 
@@ -2108,7 +2108,7 @@ Complete
 
 \- id
 
-\- project\_id
+\- projectId
 
 \- type
 
@@ -2116,13 +2116,13 @@ Complete
 
 \- priority
 
-\- created\_at
+\- createdAt
 
-\- started\_at
+\- startedAt
 
-\- completed\_at
+\- completedAt
 
-\- retry\_count
+\- retryCount
 
 \- error
 
@@ -2414,17 +2414,17 @@ API Tests:
 
 fixtures/
 
-&#x20;   simple\_python/
+&#x20;   simplePython/
 
-&#x20;   django\_project/
+&#x20;   djangoProject/
 
-&#x20;   broken\_project/
+&#x20;   brokenProject/
 
-&#x20;   circular\_dependencies/
+&#x20;   circularDependencies/
 
-&#x20;   layered\_project/
+&#x20;   layeredProject/
 
-&#x20;   mixed\_language\_project/
+&#x20;   mixedLanguageProject/
 
 
 
@@ -2936,25 +2936,25 @@ Context Package باید Metadata داشته باشد:
 
 
 
-\- project\_id
+\- projectId
 
-\- snapshot\_id
+\- snapshotId
 
-\- knowledge\_version
+\- knowledgeVersion
 
-\- generated\_at
+\- generatedAt
 
-\- generator\_version
+\- generatorVersion
 
 \- task
 
-\- token\_budget
+\- tokenBudget
 
-\- included\_files
+\- includedFiles
 
-\- included\_modules
+\- includedModules
 
-\- excluded\_files
+\- excludedFiles
 
 
 
@@ -2974,7 +2974,7 @@ Context Package باید Metadata داشته باشد:
 
 apps/
 
-&#x20;   project\_intelligence/
+&#x20;   projectIntelligence/
 
 
 
@@ -2982,7 +2982,7 @@ apps/
 
 &#x20;           entities/
 
-&#x20;           value\_objects/
+&#x20;           valueObjects/
 
 &#x20;           events/
 
@@ -2998,7 +2998,7 @@ apps/
 
 &#x20;           queries/
 
-&#x20;           use\_cases/
+&#x20;           useCases/
 
 &#x20;           services/
 
@@ -3048,7 +3048,7 @@ apps/
 
 
 
-ساختار نهایی باید با Project Structure اصلی Meryx هماهنگ باشد.
+ساختار نهایی باید با Project Structure اصلی Tekarai هماهنگ باشد.
 
 
 
@@ -3498,7 +3498,7 @@ Phase 17 فقط زمانی Done است که:
 
 
 
-در پایان Phase 17، Meryx باید بتواند یک Project را به صورت
+در پایان Phase 17، Tekarai باید بتواند یک Project را به صورت
 
 ساختاریافته مشاهده و تحلیل کند.
 
@@ -3588,7 +3588,7 @@ NEW CONTEXT
 
 Project Intelligence باید در پایان Phase 17 به عنوان
 
-«سیستم ادراک و درک پروژه» در Meryx عمل کند.
+«سیستم ادراک و درک پروژه» در Tekarai عمل کند.
 
 
 
@@ -3598,5 +3598,5 @@ Project Intelligence باید در پایان Phase 17 به عنوان
 
 تاریخچه، Knowledge، Insight و Context پروژه برای سایر Platformهای
 
-Meryx فراهم کند.
+Tekarai فراهم کند.
 

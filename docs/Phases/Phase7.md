@@ -1,6 +1,6 @@
 ╔══════════════════════════════════════════════════════════════════════════════╗
 
-║                         MERYX — PHASE 07                                   ║
+║                              TEKARAI — PHASE 07                              ║
 
 ║                  IDENTITY, AUTHENTICATION \& AUTHORIZATION                   ║
 
@@ -12,13 +12,13 @@
 
 
 
-ساخت کامل زیرساخت هویت و دسترسی Meryx به‌صورت Enterprise Grade،
+ساخت کامل زیرساخت هویت و دسترسی Tekarai به‌صورت Enterprise Grade،
 
 Multi-Tenant، Secure و قابل توسعه برای 5 تا 10 سال آینده.
 
 
 
-در پایان این فاز باید Meryx بداند:
+در پایان این فاز باید Tekarai بداند:
 
 
 
@@ -54,7 +54,7 @@ Multi-Tenant، Secure و قابل توسعه برای 5 تا 10 سال آیند�
 
 
 
-Identity یکی از Core Bounded Contextهای Meryx است.
+Identity یکی از Core Bounded Contextهای Tekarai است.
 
 
 
@@ -294,7 +294,7 @@ DELETED
 
 
 
-is\_active
+isActive
 
 
 
@@ -372,17 +372,17 @@ phone
 
 status
 
-created\_at
+createdAt
 
-updated\_at
+updatedAt
 
-last\_login\_at
+lastLoginAt
 
-password\_changed\_at
+passwordChangedAt
 
-failed\_login\_count
+failedLoginCount
 
-locked\_until
+lockedUntil
 
 
 
@@ -584,9 +584,9 @@ issuer
 
 audience
 
-tenant\_id
+tenantId
 
-session\_id
+sessionId
 
 
 
@@ -624,17 +624,17 @@ user
 
 tenant
 
-created\_at
+createdAt
 
-last\_activity\_at
+lastActivityAt
 
-expires\_at
+expiresAt
 
-revoked\_at
+revokedAt
 
-ip\_address
+ipAddress
 
-user\_agent
+userAgent
 
 device
 
@@ -784,17 +784,17 @@ tenant
 
 status
 
-joined\_at
+joinedAt
 
-left\_at
+leftAt
 
-default\_role
+defaultRole
 
-is\_primary
+isPrimary
 
-created\_at
+createdAt
 
-updated\_at
+updatedAt
 
 
 
@@ -884,7 +884,7 @@ Application نباید Tenant Context را از HTTP Request به‌صورت م�
 
 
 
-Meryx باید RBAC داشته باشد.
+Tekarai باید RBAC داشته باشد.
 
 
 
@@ -1200,15 +1200,15 @@ Policy مسئول تعیین دسترسی به Resource است.
 
 
 
-can\_view()
+canView()
 
-can\_create()
+canCreate()
 
-can\_update()
+canUpdate()
 
-can\_delete()
+canDelete()
 
-can\_approve()
+canApprove()
 
 
 
@@ -1262,7 +1262,7 @@ WHAT CAN YOU DO?
 
 
 
-Meryx باید Service Account داشته باشد.
+Tekarai باید Service Account داشته باشد.
 
 
 
@@ -1514,11 +1514,11 @@ PhoneVerification
 
 token
 
-expires\_at
+expiresAt
 
-verified\_at
+verifiedAt
 
-attempt\_count
+attemptCount
 
 
 
@@ -2142,17 +2142,17 @@ timestamp
 
 event
 
-user\_id
+userId
 
-tenant\_id
+tenantId
 
-session\_id
+sessionId
 
 ip
 
-user\_agent
+userAgent
 
-correlation\_id
+correlationId
 
 result
 
@@ -2194,7 +2194,7 @@ apps/
 
 &#x20;   │   ├── entities/
 
-&#x20;   │   ├── value\_objects/
+&#x20;   │   ├── valueObjects/
 
 &#x20;   │   ├── repositories/
 
@@ -2214,7 +2214,7 @@ apps/
 
 &#x20;   │   ├── dto/
 
-&#x20;   │   ├── use\_cases/
+&#x20;   │   ├── useCases/
 
 &#x20;   │   └── services/
 
@@ -2578,7 +2578,7 @@ Database
 
 ──────────────────────────────────────────────────────────────────────────────
 
-43\. نکته حیاتی برای Meryx
+43\. نکته حیاتی برای Tekarai
 
 ──────────────────────────────────────────────────────────────────────────────
 
@@ -2612,7 +2612,7 @@ Service Worker
 
 
 
-Identity باید Foundation امنیتی کل Meryx باشد.
+Identity باید Foundation امنیتی کل Tekarai باشد.
 
 
 

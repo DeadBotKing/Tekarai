@@ -1,6 +1,6 @@
 PHASE 18 — GUI ARCHITECTURE \& APPLICATION INTERFACE PLATFORM
 
-MERYX IMPLEMENTATION SPECIFICATION
+TEKARAI IMPLEMENTATION SPECIFICATION
 
 
 
@@ -14,11 +14,11 @@ MERYX IMPLEMENTATION SPECIFICATION
 
 هدف Phase 18 طراحی و پیاده‌سازی معماری استاندارد، عمومی،
 
-Enterprise-grade و قابل توسعه رابط کاربری Meryx است.
+Enterprise-grade و قابل توسعه رابط کاربری Tekarai است.
 
 
 
-Meryx نباید برای یک صنعت خاص UI داشته باشد.
+Tekarai نباید برای یک صنعت خاص UI داشته باشد.
 
 
 
@@ -58,7 +58,7 @@ GUI باید فقط یک مجموعه صفحه نباشد.
 
 باید یک Application Interface Platform باشد که بتواند
 
-Domainهای مختلف Meryx را به صورت استاندارد در اختیار User
+Domainهای مختلف Tekarai را به صورت استاندارد در اختیار User
 
 قرار دهد.
 
@@ -68,7 +68,7 @@ Domainهای مختلف Meryx را به صورت استاندارد در اخت�
 
 ============================================================
 
-2\. جایگاه GUI در معماری Meryx
+2\. جایگاه GUI در معماری Tekarai
 
 ============================================================
 
@@ -674,7 +674,7 @@ Navigation باید بتواند از Backend/Application Configuration
 
 \- badge
 
-\- feature\_flag
+\- featureFlag
 
 
 
@@ -732,7 +732,7 @@ Tenant
 
 
 
-Meryx باید Design System مستقل داشته باشد.
+Tekarai باید Design System مستقل داشته باشد.
 
 
 
@@ -1122,7 +1122,7 @@ Create your first project.
 
 
 
-Meryx باید Global Search Architecture داشته باشد.
+Tekarai باید Global Search Architecture داشته باشد.
 
 
 
@@ -1234,7 +1234,7 @@ Widget:
 
 \- configuration
 
-\- data\_source
+\- dataSource
 
 
 
@@ -1456,7 +1456,7 @@ Layout نباید فقط برای یک Resolution طراحی شود.
 
 
 
-Meryx باید Multi-language باشد.
+Tekarai باید Multi-language باشد.
 
 
 
@@ -1596,15 +1596,15 @@ spacing
 
 radius
 
-font\_size
+fontSize
 
-font\_weight
+fontWeight
 
 shadow
 
 breakpoint
 
-z\_index
+zIndex
 
 
 
@@ -2698,7 +2698,7 @@ frontend/
 
 ساختار نهایی باید با تکنولوژی Frontend انتخاب‌شده در معماری
 
-Meryx هماهنگ شود.
+Tekarai هماهنگ شود.
 
 
 
@@ -2756,7 +2756,7 @@ Contract شامل:
 
 
 
-در صورت تعریف Response Standard در Meryx، تمام Featureها باید
+در صورت تعریف Response Standard در Tekarai، تمام Featureها باید
 
 از همان Standard استفاده کنند.
 
@@ -2790,7 +2790,7 @@ total
 
 page
 
-page\_size
+pageSize
 
 next
 
@@ -2824,7 +2824,7 @@ Filtering باید Generic باشد.
 
 status
 
-created\_at
+createdAt
 
 owner
 
@@ -3438,11 +3438,11 @@ Phase 18 فقط زمانی Done است که:
 
 
 
-در پایان Phase 18، Meryx باید یک GUI Platform کامل و
+در پایان Phase 18، Tekarai باید یک GUI Platform کامل و
 
 Enterprise-grade داشته باشد که بتواند تمام Platformهای قبلی
 
-و آینده Meryx را بدون بازطراحی بنیادی در خود جای دهد.
+و آینده Tekarai را بدون بازطراحی بنیادی در خود جای دهد.
 
 
 
@@ -3482,7 +3482,7 @@ API CLIENT
 
 &#x20;↓
 
-MERYX APPLICATION/API
+TEKARAI APPLICATION/API
 
 &#x20;↓
 
@@ -3570,7 +3570,7 @@ Testable
 
 
 
-هدف ساخت یک Presentation Platform استاندارد برای Meryx است
+هدف ساخت یک Presentation Platform استاندارد برای Tekarai است
 
 که بتواند تمام قابلیت‌های فعلی و آینده سیستم را بدون ایجاد
 

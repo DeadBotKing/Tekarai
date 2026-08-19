@@ -1,4 +1,4 @@
-MERYX — PHASE 11
+TEKARAI — PHASE 11
 
 COMMUNICATION PLATFORM
 
@@ -8,7 +8,7 @@ Enterprise Communication, Messaging, Presence \& Meetings
 
 
 
-در این فاز باید Communication Platform مریکس به‌صورت کامل و Enterprise طراحی و پیاده‌سازی شود.
+در این فاز باید Communication Platform Tekarai به‌صورت کامل و Enterprise طراحی و پیاده‌سازی شود.
 
 
 
@@ -162,7 +162,7 @@ Communication Domain
 
 Infrastructure
 
-3\. جایگاه Communication در Meryx
+3\. جایگاه Communication در Tekarai
 
 
 
@@ -170,7 +170,7 @@ Infrastructure
 
 
 
-Meryx
+Tekarai
 
 │
 
@@ -298,15 +298,15 @@ name
 
 description
 
-created\_by
+createdBy
 
-created\_at
+createdAt
 
-updated\_at
+updatedAt
 
-is\_active
+isActive
 
-deleted\_at
+deletedAt
 
 
 
@@ -338,17 +338,17 @@ user
 
 role
 
-joined\_at
+joinedAt
 
-left\_at
+leftAt
 
-is\_active
+isActive
 
-last\_read\_message
+lastReadMessage
 
-muted\_until
+mutedUntil
 
-notification\_level
+notificationLevel
 
 
 
@@ -490,11 +490,11 @@ user
 
 role
 
-joined\_at
+joinedAt
 
-left\_at
+leftAt
 
-is\_active
+isActive
 
 
 
@@ -530,25 +530,25 @@ conversation
 
 sender
 
-message\_type
+messageType
 
 body
 
-reply\_to
+replyTo
 
-thread\_root
+threadRoot
 
-created\_at
+createdAt
 
-updated\_at
+updatedAt
 
-edited\_at
+editedAt
 
-deleted\_at
+deletedAt
 
-is\_edited
+isEdited
 
-is\_deleted
+isDeleted
 
 
 
@@ -656,13 +656,13 @@ id
 
 message
 
-previous\_body
+previousBody
 
-new\_body
+newBody
 
-changed\_by
+changedBy
 
-changed\_at
+changedAt
 
 
 
@@ -692,9 +692,9 @@ message
 
 user
 
-reaction\_type
+reactionType
 
-created\_at
+createdAt
 
 
 
@@ -740,17 +740,17 @@ message
 
 file
 
-file\_name
+fileName
 
-mime\_type
+mimeType
 
 size
 
 checksum
 
-storage\_key
+storageKey
 
-created\_at
+createdAt
 
 
 
@@ -792,9 +792,9 @@ Fields:
 
 
 
-thread\_root
+threadRoot
 
-reply\_to
+replyTo
 
 17\. Mention
 
@@ -816,13 +816,13 @@ id
 
 message
 
-mentioned\_user
+mentionedUser
 
-position\_start
+positionStart
 
-position\_end
+positionEnd
 
-created\_at
+createdAt
 
 
 
@@ -850,7 +850,7 @@ message
 
 user
 
-read\_at
+readAt
 
 
 
@@ -858,7 +858,7 @@ read\_at
 
 
 
-ConversationMember.last\_read\_message
+ConversationMember.lastReadMessage
 
 
 
@@ -928,11 +928,11 @@ user
 
 status
 
-last\_seen
+lastSeen
 
 device
 
-updated\_at
+updatedAt
 
 
 
@@ -1254,15 +1254,15 @@ tenant
 
 conversation
 
-call\_type
+callType
 
 status
 
-started\_at
+startedAt
 
-ended\_at
+endedAt
 
-initiated\_by
+initiatedBy
 
 
 
@@ -1288,9 +1288,9 @@ call
 
 user
 
-joined\_at
+joinedAt
 
-left\_at
+leftAt
 
 status
 
@@ -1364,7 +1364,7 @@ Media Streams
 
 
 
-Meryx Backend مسئول Media Streaming نیست.
+Tekarai Backend مسئول Media Streaming نیست.
 
 
 
@@ -1462,19 +1462,19 @@ description
 
 host
 
-scheduled\_start
+scheduledStart
 
-scheduled\_end
+scheduledEnd
 
-actual\_start
+actualStart
 
-actual\_end
+actualEnd
 
 status
 
-meeting\_type
+meetingType
 
-created\_at
+createdAt
 
 
 
@@ -1516,13 +1516,13 @@ user
 
 role
 
-invited\_at
+invitedAt
 
-joined\_at
+joinedAt
 
-left\_at
+leftAt
 
-attendance\_status
+attendanceStatus
 
 
 
@@ -1600,9 +1600,9 @@ meeting
 
 user
 
-started\_at
+startedAt
 
-ended\_at
+endedAt
 
 
 
@@ -1624,11 +1624,11 @@ id
 
 meeting
 
-storage\_key
+storageKey
 
-file\_name
+fileName
 
-mime\_type
+mimeType
 
 size
 
@@ -1636,11 +1636,11 @@ duration
 
 checksum
 
-started\_at
+startedAt
 
-ended\_at
+endedAt
 
-created\_at
+createdAt
 
 
 
@@ -1680,11 +1680,11 @@ language
 
 status
 
-content\_reference
+contentReference
 
-created\_at
+createdAt
 
-completed\_at
+completedAt
 
 
 
@@ -1738,11 +1738,11 @@ MeetingSummary
 
 summary
 
-key\_points
+keyPoints
 
 decisions
 
-action\_items
+actionItems
 
 risks
 
@@ -1750,9 +1750,9 @@ topics
 
 confidence
 
-generated\_at
+generatedAt
 
-model\_reference
+modelReference
 
 39\. AI Action Items
 
@@ -1790,7 +1790,7 @@ AI نباید بدون Policy و Permission الزاماً Task واقعی ای�
 
 
 
-Meryx باید امکان Communication رسمی داشته باشد.
+Tekarai باید امکان Communication رسمی داشته باشد.
 
 
 
@@ -1980,7 +1980,7 @@ Fields:
 
 message
 
-reported\_by
+reportedBy
 
 reason
 
@@ -1988,11 +1988,11 @@ description
 
 status
 
-reviewed\_by
+reviewedBy
 
-reviewed\_at
+reviewedAt
 
-created\_at
+createdAt
 
 
 
@@ -2020,11 +2020,11 @@ UserBlock
 
 blocker
 
-blocked\_user
+blockedUser
 
 reason
 
-created\_at
+createdAt
 
 
 
@@ -2138,7 +2138,7 @@ Communication نباید Notification implementation را داخل خود Domain
 
 
 
-Communication یکی از حساس‌ترین بخش‌های Meryx است.
+Communication یکی از حساس‌ترین بخش‌های Tekarai است.
 
 
 
@@ -2210,11 +2210,11 @@ Indexهای ضروری باید طراحی شوند.
 
 Conversation:
 
-tenant\_id
+tenantId
 
 type
 
-created\_at
+createdAt
 
 
 
@@ -2222,11 +2222,11 @@ created\_at
 
 ConversationMember:
 
-conversation\_id
+conversationId
 
-user\_id
+userId
 
-is\_active
+isActive
 
 
 
@@ -2234,15 +2234,15 @@ is\_active
 
 Message:
 
-tenant\_id
+tenantId
 
-conversation\_id
+conversationId
 
-created\_at
+createdAt
 
-sender\_id
+senderId
 
-thread\_root\_id
+threadRootId
 
 
 
@@ -2250,9 +2250,9 @@ thread\_root\_id
 
 MessageReadReceipt:
 
-message\_id
+messageId
 
-user\_id
+userId
 
 
 
@@ -2260,9 +2260,9 @@ user\_id
 
 ChannelMember:
 
-channel\_id
+channelId
 
-user\_id
+userId
 
 
 
@@ -2270,9 +2270,9 @@ user\_id
 
 Meeting:
 
-tenant\_id
+tenantId
 
-scheduled\_start
+scheduledStart
 
 status
 
@@ -2282,9 +2282,9 @@ status
 
 MeetingParticipant:
 
-meeting\_id
+meetingId
 
-user\_id
+userId
 
 
 
@@ -2300,49 +2300,49 @@ Unique Constraints نیز باید در سطح Database اعمال شوند.
 
 
 
-communication\_conversations
+communicationConversations
 
-communication\_conversation\_members
+communicationConversationMembers
 
-communication\_messages
+communicationMessages
 
-communication\_message\_revisions
+communicationMessageRevisions
 
-communication\_message\_reactions
+communicationMessageReactions
 
-communication\_message\_attachments
+communicationMessageAttachments
 
-communication\_message\_mentions
+communicationMessageMentions
 
-communication\_message\_read\_receipts
+communicationMessageReadReceipts
 
-communication\_channels
+communicationChannels
 
-communication\_channel\_members
+communicationChannelMembers
 
-communication\_calls
+communicationCalls
 
-communication\_call\_participants
+communicationCallParticipants
 
-communication\_meetings
+communicationMeetings
 
-communication\_meeting\_participants
+communicationMeetingParticipants
 
-communication\_meeting\_rooms
+communicationMeetingRooms
 
-communication\_meeting\_sessions
+communicationMeetingSessions
 
-communication\_meeting\_recordings
+communicationMeetingRecordings
 
-communication\_meeting\_transcripts
+communicationMeetingTranscripts
 
-communication\_meeting\_summaries
+communicationMeetingSummaries
 
-communication\_official\_messages
+communicationOfficialMessages
 
-communication\_message\_reports
+communicationMessageReports
 
-communication\_user\_blocks
+communicationUserBlocks
 
 53\. Domain Packages
 
@@ -2360,7 +2360,7 @@ apps/
 
 &#x20;   │   ├── entities/
 
-&#x20;   │   ├── value\_objects/
+&#x20;   │   ├── valueObjects/
 
 &#x20;   │   ├── aggregates/
 
@@ -2492,7 +2492,7 @@ PATCH  /conversations/{id}/
 
 POST   /conversations/{id}/members/
 
-DELETE /conversations/{id}/members/{user\_id}
+DELETE /conversations/{id}/members/{userId}
 
 
 
@@ -2568,13 +2568,13 @@ GET    /meetings/{id}/summary/
 
 
 
-/ws/communication/conversations/{conversation\_id}/
+/ws/communication/conversations/{conversationId}/
 
 /ws/communication/presence/
 
-/ws/communication/calls/{call\_id}/
+/ws/communication/calls/{callId}/
 
-/ws/communication/meetings/{meeting\_id}/
+/ws/communication/meetings/{meetingId}/
 
 57\. WebSocket Event Envelope
 
@@ -2586,15 +2586,15 @@ GET    /meetings/{id}/summary/
 
 {
 
-&#x20;   "event\_id": "UUID",
+&#x20;   "eventId": "UUID",
 
-&#x20;   "event\_type": "message.created",
+&#x20;   "eventType": "message.created",
 
 &#x20;   "timestamp": "...",
 
-&#x20;   "tenant\_id": "UUID",
+&#x20;   "tenantId": "UUID",
 
-&#x20;   "actor\_id": "UUID",
+&#x20;   "actorId": "UUID",
 
 &#x20;   "payload": {}
 
@@ -2716,21 +2716,21 @@ Metrics:
 
 
 
-messages\_sent\_total
+messagesSentTotal
 
-messages\_failed\_total
+messagesFailedTotal
 
-websocket\_connections
+websocketConnections
 
-active\_calls
+activeCalls
 
-active\_meetings
+activeMeetings
 
-message\_latency
+messageLatency
 
-delivery\_latency
+deliveryLatency
 
-read\_latency
+readLatency
 
 62\. Testing
 
@@ -2848,7 +2848,7 @@ Multiple WebSocket instances
 
 
 
-connected\_users = {}
+connectedUsers = {}
 
 
 
@@ -2930,7 +2930,7 @@ GET /communication/sync
 
 cursor
 
-last\_event\_id
+lastEventId
 
 timestamp
 
@@ -3050,29 +3050,29 @@ CommunicationPolicy
 
 
 
-message\_retention\_days
+messageRetentionDays
 
-recording\_retention\_days
+recordingRetentionDays
 
-max\_attachment\_size
+maxAttachmentSize
 
-allowed\_file\_types
+allowedFileTypes
 
-max\_message\_length
+maxMessageLength
 
-max\_group\_members
+maxGroupMembers
 
-max\_meeting\_participants
+maxMeetingParticipants
 
-allow\_external\_users
+allowExternalUsers
 
-allow\_recording
+allowRecording
 
-allow\_screen\_sharing
+allowScreenSharing
 
-allow\_message\_edit
+allowMessageEdit
 
-allow\_message\_delete
+allowMessageDelete
 
 71\. External Communication
 
@@ -3086,7 +3086,7 @@ allow\_message\_delete
 
 
 
-Meryx User
+Tekarai User
 
 &#x20;     ↕
 
@@ -3222,19 +3222,19 @@ AI-generated content باید مشخص باشد:
 
 
 
-generated\_by\_ai = true
+generatedByAi = true
 
-model\_id
+modelId
 
-model\_version
+modelVersion
 
-prompt\_version
+promptVersion
 
-generated\_at
+generatedAt
 
 confidence
 
-human\_review\_status
+humanReviewStatus
 
 77\. Human Approval
 
@@ -3636,7 +3636,7 @@ Phase 11 زمانی کامل است که:
 
 
 
-&#x20;                   MERYX
+&#x20;                   TEKARAI
 
 &#x20;                     │
 
@@ -3690,5 +3690,5 @@ Phase 11 زمانی کامل است که:
 
 
 
-اصل کلیدی: Communication در Meryx فقط «چت» نیست؛ یک Enterprise Communication Infrastructure است که Messaging، Presence، Calling، Meetings، Official Communication، Audit، Security و AI را در یک معماری یکپارچه ولی ماژولار قرار می‌دهد.
+اصل کلیدی: Communication در Tekarai فقط «چت» نیست؛ یک Enterprise Communication Infrastructure است که Messaging، Presence، Calling، Meetings، Official Communication، Audit، Security و AI را در یک معماری یکپارچه ولی ماژولار قرار می‌دهد.
 

@@ -1,5 +1,7 @@
 ============================================================
 
+NOTE (2026-08-27): Canonical Communication spec: /home/user/Tekarai/docs/CanonicalCommunication.md
+
 TEKARAI — PHASE 14
 
 COMMUNICATION PLATFORM

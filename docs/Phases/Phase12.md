@@ -1,3 +1,6 @@
+NOTE (2026-08-27): Canonical Notification spec: /home/user/Tekarai/docs/CanonicalNotification.md
+(Phase9 / 12 / 15 contradictions resolved — NotificationRecipient read state, Celery behind abstraction, no Notification.isRead.)
+
 PHASE 12 — NOTIFICATIONS \& COMMUNICATION FOUNDATION
 
 12.0 هدف فاز

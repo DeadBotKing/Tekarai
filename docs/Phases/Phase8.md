@@ -1,5 +1,8 @@
 ============================================================
 
+NOTE (2026-08-27): Contradictions with Phase10/11/14 resolved in canonical spec.
+See: /home/user/Tekarai/docs/CanonicalCommunication.md
+
 TEKARAI ENTERPRISE PLATFORM
 
 PHASE 8 — COMMUNICATION PLATFORM

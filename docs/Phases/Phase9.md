@@ -1,5 +1,8 @@
 ============================================================
 
+NOTE (2026-08-27): Canonical Notification spec: /home/user/Tekarai/docs/CanonicalNotification.md
+(Phase9 / 12 / 15 contradictions resolved — NotificationRecipient read state, Celery behind abstraction.)
+
 TEKARAI ENTERPRISE PLATFORM
 
 PHASE 9 — NOTIFICATION PLATFORM

@@ -4,6 +4,9 @@ COMMUNICATION PLATFORM
 
 Enterprise Communication, Messaging, Presence \& Meetings
 
+NOTE (2026-08-27): Canonical merged spec at /home/user/Tekarai/docs/CanonicalCommunication.md
+(Phase8 / 10 / 11 / 14 contradictions resolved — ConversationMember, Meeting/MeetingRoom/MeetingSession, SFU, CommunicationPolicy, GUEST/READ_ONLY, MEETING/SYSTEM.)
+
 1\. هدف فاز
 
 

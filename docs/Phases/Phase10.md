@@ -1,5 +1,8 @@
 ============================================================
 
+NOTE (2026-08-27): Contradictions resolved in CanonicalCommunication.md.
+See: /home/user/Tekarai/docs/CanonicalCommunication.md
+
 TEKARAI ENTERPRISE PLATFORM
 
 PHASE 10 — COMMUNICATION PLATFORM

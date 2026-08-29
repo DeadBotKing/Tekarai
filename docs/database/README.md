@@ -37,3 +37,48 @@ platform into 20 bounded contexts. Binding ownership = **Phase 03 contexts**
 | AI (§25) | AI |
 | Integration (§26) | Integration |
 | WinCC (§28) | **Industry Extension — NOT Core** (ADR-014/015) |
+
+---
+
+# Phase 05 deliverables (authoritative, unnumbered set)
+
+Spec: `docs/Phases/Phase5.md` (§63–§81). The Phase-04 numbered documents
+above remain as design history; the unnumbered set below is the
+**authoritative dictionary + rules layer** referenced by Phase 06.
+
+| File | Content |
+|---|---|
+| `DatabaseDictionary.md` | full dictionary: all 195 entities, per-entity header (domain, owner, tenancy mode, soft delete, audit, kind, business identity, state machine, retention) + business-field tables + standard field blocks |
+| `EntityCatalog.md` | one-row-per-entity quick index (195 rows) |
+| `FieldCatalog.md` | every business field: name · type · required · nullable · default · unique · index · FK · description |
+| `BusinessRuleCatalog.md` | 71 rules with IDs (BR-TEN/SEC/PER/AUD/DAT/…), severity, enforcement, traceability (§58–§62) |
+| `ConstraintCatalog.md` | PK / FK+delete behavior / tenant-scoped uniques / CHECKs (simple only §55) / vocabularies / engine notes |
+| `IndexCatalog.md` | §56-format catalogue: name · table · columns · unique · purpose · expected query · tenant-scoped · importance |
+| `StateMachineCatalog.md` | 10 machines (Project, Task, Document, Workflow, Maintenance, Notification, Integration, Device, Call, Meeting) + secondary lifecycles |
+| `ErrorCodeCatalog.md` | stable unique error codes with HTTP mapping, cause, client action |
+| `DataRetentionPolicy.md` | RET-001..020 rules, tenant-configurable knobs, GDPR/backup interplay |
+| `DatabaseMigrationStrategy.md` | versioned/reproducible/reviewable changes, expand→migrate→contract (§72/§78) |
+| `DatabaseBackupStrategy.md` | full/differential/log backups, RPO/RTO tiers, restore drills (§76–§77) |
+| `DataGovernance.md` | reference data, seed integrity (§75), environment isolation, quality policies (§79) |
+
+`tools/generatePhase5Catalogs.py` regenerates the first three files from the
+single dataset — edit the dataset, never hand-patch generated tables.
+
+## §83 answerability map (final gate)
+
+For any entity, the 27 questions of §83 are answered by this chain:
+
+| Question group | Answered in |
+|---|---|
+| what/why/owner/tenant/PK/business identity | `EntityCatalog.md` + `DatabaseDictionary.md` headers |
+| fields/required/nullable/default/constraints/indexes/relationships | `FieldCatalog.md` + `ConstraintCatalog.md` + `IndexCatalog.md` |
+| who can create/update/delete · permissions | `BusinessRuleCatalog.md` (SEC/PER) + machine tables (Actor/Perm columns) |
+| statuses · transitions | `StateMachineCatalog.md` |
+| business rules | `BusinessRuleCatalog.md` (rule IDs searchable per entity in Trace lines) |
+| audits | `BusinessRuleCatalog.md` (AUD) + Phase 04 `09AuditModel.md` |
+| possible errors | `ErrorCodeCatalog.md` |
+| retention · backup · restore | `DataRetentionPolicy.md` + `DatabaseBackupStrategy.md` |
+| how tested | Phase 06+ test bindings in each rule's Trace line + `tests/architecture/` |
+
+**Implementation status:** §82 respected — no Django models/migrations were
+created in Phase 05.

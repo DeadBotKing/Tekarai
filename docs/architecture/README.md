@@ -17,5 +17,18 @@
 | `ObservabilityArchitecture.md` | logging/metrics/tracing/health pillars, correlation IDs, audit architecture |
 | `StorageArchitecture.md` | StoragePort diagram & rules, cache architecture |
 
+**Phase 03 — Domain Architecture set:**
+
+| Document | Content |
+|---|---|
+| `DomainArchitecture.md` | umbrella: principles, classification, concept rules, boundaries, industry strategy, Phase-4 ERD conversion, microservice extraction path |
+| `BoundedContexts.md` | the 20 bounded contexts: responsibilities, ownership, guardrails, module map |
+| `DomainMap.md` | domain map diagram, classification table, at-a-glance ownership |
+| `DomainDependencies.md` | dependency rule, graph, context-granularity dependency matrix, TBD list, extraction path |
+| `AggregateCatalog.md` | aggregate rules, PerformanceEvaluation worked example, catalog per context with invariants |
+| `DomainEvents.md` | event envelope (8 mandatory fields), naming/versioning, catalogue, cross-domain flow |
+| `ValueObjectCatalog.md` | shared + per-context value objects with invariants |
+| `DomainRules.md` | the 15 domain architecture rules + concept/boundary summaries |
+
 Diagrams are Mermaid (version-control friendly, render on GitHub).
 Decisions behind these documents: `../adr/`.

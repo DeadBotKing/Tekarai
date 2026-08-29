@@ -46,6 +46,14 @@ FORBIDDEN_APP_DIRECTORIES = {
     "platformcore",
 }
 
+#: EVOLUTION NOTE (Phase 03): the 20 bounded contexts and their module names
+#: are now formally designed in docs/architecture/BoundedContexts.md §1.
+#: This Phase-01 prohibition remains active because no implementing phase
+#: has opened yet. When Phase 04+ implements a context (starting with
+#: Platform Core → Identity → Organization), that phase's report and commit
+#: must remove the corresponding names here — deliberately, with evidence —
+#: never silently.
+
 
 class NoPrematureBusinessDomainsTests(SimpleTestCase):
     def testNoForbiddenAppDirectoriesExist(self) -> None:

@@ -116,7 +116,10 @@ All architecture and execution documents live in [`docs/`](docs/).
 6. [`docs/Handoff.md`](docs/Handoff.md)
 
 Phase-by-phase implementation specifications: [`docs/Phases/`](docs/Phases/)
-Decision records: [`docs/adr/`](docs/adr/)
+Architecture set (Phase 02): [`docs/architecture/`](docs/architecture/) —
+system, layers, modules, dependency rules, security, multi-tenancy, events,
+integration, AI, extension, observability, storage.
+Decision records: [`docs/adr/`](docs/adr/) (ADR-001 … ADR-018)
 Current documentation review and open questions: [`docs/ANALYSIS.md`](docs/ANALYSIS.md)
 
 ---

@@ -140,11 +140,39 @@ class GitIgnorePolicyTests(SimpleTestCase):
         self.assertEqual(exitCode, 0, "backend/.coverage must be ignored by Git.")
 
     def testRootGitignoreTxtRemnantIsGone(self) -> None:
-        """The old `.gitignore.txt` (inactive name) must not come back."""
-        self.assertFalse(
-            (REPOSITORY_ROOT / ".gitignore.txt").exists(),
-            ".gitignore must be the active file name (no .txt suffix).",
-        )
+        """The active ignore file is `.gitignore`; a stale `.gitignore.txt`
+        must not sit next to it.
+
+        A stale copy typically appears when a newer archive is extracted
+        over an older clone/download (extraction never deletes files). The
+        failure message tells the user exactly how to clean it up.
+        """
+        stalePath = REPOSITORY_ROOT / ".gitignore.txt"
+        if stalePath.exists():
+            self.fail(
+                "A stale '.gitignore.txt' exists next to the active "
+                "'.gitignore' (usually a leftover from extracting a newer "
+                "archive over an older copy of the repository — extraction "
+                "does not delete extra files). Remove it and re-run:\n"
+                "  PowerShell:  Remove-Item .gitignore.txt   "
+                "(from the repository root)\n"
+                "  Bash:        rm .gitignore.txt"
+            )
+        # Tracked-state check when running inside a git work tree.
+        if (REPOSITORY_ROOT / ".git").exists():
+            trackedOutput = subprocess.run(
+                ["git", "ls-files"],
+                cwd=REPOSITORY_ROOT,
+                capture_output=True,
+                text=True,
+            )
+            trackedFiles = trackedOutput.stdout.splitlines()
+            self.assertIn(".gitignore", trackedFiles, ".gitignore must be tracked.")
+            self.assertNotIn(
+                ".gitignore.txt",
+                trackedFiles,
+                ".gitignore.txt must not be tracked (superseded by .gitignore).",
+            )
 
 
 class DocumentationSetTests(SimpleTestCase):

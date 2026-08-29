@@ -132,7 +132,10 @@ UPPER_SNAKE_CASE; project keys are camelCase (ADR-001/011).
 |---|---|
 | `Couldn't import Django` | venv not activated — `.\venv\Scripts\Activate.ps1` / `source venv/bin/activate` |
 | `Unsupported dbEngine` | typo in `.env` — only `mssql` and `sqlite` allowed |
-| PowerShell blocks scripts | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
+| PowerShell blocks scripts | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` or `powershell -ExecutionPolicy Bypass -File .\scripts\setupEnvironment.ps1` |
 | ODBC driver error (mssql) | install ODBC Driver 18; or stay on `dbEngine=sqlite` for dev |
 | Port 8000 busy | `python manage.py runserver 8010` |
 | Tests fail on git checks | run from a real git clone (architecture tests call `git check-ignore`) |
+| `testNoViewsOrSerializersExistYet` lists `venv/site-packages` paths | fixed in the Phase-03 hotfix (test now excludes `venv/`, `site-packages`, caches) — update your copy |
+| `testRootGitignoreTxtRemnantIsGone` fails | a stale `.gitignore.txt` from an older copy sits next to `.gitignore` — delete it: `Remove-Item ..\.gitignore.txt` (from `backend/`), then re-run tests |
+| WARNING/ERROR log lines during tests (`Method Not Allowed`, `Service Unavailable`) | **expected** — negative tests deliberately send bad requests (405) and simulate database-down (503); not failures |

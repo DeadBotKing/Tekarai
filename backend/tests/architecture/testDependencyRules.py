@@ -21,6 +21,26 @@ from django.test import SimpleTestCase
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 
+#: Directories that must never be scanned as project source (virtual
+#: environments, dependency trees, caches). Without this, a local
+#: `backend/venv/` makes site-packages files (django's own models.py,
+#: views.py, ...) look like premature project files.
+EXCLUDED_DIR_PARTS = frozenset(
+    {
+        "venv",
+        ".venv",
+        "env",
+        "site-packages",
+        "node_modules",
+        "__pycache__",
+        ".ruff_cache",
+        ".mypy_cache",
+        ".pytest_cache",
+        "staticRoot",
+        "mediaRoot",
+    }
+)
+
 FORBIDDEN_DOMAIN_IMPORT_PATTERN = re.compile(
     r"^\s*(from|import)\s+(django|rest_framework|mssql_django|pyodbc|redis|channels)",
     re.MULTILINE,
@@ -31,7 +51,7 @@ def collectPythonFiles(*rootRelativeParts: str) -> list[Path]:
     root = BACKEND_DIR.joinpath(*rootRelativeParts)
     if not root.exists():
         return []
-    return sorted(root.rglob("*.py"))
+    return sorted(path for path in root.rglob("*.py") if not (EXCLUDED_DIR_PARTS & set(path.parts)))
 
 
 class DomainPurityTests(SimpleTestCase):

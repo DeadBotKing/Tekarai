@@ -1,0 +1,55 @@
+[project]
+name = "tekarai-backend"
+version = "0.1.0"
+description = "Tekarai Enterprise Operations Platform — backend (Phase 01 foundation)"
+requires-python = ">=3.12"
+
+# ============================================================================
+# Ruff — linting + formatting (Quality gate, Phase 01 §11)
+# NOTE: project naming convention is camelCase for functions/variables
+# (Phase 01 §20). pep8-naming (N) rules are intentionally NOT enabled.
+# ============================================================================
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = ["venv", "staticRoot", "mediaRoot"]
+
+[tool.ruff.lint]
+select = [
+    "E4", "E7", "E9",   # pycodestyle errors
+    "F",                # pyflakes
+    "I",                # import order
+    "B",                # bugbear
+    "UP",               # pyupgrade
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ============================================================================
+# Mypy — static type checking (Quality gate, Phase 01 §11)
+# ============================================================================
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+check_untyped_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_optional = true
+exclude = "(venv|staticRoot|mediaRoot)"
+
+[[tool.mypy.overrides]]
+module = ["config.settings.*"]
+# Settings modules use Django's star-import inheritance pattern.
+disallow_untyped_defs = false
+
+# ============================================================================
+# Coverage (testing gate)
+# ============================================================================
+[tool.coverage.run]
+source = ["config", "apps"]
+omit = ["*/tests/*"]
+
+[tool.coverage.report]
+show_missing = true

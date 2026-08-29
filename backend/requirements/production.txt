@@ -1,0 +1,9 @@
+# ============================================================================
+# Tekarai Backend — Production-only dependencies
+# ============================================================================
+-r base.txt
+# Infrastructure requirement — SQL Server backend (ADR-004)
+mssql-django==1.8.0
+pyodbc==5.3.0
+# Operational requirement — Windows deployment baseline (ADR-003)
+waitress==3.0.2

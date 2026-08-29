@@ -1,0 +1,417 @@
+﻿# ============================================================
+# Tekarai — Enterprise Operations Platform
+# Root .gitignore
+# ============================================================
+# Rule of thumb:
+#   commit  ->  source, specs, migrations, lockfiles, *.example
+#   ignore  ->  secrets, environments, build output, caches,
+#               generated artifacts, local data, media blobs
+# ============================================================
+
+
+# ------------------------------------------------------------
+# 1. SECRETS  (Phase 1 §14 · Phase 20 §13)
+#    Never commit real credentials. Templates ARE committed.
+# ------------------------------------------------------------
+.env
+.env.*
+*.env
+.envrc
+secrets/
+secrets.json
+credentials.json
+*.pem
+*.key
+*.pfx
+*.p12
+*.keystore
+*.jks
+service-account*.json
+# keep the templates
+!.env.example
+!.env.*.example
+!.env.test.example
+!.env.staging.example
+!.env.production.example
+
+
+# ------------------------------------------------------------
+# 2. PYTHON
+# ------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+*.egg
+.installed.cfg
+MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
+
+
+# ------------------------------------------------------------
+# 3. VIRTUAL ENVIRONMENTS  (Phase 1 §8 — never commit)
+# ------------------------------------------------------------
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+virtualenv/
+.python-version
+.tool-versions
+__pypackages__/
+
+
+# ------------------------------------------------------------
+# 4. DJANGO
+#    NOTE: migrations ARE committed on purpose.
+#    Phase 19 §53/§56 and DevelopmentRules §9 require
+#    migrations to be version-controlled and reviewed.
+# ------------------------------------------------------------
+*.log
+local_settings.py
+staticfiles/
+static_root/
+staticroot/
+mediafiles/
+media_root/
+/media/
+/static/
+# collected output only — source assets stay tracked
+!**/static/src/
+
+
+# ------------------------------------------------------------
+# 5. DATABASES  (local / throwaway only)
+# ------------------------------------------------------------
+*.sqlite3
+*.sqlite3-journal
+*.db
+*.mdf
+*.ldf
+*.bak
+*.bacpac
+*.dacpac
+*.trn
+db.sqlite3
+dump.sql
+*.dump
+backups/
+*.sql.gz
+
+
+# ------------------------------------------------------------
+# 6. CELERY / REDIS / QUEUES  (Phase 15 §21 · Phase 20 §51)
+# ------------------------------------------------------------
+celerybeat-schedule
+celerybeat-schedule.*
+celerybeat.pid
+celeryd.pid
+*.rdb
+dump.rdb
+appendonly.aof
+
+
+# ------------------------------------------------------------
+# 7. TESTS · COVERAGE · QUALITY  (Phase 1 §11-12)
+# ------------------------------------------------------------
+.pytest_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+coverage/
+htmlcov/
+nosetests.xml
+*.cover
+.hypothesis/
+.cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+.pyre/
+.ruff_cache/
+test-results/
+playwright-report/
+.benchmarks/
+
+
+# ------------------------------------------------------------
+# 8. NODE / FRONTEND  (frontend-web · sdk · desktop)
+# ------------------------------------------------------------
+node_modules/
+jspm_packages/
+bower_components/
+.npm
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.eslintcache
+.stylelintcache
+# build output
+.next/
+.nuxt/
+.svelte-kit/
+.vite/
+.turbo/
+.parcel-cache/
+out/
+.output/
+storybook-static/
+# keep lockfiles committed (reproducible installs)
+!package-lock.json
+!yarn.lock
+!pnpm-lock.yaml
+
+
+# ------------------------------------------------------------
+# 9. MOBILE  (mobile/)
+# ------------------------------------------------------------
+# Android
+*.apk
+*.aab
+*.ap_
+*.dex
+.gradle/
+local.properties
+captures/
+# iOS
+*.ipa
+*.xcuserstate
+xcuserdata/
+DerivedData/
+Pods/
+*.xcworkspace/xcuserdata/
+# Flutter / React Native
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.expo/
+.expo-shared/
+
+
+# ------------------------------------------------------------
+# 10. DESKTOP  (desktop/ — Electron / Tauri)
+# ------------------------------------------------------------
+release/
+src-tauri/target/
+*.exe
+*.msi
+*.dmg
+*.deb
+*.rpm
+*.AppImage
+*.snap
+
+
+# ------------------------------------------------------------
+# 11. AI / ML ARTIFACTS  (Phase 13 · Phase 16)
+#     Model binaries and datasets belong in object storage,
+#     not in Git. Only prompts/configs/specs are committed.
+#
+#     WARNING: do NOT add a bare `models/` rule here — Django
+#     apps use `models/` packages (Phase 19 §91) and a bare
+#     rule would silently delete them from version control.
+#     ML model output is scoped to /ai/ and /ml-artifacts/.
+# ------------------------------------------------------------
+/ai/models/
+/ai/artifacts/
+/ai/checkpoints/
+/ml-artifacts/
+model_artifacts/
+checkpoints/
+datasets/
+embeddings/
+vector_store/
+vector_index/
+.chroma/
+.faiss/
+*.ckpt
+*.pt
+*.pth
+*.onnx
+*.gguf
+*.safetensors
+*.h5
+*.pkl
+*.joblib
+*.npy
+*.npz
+mlruns/
+wandb/
+.mlflow/
+
+
+# ------------------------------------------------------------
+# 12. PROJECT INTELLIGENCE CACHE  (Phase 17 §26)
+#     Snapshots and analysis caches are regenerable.
+# ------------------------------------------------------------
+.intelligence/
+intelligence_cache/
+project_snapshots/
+analysis_cache/
+.snapshot_cache/
+
+
+# ------------------------------------------------------------
+# 13. COMMUNICATION MEDIA  (Phase 8/11/14)
+#     Recordings and transcripts live in object storage.
+# ------------------------------------------------------------
+recordings/
+transcripts/
+uploads/
+attachments/
+tmp_uploads/
+*.mp4
+*.webm
+*.mkv
+*.wav
+*.mp3
+*.m4a
+*.ogg
+
+
+# ------------------------------------------------------------
+# 14. INFRASTRUCTURE / DEPLOYMENT
+# ------------------------------------------------------------
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+crash.log
+*.tfvars
+!*.tfvars.example
+.vagrant/
+kubeconfig
+*.kubeconfig
+charts/*.tgz
+docker-compose.override.yml
+.docker/
+
+
+# ------------------------------------------------------------
+# 15. LOGS · TEMP · RUNTIME
+# ------------------------------------------------------------
+logs/
+*.log.*
+*.pid
+*.seed
+*.pid.lock
+tmp/
+temp/
+.tmp/
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+*.orig
+*.rej
+profile_output/
+*.prof
+
+
+# ------------------------------------------------------------
+# 16. IDE / EDITOR
+# ------------------------------------------------------------
+# Git cannot re-include a file inside an excluded directory, so
+# ignore the .vscode CONTENTS rather than the directory itself.
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+!.vscode/launch.json.example
+.idea/
+*.iml
+*.ipr
+*.iws
+.fleet/
+.sublime-project
+.sublime-workspace
+*.code-workspace
+.spyderproject
+.spyproject
+.ropeproject
+.history/
+
+
+# ------------------------------------------------------------
+# 17. OS GENERATED
+# ------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+Icon
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+.directory
+.fuse_hidden*
+.nfs*
+
+
+# ------------------------------------------------------------
+# 18. JUPYTER / NOTEBOOKS
+# ------------------------------------------------------------
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+profile_default/
+ipython_config.py
+
+
+# ------------------------------------------------------------
+# 19. DOCUMENTATION BUILD OUTPUT
+#     docs/ source is committed; generated sites are not.
+# ------------------------------------------------------------
+docs/_build/
+docs/.doctrees/
+site/
+_site/
+.docusaurus/
+
+
+# ------------------------------------------------------------
+# 20. LOCAL SCRATCH
+#     Personal experiments that must never reach the remote.
+# ------------------------------------------------------------
+scratch/
+sandbox/
+playground/
+local/
+*.local
+TODO.local.md
+NOTES.local.md

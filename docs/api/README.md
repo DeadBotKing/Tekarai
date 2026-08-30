@@ -30,3 +30,17 @@ refresh / MFA challenge), `auth/mfa/challenge`, `auth/refresh`,
 `me/mfa/*`, `me/sessions` (list/revoke/revoke-all). Server-to-server
 authentication via `X-API-Key` (ADR-022). Decision record:
 `docs/adr/022-jwt-access-tokens.md`.
+
+## Phase 08 deliverables
+
+| File | Content |
+|---|---|
+| `COMMUNICATION_API.md` | Communication surface (REST + `/ws/communication/` frame catalogue) |
+
+## Phase 09 deliverables
+
+| File | Content |
+|---|---|
+| `NOTIFICATION_API.md` | Notification surface: own notifications, preferences, devices, admin (send/schedules/templates/policies/channels/tenant-rules/metrics) and `/ws/notifications/` frames |
+
+Phase 09 decisions: `docs/adr/ADR-024-Notification-Delivery-Architecture.md`.

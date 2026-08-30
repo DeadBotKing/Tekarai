@@ -73,10 +73,19 @@ class InProcessEventDispatcher:
 
     Handlers subscribe by event name; failures are logged, never propagated
     into the caller that already committed (outbox arrives with Phase 07+).
+
+    EVOLUTION NOTE (Phase 09 §30): consumers in other contexts (e.g. the
+    notification engine) subscribe once at boot, while composition roots
+    instantiate this class per use case. The handler registry is therefore
+    CLASS-LEVEL and shared by every instance — exactly the single-registry
+    semantics a modular monolith needs. Swap the class (settings) for a
+    broker-backed dispatcher without touching subscribers.
     """
 
+    _sharedHandlers: dict[str, list[Any]] = {}
+
     def __init__(self) -> None:
-        self.handlers: dict[str, list[Any]] = {}
+        self.handlers: dict[str, list[Any]] = InProcessEventDispatcher._sharedHandlers
         self.fallbackHandler: Any = self.logEvent
 
     def subscribe(self, eventName: str, handler: Any) -> None:

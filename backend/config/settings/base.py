@@ -98,6 +98,7 @@ INSTALLED_APPS = [
     "apps.tenancy",
     "apps.identity",
     "apps.communication",
+    "apps.notifications",
 ]
 
 # --------------------------------------------------------------------------- #
@@ -229,6 +230,7 @@ MIGRATION_MODULES = {
     "tenancy": "apps.tenancy.infrastructure.migrations",
     "identity": "apps.identity.infrastructure.migrations",
     "communication": "apps.communication.infrastructure.migrations",
+    "notifications": "apps.notifications.infrastructure.migrations",
 }
 
 # Phase 07 §7/§8 — JWT configuration (ADR-022: in-house HS256, stdlib only).

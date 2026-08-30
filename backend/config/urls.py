@@ -24,6 +24,12 @@ urlpatterns = [
                     "communication/",
                     include("apps.communication.presentation.api.urls.communicationRoutes"),
                 ),
+                path(
+                    "notifications/",
+                    include(
+                        "apps.notifications.presentation.api.urls.notificationRoutes"
+                    ),
+                ),
             ]
         ),
     ),

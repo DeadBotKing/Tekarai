@@ -250,7 +250,7 @@ class DomainPurityStillHoldsTests(SimpleTestCase):
         has deliberately opened (currently tenancy + identity per the
         Phase 06 report)."""
         appsDir = Path(__file__).resolve().parents[2] / "apps"
-        openedContexts = {"sharedKernel", "tenancy", "identity", "communication"}
+        openedContexts = {"sharedKernel", "tenancy", "identity", "communication", "notifications"}
         entries = {
             entry.name
             for entry in appsDir.iterdir()

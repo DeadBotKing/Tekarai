@@ -39,6 +39,9 @@ ACTIONS: list[tuple[str, str]] = [
     ("letter.approve", "Approve official letters"),
     ("letter.sign", "Sign official letters"),
     ("letter.dispatch", "Dispatch official letters"),
+    # -- Phase 09 notification surface (§40) ----------------------------------
+    ("notification.send", "Send and schedule notifications"),
+    ("notification.manage", "Manage templates, policies, channels and tenant rules"),
     ("audit.view", "Read the audit trail"),
 ]
 
@@ -69,6 +72,8 @@ ROLE_PRESETS: dict[str, list[str]] = {
         "session.revoke",
         "audit.view",
         "tenant.view",
+        "notification.send",
+        "notification.manage",
     ],
     MEMBER_ROLE: ["user.view", "tenant.view"],
 }

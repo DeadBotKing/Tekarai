@@ -23,6 +23,7 @@ OPENED_CONTEXTS = {
     "tenancy": "Phase 06 (exemplar context #1)",
     "identity": "Phase 06 (exemplar context #2)",
     "communication": "Phase 08 (Communication Platform)",
+    "notifications": "Phase 09 (Notification Platform)",
 }
 
 #: Bounded contexts from the approved domain map — still not opened.
@@ -44,8 +45,6 @@ FORBIDDEN_APP_DIRECTORIES = {
     "documents",
     "document",
     "workflow",
-    "notifications",
-    "notification",
     "reporting",
     "analytics",
     "ai",
@@ -95,6 +94,8 @@ class ContextOpeningRegisterTests(SimpleTestCase):
         """Early-warning scan for vocabulary of not-yet-opened contexts."""
         # EVOLUTION NOTE (Phase 08): Meeting/Conversation vocabulary now
         # lives in the opened communication context and is therefore allowed.
+        # EVOLUTION NOTE (Phase 09): Notification vocabulary now lives in the
+        # opened notifications context; it stays forbidden everywhere else.
         businessWords = (
             "Employee",
             "Department",
@@ -115,6 +116,8 @@ class ContextOpeningRegisterTests(SimpleTestCase):
         for sourceFile in sourceFiles:
             content = sourceFile.read_text(encoding="utf-8")
             for word in businessWords:
+                if word == "Notification" and "notifications" in sourceFile.parts:
+                    continue
                 self.assertNotIn(
                     word,
                     content,
@@ -135,6 +138,7 @@ class ContextOpeningRegisterTests(SimpleTestCase):
             "apps.tenancy",
             "apps.identity",
             "apps.communication",
+            "apps.notifications",
         }
         unexpectedApps = sorted(set(settings.INSTALLED_APPS) - allowedApps)
         self.assertEqual(

@@ -18,13 +18,18 @@ djangoAsgiApp = get_asgi_application()
 
 from channels.auth import AuthMiddlewareStack  # noqa: E402 — after app setup
 
-from apps.communication.presentation.ws.routing import websocketUrlPatterns  # noqa: E402
+from apps.communication.presentation.ws.routing import (  # noqa: E402
+    websocketUrlPatterns as communicationWsPatterns,
+)
+from apps.notifications.presentation.ws.routing import (  # noqa: E402
+    websocketUrlPatterns as notificationWsPatterns,
+)
 
 application = ProtocolTypeRouter(
     {
         "http": djangoAsgiApp,
         "websocket": AllowedHostsOriginValidator(
-            AuthMiddlewareStack(URLRouter(websocketUrlPatterns))
+            AuthMiddlewareStack(URLRouter([*communicationWsPatterns, *notificationWsPatterns]))
         ),
     }
 )

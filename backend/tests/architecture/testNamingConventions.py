@@ -32,6 +32,7 @@ PASCAL_CASE_PATTERN = re.compile(r"^[A-Z][a-zA-Z0-9]*$")
 FRAMEWORK_HOOKS = {
     "main",  # console entrypoints
     "handle",  # django management commands
+    "add_arguments",  # django management command argument hook
     "get_paginated_response",  # DRF pagination override
     "get_next_link",  # DRF cursor pagination helper
     "has_permission",  # DRF permission hook
@@ -42,6 +43,7 @@ FRAMEWORK_HOOKS = {
     "_backfill_refresh_hashes",  # Phase 07 migration helper (snake per Django)
     "receive_json",  # Channels AsyncJsonWebsocketConsumer hook (Phase 08)
     "communication_event",  # Channels group_send handler name (Phase 08)
+    "notification_event",  # Channels group_send handler name (Phase 09)
 }
 FUNCTION_EXEMPTIONS = FRAMEWORK_HOOKS
 MODULE_EXEMPTIONS = {"manage.py", "wsgi.py", "asgi.py", "urls.py"}

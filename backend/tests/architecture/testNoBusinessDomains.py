@@ -22,6 +22,7 @@ OPENED_CONTEXTS = {
     "sharedKernel": "Phase 06 (foundation)",
     "tenancy": "Phase 06 (exemplar context #1)",
     "identity": "Phase 06 (exemplar context #2)",
+    "communication": "Phase 08 (Communication Platform)",
 }
 
 #: Bounded contexts from the approved domain map — still not opened.
@@ -43,7 +44,6 @@ FORBIDDEN_APP_DIRECTORIES = {
     "documents",
     "document",
     "workflow",
-    "communication",
     "notifications",
     "notification",
     "reporting",
@@ -93,6 +93,8 @@ class ContextOpeningRegisterTests(SimpleTestCase):
 
     def testNoBusinessEntityNamesAppearInSourceCode(self) -> None:
         """Early-warning scan for vocabulary of not-yet-opened contexts."""
+        # EVOLUTION NOTE (Phase 08): Meeting/Conversation vocabulary now
+        # lives in the opened communication context and is therefore allowed.
         businessWords = (
             "Employee",
             "Department",
@@ -100,8 +102,6 @@ class ContextOpeningRegisterTests(SimpleTestCase):
             "Task",
             "Asset",
             "Workflow",
-            "Meeting",
-            "Conversation",
             "Notification",
         )
         allowedFiles = {Path(__file__).name}
@@ -129,9 +129,12 @@ class ContextOpeningRegisterTests(SimpleTestCase):
             "django.contrib.auth",
             "rest_framework",
             "corsheaders",
+            # Phase 08: ASGI server app so runserver speaks WebSocket.
+            "daphne",
             "apps.sharedKernel",
             "apps.tenancy",
             "apps.identity",
+            "apps.communication",
         }
         unexpectedApps = sorted(set(settings.INSTALLED_APPS) - allowedApps)
         self.assertEqual(

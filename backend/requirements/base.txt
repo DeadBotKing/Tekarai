@@ -10,3 +10,10 @@ djangorestframework==3.18.0
 django-environ==0.14.0
 # Security requirement — CORS allow-list handling (ADR-010)
 django-cors-headers==4.9.0
+
+# Communication requirement — ASGI/WebSocket transport (Phase 08 ADR-031)
+channels==4.3.2
+# Communication requirement — ASGI/HTTP-2 server for `runserver` + production
+daphne==4.2.3
+# Communication requirement — Redis channel layer for horizontal scale
+channels-redis==4.3.0

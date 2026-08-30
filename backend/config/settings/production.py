@@ -87,3 +87,17 @@ SECURE_HSTS_PRELOAD = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_BROWSER_XSS_FILTER = True
+
+
+# --------------------------------------------------------------------------- #
+# CHANNELS — Redis-backed layer in production (Phase 08 ADR-031)                #
+# --------------------------------------------------------------------------- #
+
+REDIS_URL = env("REDIS_URL", default="redis://127.0.0.1:6379/0")
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {"hosts": [REDIS_URL]},
+    },
+}

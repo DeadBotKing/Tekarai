@@ -40,6 +40,8 @@ FRAMEWORK_HOOKS = {
     "dispatch",  # DRF view dispatch
     "is_authenticated",  # DRF principal property
     "_backfill_refresh_hashes",  # Phase 07 migration helper (snake per Django)
+    "receive_json",  # Channels AsyncJsonWebsocketConsumer hook (Phase 08)
+    "communication_event",  # Channels group_send handler name (Phase 08)
 }
 FUNCTION_EXEMPTIONS = FRAMEWORK_HOOKS
 MODULE_EXEMPTIONS = {"manage.py", "wsgi.py", "asgi.py", "urls.py"}

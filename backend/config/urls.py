@@ -20,6 +20,10 @@ urlpatterns = [
                 path("", include("apps.sharedKernel.presentation.api.platformRoutes")),
                 path("", include("apps.tenancy.presentation.api.urls.tenantRoutes")),
                 path("", include("apps.identity.presentation.api.urls.identityRoutes")),
+                path(
+                    "communication/",
+                    include("apps.communication.presentation.api.urls.communicationRoutes"),
+                ),
             ]
         ),
     ),

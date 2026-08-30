@@ -86,7 +86,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # APPLICATIONS (Phase 06 §27/§32 — layered contexts under apps/)
 # Shared kernel + the first two bounded contexts (Tenancy, Identity).
 # ---------------------------------------------------------------------------
+# ``daphne`` MUST stay first so ``runserver`` serves the ASGI application
+# (Phase 08 §30 — REST and WS share one process in development).
 INSTALLED_APPS = [
+    "daphne",
     "django.contrib.contenttypes",
     "django.contrib.auth",
     "rest_framework",
@@ -94,7 +97,22 @@ INSTALLED_APPS = [
     "apps.sharedKernel",
     "apps.tenancy",
     "apps.identity",
+    "apps.communication",
 ]
+
+# --------------------------------------------------------------------------- #
+# CHANNELS — real-time transport (Phase 08 §8/§30)                              #
+# --------------------------------------------------------------------------- #
+
+ASGI_APPLICATION = "config.asgi.application"
+
+# In-memory layer works for single-process development and tests; production
+# settings override this with channels-redis (see production.py).
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    },
+}
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -210,6 +228,7 @@ MIGRATION_MODULES = {
     "sharedKernel": "apps.sharedKernel.infrastructure.migrations",
     "tenancy": "apps.tenancy.infrastructure.migrations",
     "identity": "apps.identity.infrastructure.migrations",
+    "communication": "apps.communication.infrastructure.migrations",
 }
 
 # Phase 07 §7/§8 — JWT configuration (ADR-022: in-house HS256, stdlib only).

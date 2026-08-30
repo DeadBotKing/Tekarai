@@ -30,6 +30,15 @@ ACTIONS: list[tuple[str, str]] = [
     ("serviceaccount.disable", "Disable / enable service accounts"),
     ("serviceaccount.list", "List service accounts"),
     ("session.revoke", "Revoke sessions of other users"),
+    # -- Phase 08 (Communication Platform §17/§35) ---------------------------
+    ("conversation.create", "Create direct/group conversations and channels"),
+    ("conversation.moderate", "Moderate conversations (pins, archive, participants)"),
+    ("meeting.manage", "Schedule and control meetings"),
+    ("recording.manage", "Start/stop and publish meeting recordings"),
+    ("letter.create", "Draft official letters"),
+    ("letter.approve", "Approve official letters"),
+    ("letter.sign", "Sign official letters"),
+    ("letter.dispatch", "Dispatch official letters"),
     ("audit.view", "Read the audit trail"),
 ]
 

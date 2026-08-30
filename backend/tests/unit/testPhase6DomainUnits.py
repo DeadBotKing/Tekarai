@@ -81,7 +81,7 @@ class TenantAggregateTests(SimpleTestCase):
 
 class UserAggregateTests(SimpleTestCase):
     def testCreateDefaultsToActive(self) -> None:
-        user = User.create(
+        user = User.register(
             tenantId=uuid.uuid4(),
             username="sara",
             email="Sara@ACME.com",
@@ -93,10 +93,10 @@ class UserAggregateTests(SimpleTestCase):
         self.assertEqual(user.email, "sara@acme.com")  # normalized
         self.assertEqual(user.pullEvents()[0].name, "userCreated")
 
-    def testDeactivatedIsTerminal(self) -> None:
-        user = User.create(uuid.uuid4(), "sara", "s@a.com", "h", "S", NOW)
+    def testDisabledIsTerminal(self) -> None:
+        user = User.register(uuid.uuid4(), "sara", "s@a.com", "h", "S", NOW)
         user.transitionTo("suspended", NOW)
-        user.transitionTo("deactivated", NOW)
+        user.transitionTo("disabled", NOW)
         with self.assertRaises(InvalidStateTransitionError):
             user.transitionTo("active", NOW)
 
@@ -119,13 +119,13 @@ class UserAggregateTests(SimpleTestCase):
 
 
 class SessionAggregateTests(SimpleTestCase):
-    def testIssueAndExpiry(self) -> None:
-        session = Session.issue(uuid.uuid4(), uuid.uuid4(), "hash", NOW, ttlMinutes=30)
+    def testStartAndExpiry(self) -> None:
+        session = Session.start(uuid.uuid4(), uuid.uuid4(), "hash", NOW, ttlMinutes=30)
         self.assertTrue(session.isValidAt(NOW + timedelta(minutes=29)))
         self.assertTrue(session.isExpiredAt(NOW + timedelta(minutes=31)))
 
     def testRevokeIsIdempotentAndSingleEvent(self) -> None:
-        session = Session.issue(uuid.uuid4(), uuid.uuid4(), "hash", NOW, 30)
+        session = Session.start(uuid.uuid4(), uuid.uuid4(), "hash", NOW, 30)
         session.revoke(NOW)
         session.revoke(NOW)
         self.assertEqual(session.revokedAt, NOW)
@@ -133,7 +133,7 @@ class SessionAggregateTests(SimpleTestCase):
     def testMembershipActiveFlag(self) -> None:
         membership = TenantMembership.establish(uuid.uuid4(), uuid.uuid4(), NOW)
         self.assertTrue(membership.isActive())
-        membership.close(NOW)
+        membership.remove(NOW)
         self.assertFalse(membership.isActive())
 
 

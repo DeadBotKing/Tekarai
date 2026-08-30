@@ -52,4 +52,7 @@ def bindPrincipalIntoContext(principal: SessionPrincipal) -> None:
     context.actorTenantId = str(principal.tenantId)
     if not context.tenantId:
         context.tenantId = str(principal.tenantId)
+    sessionId = getattr(principal, "sessionId", None)
+    if sessionId:
+        context.sessionId = str(sessionId)  # §9 — "current session" marking
     bindContext(context)

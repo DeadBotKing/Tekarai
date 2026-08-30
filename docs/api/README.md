@@ -15,3 +15,18 @@ what its specification requires.
 Decisions: `docs/adr/ADR-019` (session tokens), `ADR-020` (OpenAPI builder),
 `ADR-021` (Shared Kernel). Live contract: `/api/v1/openapi.json`, human list
 at `/api/v1/docs`.
+
+## Phase 07 deliverables
+
+| File | Content |
+|---|---|
+| `APIArchitecture.md` | Phase 06 architecture — still current for the shared kernel; Phase 07 adds the identity surface below |
+
+Phase 07 additions (spec `docs/Phases/Phase7.md` §32): `auth/login` (JWT +
+refresh / MFA challenge), `auth/mfa/challenge`, `auth/refresh`,
+`auth/logout`, `auth/password/change|reset/*`, `auth/verification/*`,
+`auth/verify-email|verify-phone`, `roles` (CRUD + assign/remove),
+`api-keys` (create/revoke/list — raw key shown once), `service-accounts`,
+`me/mfa/*`, `me/sessions` (list/revoke/revoke-all). Server-to-server
+authentication via `X-API-Key` (ADR-022). Decision record:
+`docs/adr/022-jwt-access-tokens.md`.

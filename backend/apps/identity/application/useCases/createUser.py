@@ -72,7 +72,7 @@ class CreateUserUseCase(UseCase[CreateUserCommand, UserDto]):
 
     def perform(self, command: CreateUserCommand) -> UserDto:
         tenantId = asUuid(command.tenantId)
-        user = User.create(
+        user = User.register(
             tenantId=tenantId,
             username=command.username,
             email=command.email,

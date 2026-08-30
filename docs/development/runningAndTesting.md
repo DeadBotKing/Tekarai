@@ -68,7 +68,9 @@ automatically on first database use.)
 python manage.py test --settings=config.settings.testing
 ```
 
-Expected: `Ran 235 tests ... OK` (63 Phase-01 + 13 Phase-02 + 16 Phase-03
+Expected: `Ran 311 tests ... OK` (235 through Phase 06 + 76 Phase 07:
+25 unit + 16 application + 25 integration + 10 architecture guards).
+Older reference: `Ran 235 tests ... OK` (63 Phase-01 + 13 Phase-02 + 16 Phase-03
 + 25 Phase-04 + 36 Phase-05 architecture/doc tests + 82 Phase-06 tests:
 25 unit + 12 application + 28 integration + 17 architecture-guard updates).
 
@@ -157,3 +159,43 @@ python manage.py runserver
 - Contract: `http://127.0.0.1:8000/api/v1/openapi.json`
 - Docs: `http://127.0.0.1:8000/api/v1/docs`
 - Login: `POST /api/v1/auth/login` with `tenantCode=platform`.
+
+
+## 9. Phase 07 — first run & token model (PowerShell)
+
+```powershell
+cd C:\Users\Mitra\Desktop\Tekarai\backend
+.\venv\Scripts\Activate.ps1
+python manage.py migrate                      # applies 0002_phase7_identity
+$env:PLATFORM_ADMIN_PASSWORD="Tekarai-Admin-2026!"
+python manage.py bootstrapPlatform
+python manage.py runserver
+```
+
+Token model changed in Phase 07 (ADR-022):
+
+- `POST /api/v1/auth/login` body: `{"tenantCode","identifier","password"}`
+  — `identifier` is username **or** email. Response data:
+  `accessToken` (JWT, 15 min) + `refreshToken` (opaque, rotates on use) +
+  `expiresIn`. MFA-enabled accounts get `mfaRequired=true` +
+  `mfaChallenge` instead (complete via `POST auth/mfa/challenge`).
+- Protected calls: `Authorization: Bearer <accessToken>`.
+- Refresh: `POST auth/refresh` with `{"refreshToken": "..."}` — a NEW pair
+  is issued; the old refresh token is dead (replay → 401).
+- Logout: `POST auth/logout` with `{"refreshToken": "..."}`.
+- Server-to-server: `X-API-Key: tek_...` header (raw key shown once at
+  creation; store it safely).
+- Optional dedicated signing key in `.env`: `jwtSigningKey=` (empty →
+  falls back to SECRET_KEY).
+
+Quick smoke (PowerShell):
+
+```powershell
+$login = Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/api/v1/auth/login `
+  -ContentType "application/json" `
+  -Body (@{tenantCode="platform";identifier="platform-admin";password="Tekarai-Admin-2026!"} | ConvertTo-Json)
+$login.data | Format-List               # accessToken / refreshToken
+$h = @{ Authorization = "Bearer $($login.data.accessToken)" }
+Invoke-RestMethod -Uri http://127.0.0.1:8000/api/v1/me -Headers $h | Format-List
+Invoke-RestMethod -Uri http://127.0.0.1:8000/api/v1/me/sessions -Headers $h | Format-List
+```

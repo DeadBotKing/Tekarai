@@ -1,8 +1,11 @@
-"""Session aggregate — opaque bearer token, hashed at rest (BR-SEC-004).
+"""Session aggregate (Phase 07 §9) — trackable, revocable login session.
 
-Token lifecycle: issued at login → sliding use → explicit revoke at logout
-or expiry sweep. Refresh rotates the token inside the same aggregate
-(ADR-019: JWT provider can replace this behind the same repository).
+Token model (§7): short-lived **JWT access token** (claims only, §8) plus a
+long-lived rotating **opaque refresh token** stored hashed on the session.
+JWT is never the sole session mechanism (§7): every access-token
+verification re-checks this session row, so revocation is instant
+(invariant §35.4/5). Fields per §9: id, user, tenant, createdAt,
+lastActivityAt, expiresAt, revokedAt, ipAddress, userAgent, device, status.
 """
 
 from __future__ import annotations
@@ -14,6 +17,10 @@ from typing import Any
 from apps.sharedKernel.domain.entities import AggregateRoot, newId
 from apps.sharedKernel.domain.events import DomainEvent
 
+SESSION_ACTIVE = "active"
+SESSION_REVOKED = "revoked"
+SESSION_EXPIRED = "expired"
+
 
 class Session(AggregateRoot):
     def __init__(
@@ -21,47 +28,71 @@ class Session(AggregateRoot):
         id: uuid.UUID,  # noqa: A002
         userId: uuid.UUID,
         tenantId: uuid.UUID,
-        tokenHash: str,
+        refreshTokenHash: str,
         issuedAt: datetime,
         expiresAt: datetime,
-        lastUsedAt: datetime | None = None,
+        *,
+        lastActivityAt: datetime | None = None,
         revokedAt: datetime | None = None,
+        ipAddress: str = "",
+        userAgent: str = "",
+        device: str = "",
     ) -> None:
         super().__init__(id)
         self.userId = userId
         self.tenantId = tenantId
-        self.tokenHash = tokenHash
+        self.refreshTokenHash = refreshTokenHash
         self.issuedAt = issuedAt
         self.expiresAt = expiresAt
-        self.lastUsedAt = lastUsedAt
+        self.lastActivityAt = lastActivityAt
         self.revokedAt = revokedAt
+        self.ipAddress = ipAddress
+        self.userAgent = userAgent
+        self.device = device
 
     @staticmethod
-    def issue(
+    def start(
         userId: uuid.UUID,
         tenantId: uuid.UUID,
-        tokenHash: str,
+        refreshTokenHash: str,
         now: datetime,
         ttlMinutes: int,
+        *,
+        ipAddress: str = "",
+        userAgent: str = "",
+        device: str = "",
     ) -> Session:
         session = Session(
             id=newId(),
             userId=userId,
             tenantId=tenantId,
-            tokenHash=tokenHash,
+            refreshTokenHash=refreshTokenHash,
             issuedAt=now,
             expiresAt=now + timedelta(minutes=ttlMinutes),
+            lastActivityAt=now,
+            ipAddress=ipAddress,
+            userAgent=userAgent,
+            device=device,
         )
         session.recordEvent(
             DomainEvent(
-                name="sessionIssued",
+                name="sessionCreated",
                 occurredAt=now,
                 tenantId=tenantId,
                 actorId=userId,
-                payload={},
+                payload={"ip": ipAddress, "device": device},
             )
         )
         return session
+
+    # -- status (§9) ----------------------------------------------------------
+
+    def statusAt(self, now: datetime) -> str:
+        if self.revokedAt is not None:
+            return SESSION_REVOKED
+        if self.expiresAt <= now:
+            return SESSION_EXPIRED
+        return SESSION_ACTIVE
 
     def isValidAt(self, now: datetime) -> bool:
         return self.revokedAt is None and self.expiresAt > now
@@ -82,8 +113,13 @@ class Session(AggregateRoot):
                 )
             )
 
+    def rotateRefreshToken(self, newHash: str, now: datetime) -> None:
+        """Refresh-token rotation (§7): replace the hash inside the session."""
+        self.refreshTokenHash = newHash
+        self.lastActivityAt = now
+
     def touch(self, now: datetime) -> None:
-        self.lastUsedAt = now
+        self.lastActivityAt = now
 
     def snapshot(self) -> dict[str, Any]:
         return {
@@ -91,6 +127,10 @@ class Session(AggregateRoot):
             "userId": str(self.userId),
             "tenantId": str(self.tenantId),
             "issuedAt": self.issuedAt.isoformat(),
+            "lastActivityAt": self.lastActivityAt.isoformat() if self.lastActivityAt else None,
             "expiresAt": self.expiresAt.isoformat(),
             "revokedAt": self.revokedAt.isoformat() if self.revokedAt else None,
+            "ipAddress": self.ipAddress,
+            "userAgent": self.userAgent,
+            "device": self.device,
         }

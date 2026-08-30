@@ -165,11 +165,13 @@ class SessionUseCaseTests(TestCase):
         dto = identityContainer.authenticateUserUseCase().execute(
             AuthenticateUserCommand(
                 tenantCode="platform",
-                username="platform-admin",
+                identifier="platform-admin",
                 password=ADMIN_PASSWORD,
             )
         )
-        self.assertTrue(dto.token)
+        self.assertTrue(dto.accessToken)
+        self.assertTrue(dto.refreshToken)
+        self.assertGreater(dto.expiresIn, 0)
         assert dto.user is not None
         self.assertEqual(dto.user.username, "platform-admin")
         audit = AuditEventModel.objects.filter(action="LOGIN").latest("occurredAt")
@@ -181,7 +183,7 @@ class SessionUseCaseTests(TestCase):
             identityContainer.authenticateUserUseCase().execute(
                 AuthenticateUserCommand(
                     tenantCode="platform",
-                    username="platform-admin",
+                    identifier="platform-admin",
                     password="Wrong-Password-1!",
                 )
             )
@@ -193,14 +195,24 @@ class SessionUseCaseTests(TestCase):
         login = identityContainer.authenticateUserUseCase().execute(
             AuthenticateUserCommand("platform", "platform-admin", ADMIN_PASSWORD)
         )
+        firstRefresh = login.refreshToken
         refreshed = identityContainer.refreshSessionUseCase().execute(
-            RefreshSessionCommand(token=login.token)
+            RefreshSessionCommand(refreshToken=firstRefresh)
         )
-        self.assertNotEqual(refreshed.token, login.token)
-        identityContainer.logoutUseCase().execute(LogoutCommand(token=refreshed.token))
+        # rotation: a brand-new refresh token replaced the old one (§7)
+        self.assertNotEqual(refreshed.refreshToken, firstRefresh)
+        self.assertNotEqual(refreshed.accessToken, login.accessToken)
+        with self.assertRaises(InvalidCredentialsError):
+            # replay of the consumed refresh token must fail (§35.4)
+            identityContainer.refreshSessionUseCase().execute(
+                RefreshSessionCommand(refreshToken=firstRefresh)
+            )
+        identityContainer.logoutUseCase().execute(
+            LogoutCommand(refreshToken=refreshed.refreshToken)
+        )
         with self.assertRaises(InvalidCredentialsError):
             identityContainer.refreshSessionUseCase().execute(
-                RefreshSessionCommand(token=refreshed.token)
+                RefreshSessionCommand(refreshToken=refreshed.refreshToken)
             )
 
 

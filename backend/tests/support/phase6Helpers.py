@@ -32,6 +32,13 @@ def platformTenantId() -> uuid.UUID:
 def loginPayload(password: str = PLATFORM_ADMIN_PASSWORD) -> dict[str, str]:
     return {
         "tenantCode": PLATFORM_TENANT_CODE,
-        "username": PLATFORM_ADMIN_USERNAME,
+        "identifier": PLATFORM_ADMIN_USERNAME,
         "password": password,
     }
+
+
+def loginViaApi(client) -> dict:
+    """Login once; returns the token pair (accessToken/refreshToken)."""
+    response = client.post("/api/v1/auth/login", loginPayload(), format="json")
+    assert response.status_code == 200, response.content
+    return response.json()["data"]

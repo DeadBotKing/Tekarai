@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 import uuid
+from datetime import UTC
 
 from django.core.management.base import BaseCommand
 
@@ -98,7 +99,29 @@ class Command(BaseCommand):
                     )
                 )
             access.grantRoleToUser(uuid.UUID(userDto.id), tenantId, adminRoleId)
+            self._ensureMembership(uuid.UUID(userDto.id), tenantId)
             self.stdout.write(f"platform admin created: {username}")
         else:
             access.grantRoleToUser(existingUser.id, tenantId, adminRoleId)
+            self._ensureMembership(existingUser.id, tenantId)
             self.stdout.write(f"platform admin ready: {username}")
+
+    def _ensureMembership(self, userId: uuid.UUID, tenantId: uuid.UUID) -> None:
+        """§11/§12 — login resolves an ACTIVE TenantMembership."""
+        from apps.identity.domain.entities.tenantMembership import TenantMembership
+        from apps.identity.infrastructure.repositories.identityRepositoriesImpl import (
+            TenantMembershipRepositoryDjango,
+        )
+
+        membershipRepository = TenantMembershipRepositoryDjango()
+        if membershipRepository.get(userId, tenantId) is None:
+            membership = TenantMembership.establish(
+                userId=userId, tenantId=tenantId, now=self._now()
+            )
+            membershipRepository.create(membership)
+
+    @staticmethod
+    def _now():
+        from datetime import datetime
+
+        return datetime.now(tz=UTC)

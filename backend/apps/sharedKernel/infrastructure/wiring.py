@@ -28,7 +28,10 @@ DEFAULT_PROVIDERS: dict[str, str] = {
     ),
     # Overridden in settings by the Identity context implementations:
     "sessionVerifier": "apps.identity.infrastructure.services.sessionVerifier.SessionVerifierDjango",
+    "apiKeyVerifier": "apps.identity.infrastructure.services.principals.ApiKeyVerifierDjango",
     "permissionGate": "apps.identity.infrastructure.services.permissionGate.PermissionGateDjango",
+    "tokenIssuer": "apps.identity.infrastructure.services.jwtService.JwtTokenIssuerDjango",
+    "secretVault": "apps.identity.infrastructure.services.secretVault.SigningSecretVault",
 }
 
 _instances: dict[str, Any] = {}

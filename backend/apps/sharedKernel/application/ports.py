@@ -57,6 +57,34 @@ class AuditRecorder(Protocol):
 
 
 @runtime_checkable
+class TokenIssuer(Protocol):
+    """Phase 07 §7 — issues short-lived JWT access tokens and MFA challenge
+    tokens. Claims stay minimal (§8); permissions never ride in the token."""
+
+    def issueAccessToken(
+        self, *, userId: uuid.UUID, tenantId: uuid.UUID, sessionId: uuid.UUID
+    ) -> tuple[str, int]: ...
+
+    def issueMfaChallenge(
+        self, *, userId: uuid.UUID, tenantId: uuid.UUID, sessionId: uuid.UUID
+    ) -> str: ...
+
+    def verifyAccessToken(self, token: str) -> dict: ...
+
+    def verifyMfaChallenge(self, token: str) -> dict: ...
+
+
+@runtime_checkable
+class SecretVault(Protocol):
+    """Phase 07 — protects at-rest secrets (TOTP secrets) so raw secrets
+    never land in the database or logs (§41 DoD)."""
+
+    def protect(self, raw: str) -> str: ...
+
+    def reveal(self, protected: str) -> str: ...
+
+
+@runtime_checkable
 class PermissionGate(Protocol):
     """Server-side authorization decision (§17, six layers §44).
 

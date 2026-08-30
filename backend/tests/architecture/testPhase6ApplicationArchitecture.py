@@ -324,8 +324,14 @@ class Phase6AuthAndTenancyTests(SimpleTestCase):
         verifier = (
             APPS_DIR / "identity" / "infrastructure" / "services" / "sessionVerifier.py"
         ).read_text(encoding="utf-8")
-        self.assertIn("verifyToken", verifier)
-        self.assertNotIn("hasPermission", verifier)  # §16 separation
+        principals = (
+            APPS_DIR / "identity" / "infrastructure" / "services" / "principals.py"
+        ).read_text(encoding="utf-8")
+        # Phase 07: verifier moved to principals.py (JWT access tokens);
+        # sessionVerifier.py stays as the wiring target (ADR-019/022).
+        self.assertIn("SessionVerifierDjango", verifier)
+        self.assertIn("verifyToken", principals)
+        self.assertNotIn("hasPermission", principals)  # §16 separation
 
 
 class Phase6AuditAndObservabilityTests(SimpleTestCase):

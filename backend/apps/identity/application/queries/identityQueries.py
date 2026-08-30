@@ -25,3 +25,24 @@ class ListUsersQuery(Query):
 @dataclass(frozen=True)
 class GetCurrentAccountQuery(Query):
     pass  # actor comes from the request context (§25)
+
+
+@dataclass(frozen=True)
+class ListSessionsQuery(Query):
+    userId: str = ""  # own sessions (§9); another user requires audit.view
+
+
+@dataclass(frozen=True)
+class ListApiKeysQuery(Query):
+    ownerType: str = "user"
+    ownerId: str = ""
+
+
+@dataclass(frozen=True)
+class ListServiceAccountsQuery(Query):
+    tenantId: str = ""
+
+
+@dataclass(frozen=True)
+class ListRolesQuery(Query):
+    pass

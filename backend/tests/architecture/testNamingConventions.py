@@ -39,6 +39,7 @@ FRAMEWORK_HOOKS = {
     "authenticate_header",  # DRF authentication hook
     "dispatch",  # DRF view dispatch
     "is_authenticated",  # DRF principal property
+    "_backfill_refresh_hashes",  # Phase 07 migration helper (snake per Django)
 }
 FUNCTION_EXEMPTIONS = FRAMEWORK_HOOKS
 MODULE_EXEMPTIONS = {"manage.py", "wsgi.py", "asgi.py", "urls.py"}

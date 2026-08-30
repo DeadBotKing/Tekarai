@@ -26,6 +26,7 @@ class RequestContext:
     actorId: str = ""
     actorTenantId: str = ""
     tenantId: str = ""
+    sessionId: str = ""
     ipAddress: str = ""
     userAgent: str = ""
 
@@ -49,6 +50,7 @@ class ContextSnapshot:
     requestId: str = ""
     actorId: str = ""
     tenantId: str = ""
+    sessionId: str = ""
     ipAddress: str = ""
     userAgent: str = ""
     extra: dict[str, str] = field(default_factory=dict)
@@ -81,6 +83,7 @@ def snapshotContext() -> ContextSnapshot:
         requestId=context.requestId,
         actorId=context.actorId,
         tenantId=context.tenantId or context.actorTenantId,
+        sessionId=context.sessionId,
         ipAddress=context.ipAddress,
         userAgent=context.userAgent,
     )

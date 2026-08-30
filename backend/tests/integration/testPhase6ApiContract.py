@@ -9,6 +9,7 @@ limiting, §24 OpenAPI and §25 correlation id propagation.
 from __future__ import annotations
 
 import uuid
+from datetime import UTC
 
 from django.core.cache import cache
 from django.test import TestCase
@@ -35,7 +36,10 @@ class ApiContractBase(TestCase):
     def login(self) -> str:
         response = self.client.post(f"{V1}/auth/login", loginPayload(), format="json")
         self.assertEqual(response.status_code, 200, response.content)
-        return str(response.json()["data"]["token"])
+        data = response.json()["data"]
+        self.refreshToken = str(data["refreshToken"])
+        self.sessionAccessToken = str(data["accessToken"])
+        return self.sessionAccessToken
 
     def authHeaders(self, token: str) -> dict[str, str]:
         return {"HTTP_AUTHORIZATION": f"Bearer {token}"}
@@ -53,7 +57,7 @@ class StandardResponseContractTests(ApiContractBase):
     def testErrorEnvelopeShapeWithField(self) -> None:
         response = self.client.post(
             f"{V1}/auth/login",
-            {"tenantCode": "platform", "username": ""},
+            {"tenantCode": "platform", "identifier": ""},
             format="json",
         )
         self.assertEqual(response.status_code, 400)
@@ -82,10 +86,15 @@ class AuthenticationFlowTests(ApiContractBase):
         me = self.client.get(f"{V1}/me", **self.authHeaders(token))
         self.assertEqual(me.status_code, 200, me.content)
         self.assertEqual(me.json()["data"]["user"]["username"], PLATFORM_ADMIN_USERNAME)
-        refresh = self.client.post(f"{V1}/auth/refresh", {"token": token}, format="json")
+        refresh = self.client.post(
+            f"{V1}/auth/refresh", {"refreshToken": self.refreshToken}, format="json"
+        )
         self.assertEqual(refresh.status_code, 200, refresh.content)
         logout = self.client.post(
-            f"{V1}/auth/logout", **self.authHeaders(refresh.json()["data"]["token"])
+            f"{V1}/auth/logout",
+            {"refreshToken": refresh.json()["data"]["refreshToken"]},
+            format="json",
+            **self.authHeaders(refresh.json()["data"]["accessToken"]),
         )
         self.assertEqual(logout.status_code, 200, logout.content)
 
@@ -145,12 +154,26 @@ class AuthorizationAndTenancyTests(ApiContractBase):
                     password="Strong-Pass-2026!",
                 )
             )
-        # grant only read actions through a direct allow grant (BR-PER-003)
-        memberRole = RoleModel.objects.get(code=roleCode)
+        # Phase 7 §11/§12 — login requires an ACTIVE TenantMembership.
+        from datetime import datetime
+
+        from apps.identity.domain.entities.tenantMembership import TenantMembership
         from apps.identity.infrastructure.repositories.identityRepositoriesImpl import (
             AccessRepositoryDjango,
+            TenantMembershipRepositoryDjango,
         )
 
+        membershipRepository = TenantMembershipRepositoryDjango()
+        if membershipRepository.get(uuid.UUID(user.id), uuid.UUID(tenantId)) is None:
+            membershipRepository.create(
+                TenantMembership.establish(
+                    userId=uuid.UUID(user.id),
+                    tenantId=uuid.UUID(tenantId),
+                    now=datetime.now(tz=UTC),
+                )
+            )
+        # grant only read actions through a direct allow grant (BR-PER-003)
+        memberRole = RoleModel.objects.get(code=roleCode)
         access = AccessRepositoryDjango()
         access.grantRoleToUser(uuid.UUID(user.id), uuid.UUID(tenantId), memberRole.id)
         del UserPermissionModel
@@ -159,11 +182,11 @@ class AuthorizationAndTenancyTests(ApiContractBase):
     def memberToken(self, username: str) -> str:
         response = self.client.post(
             f"{V1}/auth/login",
-            {"tenantCode": "platform", "username": username, "password": "Strong-Pass-2026!"},
+            {"tenantCode": "platform", "identifier": username, "password": "Strong-Pass-2026!"},
             format="json",
         )
         self.assertEqual(response.status_code, 200, response.content)
-        return str(response.json()["data"]["token"])
+        return str(response.json()["data"]["accessToken"])
 
     def testMemberCannotCreateUsers(self) -> None:
         userId, _ = self.createMember("member-one")

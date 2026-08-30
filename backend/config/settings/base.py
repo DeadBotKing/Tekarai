@@ -165,6 +165,7 @@ LOGGING = {
 # ---------------------------------------------------------------------------
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        "apps.identity.presentation.api.authentication.apiKeyAuthentication.ApiKeyAuthentication",
         "apps.sharedKernel.presentation.api.authentication.BearerSessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
@@ -209,4 +210,41 @@ MIGRATION_MODULES = {
     "sharedKernel": "apps.sharedKernel.infrastructure.migrations",
     "tenancy": "apps.tenancy.infrastructure.migrations",
     "identity": "apps.identity.infrastructure.migrations",
+}
+
+# Phase 07 §7/§8 — JWT configuration (ADR-022: in-house HS256, stdlib only).
+JWT_AUTH = {
+    "issuer": env("jwtIssuer", default="tekarai"),
+    "audience": env("jwtAudience", default="tekarai-api"),
+    "accessTtlMinutes": int(env("jwtAccessTtlMinutes", default="15") or 15),
+    "challengeTtlMinutes": int(env("jwtChallengeTtlMinutes", default="5") or 5),
+    # Dedicated key recommended; empty falls back to SECRET_KEY (ADR-022).
+    "signingKey": env("jwtSigningKey", default=""),
+}
+
+# Phase 07 §23 — password policy (expiration NOT forced by default).
+PASSWORD_POLICY = {
+    "minLength": 12,
+    "requireComplexity": True,
+    "historyLimit": 5,
+    "maxFailedAttempts": 5,
+    "lockMinutes": 15,
+    "enforceExpiration": False,
+    "expirationDays": 0,
+}
+
+# Phase 07 §24 — MFA policy (per system/tenant/user, default off).
+MFA_POLICY = {
+    "required": False,
+    "allowedFactors": ["totp"],
+    "recoveryCodeCount": 8,
+    "challengeTtlMinutes": 5,
+}
+
+# Phase 07 §25/§26 — token lifetimes (minutes).
+VERIFICATION_POLICY = {
+    "emailTtlMinutes": 60,
+    "phoneTtlMinutes": 60,
+    "resetTtlMinutes": 30,
+    "maxAttempts": 5,
 }

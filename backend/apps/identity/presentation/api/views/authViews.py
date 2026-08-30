@@ -1,7 +1,9 @@
-"""Authentication endpoints (§16): login / refresh / logout.
+"""Authentication endpoints (Phase 07 §10/§32).
 
-Login is rate limited (§23), unauthenticated by design, and performs zero
-authorization decisions (§16). Correlation ids flow via middleware (§25).
+Login is rate limited (§10 layer 4), unauthenticated by design, and performs
+zero authorization decisions (§20). The response carries the §7 pair:
+short-lived JWT access token + opaque rotating refresh token. MFA-enabled
+accounts receive a challenge instead of tokens (§24).
 """
 
 from __future__ import annotations
@@ -16,10 +18,12 @@ from apps.identity.application.commands.identityCommands import (
     AuthenticateUserCommand,
     LogoutCommand,
     RefreshSessionCommand,
+    VerifyMfaChallengeCommand,
 )
 from apps.identity.infrastructure import container
 from apps.identity.presentation.api.serializers.identitySerializers import (
     LoginSerializer,
+    MfaChallengeSerializer,
     RefreshSerializer,
 )
 from apps.sharedKernel.presentation.api.idempotency import IdempotencyMixin
@@ -47,21 +51,46 @@ class LoginView(IdempotencyMixin, APIView):
         dto = container.authenticateUserUseCase().execute(
             AuthenticateUserCommand(
                 tenantCode=str(serializer.validated_data["tenantCode"]),
-                username=str(serializer.validated_data["username"]),
+                identifier=str(serializer.validated_data["identifier"]),
                 password=str(serializer.validated_data["password"]),
+                ipAddress=clientIpOf(request),
+                userAgent=str(request.headers.get("User-Agent", ""))[:300],
+                device=str(request.data.get("device", ""))[:120],
+            )
+        )
+        return Response(successEnvelope(dataclasses.asdict(dto)))
+
+
+class MfaChallengeView(APIView):
+    """§24 — exchange the challenge + TOTP/recovery code for real tokens."""
+
+    authentication_classes: list[type] = []
+    permission_classes: list[type] = []
+
+    @enforceRateLimit("auth:mfa")
+    def post(self, request: Request) -> Response:
+        serializer = MfaChallengeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        dto = container.verifyMfaChallengeUseCase().execute(
+            VerifyMfaChallengeCommand(
+                challengeToken=str(serializer.validated_data["challengeToken"]),
+                code=str(serializer.validated_data["code"]),
             )
         )
         return Response(successEnvelope(dataclasses.asdict(dto)))
 
 
 class LogoutView(APIView):
-    """Authenticated via bearer token; the token is the resource."""
+    """Revokes the session named by the refresh token (§7)."""
 
     permission_classes: list[type] = []
 
     def post(self, request: Request) -> Response:
-        token = bearerTokenOf(request)
-        result = container.logoutUseCase().execute(LogoutCommand(token=token))
+        serializer = RefreshSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = container.logoutUseCase().execute(
+            LogoutCommand(refreshToken=str(serializer.validated_data["refreshToken"]))
+        )
         return Response(successEnvelope(result))
 
 
@@ -74,16 +103,16 @@ class RefreshView(APIView):
         serializer = RefreshSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         dto = container.refreshSessionUseCase().execute(
-            RefreshSessionCommand(token=str(serializer.validated_data["token"]))
+            RefreshSessionCommand(refreshToken=str(serializer.validated_data["refreshToken"]))
         )
         return Response(successEnvelope(dataclasses.asdict(dto)))
 
 
-def bearerTokenOf(request: Request) -> str:
-    header: str = request.headers.get("Authorization", "")
-    if header.startswith("Bearer "):
-        return header[len("Bearer ") :].strip()
-    return ""
+def clientIpOf(request: Request) -> str:
+    forwarded: str = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()[:64]
+    return request.META.get("REMOTE_ADDR", "")[:64]
 
 
 def registerAuthEndpoints() -> None:
@@ -91,12 +120,21 @@ def registerAuthEndpoints() -> None:
         EndpointSpec(
             method="POST",
             path="api/v1/auth/login",
-            summary="Authenticate (tenant code + username + password).",
+            summary="Authenticate (tenant code + identifier + password → JWT + refresh).",
             authentication="none",
-            requestExample={"tenantCode": "platform", "username": "admin", "password": "…"},
+            requestExample={
+                "tenantCode": "platform",
+                "identifier": "platform-admin",
+                "password": "…",
+            },
             responseExample={
                 "success": True,
-                "data": {"token": "…", "tokenType": "Bearer"},
+                "data": {
+                    "accessToken": "…",
+                    "refreshToken": "…",
+                    "tokenType": "Bearer",
+                    "expiresIn": 900,
+                },
                 "meta": {},
                 "errors": [],
             },
@@ -108,10 +146,21 @@ def registerAuthEndpoints() -> None:
     registerEndpoint(
         EndpointSpec(
             method="POST",
-            path="api/v1/auth/refresh",
-            summary="Rotate the session token (refresh architecture, ADR-019).",
+            path="api/v1/auth/mfa/challenge",
+            summary="Complete login with a TOTP or recovery code (§24).",
             authentication="none",
-            requestExample={"token": "…"},
+            requestExample={"challengeToken": "…", "code": "123456"},
+            errorCodes=AUTH_ERRORS,
+            rateLimitScope="auth:mfa",
+        )
+    )
+    registerEndpoint(
+        EndpointSpec(
+            method="POST",
+            path="api/v1/auth/refresh",
+            summary="Rotate the refresh token; new JWT access token (§7).",
+            authentication="none",
+            requestExample={"refreshToken": "…"},
             errorCodes=AUTH_ERRORS,
             rateLimitScope="auth:refresh",
         )
@@ -120,8 +169,9 @@ def registerAuthEndpoints() -> None:
         EndpointSpec(
             method="POST",
             path="api/v1/auth/logout",
-            summary="Revoke the current session.",
+            summary="Revoke the session bound to this refresh token.",
             permission="authenticated",
+            requestExample={"refreshToken": "…"},
             errorCodes=AUTH_ERRORS,
         )
     )

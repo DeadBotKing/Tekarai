@@ -244,18 +244,23 @@ class DomainPurityStillHoldsTests(SimpleTestCase):
     """Phase 03 stays design-only: no business implementation appeared."""
 
     def testNoBusinessAppModulesExistYet(self) -> None:
+        """EVOLUTION NOTE (Phase 06): implementing phases have opened. The
+        Phase-03 emptiness guard becomes a boundary guard — apps/ may only
+        contain the shared kernel and contexts that an implementing phase
+        has deliberately opened (currently tenancy + identity per the
+        Phase 06 report)."""
         appsDir = Path(__file__).resolve().parents[2] / "apps"
-        entries = [
+        openedContexts = {"sharedKernel", "tenancy", "identity"}
+        entries = {
             entry.name
             for entry in appsDir.iterdir()
             if entry.is_dir() and not entry.name.startswith((".", "_"))
-        ]
+        }
+        unexpected = sorted(entries - openedContexts)
         self.assertEqual(
-            entries,
+            unexpected,
             [],
-            "Phase 03 §26 forbids creating business modules; apps/ stays "
-            "empty until implementing phases open (guarded by Phase 01 "
-            "testNoBusinessDomains, superseded per phase).",
+            f"Contexts not opened by any phase yet: {unexpected}",
         )
 
     def testEventNamesFollowCamelCaseStandard(self) -> None:

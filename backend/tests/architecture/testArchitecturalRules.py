@@ -149,6 +149,14 @@ class ExplicitContractsRulesTests(SimpleTestCase):
                         targetContext, targetPath = match.groups()
                         if targetContext == contextName:
                             continue
+                        # EVOLUTION NOTE (Phase 06, ADR-021): the Shared Kernel
+                        # is the one context every layer may import — it is the
+                        # platform's explicit public contract (errors, ports,
+                        # envelope, middleware). All other cross-context
+                        # imports must still target the application layer only
+                        # (RULE F).
+                        if targetContext == "sharedKernel":
+                            continue
                         if targetPath.split(".")[0] != "application":
                             violations.append(
                                 f"RULE E/F: {sourceFile.relative_to(BACKEND_DIR)} "
@@ -158,18 +166,32 @@ class ExplicitContractsRulesTests(SimpleTestCase):
         self.assertEqual(violations, [])
 
     def testInfrastructureAndApplicationDoNotImportOtherContexts(self) -> None:
-        """Infrastructure is protocol-local; it never imports other contexts."""
+        """Infrastructure is protocol-local; it never imports other contexts.
+
+        EVOLUTION NOTE (Phase 06, ADR-021): each context's composition root
+        (``infrastructure/container.py``) assembles cross-context public
+        contracts — so infrastructure may import other contexts'
+        ``application`` facades exactly like every other layer. Reaching
+        into another context's domain/infrastructure/presentation stays
+        forbidden (RULE E).
+        """
         violations: list[str] = []
         contextNames = collectContextNames()
         for contextName in contextNames:
             for sourceFile in collectContextFiles(contextName, "infrastructure"):
                 for imported in extractImports(sourceFile.read_text(encoding="utf-8")):
-                    match = re.match(r"^apps\.([a-zA-Z0-9_]+)", imported)
-                    if match and match.group(1) != contextName:
-                        violations.append(
-                            f"RULE E: infrastructure of '{contextName}' imports "
-                            f"'{imported}' (cross-context forbidden)"
-                        )
+                    match = re.match(r"^apps\.([a-zA-Z0-9_]+)\.(.+)$", imported)
+                    if not match or match.group(1) == contextName:
+                        continue
+                    targetContext, targetPath = match.groups()
+                    if targetContext == "sharedKernel":
+                        continue  # shared kernel is public to all layers
+                    if targetPath.split(".")[0] == "application":
+                        continue  # public contract facade (Phase 06)
+                    violations.append(
+                        f"RULE E: infrastructure of '{contextName}' imports "
+                        f"'{imported}' (cross-context forbidden)"
+                    )
         self.assertEqual(violations, [])
 
 

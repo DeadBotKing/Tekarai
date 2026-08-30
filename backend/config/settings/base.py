@@ -83,18 +83,25 @@ DATABASES = {
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ---------------------------------------------------------------------------
-# APPLICATIONS (Phase 01 — framework foundation only, no business apps)
+# APPLICATIONS (Phase 06 §27/§32 — layered contexts under apps/)
+# Shared kernel + the first two bounded contexts (Tenancy, Identity).
 # ---------------------------------------------------------------------------
 INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.auth",
     "rest_framework",
     "corsheaders",
+    "apps.sharedKernel",
+    "apps.tenancy",
+    "apps.identity",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
+    # Correlation/request context before anything else observes the request
+    # (Phase 06 §25–§26).
+    "apps.sharedKernel.presentation.api.middleware.CorrelationContextMiddleware",
     "django.middleware.common.CommonMiddleware",
 ]
 
@@ -136,11 +143,15 @@ LOGGING = {
             "format": "{levelname} {asctime} {name} :: {message}",
             "style": "{",
         },
+        # Structured logging (Phase 06 §30) — JSON with the §30 field set.
+        "tekaraiJson": {
+            "()": "apps.sharedKernel.infrastructure.loggingSetup.TekaraiJsonFormatter",
+        },
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "formatter": "standard",
+            "formatter": "tekaraiJson",
         },
     },
     "root": {
@@ -150,6 +161,41 @@ LOGGING = {
 }
 
 # ---------------------------------------------------------------------------
+# API LAYER (Phase 06 §12–§25)
+# ---------------------------------------------------------------------------
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "apps.sharedKernel.presentation.api.authentication.BearerSessionAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "apps.sharedKernel.presentation.api.permissions.IsAuthenticated",
+    ],
+    "EXCEPTION_HANDLER": (
+        "apps.sharedKernel.presentation.api.exceptionHandler.tekraiExceptionHandler"
+    ),
+    "DEFAULT_PAGINATION_CLASS": (
+        "apps.sharedKernel.presentation.api.pagination.TekaraiPagePagination"
+    ),
+    "PAGE_SIZE": 50,
+    "UNAUTHENTICATED_USER": None,
+}
+
+# Port bindings for the composition root (Phase 06 §34); defaults live in
+# apps.sharedKernel.infrastructure.wiring — override per environment here.
+SHARED_KERNEL_PROVIDERS: dict[str, str] = {}
+
+# Rate-limit policies (§23): scope → (limit, windowSeconds). Sensitive
+# classes: login/refresh now; OTP, password reset, AI, uploads land with
+# their phases.
+API_RATE_LIMIT_POLICIES: dict[str, tuple[int, int]] = {
+    "auth:login": (5, 60),
+    "auth:refresh": (30, 60),
+}
+
+# Session lifetime (ADR-019 opaque tokens; refresh rotates within this TTL).
+SESSION_TTL_MINUTES = 480
+
+# ---------------------------------------------------------------------------
 # GUARDS
 # ---------------------------------------------------------------------------
 if environment not in {"development", "testing", "production"}:
@@ -157,3 +203,10 @@ if environment not in {"development", "testing", "production"}:
         f"Configuration value 'environment' must be one of "
         f"development|testing|production. Got '{environment}'."
     )
+
+# Migrations live inside each context's infrastructure layer (§27).
+MIGRATION_MODULES = {
+    "sharedKernel": "apps.sharedKernel.infrastructure.migrations",
+    "tenancy": "apps.tenancy.infrastructure.migrations",
+    "identity": "apps.identity.infrastructure.migrations",
+}

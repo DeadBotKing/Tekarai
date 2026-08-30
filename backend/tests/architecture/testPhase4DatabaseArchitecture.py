@@ -425,11 +425,23 @@ class StrategyCatalogTests(SimpleTestCase):
 
 
 class Phase4StillDesignOnlyTests(SimpleTestCase):
-    """Spec §52: no Django models/migrations may exist after Phase 04."""
+    """EVOLUTION NOTE (Phase 06, §82 of Phase 5 satisfied — approved): the
+    design-only freeze is lifted. The guard keeps enforcing Phase-04's
+    placement principle instead: persistence models live ONLY inside each
+    context's infrastructure layer, migrations ONLY under
+    infrastructure/migrations (Phase 06 §27)."""
 
     def testNoModelFilesOrMigrationsExist(self) -> None:
         appsDir = Path(__file__).resolve().parents[2] / "apps"
-        modelFiles = [path for path in appsDir.rglob("models.py") if "venv" not in path.parts]
-        self.assertEqual(modelFiles, [])
-        migrationDirs = [path for path in appsDir.rglob("migrations") if path.is_dir()]
-        self.assertEqual(migrationDirs, [])
+        modelFiles = [
+            path
+            for path in appsDir.rglob("models.py")
+            if "venv" not in path.parts and "infrastructure" not in path.parts
+        ]
+        self.assertEqual(modelFiles, [], "models.py must live in infrastructure/ only")
+        migrationDirs = [
+            path
+            for path in appsDir.rglob("migrations")
+            if path.is_dir() and "infrastructure" not in path.parts and "venv" not in path.parts
+        ]
+        self.assertEqual(migrationDirs, [], "migrations must live in infrastructure/migrations")

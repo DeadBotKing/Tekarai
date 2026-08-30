@@ -21,6 +21,9 @@ from django.test import SimpleTestCase
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 
+#: Phase 06 §27 layer set for the structure guard.
+CONTEXT_LAYERS = ("domain", "application", "infrastructure", "presentation")
+
 #: Directories that must never be scanned as project source (virtual
 #: environments, dependency trees, caches). Without this, a local
 #: `backend/venv/` makes site-packages files (django's own models.py,
@@ -74,14 +77,33 @@ class LayerPlacementTests(SimpleTestCase):
     """Structural expectations for the Phase 01 codebase."""
 
     def testAppsContainOnlyFoundationDunderInit(self) -> None:
-        appFiles = [path for path in collectPythonFiles("apps")]
-        nonInitFiles = [path for path in appFiles if path.name != "__init__.py"]
-        self.assertEqual(
-            nonInitFiles,
-            [],
-            "Phase 01 forbids application modules. Business apps arrive with "
-            "their phases (Platform Core → Identity → Organization → ...).",
-        )
+        """EVOLUTION NOTE (Phase 06): apps/ now hosts the layered contexts
+        (docs/Phases/Phase6.md §27). The Phase-01 emptiness guard becomes a
+        structure guard: every context must expose exactly the four layers,
+        and top-level app files are limited to ``__init__.py``/``apps.py``."""
+        appsDir = Path(__file__).resolve().parents[2] / "apps"
+        contextDirs = [
+            entry
+            for entry in appsDir.iterdir()
+            if entry.is_dir() and not entry.name.startswith((".", "_"))
+        ]
+        self.assertTrue(contextDirs, "Expected at least one context after Phase 06.")
+        for contextDir in contextDirs:
+            topFiles = sorted(
+                path.name
+                for path in contextDir.iterdir()
+                if path.is_file() and path.suffix == ".py"
+            )
+            self.assertEqual(
+                topFiles,
+                ["__init__.py", "apps.py"],
+                f"{contextDir.name}: unexpected top-level modules",
+            )
+            for layer in CONTEXT_LAYERS:
+                self.assertTrue(
+                    (contextDir / layer).is_dir(),
+                    f"{contextDir.name}: missing §27 layer {layer}/",
+                )
 
     def testConfigModuleContainsNoBusinessLogicModules(self) -> None:
         configFiles = [
@@ -108,14 +130,20 @@ class LayerPlacementTests(SimpleTestCase):
         )
 
     def testNoViewsOrSerializersExistYet(self) -> None:
-        """Presentation scaffolding arrives with the API phase (Phase 06)."""
+        """EVOLUTION NOTE (Phase 06): views/serializers/models exist now —
+        but only inside the §27 placement: models under infrastructure/,
+        views+serializers under presentation/api/. Anything else is still a
+        layering violation."""
         offenders = [
             path
             for path in collectPythonFiles()
             if path.name in {"views.py", "serializers.py", "models.py"}
             and "tests" not in path.parts
+            and "migrations" not in path.parts
+            and "infrastructure" not in path.parts
+            and "presentation" not in path.parts
         ]
-        self.assertEqual(offenders, [], f"Premature presentation/domain files: {offenders}")
+        self.assertEqual(offenders, [], f"Layer placement violations: {offenders}")
 
 
 class ImportHygieneTests(SimpleTestCase):

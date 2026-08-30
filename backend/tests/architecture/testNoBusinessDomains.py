@@ -1,22 +1,31 @@
-"""Architecture tests — no premature business domains (Phase 01 §23).
+"""Architecture tests — deliberate context openings (Phase 01 §23 → Phase 06).
 
-Phase 01 explicitly forbids building business domains (Employee, HR, Project,
-Task, Asset, Communication, AI, Workflow, ...). These tests make the
-prohibition executable, so nothing business-shaped can slip in unnoticed.
+Phase 01 forbade business domains until an implementing phase opened them.
+Phase 06 (docs/Phases/Phase6.md §32/§33) opened the implementation era
+with the Shared Kernel + Tenancy + Identity. This module now guards the
+OPENING REGISTER: only contexts an implementing phase has deliberately
+opened may exist, with models/migrations confined to their infrastructure
+layers (Phase 06 §27).
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
+from django.conf import settings
 from django.test import SimpleTestCase
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 
-#: Bounded contexts from the approved domain map — none may exist in Phase 01.
+#: Contexts deliberately opened, with the phase that opened them.
+OPENED_CONTEXTS = {
+    "sharedKernel": "Phase 06 (foundation)",
+    "tenancy": "Phase 06 (exemplar context #1)",
+    "identity": "Phase 06 (exemplar context #2)",
+}
+
+#: Bounded contexts from the approved domain map — still not opened.
 FORBIDDEN_APP_DIRECTORIES = {
-    "identity",
-    "tenancy",
     "organization",
     "workforce",
     "hr",
@@ -37,65 +46,53 @@ FORBIDDEN_APP_DIRECTORIES = {
     "communication",
     "notifications",
     "notification",
-    "audit",
     "reporting",
     "analytics",
     "ai",
     "integration",
-    "configuration",
     "platformcore",
 }
 
-#: EVOLUTION NOTE (Phase 03): the 20 bounded contexts and their module names
-#: are now formally designed in docs/architecture/BoundedContexts.md §1.
-#: This Phase-01 prohibition remains active because no implementing phase
-#: has opened yet. When Phase 04+ implements a context (starting with
-#: Platform Core → Identity → Organization), that phase's report and commit
-#: must remove the corresponding names here — deliberately, with evidence —
-#: never silently.
 
-
-class NoPrematureBusinessDomainsTests(SimpleTestCase):
-    def testNoForbiddenAppDirectoriesExist(self) -> None:
+class ContextOpeningRegisterTests(SimpleTestCase):
+    def testOnlyOpenedContextsExist(self) -> None:
         appsDir = BACKEND_DIR / "apps"
         existingDirs = {
-            entry.name.lower()
+            entry.name
             for entry in appsDir.iterdir()
-            if entry.is_dir() and not entry.name.startswith(".")
+            if entry.is_dir() and not entry.name.startswith((".", "_"))
         }
-        offenders = sorted(existingDirs & FORBIDDEN_APP_DIRECTORIES)
+        lowered = {name.lower() for name in existingDirs}
+        offenders = sorted(lowered & FORBIDDEN_APP_DIRECTORIES)
         self.assertEqual(
             offenders,
             [],
-            f"Business domains are forbidden in Phase 01. Found: {offenders}",
+            f"Contexts exist that no phase has opened yet: {offenders}",
+        )
+        unexpected = sorted(existingDirs - set(OPENED_CONTEXTS))
+        self.assertEqual(
+            unexpected,
+            [],
+            f"Contexts missing from the opening register: {unexpected}",
         )
 
-    def testNoModelFilesExistAnywhereInBackend(self) -> None:
+    def testModelsAndMigrationsLiveOnlyInInfrastructure(self) -> None:
+        appsDir = BACKEND_DIR / "apps"
         modelFiles = [
             str(path.relative_to(BACKEND_DIR))
-            for path in BACKEND_DIR.rglob("models.py")
-            if "venv" not in path.parts
+            for path in appsDir.rglob("models.py")
+            if "infrastructure" not in path.parts
         ]
-        self.assertEqual(
-            modelFiles,
-            [],
-            "No Django models may exist in Phase 01 (docs/Phases/Phase1.md §15).",
-        )
-
-    def testNoMigrationPackagesExist(self) -> None:
+        self.assertEqual(modelFiles, [])
         migrationDirs = [
             str(path.relative_to(BACKEND_DIR))
-            for path in BACKEND_DIR.rglob("migrations")
-            if path.is_dir() and "venv" not in path.parts
+            for path in appsDir.rglob("migrations")
+            if path.is_dir() and "infrastructure" not in path.parts
         ]
-        self.assertEqual(
-            migrationDirs,
-            [],
-            "Business migrations arrive with their phases, not in Phase 01.",
-        )
+        self.assertEqual(migrationDirs, [])
 
     def testNoBusinessEntityNamesAppearInSourceCode(self) -> None:
-        """A cheap early-warning scan for business vocabulary in backend code."""
+        """Early-warning scan for vocabulary of not-yet-opened contexts."""
         businessWords = (
             "Employee",
             "Department",
@@ -121,22 +118,24 @@ class NoPrematureBusinessDomainsTests(SimpleTestCase):
                 self.assertNotIn(
                     word,
                     content,
-                    f"Business vocabulary '{word}' appeared early in "
-                    f"{sourceFile.relative_to(BACKEND_DIR)}.",
+                    f"Business vocabulary '{word}' appeared in "
+                    f"{sourceFile.relative_to(BACKEND_DIR)} before its phase "
+                    f"opened it.",
                 )
 
-    def testInstalledAppsContainsOnlyFrameworkFoundation(self) -> None:
-        from django.conf import settings
-
+    def testInstalledAppsMatchesOpenedContexts(self) -> None:
         allowedApps = {
             "django.contrib.contenttypes",
             "django.contrib.auth",
             "rest_framework",
             "corsheaders",
+            "apps.sharedKernel",
+            "apps.tenancy",
+            "apps.identity",
         }
         unexpectedApps = sorted(set(settings.INSTALLED_APPS) - allowedApps)
         self.assertEqual(
             unexpectedApps,
             [],
-            f"INSTALLED_APPS exceeds the Phase 01 foundation set: {unexpectedApps}",
+            f"INSTALLED_APPS exceeds the opened-context set: {unexpectedApps}",
         )

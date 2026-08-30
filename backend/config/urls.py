@@ -1,14 +1,26 @@
 """Root URL configuration for the Tekarai backend.
 
-Phase 01 exposes only framework-level health endpoints. Business API routes
-arrive with their phases under a versioned prefix (/api/v1/...).
+Phase 06: every business surface is versioned under ``/api/v1/`` (§13);
+health endpoints remain framework-level (Phase 01).
 """
 
-from django.urls import path
+from __future__ import annotations
+
+from django.urls import include, path
 
 from config import healthCheck
 
 urlpatterns = [
     path("healthz/", healthCheck.healthLive, name="healthLive"),
     path("readyz/", healthCheck.healthReady, name="healthReady"),
+    path(
+        "api/v1/",
+        include(
+            [
+                path("", include("apps.sharedKernel.presentation.api.platformRoutes")),
+                path("", include("apps.tenancy.presentation.api.urls.tenantRoutes")),
+                path("", include("apps.identity.presentation.api.urls.identityRoutes")),
+            ]
+        ),
+    ),
 ]

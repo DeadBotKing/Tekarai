@@ -68,8 +68,9 @@ automatically on first database use.)
 python manage.py test --settings=config.settings.testing
 ```
 
-Expected: `Ran 92 tests ... OK` (63 Phase-01 + 13 Phase-02 + 16 Phase-03
-architecture tests).
+Expected: `Ran 235 tests ... OK` (63 Phase-01 + 13 Phase-02 + 16 Phase-03
++ 25 Phase-04 + 36 Phase-05 architecture/doc tests + 82 Phase-06 tests:
+25 unit + 12 application + 28 integration + 17 architecture-guard updates).
 
 Run one suite only:
 
@@ -139,3 +140,20 @@ UPPER_SNAKE_CASE; project keys are camelCase (ADR-001/011).
 | `testNoViewsOrSerializersExistYet` lists `venv/site-packages` paths | fixed in the Phase-03 hotfix (test now excludes `venv/`, `site-packages`, caches) — update your copy |
 | `testRootGitignoreTxtRemnantIsGone` fails | a stale `.gitignore.txt` from an older copy sits next to `.gitignore` — delete it: `Remove-Item ..\.gitignore.txt` (from `backend/`), then re-run tests |
 | WARNING/ERROR log lines during tests (`Method Not Allowed`, `Service Unavailable`) | **expected** — negative tests deliberately send bad requests (405) and simulate database-down (503); not failures |
+
+
+## 8. Phase 06 — first run (PowerShell)
+
+```powershell
+cd C:\Users\Mitra\Desktop\Tekarai\backend
+.\venv\Scripts\Activate.ps1
+$env:DJANGO_SETTINGS_MODULE="config.settings.development"
+$env:PLATFORM_ADMIN_PASSWORD="Your-Strong-Pass-2026!"   # min 12 chars + symbol
+python manage.py migrate
+python manage.py bootstrapPlatform
+python manage.py runserver
+```
+
+- Contract: `http://127.0.0.1:8000/api/v1/openapi.json`
+- Docs: `http://127.0.0.1:8000/api/v1/docs`
+- Login: `POST /api/v1/auth/login` with `tenantCode=platform`.

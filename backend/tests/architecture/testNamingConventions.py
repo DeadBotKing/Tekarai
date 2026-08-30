@@ -26,8 +26,29 @@ CAMEL_CASE_PATTERN = re.compile(r"^_?[a-z][a-zA-Z0-9]*$")
 PASCAL_CASE_PATTERN = re.compile(r"^[A-Z][a-zA-Z0-9]*$")
 
 #: Names exempt from the convention (dunder hooks, standard entrypoints).
-FUNCTION_EXEMPTIONS = {"main"}
+#: EVOLUTION NOTE (Phase 06): framework hook methods we override keep their
+#: framework names (DRF/Django/management contracts) — camelCase still rules
+#: for everything we name ourselves.
+FRAMEWORK_HOOKS = {
+    "main",  # console entrypoints
+    "handle",  # django management commands
+    "get_paginated_response",  # DRF pagination override
+    "get_next_link",  # DRF cursor pagination helper
+    "has_permission",  # DRF permission hook
+    "authenticate",  # DRF authentication hook
+    "authenticate_header",  # DRF authentication hook
+    "dispatch",  # DRF view dispatch
+    "is_authenticated",  # DRF principal property
+}
+FUNCTION_EXEMPTIONS = FRAMEWORK_HOOKS
 MODULE_EXEMPTIONS = {"manage.py", "wsgi.py", "asgi.py", "urls.py"}
+
+
+def isFrameworkGenerated(sourceFile: Path) -> bool:
+    """Django-generated migration files (0001_initial.py, 00XX_*.py)."""
+    return "migrations" in sourceFile.parts and bool(
+        __import__("re").match(r"^\d{4}_", sourceFile.name)
+    )
 
 
 def collectOurPythonFiles() -> list[Path]:
@@ -41,7 +62,7 @@ def collectOurPythonFiles() -> list[Path]:
 class FunctionNamingTests(SimpleTestCase):
     def testFunctionNamesAreCamelCase(self) -> None:
         for sourceFile in collectOurPythonFiles():
-            if sourceFile.name in MODULE_EXEMPTIONS:
+            if sourceFile.name in MODULE_EXEMPTIONS or isFrameworkGenerated(sourceFile):
                 continue
             tree = ast.parse(sourceFile.read_text(encoding="utf-8"))
             for node in ast.walk(tree):
@@ -76,6 +97,8 @@ class FileNamingTests(SimpleTestCase):
             name = sourceFile.name
             if name in MODULE_EXEMPTIONS or name == "__init__.py":
                 continue
+            if isFrameworkGenerated(sourceFile):
+                continue  # Django migration file names are framework-owned
             stem = name.removesuffix(".py")
             isCamelCase = bool(CAMEL_CASE_PATTERN.match(stem))
             isSingleLowercaseWord = bool(re.match(r"^[a-z]+$", stem))

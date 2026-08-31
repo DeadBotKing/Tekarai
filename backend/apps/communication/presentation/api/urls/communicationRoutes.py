@@ -9,6 +9,7 @@ from apps.communication.presentation.api.views.communicationViews import (
     CallDetailView,
     CallView,
     ChannelJoinView,
+    CommunicationMetricsView,
     ConversationArchiveView,
     ConversationDetailView,
     ConversationListView,
@@ -31,9 +32,37 @@ from apps.communication.presentation.api.views.communicationViews import (
     PinListView,
     PresenceView,
     RecordingDetailView,
-    CommunicationMetricsView,
     RecordingListView,
     registerCommunicationEndpoints,
+)
+from apps.communication.presentation.api.views.phase10Views import (
+    CallSessionView,
+    MeetingCapabilityView,
+    MessageRevisionListView,
+    TranscriptCompleteView,
+    TranscriptRequestView,
+    UserBlockDetailView,
+    UserBlockView,
+)
+from apps.communication.presentation.api.views.phase11Views import (
+    ActionItemDispatchView,
+    ActionItemReviewView,
+    CommunicationPolicyView,
+    LegalHoldReleaseView,
+    LegalHoldView,
+    MeetingRoomView,
+    MeetingSessionEndView,
+    MeetingSessionView,
+    MeetingSummaryReviewView,
+    MeetingSummaryView,
+    MessageDeliveryView,
+    MessageReportReviewView,
+    MessageReportView,
+    OfficialMessageAcknowledgeView,
+    OfficialMessageTransitionView,
+    OfficialMessageView,
+    ScreenShareStopView,
+    ScreenShareView,
 )
 
 urlpatterns = [
@@ -114,15 +143,30 @@ urlpatterns = [
         MeetingDetailView.as_view(),
         name="commMeetingDetail",
     ),
-    path(
-        "meetings/<str:meetingId>/<str:action>",
-        MeetingLifecycleView.as_view(),
-        name="commMeetingLifecycle",
-    ),
+    # Phase 10 + specific sub-paths must be declared BEFORE the generic
+    # <str:action> lifecycle route, or they would be swallowed by it.
     path(
         "meetings/<str:meetingId>/rsvp",
         MeetingRsvpView.as_view(),
         name="commMeetingRsvp",
+    ),
+    # -- Phase 11 meeting sub-resources (MUST precede the
+    # meetings/<id>/<action> catch-all below so /room, /sessions,
+    # /screen-share and /summary route to the governance views) -------------
+    path(
+        "meetings/<str:meetingId>/room",
+        MeetingRoomView.as_view(),
+        name="commMeetingRoom",
+    ),
+    path(
+        "meetings/<str:meetingId>/sessions",
+        MeetingSessionView.as_view(),
+        name="commMeetingSessions",
+    ),
+    path(
+        "meetings/<str:meetingId>/screen-share",
+        ScreenShareView.as_view(),
+        name="commScreenShare",
     ),
     path(
         "meetings/<str:meetingId>/summary",
@@ -135,10 +179,37 @@ urlpatterns = [
         name="commRecordings",
     ),
     path(
+        "meetings/<str:meetingId>/transcript",
+        TranscriptRequestView.as_view(),
+        name="commMeetingTranscript",
+    ),
+    path(
+        "meetings/<str:meetingId>/capabilities",
+        MeetingCapabilityView.as_view(),
+        name="commMeetingCapabilities",
+    ),
+    path(
+        "transcripts/<str:transcriptId>/complete",
+        TranscriptCompleteView.as_view(),
+        name="commTranscriptComplete",
+    ),
+    path(
+        "meetings/<str:meetingId>/<str:action>",
+        MeetingLifecycleView.as_view(),
+        name="commMeetingLifecycle",
+    ),
+    path(
         "recordings/<str:recordingId>/<str:action>",
         RecordingDetailView.as_view(),
         name="commRecordingAction",
     ),
+    path("blocks", UserBlockView.as_view(), name="commBlocks"),
+    path(
+        "blocks/<str:blockedUserId>",
+        UserBlockDetailView.as_view(),
+        name="commBlockDetail",
+    ),
+    path("call-sessions", CallSessionView.as_view(), name="commCallSessions"),
     path("calls", CallView.as_view(), name="commCalls"),
     path("calls/<str:callId>", CallDetailView.as_view(), name="commCallDetail"),
     path(
@@ -153,6 +224,74 @@ urlpatterns = [
         "letters/<str:letterId>/<str:action>",
         LetterDetailView.as_view(),
         name="commLetterAction",
+    ),
+    # -- Phase 10 surface: message revision history (§11) -------------------
+    path(
+        "messages/<str:messageId>/revisions",
+        MessageRevisionListView.as_view(),
+        name="commMessageRevisions",
+    ),
+    # -- Phase 11 surface (docs/Phases/Phase11.md) --------------------------
+    path("policy", CommunicationPolicyView.as_view(), name="commPolicy"),
+    path(
+        "messages/<str:messageId>/delivery",
+        MessageDeliveryView.as_view(),
+        name="commMessageDelivery",
+    ),
+    path(
+        "messages/<str:messageId>/report",
+        MessageReportView.as_view(),
+        name="commMessageReport",
+    ),
+    path(
+        "reports/<str:reportId>/review",
+        MessageReportReviewView.as_view(),
+        name="commMessageReportReview",
+    ),
+    # NOTE: meetings/<meetingId>/room|sessions|screen-share|summary are
+    # registered earlier (before the meetings/<id>/<action> catch-all) below;
+    # the non-meeting-prefixed Phase 11 routes stay here.
+    path(
+        "sessions/<str:sessionId>/end",
+        MeetingSessionEndView.as_view(),
+        name="commMeetingSessionEnd",
+    ),
+    path(
+        "screen-shares/<str:shareId>/stop",
+        ScreenShareStopView.as_view(),
+        name="commScreenShareStop",
+    ),
+    path(
+        "summaries/<str:summaryId>/review",
+        MeetingSummaryReviewView.as_view(),
+        name="commSummaryReview",
+    ),
+    path(
+        "action-items/<str:itemId>/review",
+        ActionItemReviewView.as_view(),
+        name="commActionItemReview",
+    ),
+    path(
+        "action-items/<str:itemId>/dispatch",
+        ActionItemDispatchView.as_view(),
+        name="commActionItemDispatch",
+    ),
+    path("official-messages", OfficialMessageView.as_view(), name="commOfficial"),
+    path(
+        "official-messages/<str:officialId>/transition",
+        OfficialMessageTransitionView.as_view(),
+        name="commOfficialTransition",
+    ),
+    path(
+        "official-messages/<str:officialId>/acknowledge",
+        OfficialMessageAcknowledgeView.as_view(),
+        name="commOfficialAcknowledge",
+    ),
+    path("legal-holds", LegalHoldView.as_view(), name="commLegalHold"),
+    path(
+        "legal-holds/<str:holdId>/release",
+        LegalHoldReleaseView.as_view(),
+        name="commLegalHoldRelease",
     ),
 ]
 

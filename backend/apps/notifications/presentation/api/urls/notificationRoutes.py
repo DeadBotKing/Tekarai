@@ -28,12 +28,42 @@ from apps.notifications.presentation.api.views.notificationViews import (
     NotificationUnreadCountView,
     PreferenceListView,
 )
+from apps.notifications.presentation.api.views.phase12Views import (  # noqa: E402
+    BroadcastListView,
+    BroadcastUnreadCountView,
+    DeliveryListView,
+    DeliveryRetryView,
+    EventIntakeView,
+    RecipientStateView,
+    RuleListView,
+)
 
 urlpatterns = [
     # literal segments MUST precede <str:notificationId> (Django matches in order)
     path("", NotificationListView.as_view(), name="ntfList"),
     path("read-bulk", NotificationReadBulkView.as_view(), name="ntfReadBulk"),
     path("unread-count", NotificationUnreadCountView.as_view(), name="ntfUnreadCount"),
+    # -- Phase 12 multi-recipient broadcast model (docs/Phases/Phase12.md) --
+    # distinct literal segments, registered before the <str:notificationId> catch-all
+    path("broadcasts", BroadcastListView.as_view(), name="ntfBroadcasts"),
+    path(
+        "broadcasts/unread-count",
+        BroadcastUnreadCountView.as_view(),
+        name="ntfBroadcastUnreadCount",
+    ),
+    path(
+        "broadcasts/<str:notificationId>/<str:action>",
+        RecipientStateView.as_view(),
+        name="ntfBroadcastState",
+    ),
+    path("deliveries", DeliveryListView.as_view(), name="ntfDeliveries"),
+    path(
+        "deliveries/<str:deliveryId>/retry",
+        DeliveryRetryView.as_view(),
+        name="ntfDeliveryRetry",
+    ),
+    path("rules", RuleListView.as_view(), name="ntfRules"),
+    path("events", EventIntakeView.as_view(), name="ntfEvents"),
     path("preferences", PreferenceListView.as_view(), name="ntfPreferences"),
     path("devices", DeviceListView.as_view(), name="ntfDevices"),
     path(

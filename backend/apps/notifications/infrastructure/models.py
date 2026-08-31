@@ -395,3 +395,192 @@ class NotificationScheduleModel(models.Model):
             # §22 — worker poll: due pending schedules
             models.Index(fields=["status", "nextRunAt"], name="IX_Sched_due"),
         ]
+
+
+# ---------------------------------------------------------------------------
+# Phase 12 — canonical multi-recipient notification model (docs/Phases/Phase12.md).
+# The Phase 09 single-recipient tables above stay untouched; these tables add
+# the broadcast/recipient split (§12.8), delivery attempts (§12.16), dead-letter
+# (§12.18), rules (§12.24) and the idempotent event log (§12.38).
+# ---------------------------------------------------------------------------
+
+
+class NotificationModel(models.Model):
+    """§12.3 — ONE notification addressed to MANY recipients (broadcast).
+
+    Read state is NOT stored here (§12.8 forbids Notification.isRead); it lives
+    on NotificationRecipientModel.
+    """
+
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    notificationType = models.CharField(max_length=120, db_index=True)
+    severity = models.CharField(max_length=16, default="INFO")
+    priority = models.CharField(max_length=16, db_index=True, default="NORMAL")
+    title = models.CharField(max_length=300)
+    body = models.TextField(blank=True, default="")
+    sourceType = models.CharField(max_length=64, blank=True, default="", db_index=True)
+    sourceId = models.CharField(max_length=120, blank=True, default="")
+    deepLink = models.CharField(max_length=300, blank=True, default="")
+    language = models.CharField(max_length=16, blank=True, default="")
+    metadata = models.JSONField(default=dict, blank=True)
+    idempotencyKey = models.CharField(max_length=80, blank=True, default="", db_index=True)
+    correlationId = models.CharField(max_length=64, blank=True, default="", db_index=True)
+    createdAt = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = "notifications"
+        indexes = [
+            models.Index(fields=["tenantId", "notificationType"], name="IX_Ntf12_type"),
+            models.Index(fields=["tenantId", "priority"], name="IX_Ntf12_pri"),
+        ]
+        constraints = [
+            # §12.38 — a redelivered event must not duplicate a notification
+            models.UniqueConstraint(
+                fields=["tenantId", "idempotencyKey"],
+                condition=models.Q(idempotencyKey__gt=""),
+                name="UQ_Notifications12_idem",
+            ),
+        ]
+
+
+class NotificationRecipientModel(models.Model):
+    """§12.7/§12.8 — per-recipient read/archive/dismiss state."""
+
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    notificationId = models.UUIDField(db_index=True)
+    userId = models.UUIDField(db_index=True)
+    recipientState = models.CharField(max_length=12, default="UNREAD", db_index=True)
+    readAt = models.DateTimeField(null=True, blank=True)
+    archivedAt = models.DateTimeField(null=True, blank=True)
+    dismissedAt = models.DateTimeField(null=True, blank=True)
+    createdAt = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "notificationRecipients"
+        indexes = [
+            # §12.48 — unread inbox query: (tenant, recipient, state, created)
+            models.Index(
+                fields=["tenantId", "userId", "recipientState", "createdAt"],
+                name="IX_Recp_inbox",
+            ),
+            models.Index(fields=["notificationId", "userId"], name="IX_Recp_n_u"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["notificationId", "userId"], name="UQ_Recp_notif_user"
+            ),
+        ]
+
+
+class NotificationRecipientDeliveryModel(models.Model):
+    """§12.14 — one channel delivery to one recipient of a broadcast.
+
+    Distinct from the Phase 09 ``NotificationDeliveryModel`` (single-recipient
+    rows in ``notificationsDeliveries``); this is the broadcast delivery table.
+    """
+
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    notificationId = models.UUIDField(db_index=True)
+    recipientId = models.UUIDField(db_index=True)
+    channel = models.CharField(max_length=16, db_index=True)
+    provider = models.CharField(max_length=48, blank=True, default="")
+    deliveryStatus = models.CharField(max_length=16, default="PENDING", db_index=True)
+    attemptCount = models.IntegerField(default=0)
+    maxAttempts = models.IntegerField(default=5)
+    errorCode = models.CharField(max_length=48, blank=True, default="")
+    errorMessage = models.CharField(max_length=500, blank=True, default="")
+    lastAttemptAt = models.DateTimeField(null=True, blank=True)
+    nextAttemptAt = models.DateTimeField(null=True, blank=True, db_index=True)
+    deliveredAt = models.DateTimeField(null=True, blank=True)
+    createdAt = models.DateTimeField(auto_now_add=True)
+    updatedAt = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "notificationDeliveries"
+        indexes = [
+            # §12.48 — retry worker scan
+            models.Index(fields=["deliveryStatus", "nextAttemptAt"], name="IX_Dlv12_retry"),
+            models.Index(
+                fields=["notificationId", "recipientId", "channel"],
+                name="IX_Dlv12_nrc",
+            ),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["notificationId", "recipientId", "channel"],
+                name="UQ_Dlv12_triple",
+            ),
+        ]
+
+
+class NotificationAttemptModel(models.Model):
+    """§12.16 — every provider send attempt is audited."""
+
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    deliveryId = models.UUIDField(db_index=True)
+    attemptNumber = models.IntegerField()
+    outcome = models.CharField(max_length=12)
+    provider = models.CharField(max_length=48, blank=True, default="")
+    providerMessageId = models.CharField(max_length=120, blank=True, default="")
+    errorCode = models.CharField(max_length=48, blank=True, default="")
+    errorMessage = models.CharField(max_length=500, blank=True, default="")
+    responseMetadata = models.JSONField(default=dict, blank=True)
+    startedAt = models.DateTimeField(null=True, blank=True)
+    completedAt = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "notificationAttempts"
+        indexes = [
+            models.Index(fields=["deliveryId", "attemptNumber"], name="IX_Att_dlv_num"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["deliveryId", "attemptNumber"], name="UQ_Att_dlv_num"
+            ),
+        ]
+
+
+class NotificationRuleModel(models.Model):
+    """§12.24 — WHEN event / IF condition / THEN notify rule."""
+
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    name = models.CharField(max_length=160)
+    eventType = models.CharField(max_length=120, db_index=True)
+    condition = models.JSONField(default=dict, blank=True)
+    recipientStrategy = models.CharField(max_length=24, default="TARGET")
+    channels = models.JSONField(default=list)
+    priority = models.CharField(max_length=16, default="NORMAL")
+    templateKey = models.CharField(max_length=120, blank=True, default="")
+    isActive = models.BooleanField(default=True, db_index=True)
+    createdAt = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "notificationRules"
+        indexes = [
+            models.Index(fields=["tenantId", "eventType", "isActive"], name="IX_Rule_evt"),
+        ]
+
+
+class NotificationEventModel(models.Model):
+    """§12.38 — idempotent inbound event log (dedupe redelivered events)."""
+
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    eventId = models.CharField(max_length=80, db_index=True)
+    eventType = models.CharField(max_length=120, db_index=True)
+    payload = models.JSONField(default=dict, blank=True)
+    processed = models.BooleanField(default=False, db_index=True)
+    createdAt = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "notificationEvents"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenantId", "eventId"], name="UQ_Event_tenant_evt"
+            ),
+        ]

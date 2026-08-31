@@ -71,6 +71,7 @@ def channelRegistry():
 
 def jobQueue():
     from django.conf import settings
+
     from apps.sharedKernel.infrastructure.wiring import importFromDottedPath
 
     dotted = getattr(
@@ -534,3 +535,127 @@ class NotificationContainer:
 
 
 container = NotificationContainer()
+
+
+# ---------------------------------------------------------------------------
+# Phase 12 — multi-recipient broadcast model (docs/Phases/Phase12.md).
+# Standalone factories so the Phase 09 container class stays untouched.
+# ---------------------------------------------------------------------------
+
+
+def broadcastRepository():
+    from apps.notifications.infrastructure.repositories.phase12RepositoriesImpl import (
+        BroadcastNotificationRepositoryDjango,
+    )
+
+    return BroadcastNotificationRepositoryDjango()
+
+
+def recipientDeliveryRepository():
+    from apps.notifications.infrastructure.repositories.phase12RepositoriesImpl import (
+        RecipientDeliveryRepositoryDjango,
+    )
+
+    return RecipientDeliveryRepositoryDjango()
+
+
+def notificationRuleRepository():
+    from apps.notifications.infrastructure.repositories.phase12RepositoriesImpl import (
+        NotificationRuleRepositoryDjango,
+    )
+
+    return NotificationRuleRepositoryDjango()
+
+
+def inboundEventRepository():
+    from apps.notifications.infrastructure.repositories.phase12RepositoriesImpl import (
+        InboundEventRepositoryDjango,
+    )
+
+    return InboundEventRepositoryDjango()
+
+
+def createBroadcastService():
+    from apps.notifications.application.services.phase12Services import (
+        CreateBroadcastService,
+    )
+
+    return CreateBroadcastService(
+        broadcastRepository=broadcastRepository(), **notificationPorts()
+    )
+
+
+def recipientStateService():
+    from apps.notifications.application.services.phase12Services import (
+        RecipientStateService,
+    )
+
+    return RecipientStateService(
+        broadcastRepository=broadcastRepository(), **notificationPorts()
+    )
+
+
+def broadcastQueryService():
+    from apps.notifications.application.services.phase12Services import (
+        BroadcastQueryService,
+    )
+
+    return BroadcastQueryService(
+        broadcastRepository=broadcastRepository(), **notificationPorts()
+    )
+
+
+def deliveryDispatchService():
+    from apps.notifications.application.services.phase12Services import (
+        DeliveryDispatchService,
+    )
+
+    return DeliveryDispatchService(
+        broadcastRepository=broadcastRepository(),
+        deliveryRepository=recipientDeliveryRepository(),
+        **notificationPorts(),
+    )
+
+
+def deliveryRetryService():
+    from apps.notifications.application.services.phase12Services import (
+        DeliveryRetryService,
+    )
+
+    return DeliveryRetryService(
+        deliveryRepository=recipientDeliveryRepository(), **notificationPorts()
+    )
+
+
+def deliveryQueryService():
+    from apps.notifications.application.services.phase12Services import (
+        DeliveryQueryService,
+    )
+
+    return DeliveryQueryService(
+        deliveryRepository=recipientDeliveryRepository(), **notificationPorts()
+    )
+
+
+def ruleDefinitionService():
+    from apps.notifications.application.services.phase12Services import (
+        RuleDefinitionService,
+    )
+
+    return RuleDefinitionService(
+        ruleRepository=notificationRuleRepository(), **notificationPorts()
+    )
+
+
+def eventIntakeService():
+    from apps.notifications.application.services.phase12Services import (
+        EventIntakeService,
+    )
+
+    return EventIntakeService(
+        inboundEventRepository=inboundEventRepository(),
+        ruleRepository=notificationRuleRepository(),
+        broadcastRepository=broadcastRepository(),
+        dispatchService=deliveryDispatchService(),
+        **notificationPorts(),
+    )

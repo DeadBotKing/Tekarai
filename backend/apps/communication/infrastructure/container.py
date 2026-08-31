@@ -389,6 +389,7 @@ def sendMessageUseCase():
         attachmentRepository=attachmentRepository(),
         readStateRepository=readStateRepository(),
         userDirectory=userDirectory(),
+        blockRepository=userBlockRepository(),
         **commPorts(),
     )
 
@@ -401,6 +402,7 @@ def editMessageUseCase():
     return EditMessageUseCase(
         messageRepository=messageRepository(),
         participantRepository=participantRepository(),
+        revisionRepository=messageRevisionRepository(),
         **commPorts(),
     )
 
@@ -537,6 +539,7 @@ def createMeetingUseCase():
         meetingRepository=meetingRepository(),
         meetingParticipantRepository=meetingParticipantRepository(),
         userDirectory=userDirectory(),
+        blockRepository=userBlockRepository(),  # Phase 10 §70
         **commPorts(),
     )
 
@@ -740,6 +743,7 @@ def startCallUseCase():
         meetingRepository=meetingRepository(),
         participantRepository=participantRepository(),
         mediaRouter=mediaRouter(),
+        blockRepository=userBlockRepository(),  # Phase 10 §70
         **commPorts(),
     )
 
@@ -881,3 +885,473 @@ def outboxRepository():
     )
 
     return OutboxRepositoryDjango()
+
+
+# ===========================================================================
+# Phase 10 factories (docs/Phases/Phase10.md) — revisions, transcripts,
+# granular meeting capabilities, user blocks, provider-agnostic call session.
+# ===========================================================================
+
+_messageRevisionRepositorySingleton = None
+_transcriptRepositorySingleton = None
+_userBlockRepositorySingleton = None
+_meetingCapabilityRepositorySingleton = None
+_callProviderSingleton = None
+_messageSearchProviderSingleton = None
+
+
+def messageRevisionRepository():
+    global _messageRevisionRepositorySingleton
+    if _messageRevisionRepositorySingleton is None:
+        from apps.communication.infrastructure.repositories.phase10RepositoriesImpl import (
+            MessageRevisionRepositoryDjango,
+        )
+        _messageRevisionRepositorySingleton = MessageRevisionRepositoryDjango()
+    return _messageRevisionRepositorySingleton
+
+
+def transcriptRepository():
+    global _transcriptRepositorySingleton
+    if _transcriptRepositorySingleton is None:
+        from apps.communication.infrastructure.repositories.phase10RepositoriesImpl import (
+            TranscriptRepositoryDjango,
+        )
+        _transcriptRepositorySingleton = TranscriptRepositoryDjango()
+    return _transcriptRepositorySingleton
+
+
+def userBlockRepository():
+    global _userBlockRepositorySingleton
+    if _userBlockRepositorySingleton is None:
+        from apps.communication.infrastructure.repositories.phase10RepositoriesImpl import (
+            UserBlockRepositoryDjango,
+        )
+        _userBlockRepositorySingleton = UserBlockRepositoryDjango()
+    return _userBlockRepositorySingleton
+
+
+def meetingCapabilityRepository():
+    global _meetingCapabilityRepositorySingleton
+    if _meetingCapabilityRepositorySingleton is None:
+        from apps.communication.infrastructure.repositories.phase10RepositoriesImpl import (
+            MeetingCapabilityRepositoryDjango,
+        )
+        _meetingCapabilityRepositorySingleton = MeetingCapabilityRepositoryDjango()
+    return _meetingCapabilityRepositorySingleton
+
+
+def callProvider():
+    """§25 — default signaling-only WebRTC provider; future Twilio/Agora/Jitsi
+    providers implement the same port and are selected by settings."""
+    global _callProviderSingleton
+    if _callProviderSingleton is None:
+        from apps.communication.infrastructure.services.callProviderImpl import (
+            WebRtcCallProvider,
+        )
+        _callProviderSingleton = WebRtcCallProvider()
+    return _callProviderSingleton
+
+
+def messageSearchProvider():
+    """§54 — default SQL search provider; Elasticsearch/OpenSearch later."""
+    global _messageSearchProviderSingleton
+    if _messageSearchProviderSingleton is None:
+        from apps.communication.infrastructure.repositories.phase10RepositoriesImpl import (
+            SqlMessageSearchProvider,
+        )
+        _messageSearchProviderSingleton = SqlMessageSearchProvider()
+    return _messageSearchProviderSingleton
+
+
+# -- use cases -----------------------------------------------------------------
+
+
+def listMessageRevisionsUseCase():
+    from apps.communication.application.useCases.phase10UseCases import (
+        ListMessageRevisionsUseCase,
+    )
+
+    return ListMessageRevisionsUseCase(
+        messageRepository=messageRepository(),
+        participantRepository=participantRepository(),
+        revisionRepository=messageRevisionRepository(),
+        **commPorts(),
+    )
+
+
+def requestTranscriptUseCase():
+    from apps.communication.application.useCases.phase10UseCases import (
+        RequestTranscriptUseCase,
+    )
+
+    return RequestTranscriptUseCase(
+        meetingRepository=meetingRepository(),
+        transcriptRepository=transcriptRepository(),
+        **commPorts(),
+    )
+
+
+def completeTranscriptUseCase():
+    from apps.communication.application.useCases.phase10UseCases import (
+        CompleteTranscriptUseCase,
+    )
+
+    return CompleteTranscriptUseCase(
+        transcriptRepository=transcriptRepository(),
+        **commPorts(),
+    )
+
+
+def getTranscriptUseCase():
+    from apps.communication.application.useCases.phase10UseCases import (
+        GetTranscriptUseCase,
+    )
+
+    return GetTranscriptUseCase(
+        meetingRepository=meetingRepository(),
+        participantRepository=participantRepository(),
+        transcriptRepository=transcriptRepository(),
+        **commPorts(),
+    )
+
+
+def setMeetingCapabilityUseCase():
+    from apps.communication.application.useCases.phase10UseCases import (
+        SetMeetingCapabilityUseCase,
+    )
+
+    return SetMeetingCapabilityUseCase(
+        meetingRepository=meetingRepository(),
+        meetingParticipantRepository=meetingParticipantRepository(),
+        capabilityRepository=meetingCapabilityRepository(),
+        **commPorts(),
+    )
+
+
+def checkMeetingCapabilityUseCase():
+    from apps.communication.application.useCases.phase10UseCases import (
+        CheckMeetingCapabilityUseCase,
+    )
+
+    return CheckMeetingCapabilityUseCase(
+        meetingRepository=meetingRepository(),
+        meetingParticipantRepository=meetingParticipantRepository(),
+        capabilityRepository=meetingCapabilityRepository(),
+        **commPorts(),
+    )
+
+
+def blockUserUseCase():
+    from apps.communication.application.useCases.phase10UseCases import (
+        BlockUserUseCase,
+    )
+
+    return BlockUserUseCase(blockRepository=userBlockRepository(), **commPorts())
+
+
+def unblockUserUseCase():
+    from apps.communication.application.useCases.phase10UseCases import (
+        UnblockUserUseCase,
+    )
+
+    return UnblockUserUseCase(blockRepository=userBlockRepository(), **commPorts())
+
+
+def listBlocksUseCase():
+    from apps.communication.application.useCases.phase10UseCases import (
+        ListBlocksUseCase,
+    )
+
+    return ListBlocksUseCase(blockRepository=userBlockRepository(), **commPorts())
+
+
+def createCallSessionUseCase():
+    from apps.communication.application.useCases.phase10UseCases import (
+        CreateCallSessionUseCase,
+    )
+
+    return CreateCallSessionUseCase(
+        callRepository=callRepository(),
+        callProvider=callProvider(),
+        **commPorts(),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Phase 11 factories (docs/Phases/Phase11.md) — Enterprise Communication:
+# tenant policy, delivery receipts, room/session, screen share, AI-governed
+# summary + action item candidates, official messages, moderation reports,
+# and legal hold.
+# ---------------------------------------------------------------------------
+
+
+def communicationPolicyRepository():
+    from apps.communication.infrastructure.repositories.phase11RepositoriesImpl import (
+        CommunicationPolicyRepositoryDjango,
+    )
+
+    return CommunicationPolicyRepositoryDjango()
+
+
+def messageDeliveryRepository():
+    from apps.communication.infrastructure.repositories.phase11RepositoriesImpl import (
+        MessageDeliveryRepositoryDjango,
+    )
+
+    return MessageDeliveryRepositoryDjango()
+
+
+def meetingRoomRepository():
+    from apps.communication.infrastructure.repositories.phase11RepositoriesImpl import (
+        MeetingRoomRepositoryDjango,
+    )
+
+    return MeetingRoomRepositoryDjango()
+
+
+def screenShareRepository():
+    from apps.communication.infrastructure.repositories.phase11RepositoriesImpl import (
+        ScreenShareRepositoryDjango,
+    )
+
+    return ScreenShareRepositoryDjango()
+
+
+def meetingSummaryRepository():
+    from apps.communication.infrastructure.repositories.phase11RepositoriesImpl import (
+        MeetingSummaryRepositoryDjango,
+    )
+
+    return MeetingSummaryRepositoryDjango()
+
+
+def actionItemRepository():
+    from apps.communication.infrastructure.repositories.phase11RepositoriesImpl import (
+        ActionItemRepositoryDjango,
+    )
+
+    return ActionItemRepositoryDjango()
+
+
+def officialMessageRepository():
+    from apps.communication.infrastructure.repositories.phase11RepositoriesImpl import (
+        OfficialMessageRepositoryDjango,
+    )
+
+    return OfficialMessageRepositoryDjango()
+
+
+def messageReportRepository():
+    from apps.communication.infrastructure.repositories.phase11RepositoriesImpl import (
+        MessageReportRepositoryDjango,
+    )
+
+    return MessageReportRepositoryDjango()
+
+
+def legalHoldRepository():
+    from apps.communication.infrastructure.repositories.phase11RepositoriesImpl import (
+        LegalHoldRepositoryDjango,
+    )
+
+    return LegalHoldRepositoryDjango()
+
+
+def getCommunicationPolicyUseCase():
+    from apps.communication.application.useCases.phase11UseCases import (
+        GetCommunicationPolicyUseCase,
+    )
+
+    return GetCommunicationPolicyUseCase(
+        policyRepository=communicationPolicyRepository(), **commPorts()
+    )
+
+
+def updateCommunicationPolicyUseCase():
+    from apps.communication.application.useCases.phase11UseCases import (
+        UpdateCommunicationPolicyUseCase,
+    )
+
+    return UpdateCommunicationPolicyUseCase(
+        policyRepository=communicationPolicyRepository(), **commPorts()
+    )
+
+
+def recordDeliveryUseCase():
+    from apps.communication.application.useCases.phase11UseCases import (
+        RecordDeliveryUseCase,
+    )
+
+    return RecordDeliveryUseCase(
+        deliveryRepository=messageDeliveryRepository(),
+        messageRepository=messageRepository(),
+        **commPorts(),
+    )
+
+
+def openMeetingRoomUseCase():
+    from apps.communication.application.useCases.phase11UseCases import (
+        OpenMeetingRoomUseCase,
+    )
+
+    return OpenMeetingRoomUseCase(
+        roomRepository=meetingRoomRepository(),
+        meetingRepository=meetingRepository(),
+        **commPorts(),
+    )
+
+
+def startMeetingSessionUseCase():
+    from apps.communication.application.useCases.phase11UseCases import (
+        StartMeetingSessionUseCase,
+    )
+
+    return StartMeetingSessionUseCase(
+        roomRepository=meetingRoomRepository(),
+        meetingRepository=meetingRepository(),
+        **commPorts(),
+    )
+
+
+def endMeetingSessionUseCase():
+    from apps.communication.application.useCases.phase11UseCases import (
+        EndMeetingSessionUseCase,
+    )
+
+    return EndMeetingSessionUseCase(roomRepository=meetingRoomRepository(), **commPorts())
+
+
+def startScreenShareUseCase():
+    from apps.communication.application.useCases.phase11UseCases import (
+        StartScreenShareUseCase,
+    )
+
+    return StartScreenShareUseCase(
+        screenShareRepository=screenShareRepository(),
+        meetingRepository=meetingRepository(),
+        **commPorts(),
+    )
+
+
+def stopScreenShareUseCase():
+    from apps.communication.application.useCases.phase11UseCases import (
+        StopScreenShareUseCase,
+    )
+
+    return StopScreenShareUseCase(
+        screenShareRepository=screenShareRepository(), **commPorts()
+    )
+
+
+def generateMeetingSummaryUseCase():
+    from apps.communication.application.useCases.phase11UseCases import (
+        GenerateMeetingSummaryUseCase,
+    )
+
+    return GenerateMeetingSummaryUseCase(
+        summaryRepository=meetingSummaryRepository(),
+        meetingRepository=meetingRepository(),
+        **commPorts(),
+    )
+
+
+def reviewMeetingSummaryUseCase():
+    from apps.communication.application.useCases.phase11UseCases import (
+        ReviewMeetingSummaryUseCase,
+    )
+
+    return ReviewMeetingSummaryUseCase(
+        summaryRepository=meetingSummaryRepository(), **commPorts()
+    )
+
+
+def reviewActionItemUseCase():
+    from apps.communication.application.useCases.phase11UseCases import (
+        ReviewActionItemUseCase,
+    )
+
+    return ReviewActionItemUseCase(
+        actionItemRepository=actionItemRepository(), **commPorts()
+    )
+
+
+def dispatchActionItemUseCase():
+    from apps.communication.application.useCases.phase11UseCases import (
+        DispatchActionItemUseCase,
+    )
+
+    return DispatchActionItemUseCase(
+        actionItemRepository=actionItemRepository(), **commPorts()
+    )
+
+
+def createOfficialMessageUseCase():
+    from apps.communication.application.useCases.phase11UseCases import (
+        CreateOfficialMessageUseCase,
+    )
+
+    return CreateOfficialMessageUseCase(
+        officialRepository=officialMessageRepository(), **commPorts()
+    )
+
+
+def transitionOfficialMessageUseCase():
+    from apps.communication.application.useCases.phase11UseCases import (
+        TransitionOfficialMessageUseCase,
+    )
+
+    return TransitionOfficialMessageUseCase(
+        officialRepository=officialMessageRepository(), **commPorts()
+    )
+
+
+def acknowledgeOfficialMessageUseCase():
+    from apps.communication.application.useCases.phase11UseCases import (
+        AcknowledgeOfficialMessageUseCase,
+    )
+
+    return AcknowledgeOfficialMessageUseCase(
+        officialRepository=officialMessageRepository(), **commPorts()
+    )
+
+
+def reportMessageUseCase():
+    from apps.communication.application.useCases.phase11UseCases import (
+        ReportMessageUseCase,
+    )
+
+    return ReportMessageUseCase(
+        reportRepository=messageReportRepository(),
+        messageRepository=messageRepository(),
+        **commPorts(),
+    )
+
+
+def reviewMessageReportUseCase():
+    from apps.communication.application.useCases.phase11UseCases import (
+        ReviewMessageReportUseCase,
+    )
+
+    return ReviewMessageReportUseCase(
+        reportRepository=messageReportRepository(), **commPorts()
+    )
+
+
+def placeLegalHoldUseCase():
+    from apps.communication.application.useCases.phase11UseCases import (
+        PlaceLegalHoldUseCase,
+    )
+
+    return PlaceLegalHoldUseCase(
+        legalHoldRepository=legalHoldRepository(), **commPorts()
+    )
+
+
+def releaseLegalHoldUseCase():
+    from apps.communication.application.useCases.phase11UseCases import (
+        ReleaseLegalHoldUseCase,
+    )
+
+    return ReleaseLegalHoldUseCase(
+        legalHoldRepository=legalHoldRepository(), **commPorts()
+    )

@@ -42,6 +42,7 @@ class Message(AggregateRoot):
         *,
         body: str = "",
         replyToId: uuid.UUID | None = None,
+        threadRootId: uuid.UUID | None = None,
         clientRequestId: str = "",
         mentions: tuple[str, ...] = (),
         editedAt: datetime | None = None,
@@ -61,6 +62,9 @@ class Message(AggregateRoot):
         self.createdAt = createdAt
         self.body = body
         self.replyToId = replyToId
+        # Phase 10 §14 — thread root denormalised so deep replies stay grouped
+        # even when replyToId points at another reply (not the root).
+        self.threadRootId = threadRootId
         self.clientRequestId = clientRequestId
         self.mentions = tuple(mentions)
         self.editedAt = editedAt
@@ -78,6 +82,7 @@ class Message(AggregateRoot):
         *,
         messageType: str = MESSAGE_TEXT,
         replyToId: uuid.UUID | None = None,
+        threadRootId: uuid.UUID | None = None,
         clientRequestId: str = "",
         mentions: tuple[str, ...] = (),
     ) -> Message:
@@ -94,6 +99,9 @@ class Message(AggregateRoot):
                 "Message body is too long.",
                 fieldErrors={"body": f"max {BODY_MAX_LENGTH}"},
             )
+        # A reply without an explicit root roots the thread at the replied
+        # message itself (§14).
+        root = threadRootId if threadRootId is not None else replyToId
         message = Message(
             id=newId(),
             tenantId=tenantId,
@@ -103,6 +111,7 @@ class Message(AggregateRoot):
             createdAt=now,
             body=body,
             replyToId=replyToId,
+            threadRootId=root,
             clientRequestId=clientRequestId,
             mentions=mentions,
         )

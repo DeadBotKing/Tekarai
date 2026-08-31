@@ -190,6 +190,67 @@ class TranscriptApiTests(Phase10ApiBase):
         self.assertEqual(response.status_code, 404)
 
 
+class MessageThreadApiTests(Phase10ApiBase):
+    def testDeepRepliesShareThreadRoot(self) -> None:
+        member = ensureUser(TenantModel.objects.get(id=self.tenantId), "p10-thread-user")
+        conv = self.client.post(
+            f"{V1}/conversations",
+            {"kind": "direct", "peerUserId": str(member.id)},
+            format="json",
+            **self.auth(),
+        )
+        self.assertEqual(conv.status_code, 201, conv.content)
+        conversationId = conv.json()["data"]["id"]
+
+        def send(body: str, replyTo: str = "") -> str:
+            payload: dict[str, object] = {"body": body}
+            if replyTo:
+                payload["replyToId"] = replyTo
+            resp = self.client.post(
+                f"{V1}/conversations/{conversationId}/messages",
+                payload,
+                format="json",
+                **self.auth(),
+            )
+            self.assertEqual(resp.status_code, 201, resp.content)
+            return resp.json()["data"]["id"]
+
+        root = send("root message")
+        reply1 = send("first reply", replyTo=root)
+        # a deep reply points at reply1, but its thread root must still be root
+        send("deep reply", replyTo=reply1)
+
+        thread = self.client.get(
+            f"{V1}/conversations/{conversationId}/messages",
+            {"threadRootId": root},
+            **self.auth(),
+        )
+        self.assertEqual(thread.status_code, 200, thread.content)
+        bodies = {item["body"] for item in thread.json()["data"]}
+        self.assertIn("first reply", bodies)
+        self.assertIn("deep reply", bodies)
+        self.assertNotIn("root message", bodies)
+
+    def testSystemEventMessageTypesAccepted(self) -> None:
+        member = ensureUser(TenantModel.objects.get(id=self.tenantId), "p10-mtype-user")
+        conv = self.client.post(
+            f"{V1}/conversations",
+            {"kind": "direct", "peerUserId": str(member.id)},
+            format="json",
+            **self.auth(),
+        )
+        conversationId = conv.json()["data"]["id"]
+        for kind in ("DOCUMENT", "CALL_EVENT", "MEETING_EVENT"):
+            resp = self.client.post(
+                f"{V1}/conversations/{conversationId}/messages",
+                {"body": f"system {kind}", "messageType": kind},
+                format="json",
+                **self.auth(),
+            )
+            self.assertEqual(resp.status_code, 201, resp.content)
+            self.assertEqual(resp.json()["data"]["messageType"], kind)
+
+
 class PresencePrivacyApiTests(Phase10ApiBase):
     def testInvisibleAppearsOfflineToOthers(self) -> None:
         userId = self.adminId

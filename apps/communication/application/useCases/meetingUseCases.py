@@ -123,7 +123,9 @@ class CreateMeetingUseCase(CommunicationUseCase[CreateMeetingCommand, MeetingDto
         meeting.clientRequestId = command.clientRequestId
         self.meetingRepository.create(meeting)
         self.meetingParticipantRepository.add(
-            MeetingParticipant.invite(tenantId, meeting.id, actorId, now)
+            MeetingParticipant.invite(
+                tenantId, meeting.id, actorId, now, role="HOST"
+            )
         )
         for invitee in command.inviteeIds:
             inviteeId = asUuid(invitee)
@@ -144,7 +146,9 @@ class CreateMeetingUseCase(CommunicationUseCase[CreateMeetingCommand, MeetingDto
                     p10.BLOCK_MEETING_INVITATION,
                 )
             self.meetingParticipantRepository.add(
-                MeetingParticipant.invite(tenantId, meeting.id, inviteeId, now)
+                MeetingParticipant.invite(
+                    tenantId, meeting.id, inviteeId, now, role="PARTICIPANT"
+                )
             )
         self.collectEventsFrom(meeting)
         self.emitIntegrationEvent(

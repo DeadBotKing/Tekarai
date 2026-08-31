@@ -139,6 +139,7 @@ class SendMessageUseCase(CommunicationUseCase[SendMessageCommand, MessageDto]):
                 )
 
         replyToId = asUuid(command.replyToId) if command.replyToId else None
+        threadRootId = None  # Phase 10 §14 — denormalised thread root
         if replyToId is not None:
             root = self.messageRepository.getById(replyToId, tenantId)
             communicationRules.validateThread(
@@ -148,6 +149,10 @@ class SendMessageUseCase(CommunicationUseCase[SendMessageCommand, MessageDto]):
                     root is not None and root.conversationId == conversation.id
                 ),
             )
+            # If the parent is itself a reply, inherit ITS root; otherwise the
+            # parent is the root of the new thread.
+            if root is not None:
+                threadRootId = root.threadRootId or root.id
 
         mentionedIds = self._resolveMentions(command.body, tenantId)
 
@@ -160,6 +165,7 @@ class SendMessageUseCase(CommunicationUseCase[SendMessageCommand, MessageDto]):
             now=now,
             messageType=command.messageType,
             replyToId=replyToId,
+            threadRootId=threadRootId,
             clientRequestId=command.clientRequestId,
             mentions=mentionedIds,
         )

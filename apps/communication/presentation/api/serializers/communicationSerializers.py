@@ -15,6 +15,10 @@ MESSAGE_TYPE_CHOICES = [
     "LOCATION",
     "LINK",
     "AI_GENERATED",
+    # Phase 10 §9
+    "DOCUMENT",
+    "CALL_EVENT",
+    "MEETING_EVENT",
 ]
 
 

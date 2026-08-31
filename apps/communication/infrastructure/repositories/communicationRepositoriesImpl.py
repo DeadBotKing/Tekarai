@@ -347,6 +347,7 @@ class MessageRepositoryDjango:
             messageType=message.messageType,
             body=message.body,
             replyToId=message.replyToId,
+            threadRootId=message.threadRootId,
             clientRequestId=message.clientRequestId,
             editedAt=message.editedAt,
             deletedAt=message.deletedAt,
@@ -407,7 +408,8 @@ class MessageRepositoryDjango:
             tenantId=tenantId, conversationId=conversationId
         )
         if threadRootId is not None:
-            queryset = queryset.filter(replyToId=threadRootId)
+            # §14 — group every reply under the same root (deep replies too).
+            queryset = queryset.filter(threadRootId=threadRootId)
         if beforeId is not None:
             anchor = (
                 MessageModel.objects.filter(id=beforeId)
@@ -470,6 +472,7 @@ class MessageRepositoryDjango:
             createdAt=model.createdAt,
             body=model.body,
             replyToId=model.replyToId,
+            threadRootId=model.threadRootId,
             clientRequestId=model.clientRequestId,
             mentions=mentions,
             editedAt=model.editedAt,
@@ -773,11 +776,15 @@ class MeetingParticipantRepositoryDjango:
             meetingId=participant.meetingId,
             userId=participant.userId,
             status=participant.status,
+            role=participant.role,
+            attendanceDuration=participant.attendanceDuration,
         )
 
     def update(self, participant: MeetingParticipant) -> None:
         MeetingParticipantModel.objects.filter(id=participant.id).update(
             status=participant.status,
+            role=participant.role,
+            attendanceDuration=participant.attendanceDuration,
             respondedAt=participant.respondedAt,
             joinedAt=participant.joinedAt,
             leftAt=participant.leftAt,
@@ -812,6 +819,8 @@ class MeetingParticipantRepositoryDjango:
             userId=model.userId,
             status=model.status,
             createdAt=model.createdAt,
+            role=model.role or "PARTICIPANT",
+            attendanceDuration=model.attendanceDuration or 0,
             respondedAt=model.respondedAt,
             joinedAt=model.joinedAt,
             leftAt=model.leftAt,

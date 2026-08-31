@@ -54,6 +54,12 @@ MESSAGE_MEETING = "MEETING"
 MESSAGE_LOCATION = "LOCATION"
 MESSAGE_LINK = "LINK"
 MESSAGE_AI_GENERATED = "AI_GENERATED"
+# Phase 10 §9 — system/event message kinds. DOCUMENT carries a document-store
+# reference (never an inline file); CALL_EVENT / MEETING_EVENT are lifecycle
+# markers emitted by the call/meeting flows.
+MESSAGE_DOCUMENT = "DOCUMENT"
+MESSAGE_CALL_EVENT = "CALL_EVENT"
+MESSAGE_MEETING_EVENT = "MEETING_EVENT"
 MESSAGE_TYPES = (
     MESSAGE_TEXT,
     MESSAGE_FILE,
@@ -65,6 +71,9 @@ MESSAGE_TYPES = (
     MESSAGE_LOCATION,
     MESSAGE_LINK,
     MESSAGE_AI_GENERATED,
+    MESSAGE_DOCUMENT,
+    MESSAGE_CALL_EVENT,
+    MESSAGE_MEETING_EVENT,
 )
 
 # §3.6 / §32 read states (monotonic)

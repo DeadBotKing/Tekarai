@@ -99,6 +99,9 @@ class ConversationParticipantModel(models.Model):
     joinedAt = models.DateTimeField(auto_now_add=True)
     leftAt = models.DateTimeField(null=True, blank=True)
     isMuted = models.BooleanField(default=False)
+    # Phase 10 §5 — time-bounded mute and explicit notification toggle.
+    mutedUntil = models.DateTimeField(null=True, blank=True)
+    notificationsEnabled = models.BooleanField(default=True)
     notificationLevel = models.CharField(max_length=12, default="ALL")
     lastReadMessageId = models.UUIDField(null=True, blank=True)
     createdAt = models.DateTimeField(auto_now_add=True)
@@ -127,6 +130,8 @@ class MessageModel(models.Model):
     messageType = models.CharField(max_length=20, default="TEXT")
     body = models.TextField(blank=True, default="")
     replyToId = models.UUIDField(null=True, blank=True, db_index=True)
+    # Phase 10 §14 — thread root for nested replies (indexed per §42).
+    threadRootId = models.UUIDField(null=True, blank=True, db_index=True)
     clientRequestId = models.CharField(max_length=80, blank=True, default="")
     editedAt = models.DateTimeField(null=True, blank=True)
     deletedAt = models.DateTimeField(null=True, blank=True)
@@ -229,6 +234,10 @@ class MeetingModel(models.Model):
     actualStart = models.DateTimeField(null=True, blank=True)
     actualEnd = models.DateTimeField(null=True, blank=True)
     meetingStatus = models.CharField(max_length=12, default="SCHEDULED", db_index=True)
+    # Phase 10 §27 — meeting configuration.
+    meetingType = models.CharField(max_length=16, blank=True, default="SCHEDULED")
+    joinPolicy = models.CharField(max_length=16, blank=True, default="INVITE_ONLY")
+    recordingPolicy = models.CharField(max_length=16, blank=True, default="ORGANIZER")
     clientRequestId = models.CharField(max_length=80, blank=True, default="")
     createdAt = models.DateTimeField(auto_now_add=True)
     updatedAt = models.DateTimeField(auto_now=True)
@@ -254,6 +263,9 @@ class MeetingParticipantModel(models.Model):
     meetingId = models.UUIDField(db_index=True)
     userId = models.UUIDField(db_index=True)
     status = models.CharField(max_length=10, default="INVITED")
+    # Phase 10 §29 — host/co-host/participant/guest role + attendance seconds.
+    role = models.CharField(max_length=12, blank=True, default="PARTICIPANT")
+    attendanceDuration = models.IntegerField(default=0)
     respondedAt = models.DateTimeField(null=True, blank=True)
     joinedAt = models.DateTimeField(null=True, blank=True)
     leftAt = models.DateTimeField(null=True, blank=True)

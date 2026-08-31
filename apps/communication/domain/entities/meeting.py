@@ -160,6 +160,8 @@ class MeetingParticipant(AggregateRoot):
         status: str,
         createdAt: datetime,
         *,
+        role: str = "PARTICIPANT",  # Phase 10 §29 HOST|CO_HOST|PARTICIPANT|GUEST
+        attendanceDuration: int = 0,  # Phase 10 §29 cumulative seconds in-meeting
         respondedAt: datetime | None = None,
         joinedAt: datetime | None = None,
         leftAt: datetime | None = None,
@@ -169,6 +171,8 @@ class MeetingParticipant(AggregateRoot):
         self.meetingId = meetingId
         self.userId = userId
         self.status = status
+        self.role = role
+        self.attendanceDuration = attendanceDuration
         self.createdAt = createdAt
         self.respondedAt = respondedAt
         self.joinedAt = joinedAt
@@ -176,7 +180,11 @@ class MeetingParticipant(AggregateRoot):
 
     @staticmethod
     def invite(
-        tenantId: uuid.UUID, meetingId: uuid.UUID, userId: uuid.UUID, now: datetime
+        tenantId: uuid.UUID,
+        meetingId: uuid.UUID,
+        userId: uuid.UUID,
+        now: datetime,
+        role: str = "PARTICIPANT",
     ) -> MeetingParticipant:
         participant = MeetingParticipant(
             id=newId(),
@@ -185,6 +193,7 @@ class MeetingParticipant(AggregateRoot):
             userId=userId,
             status=MEETING_INVITED,
             createdAt=now,
+            role=role,
         )
         participant.recordEvent(
             DomainEvent(
@@ -240,6 +249,11 @@ class MeetingParticipant(AggregateRoot):
 
             raise ConflictError("Not currently joined.")
         self.status = MEETING_LEFT
+        if self.joinedAt is not None:
+            # Phase 10 §29 — accumulate attended seconds across join/leave cycles.
+            self.attendanceDuration += max(
+                0, int((now - self.joinedAt).total_seconds())
+            )
         self.leftAt = now
         self.recordEvent(
             DomainEvent(
@@ -255,4 +269,6 @@ class MeetingParticipant(AggregateRoot):
             "meetingId": str(self.meetingId),
             "userId": str(self.userId),
             "status": self.status,
+            "role": self.role,
+            "attendanceDuration": self.attendanceDuration,
         }

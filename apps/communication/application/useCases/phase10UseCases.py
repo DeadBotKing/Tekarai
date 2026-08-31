@@ -338,7 +338,7 @@ class SetMeetingCapabilityUseCase(
             raise EntityNotFoundError("Meeting", command.meetingId)
 
         actorPart = self.meetingParticipantRepository.get(meetingId, actorId)
-        actorRole = getattr(actorPart, "role", "") if actorPart is not None else ""
+        actorRole = actorPart.role if actorPart is not None else ""
         # only HOST / CO_HOST (or organizer) may override capabilities
         if actorId != meeting.organizerId and not meetingPermissions.isPrivilegedRole(
             actorRole
@@ -406,7 +406,7 @@ class CheckMeetingCapabilityUseCase(
             raise EntityNotFoundError("Meeting", query.meetingId)
 
         participant = self.meetingParticipantRepository.get(meetingId, actorId)
-        role = getattr(participant, "role", "") if participant is not None else ""
+        role = participant.role if participant is not None else ""
         invited = participant is not None
 
         override = self.capabilityRepository.find(

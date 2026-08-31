@@ -174,7 +174,7 @@ letter.*` بخوانند.
 
 ## 9. تست‌ها (§58، §59)
 
-۳۷ تست جدید فاز ۱۰ (همه سبز):
+۳۹ تست جدید فاز ۱۰ (همه سبز):
 
 - `tests/unit/testPhase10Domain.py` (۱۷ تست): ماتریس مجوزهای جلسه، چرخه‌عمر
   رونوشت، اعتبارسنجی سگمنت/revision، بلاک کاربر.
@@ -191,7 +191,7 @@ letter.*` بخوانند.
 ```
 cd backend
 ./venv/bin/python manage.py test --settings=config.settings.testing
-# Ran 494 tests ... OK  (457 پایه + 37 جدید)
+# Ran 496 tests ... OK  (457 پایه + 39 جدید)
 ```
 
 تست‌های امنیتی §59 پوشش می‌دهند: دسترسی بین‌مستأجری، دسترسی کاربر بیگانه به
@@ -210,9 +210,24 @@ cd backend
 - `communicationMeetingCapabilityOverrides`
 
 شاخص‌ها روی `tenantId` و کلیدهای دسترسی (messageId, meetingId, blocker/blocked,
-meeting+user+capability) تنظیم شده‌اند. تنها drift باقی‌ماندهٔ `makemigrations`
-مربوط به `channelprofilemodel.conversationId` است که از فاز ۹ وجود داشته و عمداً
-دست‌نخورده مانده است.
+meeting+user+capability) تنظیم شده‌اند.
+
+مهاجرت تکمیلی `0003_phase10_fields.py` فیلدهای جامانده از قرارداد سند را به‌صورت
+**افزودنی و nullable** (بدون شکستن فاز ۸) اضافه می‌کند:
+
+- `messages.threadRootId` (§14 — ریشهٔ Thread؛ replyهای تو در تو را گروه می‌کند،
+  با ایندکس)،
+- `conversationParticipants.mutedUntil` و `notificationsEnabled` (§5)،
+- `meetings.meetingType`, `joinPolicy`, `recordingPolicy` (§27)،
+- `meetingParticipants.role` و `attendanceDuration` (§29 — نقش HOST/CO_HOST/
+  PARTICIPANT/GUEST که ماتریس مجوز فاز ۱۰ را تغذیه می‌کند، و ثانیه‌های حضور).
+
+انواع پیام جدید (§9) `DOCUMENT`, `CALL_EVENT`, `MEETING_EVENT` و وضعیت حضور
+`INVISIBLE` (§17) نیز در ثابت‌ها و سریالایزرها اضافه شده‌اند.
+
+نکته: تنها drift باقی‌ماندهٔ `makemigrations` مربوط به
+`channelprofilemodel.conversationId` است که از فاز ۹ وجود داشته و عمداً از مهاجرت
+فاز ۱۰ حذف و دست‌نخورده مانده است.
 
 ---
 

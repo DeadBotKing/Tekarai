@@ -99,6 +99,9 @@ class ConversationParticipantModel(models.Model):
     joinedAt = models.DateTimeField(auto_now_add=True)
     leftAt = models.DateTimeField(null=True, blank=True)
     isMuted = models.BooleanField(default=False)
+    # Phase 10 §5 — time-bounded mute and explicit notification toggle.
+    mutedUntil = models.DateTimeField(null=True, blank=True)
+    notificationsEnabled = models.BooleanField(default=True)
     notificationLevel = models.CharField(max_length=12, default="ALL")
     lastReadMessageId = models.UUIDField(null=True, blank=True)
     createdAt = models.DateTimeField(auto_now_add=True)
@@ -127,6 +130,8 @@ class MessageModel(models.Model):
     messageType = models.CharField(max_length=20, default="TEXT")
     body = models.TextField(blank=True, default="")
     replyToId = models.UUIDField(null=True, blank=True, db_index=True)
+    # Phase 10 §14 — thread root for nested replies (indexed per §42).
+    threadRootId = models.UUIDField(null=True, blank=True, db_index=True)
     clientRequestId = models.CharField(max_length=80, blank=True, default="")
     editedAt = models.DateTimeField(null=True, blank=True)
     deletedAt = models.DateTimeField(null=True, blank=True)
@@ -229,6 +234,10 @@ class MeetingModel(models.Model):
     actualStart = models.DateTimeField(null=True, blank=True)
     actualEnd = models.DateTimeField(null=True, blank=True)
     meetingStatus = models.CharField(max_length=12, default="SCHEDULED", db_index=True)
+    # Phase 10 §27 — meeting configuration.
+    meetingType = models.CharField(max_length=16, blank=True, default="SCHEDULED")
+    joinPolicy = models.CharField(max_length=16, blank=True, default="INVITE_ONLY")
+    recordingPolicy = models.CharField(max_length=16, blank=True, default="ORGANIZER")
     clientRequestId = models.CharField(max_length=80, blank=True, default="")
     createdAt = models.DateTimeField(auto_now_add=True)
     updatedAt = models.DateTimeField(auto_now=True)
@@ -254,6 +263,9 @@ class MeetingParticipantModel(models.Model):
     meetingId = models.UUIDField(db_index=True)
     userId = models.UUIDField(db_index=True)
     status = models.CharField(max_length=10, default="INVITED")
+    # Phase 10 §29 — host/co-host/participant/guest role + attendance seconds.
+    role = models.CharField(max_length=12, blank=True, default="PARTICIPANT")
+    attendanceDuration = models.IntegerField(default=0)
     respondedAt = models.DateTimeField(null=True, blank=True)
     joinedAt = models.DateTimeField(null=True, blank=True)
     leftAt = models.DateTimeField(null=True, blank=True)
@@ -400,4 +412,391 @@ class OutboxModel(models.Model):
         db_table = "communicationOutbox"
         indexes = [
             models.Index(fields=["publishedAt", "occurredAt"], name="IX_Outbox_pending"),
+        ]
+
+
+# ---------------------------------------------------------------------------
+# Phase 10 additions (docs/Phases/Phase10.md) — appended without touching the
+# Phase 08 table set, so 0001 stays reproducible and every Phase 08 test keeps
+# passing. New tables live in migration 0002_phase10_communication.
+# ---------------------------------------------------------------------------
+
+
+class MessageRevisionModel(models.Model):
+    """§11 — append-only edit history (previous body + who/when)."""
+
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    messageId = models.UUIDField(db_index=True)
+    conversationId = models.UUIDField(db_index=True)
+    revisionNumber = models.IntegerField()
+    previousBody = models.TextField(blank=True, default="")
+    newBody = models.TextField(blank=True, default="")
+    editedBy = models.UUIDField(db_index=True)
+    editedAt = models.DateTimeField(db_index=True)
+    createdAt = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "communicationMessageRevisions"
+        indexes = [
+            models.Index(fields=["messageId", "revisionNumber"], name="IX_Rev_msg_seq"),
+            models.Index(fields=["tenantId", "messageId"], name="IX_Rev_t_msg"),
+        ]
+        constraints = [
+            # §43 — one ordinal revision number per message
+            models.UniqueConstraint(
+                fields=["messageId", "revisionNumber"],
+                name="UQ_Revision_message_number",
+            ),
+        ]
+
+
+class MeetingTranscriptModel(models.Model):
+    """§34 — transcript aggregate, independent of the recording."""
+
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    meetingId = models.UUIDField(db_index=True)
+    language = models.CharField(max_length=10, default="en-US")
+    transcriptStatus = models.CharField(max_length=12, default="PENDING", db_index=True)
+    contentReference = models.CharField(max_length=300, blank=True, default="")
+    segmentCount = models.IntegerField(default=0)
+    requestedBy = models.UUIDField(null=True, blank=True)
+    createdAt = models.DateTimeField(auto_now_add=True)
+    updatedAt = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "communicationMeetingTranscripts"
+        indexes = [
+            models.Index(fields=["tenantId", "meetingId"], name="IX_Tran_t_meeting"),
+            models.Index(fields=["meetingId", "transcriptStatus"], name="IX_Tran_m_status"),
+        ]
+
+
+class TranscriptSegmentModel(models.Model):
+    """§35 — timed, attributed transcript slice."""
+
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    transcriptId = models.UUIDField(db_index=True)
+    sequence = models.IntegerField()
+    speakerId = models.UUIDField(null=True, blank=True, db_index=True)
+    startTimeSeconds = models.FloatField()
+    endTimeSeconds = models.FloatField()
+    text = models.TextField()
+    confidence = models.FloatField(default=0.0)
+    createdAt = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "communicationTranscriptSegments"
+        indexes = [
+            models.Index(
+                fields=["transcriptId", "sequence"], name="IX_Seg_tran_seq"
+            ),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["transcriptId", "sequence"],
+                name="UQ_Segment_transcript_seq",
+            ),
+        ]
+
+
+class UserBlockModel(models.Model):
+    """§70 — directional user block across communication scopes."""
+
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    blockerId = models.UUIDField(db_index=True)
+    blockedUserId = models.UUIDField(db_index=True)
+    scopes = models.JSONField(default=list)
+    reason = models.CharField(max_length=300, blank=True, default="")
+    blockStatus = models.CharField(max_length=10, default="ACTIVE", db_index=True)
+    createdAt = models.DateTimeField(auto_now_add=True)
+    removedAt = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "communicationUserBlocks"
+        indexes = [
+            models.Index(fields=["tenantId", "blockerId"], name="IX_Block_t_blocker"),
+            models.Index(
+                fields=["blockerId", "blockedUserId", "blockStatus"],
+                name="IX_Block_pair_status",
+            ),
+        ]
+        constraints = [
+            # one active block per ordered pair
+            models.UniqueConstraint(
+                fields=["tenantId", "blockerId", "blockedUserId"],
+                condition=models.Q(blockStatus="ACTIVE"),
+                name="UQ_Block_active_pair",
+            ),
+        ]
+
+
+class MeetingCapabilityOverrideModel(models.Model):
+    """§30 — per-meeting capability grant/deny overriding the role default."""
+
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    meetingId = models.UUIDField(db_index=True)
+    userId = models.UUIDField(db_index=True)
+    capability = models.CharField(max_length=32)
+    granted = models.BooleanField(default=False)
+    createdAt = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "communicationMeetingCapabilityOverrides"
+        indexes = [
+            models.Index(fields=["meetingId", "userId"], name="IX_Cap_m_user"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["meetingId", "userId", "capability"],
+                name="UQ_Cap_meeting_user_cap",
+            ),
+        ]
+
+
+# ---------------------------------------------------------------------------
+# Phase 11 additions (docs/Phases/Phase11.md) — appended without touching the
+# Phase 08/10 table set. New tables live in migration 0004_phase11_*.
+# ---------------------------------------------------------------------------
+
+
+class CommunicationPolicyModel(models.Model):
+    """§70 — one active tenant-wide policy row (limits/retention)."""
+
+    id = uuidPk()
+    tenantId = models.UUIDField(unique=True, db_index=True)
+    messageRetentionDays = models.IntegerField(default=2555)
+    recordingRetentionDays = models.IntegerField(default=730)
+    transcriptRetentionDays = models.IntegerField(default=2555)
+    presenceRetentionDays = models.IntegerField(default=30)
+    auditRetentionDays = models.IntegerField(default=3650)
+    maxAttachmentSize = models.BigIntegerField(default=26214400)
+    maxMessageLength = models.IntegerField(default=8000)
+    maxGroupMembers = models.IntegerField(default=5000)
+    maxMeetingParticipants = models.IntegerField(default=500)
+    allowedFileTypes = models.JSONField(default=list)
+    allowExternalUsers = models.BooleanField(default=False)
+    allowRecording = models.BooleanField(default=True)
+    allowScreenSharing = models.BooleanField(default=True)
+    allowMessageEdit = models.BooleanField(default=True)
+    allowMessageDelete = models.BooleanField(default=True)
+    createdAt = models.DateTimeField(auto_now_add=True)
+    updatedAt = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "communicationPolicies"
+
+
+class MessageDeliveryModel(models.Model):
+    """§19 — per-recipient delivery receipt (distinct from read receipts)."""
+
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    messageId = models.UUIDField(db_index=True)
+    recipientId = models.UUIDField(db_index=True)
+    deliveryState = models.CharField(max_length=12, default="SENT")
+    failedReason = models.CharField(max_length=300, blank=True, default="")
+    deliveredAt = models.DateTimeField(null=True, blank=True)
+    updatedAt = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "communicationMessageDeliveries"
+        indexes = [
+            models.Index(fields=["messageId", "recipientId"], name="IX_Deliv_mr"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["messageId", "recipientId"], name="UQ_Deliv_pair"
+            ),
+        ]
+
+
+class MeetingRoomModel(models.Model):
+    """§34 — reusable room definition, separated from live sessions."""
+
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    meetingId = models.UUIDField(db_index=True)
+    roomRef = models.CharField(max_length=64, db_index=True)
+    capacity = models.IntegerField(default=500)
+    isActive = models.BooleanField(default=True)
+    createdAt = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "communicationMeetingRooms"
+        indexes = [
+            models.Index(fields=["meetingId"], name="IX_Room_meeting"),
+        ]
+
+
+class MeetingSessionModel(models.Model):
+    """§34 — a concrete live instance of a meeting within a room."""
+
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    meetingId = models.UUIDField(db_index=True)
+    roomId = models.UUIDField(db_index=True)
+    sequence = models.IntegerField(default=1)
+    sessionStatus = models.CharField(max_length=12, default="WAITING", db_index=True)
+    participantCount = models.IntegerField(default=0)
+    startedAt = models.DateTimeField(null=True, blank=True)
+    endedAt = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "communicationMeetingSessions"
+        indexes = [
+            models.Index(fields=["meetingId", "sequence"], name="IX_Sess_m_seq"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["meetingId", "sequence"], name="UQ_Sess_meeting_seq"
+            ),
+        ]
+
+
+class ScreenShareSessionModel(models.Model):
+    """§35 — screen-share state; media itself never enters the DB."""
+
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    meetingId = models.UUIDField(db_index=True)
+    sessionId = models.UUIDField(null=True, blank=True)
+    sharerId = models.UUIDField(db_index=True)
+    shareKind = models.CharField(max_length=12)
+    shareStatus = models.CharField(max_length=12, default="ACTIVE")
+    startedAt = models.DateTimeField(null=True, blank=True)
+    endedAt = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "communicationScreenShareSessions"
+        indexes = [
+            models.Index(fields=["meetingId", "shareStatus"], name="IX_SS_meet_st"),
+        ]
+
+
+class MeetingSummaryModel(models.Model):
+    """§38 — persisted, AI-governed meeting summary (human review required)."""
+
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    meetingId = models.UUIDField(db_index=True)
+    transcriptId = models.UUIDField(null=True, blank=True)
+    summary = models.TextField(blank=True, default="")
+    keyPoints = models.JSONField(default=list)
+    decisions = models.JSONField(default=list)
+    actionItems = models.JSONField(default=list)
+    risks = models.JSONField(default=list)
+    topics = models.JSONField(default=list)
+    confidence = models.FloatField(default=0.0)
+    modelReference = models.CharField(max_length=120, blank=True, default="")
+    humanReviewStatus = models.CharField(max_length=12, default="PENDING", db_index=True)
+    reviewedBy = models.UUIDField(null=True, blank=True)
+    generatedAt = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "communicationMeetingSummaries"
+        indexes = [
+            models.Index(fields=["meetingId"], name="IX_Sum_meeting"),
+        ]
+
+
+class ActionItemCandidateModel(models.Model):
+    """§39 — AI-extracted task candidate; never becomes a real task here."""
+
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    meetingId = models.UUIDField(db_index=True)
+    summaryId = models.UUIDField(null=True, blank=True)
+    title = models.CharField(max_length=300)
+    description = models.TextField(blank=True, default="")
+    suggestedAssigneeId = models.UUIDField(null=True, blank=True)
+    confidence = models.FloatField(default=0.0)
+    candidateState = models.CharField(max_length=12, default="CANDIDATE", db_index=True)
+    reviewNote = models.CharField(max_length=500, blank=True, default="")
+    dispatchedItemRef = models.CharField(max_length=120, blank=True, default="")
+    reviewedBy = models.UUIDField(null=True, blank=True)
+    createdAt = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "communicationActionItemCandidates"
+        indexes = [
+            models.Index(fields=["meetingId"], name="IX_Act_meeting"),
+            models.Index(fields=["candidateState"], name="IX_Act_state"),
+        ]
+
+
+class OfficialMessageModel(models.Model):
+    """§40/§41 — formal communication with a governed lifecycle."""
+
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    officialKind = models.CharField(max_length=16)
+    subject = models.CharField(max_length=300)
+    body = models.TextField(blank=True, default="")
+    authorId = models.UUIDField(db_index=True)
+    officialStatus = models.CharField(max_length=14, default="DRAFT", db_index=True)
+    recipientIds = models.JSONField(default=list)
+    acknowledgedBy = models.JSONField(default=list)
+    publishedAt = models.DateTimeField(null=True, blank=True)
+    createdAt = models.DateTimeField(auto_now_add=True)
+    updatedAt = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "communicationOfficialMessages"
+        indexes = [
+            models.Index(fields=["tenantId", "officialStatus"], name="IX_Official_st"),
+        ]
+
+
+class MessageReportModel(models.Model):
+    """§43/§44 — moderation report with a review workflow."""
+
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    messageId = models.UUIDField(db_index=True)
+    reportedById = models.UUIDField(db_index=True)
+    reason = models.CharField(max_length=20)
+    description = models.TextField(blank=True, default="")
+    reportStatus = models.CharField(max_length=14, default="OPEN", db_index=True)
+    reviewedById = models.UUIDField(null=True, blank=True)
+    reviewedAt = models.DateTimeField(null=True, blank=True)
+    resolutionNote = models.CharField(max_length=500, blank=True, default="")
+    createdAt = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "communicationMessageReports"
+        indexes = [
+            models.Index(fields=["tenantId", "reportStatus"], name="IX_Report_st"),
+            models.Index(fields=["messageId"], name="IX_Report_msg"),
+        ]
+
+
+class LegalHoldModel(models.Model):
+    """§69 — when active, retention purges skip the held resources."""
+
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    holdScope = models.CharField(max_length=16)
+    targetId = models.UUIDField(db_index=True)
+    reason = models.CharField(max_length=500, blank=True, default="")
+    holdStatus = models.CharField(max_length=10, default="ACTIVE", db_index=True)
+    createdById = models.UUIDField(null=True, blank=True)
+    createdAt = models.DateTimeField(auto_now_add=True)
+    releasedAt = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "communicationLegalHolds"
+        indexes = [
+            models.Index(fields=["targetId", "holdStatus"], name="IX_Hold_target_st"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenantId", "holdScope", "targetId"],
+                condition=models.Q(holdStatus="ACTIVE"),
+                name="UQ_Hold_active_scope_target",
+            ),
         ]

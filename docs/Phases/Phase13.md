@@ -6,6 +6,14 @@ STATUS: ARCHITECTURE → IMPLEMENTATION SPECIFICATION
 
 
 
+SUB-PHASE INDEX
+
+Implementation is split into 26 tracked sub-phases (A–Z). Start with
+`docs/Phases/Phase13/README.md` and the detailed contract in
+`docs/Phases/Phase13/Phase13-A.md`.
+
+
+
 ============================================================
 
 1\. PHASE OBJECTIVE

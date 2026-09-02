@@ -1,0 +1,10 @@
+class AIError(Exception): pass
+class AIProviderUnavailable(AIError): pass
+class AIModelUnavailable(AIError): pass
+class AIRequestTimeout(AIError): pass
+class AIQuotaExceeded(AIError): pass
+class AITokenLimitExceeded(AIError): pass
+class AIContextTooLarge(AIError): pass
+class AIOutputValidationFailed(AIError): pass
+class AIPermissionDenied(AIError): pass
+class AIProviderRateLimited(AIError): pass

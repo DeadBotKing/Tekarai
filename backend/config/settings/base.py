@@ -99,6 +99,7 @@ INSTALLED_APPS = [
     "apps.identity",
     "apps.communication",
     "apps.notifications",
+    "apps.ai",
 ]
 
 # --------------------------------------------------------------------------- #

@@ -243,6 +243,7 @@ MIGRATION_MODULES = {
     "identity": "apps.identity.infrastructure.migrations",
     "communication": "apps.communication.infrastructure.migrations",
     "notifications": "apps.notifications.infrastructure.migrations",
+    "ai": "apps.ai.infrastructure.migrations",
 }
 
 # Phase 07 §7/§8 — JWT configuration (ADR-022: in-house HS256, stdlib only).

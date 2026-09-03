@@ -286,6 +286,52 @@ class AIRequestCapabilityInvalid(AIError):
         self.capabilityId = capabilityId
 
 
+class AIResponseNotFound(AIError):
+    code = "AI_RESPONSE_NOT_FOUND"
+    httpStatus = 404
+
+    def __init__(self, responseId: str = "") -> None:
+        super().__init__("AI response was not found.")
+        self.responseId = responseId
+
+
+class AIResponseAlreadyRegistered(AIError):
+    code = "AI_RESPONSE_ALREADY_REGISTERED"
+    httpStatus = 409
+
+    def __init__(self, responseId: str = "") -> None:
+        super().__init__("AI response is already registered.")
+        self.responseId = responseId
+
+
+class AIResponseInvalid(AIError):
+    code = "AI_RESPONSE_INVALID"
+    httpStatus = 422
+
+
+class AIResponseRequestInvalid(AIError):
+    code = "AI_RESPONSE_REQUEST_INVALID"
+    httpStatus = 422
+
+    def __init__(self, requestId: str = "") -> None:
+        super().__init__("AI response request is invalid for this tenant or lifecycle state.")
+        self.requestId = requestId
+
+
+class AIStructuredSchemaInvalid(AIError):
+    code = "AI_STRUCTURED_SCHEMA_INVALID"
+    httpStatus = 422
+
+
+class AIStructuredOutputInvalid(AIOutputValidationFailed):
+    code = "AI_STRUCTURED_OUTPUT_INVALID"
+    httpStatus = 422
+
+    def __init__(self, message: str = "Structured AI output failed schema validation.", issues: tuple[object, ...] = ()) -> None:
+        super().__init__(message)
+        self.issues = issues
+
+
 class AIPromptNotFound(AIError):
     code = "AI_PROMPT_NOT_FOUND"
     httpStatus = 404

@@ -59,6 +59,38 @@ class AIProviderRateLimited(AIError):
     httpStatus = 429
 
 
+class AIProviderAlreadyRegistered(AIError):
+    code = "AI_PROVIDER_ALREADY_REGISTERED"
+    httpStatus = 409
+
+    def __init__(self, providerCode: str) -> None:
+        super().__init__(f"AI provider {providerCode} is already registered.")
+        self.providerCode = providerCode
+
+
+class AIProviderNotRegistered(AIError):
+    code = "AI_PROVIDER_NOT_REGISTERED"
+    httpStatus = 404
+
+    def __init__(self, providerCode: str) -> None:
+        super().__init__(f"AI provider {providerCode} is not registered.")
+        self.providerCode = providerCode
+
+
+class AIProviderInactive(AIError):
+    code = "AI_PROVIDER_INACTIVE"
+    httpStatus = 503
+
+    def __init__(self, providerCode: str) -> None:
+        super().__init__(f"AI provider {providerCode} is inactive.")
+        self.providerCode = providerCode
+
+
+class AIProviderRegistrationInvalid(AIError):
+    code = "AI_PROVIDER_REGISTRATION_INVALID"
+    httpStatus = 422
+
+
 class AIPromptNotFound(AIError):
     code = "AI_PROMPT_NOT_FOUND"
     httpStatus = 404

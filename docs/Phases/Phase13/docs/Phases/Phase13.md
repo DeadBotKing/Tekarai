@@ -10,10 +10,11 @@ SUB-PHASE INDEX
 
 Implementation is split into 26 tracked sub-phases (A–Z). Start with
 `docs/Phases/Phase13/README.md` and the detailed contracts in
-`docs/Phases/Phase13/Phase13-A.md` and `docs/Phases/Phase13/Phase13-B.md`.
+`docs/Phases/Phase13/Phase13-A.md`, `docs/Phases/Phase13/Phase13-B.md`,
+`docs/Phases/Phase13/Phase13-C.md` and `docs/Phases/Phase13/Phase13-D.md`.
 
-Sub-phase A and B are complete; sub-phase C is the next implementation gate.
-The completion of A/B does not mean that the complete Phase 13 is finished.
+Sub-phases A, B, C and D are complete; sub-phase E is the next implementation
+gate. The completion of A/B/C/D does not mean that the complete Phase 13 is finished.
 
 
 

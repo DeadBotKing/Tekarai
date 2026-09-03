@@ -109,7 +109,7 @@ PYTHONPATH=backend python -m unittest backend.tests.unit.testPhase13Domain -v
 نتیجهٔ نهایی:
 
 ```text
-Ran 10 tests in 0.003s
+Ran 10 tests
 OK
 ```
 
@@ -156,6 +156,15 @@ git diff --check
 ```
 
 نتیجه: خطای whitespace گزارش نشد.
+
+### 4.5 Exception Import Surface — PASS
+
+هر دو سطح public package و implementation module بررسی شدند و به یک کلاس
+یکسان resolve شدند:
+
+```text
+exception import surface: PASS
+```
 
 ---
 
@@ -296,10 +305,26 @@ python -m pip freeze
 
 ## 10. Archive تحویل
 
-پس از نهایی‌شدن کد، تست و Docs، Archive مستقل B در این مسیر ساخته می‌شود:
+Archive مستقل B پس از نهایی‌شدن کد، تست و Docs در این مسیر ساخته شد:
 
 ```text
 /home/user/Tekarai-Phase13-B.zip
 ```
 
-SHA-256 و فهرست exclusionهای Archive باید هنگام ساخت نهایی در همین سند ثبت شوند.
+SHA-256:
+
+```text
+bdf7008c43044a995ec9b2279f86ee3e3eed97dd9358b9e171927140814c4cc0
+```
+
+Exclusionهای Archive:
+
+```text
+.git, backend/venv, backend/.venv, backend/staticRoot, backend/mediaRoot,
+__pycache__, *.pyc, .pytest_cache, .mypy_cache, .ruff_cache, .cache,
+node_modules, dist, build, coverage, .tox
+```
+
+این checksum متعلق به فایل ZIP تحویل‌شده است؛ خط checksum در نسخهٔ کاری این
+گزارش به‌عنوان Delivery Metadata پس از ساخت Archive ثبت شد و محتوای اجرایی و
+مستنداتی Archive را تغییر نمی‌دهد.

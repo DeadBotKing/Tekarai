@@ -197,7 +197,10 @@ class ProviderRegistry:
     ) -> ProviderHealth:
         adapter = self.resolveProvider(tenantId, providerCode)
         try:
-            return adapter.healthCheck(model=model)
+            health = adapter.healthCheck(model=model)
+            if not isinstance(health, ProviderHealth):
+                raise TypeError("Adapter returned an invalid health snapshot.")
+            return health
         except AIProviderUnavailable:
             raise
         except Exception as exc:

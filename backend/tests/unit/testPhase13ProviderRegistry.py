@@ -122,7 +122,9 @@ class Phase13DProviderRegistryTests(unittest.TestCase):
         self.assertEqual(registry.listProviders(self.tenantId, activeOnly=False), ())
 
     def testRegistryModuleIsFrameworkAndVendorFree(self) -> None:
-        source = Path("backend/apps/ai/domain/registries/providerRegistry.py").read_text(encoding="utf-8")
+        source = (
+            Path(__file__).resolve().parents[2] / "apps/ai/domain/registries/providerRegistry.py"
+        ).read_text(encoding="utf-8")
         for forbidden in ("django", "rest_framework", "channels", "redis", "openai", "ollama", "azure", "anthropic"):
             self.assertNotIn(f"import {forbidden}", source.lower())
 

@@ -149,7 +149,9 @@ class Phase13CProviderPortTests(unittest.TestCase):
     def testPortIsAProtocolAndDomainPortHasNoFrameworkOrVendorImport(self) -> None:
         self.assertTrue(getattr(AIProviderPort, "_is_protocol", False))
         self.assertIsInstance(self.provider, AIProviderPort)
-        source = Path("backend/apps/ai/domain/ports.py").read_text(encoding="utf-8")
+        source = (Path(__file__).resolve().parents[2] / "apps/ai/domain/ports.py").read_text(
+            encoding="utf-8"
+        )
         for forbidden in ("django", "rest_framework", "openai", "ollama", "azure", "anthropic", "requests", "httpx"):
             self.assertNotIn(f"import {forbidden}", source.lower())
 

@@ -1,8 +1,0 @@
-# ============================================================================
-# Tekarai Backend — Development dependencies (local machines + CI)
-# ============================================================================
--r testing.txt
-# Quality gate — linting / formatting (Phase 01 §11)
-ruff==0.16.5
-# Quality gate — static type checking (Phase 01 §11)
-mypy==2.3.1

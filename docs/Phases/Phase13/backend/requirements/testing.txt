@@ -1,6 +1,0 @@
-# ============================================================================
-# Tekarai Backend — Testing dependencies
-# ============================================================================
--r base.txt
-# Operational requirement — test coverage measurement
-coverage==7.16.0

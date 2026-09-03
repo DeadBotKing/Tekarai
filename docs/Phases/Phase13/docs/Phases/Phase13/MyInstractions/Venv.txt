@@ -1,0 +1,2 @@
+cd C:\Users\Mitra\Desktop\Tekarai\backend
+.\venv\Scripts\Activate.ps1

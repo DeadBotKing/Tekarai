@@ -285,6 +285,17 @@ Link شکسته‌ای باقی نماند.
 در یک اجرای زودهنگام، پیش از ایجاد همین Execution Report، Scanner لینک گزارش را
 Missing اعلام کرد؛ Report ایجاد شد و Scan نهایی PASS شد.
 
+### 4.8 Verification خود Archive — PASS
+
+Archive با `unzip -tq` بررسی و سپس در یک مسیر موقت Extract شد. تست ترکیبی از روی
+محتوای Extract‌شده نیز سبز شد:
+
+```text
+archive integrity: PASS
+Ran 39 tests
+OK
+```
+
 ---
 
 ## 5. تست‌های اجرا نشده و دلیل دقیق
@@ -482,17 +493,28 @@ Verification تکرار و Archive جدید با Checksum جدید ساخته خ
 
 ## 9. Archive تحویل
 
-پس از Verification نهایی، Archive مستقل E در این مسیر ساخته می‌شود:
+پس از Verification نهایی، Archive مستقل E در این مسیر ساخته و بررسی شد:
 
 ```text
 /home/user/Tekarai-Phase13-E.zip
 ```
 
-SHA-256 در نسخهٔ نهایی این Report و فایل sidecar زیر ثبت می‌شود:
+SHA-256 فایل ZIP تحویلی:
+
+```text
+e7f646fff7bae67322942aac8ed646ab4a1fafcd3c13ec3acb72488612f51547
+```
+
+فایل sidecar همان checksum:
 
 ```text
 /home/user/Tekarai-Phase13-E.zip.sha256
 ```
+
+Checksum در این Report کاری و sidecar، Delivery Metadata نهایی است؛ ZIP از
+Workspace نهایی قبل از درج همین مقدار در متن Report بسته‌بندی شده است. برای
+اعتبارسنجی Artifact، مقدار sidecar یا همین SHA-256 را با خروجی `sha256sum`/
+`Get-FileHash` مقایسه کنید.
 
 Exclusionهای Archive:
 

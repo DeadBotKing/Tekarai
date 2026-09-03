@@ -1,6 +1,14 @@
 """Public Phase 13 AI errors."""
 
 from apps.ai.domain.exceptions.aiExceptions import (
+    AICapabilityAlreadyRegistered,
+    AICapabilityInactive,
+    AICapabilityModelNotSupported,
+    AICapabilityNotRegistered,
+    AICapabilityPolicyInvalid,
+    AICapabilityRegistrationInvalid,
+    AICapabilityRequestTypeUnsupported,
+    AICapabilityRoutingNoMatch,
     AIConfigurationError,
     AIContextTooLarge,
     AIError,
@@ -30,6 +38,14 @@ from apps.ai.domain.exceptions.aiExceptions import (
 )
 
 __all__ = [
+    "AICapabilityAlreadyRegistered",
+    "AICapabilityInactive",
+    "AICapabilityModelNotSupported",
+    "AICapabilityNotRegistered",
+    "AICapabilityPolicyInvalid",
+    "AICapabilityRegistrationInvalid",
+    "AICapabilityRequestTypeUnsupported",
+    "AICapabilityRoutingNoMatch",
     "AIConfigurationError",
     "AIContextTooLarge",
     "AIError",

@@ -1,4 +1,4 @@
-"""Stable AI domain errors for Phase 13-B and Phase 13-E.
+"""Stable AI domain errors for Phase 13-B, Phase 13-E and Phase 13-F.
 
 Provider-specific failures are mapped to these errors by later infrastructure
 adapters. No vendor exception is allowed to cross the AI boundary.
@@ -162,6 +162,67 @@ class AIRoutingNoMatch(AIError):
 
     def __init__(self, message: str = "No eligible AI model matches the routing request.") -> None:
         super().__init__(message)
+
+
+class AICapabilityAlreadyRegistered(AIError):
+    code = "AI_CAPABILITY_ALREADY_REGISTERED"
+    httpStatus = 409
+
+    def __init__(self, capabilityCode: str) -> None:
+        super().__init__(f"AI capability {capabilityCode} is already registered.")
+        self.capabilityCode = capabilityCode
+
+
+class AICapabilityNotRegistered(AIError):
+    code = "AI_CAPABILITY_NOT_REGISTERED"
+    httpStatus = 404
+
+    def __init__(self, capabilityCode: str) -> None:
+        super().__init__(f"AI capability {capabilityCode} is not registered.")
+        self.capabilityCode = capabilityCode
+
+
+class AICapabilityInactive(AIError):
+    code = "AI_CAPABILITY_INACTIVE"
+    httpStatus = 503
+
+    def __init__(self, capabilityCode: str) -> None:
+        super().__init__(f"AI capability {capabilityCode} is inactive.")
+        self.capabilityCode = capabilityCode
+
+
+class AICapabilityRegistrationInvalid(AIError):
+    code = "AI_CAPABILITY_REGISTRATION_INVALID"
+    httpStatus = 422
+
+
+class AICapabilityPolicyInvalid(AIError):
+    code = "AI_CAPABILITY_POLICY_INVALID"
+    httpStatus = 422
+
+
+class AICapabilityRequestTypeUnsupported(AIError):
+    code = "AI_CAPABILITY_REQUEST_TYPE_UNSUPPORTED"
+    httpStatus = 422
+
+    def __init__(self, capabilityCode: str, requestType: str) -> None:
+        super().__init__(f"AI capability {capabilityCode} does not accept request type {requestType}.")
+        self.capabilityCode = capabilityCode
+        self.requestType = requestType
+
+
+class AICapabilityModelNotSupported(AIError):
+    code = "AI_CAPABILITY_MODEL_NOT_SUPPORTED"
+    httpStatus = 422
+
+
+class AICapabilityRoutingNoMatch(AIRoutingNoMatch):
+    code = "AI_CAPABILITY_ROUTING_NO_MATCH"
+    httpStatus = 422
+
+    def __init__(self, capabilityCode: str) -> None:
+        super().__init__(f"No eligible model supports AI capability {capabilityCode}.")
+        self.capabilityCode = capabilityCode
 
 
 class AIPromptNotFound(AIError):

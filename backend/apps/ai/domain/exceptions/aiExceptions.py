@@ -332,9 +332,60 @@ class AIStructuredOutputInvalid(AIOutputValidationFailed):
         self.issues = issues
 
 
+class AIPromptAlreadyRegistered(AIError):
+    code = "AI_PROMPT_ALREADY_REGISTERED"
+    httpStatus = 409
+
+    def __init__(self, promptCode: str = "") -> None:
+        super().__init__("AI prompt is already registered.")
+        self.promptCode = promptCode
+
+
 class AIPromptNotFound(AIError):
     code = "AI_PROMPT_NOT_FOUND"
     httpStatus = 404
+
+    def __init__(self, promptCode: str = "") -> None:
+        super().__init__("AI prompt was not found.")
+        self.promptCode = promptCode
+
+
+class AIPromptVersionAlreadyRegistered(AIError):
+    code = "AI_PROMPT_VERSION_ALREADY_REGISTERED"
+    httpStatus = 409
+
+    def __init__(self, version: int | str = "") -> None:
+        super().__init__("AI prompt version is already registered.")
+        self.version = version
+
+
+class AIPromptVersionNotFound(AIError):
+    code = "AI_PROMPT_VERSION_NOT_FOUND"
+    httpStatus = 404
+
+    def __init__(self, versionId: str = "") -> None:
+        super().__init__("AI prompt version was not found.")
+        self.versionId = versionId
+
+
+class AIPromptLifecycleInvalid(AIError):
+    code = "AI_PROMPT_LIFECYCLE_INVALID"
+    httpStatus = 409
+
+
+class AIPromptTemplateInvalid(AIError):
+    code = "AI_PROMPT_TEMPLATE_INVALID"
+    httpStatus = 422
+
+
+class AIPromptOutputSchemaInvalid(AIError):
+    code = "AI_PROMPT_OUTPUT_SCHEMA_INVALID"
+    httpStatus = 422
+
+
+class AIPromptVersionImmutable(AIError):
+    code = "AI_PROMPT_VERSION_IMMUTABLE"
+    httpStatus = 409
 
 
 class AIIdempotencyConflict(AIError):

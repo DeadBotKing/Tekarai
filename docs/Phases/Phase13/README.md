@@ -16,8 +16,8 @@
 | [F](Phase13-F.md) | Capability Registry | ✅ تکمیل شد |
 | [G](Phase13-G.md) | Request و Operation Lifecycle | ✅ تکمیل شد |
 | [H](Phase13-H.md) | Response و Structured Output | ✅ تکمیل شد |
-| I | Prompt Platform و Versioning | ⏳ بعدی |
-| J | Context Engine و Context Builder | ⏳ |
+| [I](Phase13-I.md) | Prompt Platform و Versioning | ✅ تکمیل شد |
+| J | Context Engine و Context Builder | ⏳ بعدی |
 | K | Tenant Isolation، Authorization و Permission Filtering | ⏳ |
 | L | Provider Adapterها | ⏳ |
 | M | Fallback، Retry، Timeout و Error Boundary | ⏳ |
@@ -70,3 +70,5 @@
 - گزارش زیر‌فاز G: [`Phase13-G-ExecutionReport.md`](Phase13-G-ExecutionReport.md)
 - قرارداد H: [`Phase13-H.md`](Phase13-H.md)
 - گزارش زیر‌فاز H: [`Phase13-H-ExecutionReport.md`](Phase13-H-ExecutionReport.md)
+- قرارداد I: [`Phase13-I.md`](Phase13-I.md)
+- گزارش زیر‌فاز I: [`Phase13-I-ExecutionReport.md`](Phase13-I-ExecutionReport.md)

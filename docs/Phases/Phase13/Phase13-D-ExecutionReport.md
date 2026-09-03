@@ -402,7 +402,7 @@ Verification را تکرار و ZIP جدید تولید می‌کنم.
 SHA-256:
 
 ```text
-1b69e15818e86f7e70b26e576365e89dc81d2f30c2c6e8a154a72ada05560428
+a2d6e808d095360e5cfb1714a827a33d1e2a5c25954fb303348e1a3c626267d7
 ```
 
 Exclusionهای Archive:

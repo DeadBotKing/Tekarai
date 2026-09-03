@@ -12,8 +12,8 @@
 | [B](Phase13-B.md) | AI Domain، Entityها و Value Objectها | ✅ تکمیل شد |
 | [C](Phase13-C.md) | Provider Port و قرارداد Provider | ✅ تکمیل شد |
 | [D](Phase13-D.md) | Provider Registry | ✅ تکمیل شد |
-| E | Model Registry و Routing | ⏳ بعدی |
-| F | Capability Registry | ⏳ |
+| [E](Phase13-E.md) | Model Registry و Routing | ✅ تکمیل شد |
+| F | Capability Registry | ⏳ بعدی |
 | G | Request و Operation Lifecycle | ⏳ |
 | H | Response و Structured Output | ⏳ |
 | I | Prompt Platform و Versioning | ⏳ |
@@ -62,3 +62,5 @@
 - گزارش زیر‌فاز B: [`Phase13-B-ExecutionReport.md`](Phase13-B-ExecutionReport.md)
 - گزارش زیر‌فاز C: [`Phase13-C-ExecutionReport.md`](Phase13-C-ExecutionReport.md)
 - گزارش زیر‌فاز D: [`Phase13-D-ExecutionReport.md`](Phase13-D-ExecutionReport.md)
+- قرارداد E: [`Phase13-E.md`](Phase13-E.md)
+- گزارش زیر‌فاز E: [`Phase13-E-ExecutionReport.md`](Phase13-E-ExecutionReport.md)

@@ -87,6 +87,41 @@ class AIPermissionDenied(AIError):
     httpStatus = 403
 
 
+class AIAuthorizationDenied(AIPermissionDenied):
+    code = "AI_AUTHORIZATION_DENIED"
+    httpStatus = 403
+
+
+class AIAuthorizationPrincipalInvalid(AIError):
+    code = "AI_AUTHORIZATION_PRINCIPAL_INVALID"
+    httpStatus = 422
+
+
+class AIAuthorizationGrantInvalid(AIError):
+    code = "AI_AUTHORIZATION_GRANT_INVALID"
+    httpStatus = 422
+
+
+class AIAuthorizationPolicyInvalid(AIError):
+    code = "AI_AUTHORIZATION_POLICY_INVALID"
+    httpStatus = 422
+
+
+class AIAuthorizationTenantMismatch(AIError):
+    code = "AI_AUTHORIZATION_TENANT_MISMATCH"
+    httpStatus = 403
+
+
+class AIAuthorizationAlreadyRegistered(AIError):
+    code = "AI_AUTHORIZATION_ALREADY_REGISTERED"
+    httpStatus = 409
+
+
+class AIAuthorizationNotFound(AIError):
+    code = "AI_AUTHORIZATION_NOT_FOUND"
+    httpStatus = 404
+
+
 class AIProviderRateLimited(AIError):
     code = "AI_PROVIDER_RATE_LIMITED"
     httpStatus = 429

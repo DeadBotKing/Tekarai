@@ -44,6 +44,39 @@ class AIContextTooLarge(AIError):
     httpStatus = 422
 
 
+class AIContextSourceInvalid(AIError):
+    code = "AI_CONTEXT_SOURCE_INVALID"
+    httpStatus = 422
+
+
+class AIContextTenantMismatch(AIError):
+    code = "AI_CONTEXT_TENANT_MISMATCH"
+    httpStatus = 403
+
+
+class AIContextPolicyInvalid(AIError):
+    code = "AI_CONTEXT_POLICY_INVALID"
+    httpStatus = 422
+
+
+class AIContextAlreadyRegistered(AIError):
+    code = "AI_CONTEXT_ALREADY_REGISTERED"
+    httpStatus = 409
+
+    def __init__(self, contextId: str = "") -> None:
+        super().__init__("AI context is already registered.")
+        self.contextId = contextId
+
+
+class AIContextNotFound(AIError):
+    code = "AI_CONTEXT_NOT_FOUND"
+    httpStatus = 404
+
+    def __init__(self, contextId: str = "") -> None:
+        super().__init__("AI context was not found.")
+        self.contextId = contextId
+
+
 class AIOutputValidationFailed(AIError):
     code = "AI_OUTPUT_VALIDATION_FAILED"
     httpStatus = 422

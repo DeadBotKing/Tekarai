@@ -239,6 +239,17 @@ git diff --check
 برای فایل‌های Python جدید نیز trailing whitespace scan اجرا شد و PASS بود.
 Trailing دو فاصله در Markdown فقط برای line break استاندارد Markdown است.
 
+### 4.7 Package Verification — PASS
+
+Archive با `unzip -tq` بررسی و سپس در مسیر موقت Extract شد. تست ترکیبی روی
+محتوای Extract‌شده نیز موفق بود:
+
+```text
+archive integrity: PASS
+Ran 48 tests
+OK
+```
+
 ---
 
 ## 5. تست‌های اجرا نشده و دلیل دقیق
@@ -420,17 +431,28 @@ Tenant، Model Integration یا Routing است؛ سپس اصلاح و Verificati
 
 ## 9. Archive تحویل
 
-پس از Verification نهایی، Archive مستقل F در این مسیر ساخته می‌شود:
+پس از Verification نهایی، Archive مستقل F در این مسیر ساخته و بررسی شد:
 
 ```text
 /home/user/Tekarai-Phase13-F.zip
 ```
 
-SHA-256 و فایل sidecar پس از Packaging در همین Report و مسیر زیر ثبت می‌شوند:
+SHA-256 فایل ZIP تحویلی:
+
+```text
+a301a91ca6df1341372ed6f3abdba1c88650debd81b7fc3d934221ee8d0966ed
+```
+
+فایل sidecar همان checksum:
 
 ```text
 /home/user/Tekarai-Phase13-F.zip.sha256
 ```
+
+Checksum در این Report کاری و sidecar، Delivery Metadata نهایی است؛ ZIP از
+Workspace نهایی قبل از درج همین مقدار در متن Report بسته‌بندی شده است. برای
+اعتبارسنجی Artifact، مقدار sidecar یا همین SHA-256 را با خروجی `sha256sum`/
+`Get-FileHash` مقایسه کنید.
 
 Exclusionهای Archive:
 

@@ -72,12 +72,9 @@ def _policyRequestTypes(capability: AICapability) -> tuple[str, ...]:
     if "allowedRequestTypes" not in capability.policy:
         return REQUEST_TYPES
     raw = capability.policy["allowedRequestTypes"]
-    if isinstance(raw, str) or raw is None:
+    if not isinstance(raw, (tuple, list, set, frozenset)):
         raise AICapabilityPolicyInvalid("allowedRequestTypes must be a sequence of request types.")
-    try:
-        values = tuple(_normalizeRequestType(value) for value in raw)
-    except TypeError as exc:
-        raise AICapabilityPolicyInvalid("allowedRequestTypes must be iterable.") from exc
+    values = tuple(_normalizeRequestType(value) for value in raw)
     return tuple(dict.fromkeys(values))
 
 

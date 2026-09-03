@@ -14,8 +14,8 @@
 | [D](Phase13-D.md) | Provider Registry | ✅ تکمیل شد |
 | [E](Phase13-E.md) | Model Registry و Routing | ✅ تکمیل شد |
 | [F](Phase13-F.md) | Capability Registry | ✅ تکمیل شد |
-| G | Request و Operation Lifecycle | ⏳ بعدی |
-| H | Response و Structured Output | ⏳ |
+| [G](Phase13-G.md) | Request و Operation Lifecycle | ✅ تکمیل شد |
+| H | Response و Structured Output | ⏳ بعدی |
 | I | Prompt Platform و Versioning | ⏳ |
 | J | Context Engine و Context Builder | ⏳ |
 | K | Tenant Isolation، Authorization و Permission Filtering | ⏳ |
@@ -66,3 +66,5 @@
 - گزارش زیر‌فاز E: [`Phase13-E-ExecutionReport.md`](Phase13-E-ExecutionReport.md)
 - قرارداد F: [`Phase13-F.md`](Phase13-F.md)
 - گزارش زیر‌فاز F: [`Phase13-F-ExecutionReport.md`](Phase13-F-ExecutionReport.md)
+- قرارداد G: [`Phase13-G.md`](Phase13-G.md)
+- گزارش زیر‌فاز G: [`Phase13-G-ExecutionReport.md`](Phase13-G-ExecutionReport.md)

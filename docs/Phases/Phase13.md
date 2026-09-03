@@ -12,10 +12,11 @@ Implementation is split into 26 tracked sub-phases (A–Z). Start with
 `docs/Phases/Phase13/README.md` and the detailed contracts in
 `docs/Phases/Phase13/Phase13-A.md`, `docs/Phases/Phase13/Phase13-B.md`,
 `docs/Phases/Phase13/Phase13-C.md`, `docs/Phases/Phase13/Phase13-D.md`,
-`docs/Phases/Phase13/Phase13-E.md` and `docs/Phases/Phase13/Phase13-F.md`.
+`docs/Phases/Phase13/Phase13-E.md`, `docs/Phases/Phase13/Phase13-F.md` and
+`docs/Phases/Phase13/Phase13-G.md`.
 
-Sub-phases A, B, C, D, E and F are complete; sub-phase G is the next implementation
-gate. The completion of A/B/C/D/E/F does not mean that the complete Phase 13 is finished.
+Sub-phases A, B, C, D, E, F and G are complete; sub-phase H is the next implementation
+gate. The completion of A/B/C/D/E/F/G does not mean that the complete Phase 13 is finished.
 
 
 

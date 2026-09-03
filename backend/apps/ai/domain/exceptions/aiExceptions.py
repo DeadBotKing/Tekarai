@@ -225,6 +225,67 @@ class AICapabilityRoutingNoMatch(AIRoutingNoMatch):
         self.capabilityCode = capabilityCode
 
 
+class AIRequestNotFound(AIError):
+    code = "AI_REQUEST_NOT_FOUND"
+    httpStatus = 404
+
+    def __init__(self, requestId: str = "") -> None:
+        super().__init__("AI request was not found.")
+        self.requestId = requestId
+
+
+class AIOperationNotFound(AIError):
+    code = "AI_OPERATION_NOT_FOUND"
+    httpStatus = 404
+
+    def __init__(self, operationId: str = "") -> None:
+        super().__init__("AI operation was not found.")
+        self.operationId = operationId
+
+
+class AIRequestAlreadyRegistered(AIError):
+    code = "AI_REQUEST_ALREADY_REGISTERED"
+    httpStatus = 409
+
+    def __init__(self, requestId: str = "") -> None:
+        super().__init__("AI request is already registered.")
+        self.requestId = requestId
+
+
+class AIOperationAlreadyRegistered(AIError):
+    code = "AI_OPERATION_ALREADY_REGISTERED"
+    httpStatus = 409
+
+    def __init__(self, operationId: str = "") -> None:
+        super().__init__("AI operation is already registered.")
+        self.operationId = operationId
+
+
+class AIRequestLifecycleInvalid(AIError):
+    code = "AI_REQUEST_LIFECYCLE_INVALID"
+    httpStatus = 409
+
+    def __init__(self, message: str = "AI request lifecycle transition is invalid.") -> None:
+        super().__init__(message)
+
+
+class AIOperationLifecycleInvalid(AIError):
+    code = "AI_OPERATION_LIFECYCLE_INVALID"
+    httpStatus = 409
+
+    def __init__(self, message: str = "AI operation lifecycle transition is invalid.") -> None:
+        super().__init__(message)
+
+
+class AIRequestCapabilityInvalid(AIError):
+    code = "AI_REQUEST_CAPABILITY_INVALID"
+    httpStatus = 422
+
+    def __init__(self, capabilityId: str = "") -> None:
+        super().__init__("AI request capability is invalid for its tenant or request type.")
+        self.capabilityId = capabilityId
+
+
 class AIPromptNotFound(AIError):
     code = "AI_PROMPT_NOT_FOUND"
     httpStatus = 404

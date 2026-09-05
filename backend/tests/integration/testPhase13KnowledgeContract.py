@@ -311,3 +311,21 @@ class DjangoKnowledgeChunkStoreTests(TestCase):
 
     def testUnknownChunkReadsAsNone(self) -> None:
         self.assertIsNone(self.store.getChunk(self.tenantId, uuid.uuid4()))
+
+    def testReclassifyPropagatesToEveryChunkOfTheSource(self) -> None:
+        stored = self.seed(3)
+        changed = self.store.reclassifyChunks(self.tenantId, self.source.id, "RESTRICTED")
+        self.assertEqual(changed, 3)
+        for chunk in self.store.listChunks(self.tenantId, self.source.id):
+            self.assertEqual(chunk.classification, "RESTRICTED")
+        self.assertEqual(stored[0].classification, "INTERNAL")
+
+    def testReclassifyIsIdempotentAndTenantScoped(self) -> None:
+        self.seed(2)
+        self.store.reclassifyChunks(self.tenantId, self.source.id, "CONFIDENTIAL")
+        self.assertEqual(
+            self.store.reclassifyChunks(self.tenantId, self.source.id, "CONFIDENTIAL"), 0
+        )
+        self.assertEqual(
+            self.store.reclassifyChunks(self.otherTenantId, self.source.id, "PUBLIC"), 0
+        )

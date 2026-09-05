@@ -247,6 +247,26 @@ class DjangoKnowledgeChunkStore:
                 ).update(ordinal=int(ordinal))
         return moved
 
+    def reclassifyChunks(
+        self, tenantId: uuid.UUID, sourceId: uuid.UUID, classification: str
+    ) -> int:
+        """Propagate a source classification change to its stored chunks.
+
+        Reused chunks survive a reindex by checksum, so without this their
+        inherited classification would stay at the previous (possibly more
+        permissive) level and the Phase 13-K filter would keep letting them
+        through — see the Phase 13-S execution report §5.
+        """
+
+        return int(
+            AIKnowledgeChunkRecordModel.objects.filter(
+                tenantId=requireUuid(tenantId, "tenantId"),
+                source_id=requireUuid(sourceId, "sourceId"),
+            )
+            .exclude(classification=classification)
+            .update(classification=classification)
+        )
+
     def deleteChunks(self, tenantId: uuid.UUID, chunkIds: tuple[uuid.UUID, ...]) -> int:
         if not chunkIds:
             return 0

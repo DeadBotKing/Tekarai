@@ -26,8 +26,8 @@
 | [P](Phase13-P.md) | Async Execution، Queue و Worker | ✅ تکمیل شد |
 | [Q](Phase13-Q.md) | Embedding Foundation | ✅ تکمیل شد |
 | [R](Phase13-R.md) | Knowledge Ingestion، Chunking و Indexing | ✅ تکمیل شد |
-| S | Retrieval، RAG و Reranking | ⏳ بعدی |
-| T | AI Memory | ⏳ |
+| [S](Phase13-S.md) | Retrieval، RAG و Reranking | ✅ تکمیل شد |
+| T | AI Memory | ⏳ بعدی |
 | U | Evaluation | ⏳ |
 | V | Feedback | ⏳ |
 | W | Observability و Monitoring | ⏳ |
@@ -90,3 +90,5 @@
 - گزارش زیر‌فاز Q: [`Phase13-Q-ExecutionReport.md`](Phase13-Q-ExecutionReport.md)
 - قرارداد R: [`Phase13-R.md`](Phase13-R.md)
 - گزارش زیر‌فاز R: [`Phase13-R-ExecutionReport.md`](Phase13-R-ExecutionReport.md)
+- قرارداد S: [`Phase13-S.md`](Phase13-S.md)
+- گزارش زیر‌فاز S: [`Phase13-S-ExecutionReport.md`](Phase13-S-ExecutionReport.md)

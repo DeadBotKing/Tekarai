@@ -18,11 +18,12 @@ Implementation is split into 26 tracked sub-phases (A–Z). Start with
 `docs/Phases/Phase13/Phase13-K.md`, `docs/Phases/Phase13/Phase13-L.md`,
 `docs/Phases/Phase13/Phase13-M.md`, `docs/Phases/Phase13/Phase13-N.md`,
 `docs/Phases/Phase13/Phase13-O.md`, `docs/Phases/Phase13/Phase13-P.md`,
-`docs/Phases/Phase13/Phase13-Q.md` and `docs/Phases/Phase13/Phase13-R.md`.
+`docs/Phases/Phase13/Phase13-Q.md`, `docs/Phases/Phase13/Phase13-R.md` and
+`docs/Phases/Phase13/Phase13-S.md`.
 
-Sub-phases A through R are complete; sub-phase S (Retrieval, RAG and Reranking)
-is the next implementation gate. The completion of A–R does not mean that the
-complete Phase 13 is finished.
+Sub-phases A through S are complete; sub-phase T (AI Memory) is the next
+implementation gate. The completion of A–S does not mean that the complete
+Phase 13 is finished.
 
 
 
@@ -2798,7 +2799,7 @@ Phase 13 زمانی Done است که:
 
 
 
-\[ ] Retrieval Foundation آماده باشد.
+\[x] Retrieval Foundation آماده باشد. (Sub-phase S — Phase13-S.md)
 
 
 

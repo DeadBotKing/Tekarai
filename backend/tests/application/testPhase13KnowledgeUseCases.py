@@ -592,3 +592,39 @@ class KnowledgeJobHandlerTests(KnowledgeTestCase):
 
     def testHandlerAdvertisesItsKind(self) -> None:
         self.assertEqual(KnowledgeIngestionJobHandler(self.service).kind(), "INDEXING")
+
+
+class ClassificationPropagationTests(KnowledgeTestCase):
+    """A downgrade must reach chunks that survive a reindex by checksum."""
+
+    def testReusedChunksInheritTheNewClassification(self) -> None:
+        created = self.service.ingestSource(self.tenantId, self.command())
+        self.assertEqual(
+            {
+                chunk.classification
+                for chunk in self.service.listChunks(self.tenantId, created.source.sourceId)
+            },
+            {"INTERNAL"},
+        )
+        result = self.service.ingestSource(
+            self.tenantId, self.command(classification="RESTRICTED", force=True)
+        )
+        self.assertEqual(result.chunksReused, 3)
+        self.assertEqual(
+            {
+                chunk.classification
+                for chunk in self.service.listChunks(self.tenantId, created.source.sourceId)
+            },
+            {"RESTRICTED"},
+        )
+
+    def testUnchangedClassificationDoesNotTouchChunks(self) -> None:
+        created = self.service.ingestSource(self.tenantId, self.command())
+        self.service.ingestSource(self.tenantId, self.command(force=True))
+        self.assertEqual(
+            {
+                chunk.classification
+                for chunk in self.service.listChunks(self.tenantId, created.source.sourceId)
+            },
+            {"INTERNAL"},
+        )

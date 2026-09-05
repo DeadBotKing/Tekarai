@@ -396,6 +396,29 @@ AI_KNOWLEDGE_MAX_CHUNKS_PER_SOURCE = int(
 AI_KNOWLEDGE_RETENTION_DAYS = int(env("aiKnowledgeRetentionDays", default="730") or 730)
 
 # ---------------------------------------------------------------------------
+# AI RETRIEVAL, RAG & RERANKING (Phase 13-S)
+# ---------------------------------------------------------------------------
+# Configuration-driven read defaults (Master Specification §42): the
+# fail-closed switch, the candidate strategy and its ceilings, the rerank
+# strategy and its weights, the context budget, and the grounding rule that
+# decides whether an answer may be produced without authorized evidence.
+# An empty aiRetrievalMinScore means "no floor".
+# Camel-case env names per ADR-001/ADR-009.
+AI_RETRIEVAL_ENABLED = env.bool("aiRetrievalEnabled", default=True)
+AI_RETRIEVAL_STRATEGY = str(env("aiRetrievalStrategy", default="HYBRID") or "HYBRID").upper()
+AI_RETRIEVAL_TOP_K = int(env("aiRetrievalTopK", default="5") or 5)
+AI_RETRIEVAL_CANDIDATE_LIMIT = int(env("aiRetrievalCandidateLimit", default="200") or 200)
+AI_RETRIEVAL_MIN_SCORE = str(env("aiRetrievalMinScore", default="") or "")
+AI_RETRIEVAL_RERANK = str(env("aiRetrievalRerank", default="LEXICAL_BOOST") or "LEXICAL_BOOST").upper()
+AI_RETRIEVAL_LEXICAL_WEIGHT = float(env("aiRetrievalLexicalWeight", default="0.3") or 0.3)
+AI_RETRIEVAL_MMR_LAMBDA = float(env("aiRetrievalMmrLambda", default="0.7") or 0.7)
+AI_RETRIEVAL_MAX_CONTEXT_TOKENS = int(env("aiRetrievalMaxContextTokens", default="4000") or 4000)
+AI_RETRIEVAL_MAX_CONTEXT_SOURCES = int(env("aiRetrievalMaxContextSources", default="10") or 10)
+AI_RETRIEVAL_LEXICAL_SCAN_LIMIT = int(env("aiRetrievalLexicalScanLimit", default="500") or 500)
+AI_RAG_REQUIRE_GROUNDING = env.bool("aiRagRequireGrounding", default=True)
+AI_RAG_ANSWER_MODEL = str(env("aiRagAnswerModel", default="") or "")
+
+# ---------------------------------------------------------------------------
 # GUARDS
 # ---------------------------------------------------------------------------
 if environment not in {"development", "testing", "production"}:

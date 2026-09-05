@@ -64,7 +64,7 @@ def makeRequest(tenantId: uuid.UUID, **overrides: object) -> GovernanceRequest:
 
 class AuditVocabularyTests(unittest.TestCase):
     def testAuditActionsCoverSection36PlusGovernanceNeeds(self) -> None:
-        self.assertEqual(len(AUDIT_ACTIONS), 27)
+        self.assertEqual(len(AUDIT_ACTIONS), 30)
         for action in (
             "REQUEST_CREATED",
             "REQUEST_STARTED",
@@ -95,6 +95,10 @@ class AuditVocabularyTests(unittest.TestCase):
             "KNOWLEDGE_REINDEXED",
             "KNOWLEDGE_ARCHIVED",
             "KNOWLEDGE_PURGED",
+            # Phase 13-S amendment: retrieval and RAG read path.
+            "RETRIEVAL_EXECUTED",
+            "RETRIEVAL_DENIED",
+            "RAG_ANSWERED",
         ):
             self.assertIn(action, AUDIT_ACTIONS)
 

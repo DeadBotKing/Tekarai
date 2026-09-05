@@ -738,3 +738,34 @@ class AIKnowledgeIngestionFailed(AIError):
 
     code = "AI_KNOWLEDGE_INGESTION_FAILED"
     httpStatus = 500
+
+
+# ---------------------------------------------------------------------------
+# Phase 13-S — retrieval, RAG, reranking
+# ---------------------------------------------------------------------------
+class AIRetrievalInvalid(AIError):
+    code = "AI_RETRIEVAL_INVALID"
+    httpStatus = 422
+
+
+class AIRetrievalPolicyInvalid(AIError):
+    code = "AI_RETRIEVAL_POLICY_INVALID"
+    httpStatus = 422
+
+
+class AIRetrievalStageViolation(AIError):
+    """Context assembly was attempted before permission filtering ran.
+
+    This is a programming error, never a user error: the pipeline refuses
+    to build context out of an unauthorized candidate set (§20, §40).
+    """
+
+    code = "AI_RETRIEVAL_STAGE_VIOLATION"
+    httpStatus = 500
+
+
+class AIRagUngrounded(AIError):
+    """No authorized evidence survived, and the policy forbids guessing."""
+
+    code = "AI_RAG_UNGROUNDED"
+    httpStatus = 422

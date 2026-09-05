@@ -583,11 +583,15 @@ class KnowledgeApplicationService:
         moment: datetime,
     ) -> dict[str, int]:
         # 1. Reused chunks keep their identity (and their vectors) and are
-        #    only moved to their new position.
+        #    only moved to their new position. A classification change on
+        #    the source must still reach them: they inherit it, and a stale
+        #    (more permissive) value would survive every future reindex.
         if plan.reused:
             self.chunkStore.reorderChunks(
                 tenant, {chunk.id: ordinal for chunk, ordinal in plan.reused}
             )
+            if any(chunk.classification != classification for chunk, _ in plan.reused):
+                self.chunkStore.reclassifyChunks(tenant, source.id, classification)
 
         # 2. Orphaned chunks lose their vectors first, then themselves —
         #    an interrupted run leaves no vector pointing at a dead chunk.

@@ -64,7 +64,7 @@ def makeRequest(tenantId: uuid.UUID, **overrides: object) -> GovernanceRequest:
 
 class AuditVocabularyTests(unittest.TestCase):
     def testAuditActionsCoverSection36PlusGovernanceNeeds(self) -> None:
-        self.assertEqual(len(AUDIT_ACTIONS), 19)
+        self.assertEqual(len(AUDIT_ACTIONS), 23)
         for action in (
             "REQUEST_CREATED",
             "REQUEST_STARTED",
@@ -85,6 +85,11 @@ class AuditVocabularyTests(unittest.TestCase):
             "JOB_STARTED",
             "JOB_COMPLETED",
             "JOB_FAILED",
+            # Phase 13-Q amendment: vector space and embedding lifecycle.
+            "VECTOR_SPACE_DEFINED",
+            "VECTOR_SPACE_DEACTIVATED",
+            "EMBEDDING_CREATED",
+            "EMBEDDING_DELETED",
         ):
             self.assertIn(action, AUDIT_ACTIONS)
 

@@ -2,5 +2,6 @@
 
 from apps.ai.domain.entities.aiRecords import *  # noqa: F401,F403
 from apps.ai.domain.entities.auditRecords import *  # noqa: F401,F403
+from apps.ai.domain.entities.embeddingRecords import *  # noqa: F401,F403
 from apps.ai.domain.entities.jobRecords import *  # noqa: F401,F403
 from apps.ai.domain.entities.usageRecords import *  # noqa: F401,F403

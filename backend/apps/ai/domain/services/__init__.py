@@ -4,6 +4,7 @@ from apps.ai.domain.services.aiRules import *  # noqa: F401,F403
 from apps.ai.domain.services.auditTrail import *  # noqa: F401,F403
 from apps.ai.domain.services.authorizationService import *  # noqa: F401,F403
 from apps.ai.domain.services.contextEngine import *  # noqa: F401,F403
+from apps.ai.domain.services.embeddingEngine import *  # noqa: F401,F403
 from apps.ai.domain.services.eventBus import *  # noqa: F401,F403
 from apps.ai.domain.services.governance import *  # noqa: F401,F403
 from apps.ai.domain.services.jobQueue import *  # noqa: F401,F403

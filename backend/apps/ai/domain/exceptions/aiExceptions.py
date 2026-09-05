@@ -614,3 +614,73 @@ class AIJobHandlerMissing(AIError):
 class AIEventInvalid(AIError):
     code = "AI_EVENT_INVALID"
     httpStatus = 422
+
+
+# ---------------------------------------------------------------------------
+# Phase 13-Q — embedding foundation
+# ---------------------------------------------------------------------------
+class AIVectorSpaceAlreadyRegistered(AIError):
+    code = "AI_VECTOR_SPACE_ALREADY_REGISTERED"
+    httpStatus = 409
+
+    def __init__(self, spaceCode: str = "") -> None:
+        super().__init__("AI vector space is already registered.")
+        self.spaceCode = spaceCode
+
+
+class AIVectorSpaceNotFound(AIError):
+    code = "AI_VECTOR_SPACE_NOT_FOUND"
+    httpStatus = 404
+
+    def __init__(self, spaceCode: str = "") -> None:
+        super().__init__("AI vector space was not found.")
+        self.spaceCode = spaceCode
+
+
+class AIVectorSpaceInvalid(AIError):
+    code = "AI_VECTOR_SPACE_INVALID"
+    httpStatus = 422
+
+
+class AIVectorSpaceInactive(AIError):
+    """The space exists but is closed for writes (reads remain legal)."""
+
+    code = "AI_VECTOR_SPACE_INACTIVE"
+    httpStatus = 409
+
+
+class AIVectorSpaceMismatch(AIError):
+    """Vectors from different spaces may never be compared or mixed."""
+
+    code = "AI_VECTOR_SPACE_MISMATCH"
+    httpStatus = 409
+
+
+class AIEmbeddingInvalid(AIError):
+    code = "AI_EMBEDDING_INVALID"
+    httpStatus = 422
+
+
+class AIEmbeddingNotFound(AIError):
+    code = "AI_EMBEDDING_NOT_FOUND"
+    httpStatus = 404
+
+    def __init__(self, embeddingId: str = "") -> None:
+        super().__init__("AI embedding was not found.")
+        self.embeddingId = embeddingId
+
+
+class AIEmbeddingAlreadyRegistered(AIError):
+    code = "AI_EMBEDDING_ALREADY_REGISTERED"
+    httpStatus = 409
+
+    def __init__(self, embeddingId: str = "") -> None:
+        super().__init__("AI embedding is already registered.")
+        self.embeddingId = embeddingId
+
+
+class AIEmbeddingBatchTooLarge(AIError):
+    """The batch exceeds the configured (or absolute) batch ceiling."""
+
+    code = "AI_EMBEDDING_BATCH_TOO_LARGE"
+    httpStatus = 422

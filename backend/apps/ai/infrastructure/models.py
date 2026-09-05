@@ -205,3 +205,54 @@ class AIJobModel(BaseAiModel):
             models.Index(fields=["tenantId", "status", "runAt"]),
             models.Index(fields=["tenantId", "createdAt"]),
         ]
+
+
+# Phase 13-Q embedding foundation tables (clean style). Vectors are stored
+# as JSON float arrays so the schema works unchanged on SQL Server, SQLite,
+# and PostgreSQL without a vector extension or any new dependency
+# (contract §Q.15 decision Q-D2). ``sourceId`` is a plain reference string:
+# AI never owns the business row it points at, so no foreign key exists and
+# purging a source can never cascade into another domain's tables.
+class AIVectorSpaceModel(BaseAiModel):
+    """Tenant-scoped registration of one comparable vector set (§Q.5)."""
+
+    code = models.CharField(max_length=80)
+    modelCode = models.CharField(max_length=120)
+    modelVersion = models.CharField(max_length=80, blank=True)
+    modelId = models.UUIDField(null=True)
+    providerCode = models.CharField(max_length=80, blank=True)
+    dimensions = models.PositiveIntegerField()
+    metric = models.CharField(max_length=20, default="COSINE")
+    normalization = models.CharField(max_length=10, default="L2")
+    description = models.TextField(blank=True)
+    isActive = models.BooleanField(default=True)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = "aiVectorSpaces"
+        unique_together = [("tenantId", "code")]
+        indexes = [models.Index(fields=["tenantId", "isActive"])]
+
+
+class AIStoredEmbeddingModel(BaseAiModel):
+    """One durable vector bound to a business reference (§Q.4)."""
+
+    spaceCode = models.CharField(max_length=80)
+    sourceType = models.CharField(max_length=40)
+    sourceId = models.CharField(max_length=160)
+    chunkId = models.UUIDField(null=True)
+    modelId = models.UUIDField(null=True)
+    providerCode = models.CharField(max_length=80, blank=True)
+    dimensions = models.PositiveIntegerField()
+    vector = models.JSONField(default=list)
+    contentHash = models.CharField(max_length=64)
+    tokenCount = models.PositiveIntegerField(default=0)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = "aiEmbeddingVectors"
+        unique_together = [("tenantId", "spaceCode", "contentHash")]
+        indexes = [
+            models.Index(fields=["tenantId", "spaceCode", "sourceType", "sourceId"]),
+            models.Index(fields=["tenantId", "spaceCode", "createdAt"]),
+        ]

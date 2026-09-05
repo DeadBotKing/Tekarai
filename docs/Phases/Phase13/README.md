@@ -20,12 +20,12 @@
 | [J](Phase13-J.md) | Context Engine و Context Builder | ✅ تکمیل شد |
 | [K](Phase13-K.md) | Tenant Isolation، Authorization و Permission Filtering | ✅ تکمیل شد |
 | [L](Phase13-L.md) | Provider Adapterها | ✅ تکمیل شد |
-| M | Fallback، Retry، Timeout و Error Boundary | ⏳ بعدی |
+| [M](Phase13-M.md) | Fallback، Retry، Timeout و Error Boundary | ✅ تکمیل شد |
 | [N](Phase13-N.md) | Usage، Token، Latency، Cost و Quota | ✅ تکمیل شد |
 | [O](Phase13-O.md) | Audit و Governance | ✅ تکمیل شد |
 | [P](Phase13-P.md) | Async Execution، Queue و Worker | ✅ تکمیل شد |
-| Q | Embedding Foundation | ⏳ |
-| R | Knowledge Ingestion، Chunking و Indexing | ⏳ |
+| [Q](Phase13-Q.md) | Embedding Foundation | ✅ تکمیل شد |
+| R | Knowledge Ingestion، Chunking و Indexing | ⏳ بعدی |
 | S | Retrieval، RAG و Reranking | ⏳ |
 | T | AI Memory | ⏳ |
 | U | Evaluation | ⏳ |
@@ -82,5 +82,9 @@
 - گزارش زیر‌فاز N: [`Phase13-N-ExecutionReport.md`](Phase13-N-ExecutionReport.md)
 - قرارداد O: [`Phase13-O.md`](Phase13-O.md)
 - گزارش زیر‌فاز O: [`Phase13-O-ExecutionReport.md`](Phase13-O-ExecutionReport.md)
+- قرارداد M: [`Phase13-M.md`](Phase13-M.md)
+- گزارش زیر‌فاز M: [`Phase13-M-ExecutionReport.md`](Phase13-M-ExecutionReport.md)
 - قرارداد P: [`Phase13-P.md`](Phase13-P.md)
 - گزارش زیر‌فاز P: [`Phase13-P-ExecutionReport.md`](Phase13-P-ExecutionReport.md)
+- قرارداد Q: [`Phase13-Q.md`](Phase13-Q.md)
+- گزارش زیر‌فاز Q: [`Phase13-Q-ExecutionReport.md`](Phase13-Q-ExecutionReport.md)

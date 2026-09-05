@@ -319,6 +319,58 @@ AI_WORKER_RETRY_MAX_SECONDS = int(env("aiWorkerRetryMaxSeconds", default="600") 
 AI_WORKER_IDLE_SLEEP_SECONDS = int(env("aiWorkerIdleSleepSeconds", default="5") or 5)
 
 # ---------------------------------------------------------------------------
+# AI PROVIDER RESILIENCE (Phase 13-M)
+# ---------------------------------------------------------------------------
+# Retry / fallback / timeout tuning consumed by
+# apps.ai.infrastructure.providers.resilienceWiring, which validates them.
+# NOTE (Phase 13-Q corrective amendment): this block was delivered by
+# Phase 13-M (commit 0df22be) and removed by the Phase 13-N commit
+# (fd9b289) — see Phase13-Q-ExecutionReport.md §5. It is restored here
+# unchanged so `resilienceWiring.buildResilientExecutor` reads real
+# configuration again instead of falling back to an empty mapping.
+AI_RESILIENCE: dict[str, object] = {
+    # Total attempts for one provider step (1 = no retry).
+    "aiRetryMaxAttempts": int(env("aiRetryMaxAttempts", default="3") or 3),
+    # Initial backoff before the first retry, in seconds.
+    "aiRetryInitialBackoffSeconds": float(
+        env("aiRetryInitialBackoffSeconds", default="0.25") or 0.25
+    ),
+    # Geometric growth factor applied to the backoff after each retry.
+    "aiRetryBackoffMultiplier": float(env("aiRetryBackoffMultiplier", default="2.0") or 2.0),
+    # Ceiling for a single backoff wait, in seconds.
+    "aiRetryMaxBackoffSeconds": float(env("aiRetryMaxBackoffSeconds", default="5.0") or 5.0),
+    # Wall-clock budget for the whole call including fallbacks, in seconds.
+    "aiProviderTimeoutBudgetSeconds": float(
+        env("aiProviderTimeoutBudgetSeconds", default="60") or 60
+    ),
+    # Ordered fallback chain: primary first, then secondaries, then local.
+    "aiProviderFallbackChain": env("aiProviderFallbackChain", default=""),
+}
+
+# ---------------------------------------------------------------------------
+# AI EMBEDDING FOUNDATION (Phase 13-Q)
+# ---------------------------------------------------------------------------
+# Configuration-driven embedding defaults (Master Specification §42): the
+# fail-closed switch, provider batch and input ceilings, the default vector
+# space geometry applied when a space is registered without one, the
+# fingerprint cache switch, the brute-force candidate scan ceiling, and the
+# vector retention horizon. Camel-case env names per ADR-001/ADR-009.
+AI_EMBEDDING_ENABLED = env.bool("aiEmbeddingEnabled", default=True)
+AI_EMBEDDING_MAX_BATCH_SIZE = int(env("aiEmbeddingMaxBatchSize", default="32") or 32)
+AI_EMBEDDING_MAX_INPUT_TOKENS = int(env("aiEmbeddingMaxInputTokens", default="8192") or 8192)
+AI_EMBEDDING_DEFAULT_METRIC = str(
+    env("aiEmbeddingDefaultMetric", default="COSINE") or "COSINE"
+).upper()
+AI_EMBEDDING_DEFAULT_NORMALIZATION = str(
+    env("aiEmbeddingDefaultNormalization", default="L2") or "L2"
+).upper()
+AI_EMBEDDING_CACHE_ENABLED = env.bool("aiEmbeddingCacheEnabled", default=True)
+AI_EMBEDDING_SEARCH_CANDIDATE_LIMIT = int(
+    env("aiEmbeddingSearchCandidateLimit", default="1000") or 1000
+)
+AI_EMBEDDING_RETENTION_DAYS = int(env("aiEmbeddingRetentionDays", default="365") or 365)
+
+# ---------------------------------------------------------------------------
 # GUARDS
 # ---------------------------------------------------------------------------
 if environment not in {"development", "testing", "production"}:

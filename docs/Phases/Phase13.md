@@ -15,11 +15,11 @@ Implementation is split into 26 tracked sub-phases (A–Z). Start with
 `docs/Phases/Phase13/Phase13-E.md`, `docs/Phases/Phase13/Phase13-F.md`,
 `docs/Phases/Phase13/Phase13-G.md`, `docs/Phases/Phase13/Phase13-H.md`,
 `docs/Phases/Phase13/Phase13-I.md`, `docs/Phases/Phase13/Phase13-J.md`,
-`docs/Phases/Phase13/Phase13-K.md`, `docs/Phases/Phase13/Phase13-L.md` and
-`docs/Phases/Phase13/Phase13-N.md`.
+`docs/Phases/Phase13/Phase13-K.md`, `docs/Phases/Phase13/Phase13-L.md`,
+`docs/Phases/Phase13/Phase13-N.md` and `docs/Phases/Phase13/Phase13-O.md`.
 
-Sub-phases A, B, C, D, E, F, G, H, I, J, K, L and N are complete; sub-phase M is the next implementation
-gate. The completion of A/B/C/D/E/F/G/H/I/J/K/L/N does not mean that the complete Phase 13 is finished.
+Sub-phases A, B, C, D, E, F, G, H, I, J, K, L, N and O are complete; sub-phase M is the next implementation
+gate. The completion of A/B/C/D/E/F/G/H/I/J/K/L/N/O does not mean that the complete Phase 13 is finished.
 
 
 
@@ -2775,7 +2775,7 @@ Phase 13 زمانی Done است که:
 
 
 
-\[ ] Audit وجود داشته باشد.
+\[x] Audit وجود داشته باشد. (Sub-phase O — Phase13-O.md)
 
 
 

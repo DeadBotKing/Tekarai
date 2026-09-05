@@ -117,3 +117,55 @@ class AIQuotaCounterModel(BaseAiModel):
         db_table = "aiQuotaCounters"
         unique_together = [("policy", "windowStart")]
         indexes = [models.Index(fields=["tenantId", "windowStart"])]
+
+
+# Phase 13-O audit trail and governance tables (clean style). Entity
+# references are plain UUID columns with no foreign keys on purpose:
+# retention purges of the referenced rows must never cascade into the
+# audit ledger, and purge order stays irrelevant (contract §O.4.1).
+class AIAuditTrailModel(BaseAiModel):
+    occurredAt = models.DateTimeField()
+    actorType = models.CharField(max_length=20, default="SYSTEM")
+    actorId = models.UUIDField(null=True)
+    action = models.CharField(max_length=40)
+    requestId = models.UUIDField(null=True)
+    attemptId = models.UUIDField(null=True)
+    policyId = models.UUIDField(null=True)
+    capabilityCode = models.CharField(max_length=100, blank=True)
+    providerCode = models.CharField(max_length=100, blank=True)
+    modelCode = models.CharField(max_length=160, blank=True)
+    promptVersion = models.CharField(max_length=80, blank=True)
+    classification = models.CharField(max_length=20, default="INTERNAL")
+    outcome = models.CharField(max_length=20, default="RECORDED")
+    errorCode = models.CharField(max_length=80, blank=True)
+    correlationId = models.CharField(max_length=128, blank=True)
+    traceId = models.CharField(max_length=128, blank=True)
+    contextSources = models.JSONField(default=list)
+    detail = models.JSONField(default=dict)
+    prevHash = models.CharField(max_length=64, blank=True)
+    hash = models.CharField(max_length=64, blank=True)
+
+    class Meta:
+        db_table = "aiAuditTrail"
+        indexes = [
+            models.Index(fields=["tenantId", "occurredAt"]),
+            models.Index(fields=["tenantId", "action"]),
+        ]
+
+
+class AIGovernancePolicyModel(BaseAiModel):
+    name = models.CharField(max_length=160, default="default")
+    allowedProviders = models.JSONField(default=list)
+    allowedModels = models.JSONField(default=list)
+    disabledCapabilities = models.JSONField(default=list)
+    allowRestrictedToExternal = models.BooleanField(default=False)
+    maxCostPerDay = models.DecimalField(max_digits=18, decimal_places=8, default=0)
+    currency = models.CharField(max_length=3, default="USD")
+    description = models.TextField(blank=True)
+    isActive = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "aiGovernancePolicies"
+        constraints = [
+            models.UniqueConstraint(fields=["tenantId"], name="unique_governance_policy_per_tenant")
+        ]

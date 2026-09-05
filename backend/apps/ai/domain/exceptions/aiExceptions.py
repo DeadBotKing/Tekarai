@@ -1,4 +1,5 @@
-"""Stable AI domain errors for Phase 13-B, Phase 13-E, Phase 13-F and Phase 13-N.
+"""Stable AI domain errors for Phase 13-B, Phase 13-E, Phase 13-F, Phase 13-N
+and Phase 13-O.
 
 Provider-specific failures are mapped to these errors by later infrastructure
 adapters. No vendor exception is allowed to cross the AI boundary.
@@ -521,4 +522,53 @@ class AIToolDenied(AIError):
 
 class AIConfigurationError(AIError):
     code = "AI_CONFIGURATION_ERROR"
+    httpStatus = 500
+
+
+class AIGovernanceDenied(AIError):
+    """A governance rule denied the request before execution (fail-closed)."""
+
+    code = "AI_GOVERNANCE_DENIED"
+    httpStatus = 403
+
+
+class AIGovernancePolicyAlreadyRegistered(AIError):
+    code = "AI_GOVERNANCE_POLICY_ALREADY_REGISTERED"
+    httpStatus = 409
+
+    def __init__(self, message: str = "AI governance policy is already registered.") -> None:
+        super().__init__(message)
+
+
+class AIGovernancePolicyNotFound(AIError):
+    code = "AI_GOVERNANCE_POLICY_NOT_FOUND"
+    httpStatus = 404
+
+    def __init__(self, message: str = "AI governance policy was not found.") -> None:
+        super().__init__(message)
+
+
+class AIGovernancePolicyInvalid(AIError):
+    code = "AI_GOVERNANCE_POLICY_INVALID"
+    httpStatus = 422
+
+
+class AIAuditRecordInvalid(AIError):
+    code = "AI_AUDIT_RECORD_INVALID"
+    httpStatus = 422
+
+
+class AIAuditRecordNotFound(AIError):
+    code = "AI_AUDIT_RECORD_NOT_FOUND"
+    httpStatus = 404
+
+    def __init__(self, entryId: str = "") -> None:
+        super().__init__("AI audit record was not found.")
+        self.entryId = entryId
+
+
+class AIAuditTrailTampered(AIError):
+    """Chain verification detected a broken link, a fork, or a hash mismatch."""
+
+    code = "AI_AUDIT_TRAIL_TAMPERED"
     httpStatus = 500

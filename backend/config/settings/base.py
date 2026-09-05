@@ -283,6 +283,27 @@ AI_USAGE_DEFAULT_CURRENCY = str(env("aiUsageDefaultCurrency", default="USD") or 
 AI_USAGE_RETENTION_DAYS = int(env("aiUsageRetentionDays", default="90") or 90)
 
 # ---------------------------------------------------------------------------
+# AI AUDIT & GOVERNANCE (Phase 13-O)
+# ---------------------------------------------------------------------------
+# Configuration-driven audit/governance defaults (Master Specification §42):
+# ledger switch and retention horizon, the restricted-detail opt-in (§47),
+# the governance switch, and the platform-default daily cost budget applied
+# when a tenant defines no governance policy of its own (§48). A zero
+# budget means "unlimited" — an explicit per-tenant governance policy
+# always takes precedence over these platform defaults.
+# Camel-case env names per ADR-001/ADR-009.
+AI_AUDIT_ENABLED = env.bool("aiAuditEnabled", default=True)
+AI_AUDIT_RETENTION_DAYS = int(env("aiAuditRetentionDays", default="365") or 365)
+AI_AUDIT_INCLUDE_RESTRICTED_DETAIL = env.bool("aiAuditIncludeRestrictedDetail", default=False)
+AI_GOVERNANCE_ENABLED = env.bool("aiGovernanceEnabled", default=True)
+AI_GOVERNANCE_DEFAULT_MAX_COST_PER_DAY = str(
+    env("aiGovernanceDefaultMaxCostPerDay", default="0") or "0"
+)
+AI_GOVERNANCE_DEFAULT_CURRENCY = str(
+    env("aiGovernanceDefaultCurrency", default="USD") or "USD"
+).upper()
+
+# ---------------------------------------------------------------------------
 # GUARDS
 # ---------------------------------------------------------------------------
 if environment not in {"development", "testing", "production"}:

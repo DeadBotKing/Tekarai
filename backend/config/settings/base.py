@@ -269,6 +269,32 @@ AI_PROVIDER_ADAPTERS: dict[str, dict[str, object]] = {
 }
 
 # ---------------------------------------------------------------------------
+# AI RESILIENCE (Phase 13-M)
+# ---------------------------------------------------------------------------
+# Controlled retry, fallback chain and timeout budget (Master Specification
+# §25/§42/§44). Values are configuration-driven; the executor in
+# apps.ai.infrastructure.providers.resilienceWiring validates them.
+AI_RESILIENCE = {
+    # Max attempts per provider step in a resilient chain (>= 1, §44).
+    "aiRetryMaxAttempts": int(env("aiRetryMaxAttempts", default="3") or 3),
+    # Initial backoff before the first retry, in seconds.
+    "aiRetryInitialBackoffSeconds": float(
+        env("aiRetryInitialBackoffSeconds", default="0.25") or 0.25
+    ),
+    # Geometric growth factor applied to the backoff after each retry.
+    "aiRetryBackoffMultiplier": float(env("aiRetryBackoffMultiplier", default="2.0") or 2.0),
+    # Hard cap on any single backoff delay, in seconds.
+    "aiRetryMaxBackoffSeconds": float(env("aiRetryMaxBackoffSeconds", default="5.0") or 5.0),
+    # Wall-clock budget for one resilient AI operation (seconds, > 0).
+    "aiProviderTimeoutBudgetSeconds": float(
+        env("aiProviderTimeoutBudgetSeconds", default="60") or 60
+    ),
+    # Ordered fallback chain: primary first, then secondaries, then local.
+    # Comma-separated provider codes; empty string disables fallback (§25).
+    "aiProviderFallbackChain": env("aiProviderFallbackChain", default=""),
+}
+
+# ---------------------------------------------------------------------------
 # GUARDS
 # ---------------------------------------------------------------------------
 if environment not in {"development", "testing", "production"}:

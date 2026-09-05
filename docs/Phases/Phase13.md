@@ -14,11 +14,13 @@ Implementation is split into 26 tracked sub-phases (A–Z). Start with
 `docs/Phases/Phase13/Phase13-C.md`, `docs/Phases/Phase13/Phase13-D.md`,
 `docs/Phases/Phase13/Phase13-E.md`, `docs/Phases/Phase13/Phase13-F.md`,
 `docs/Phases/Phase13/Phase13-G.md`, `docs/Phases/Phase13/Phase13-H.md`,
-`docs/Phases/Phase13/Phase13-I.md`, `docs/Phases/Phase13/Phase13-J.md` and
-`docs/Phases/Phase13/Phase13-K.md`.
+`docs/Phases/Phase13/Phase13-I.md`, `docs/Phases/Phase13/Phase13-J.md`,
+`docs/Phases/Phase13/Phase13-K.md`, `docs/Phases/Phase13/Phase13-L.md` and
+`docs/Phases/Phase13/Phase13-M.md`.
 
-Sub-phases A, B, C, D, E, F, G, H, I, J, K and L are complete; sub-phase M is the next implementation
-gate. The completion of A/B/C/D/E/F/G/H/I/J/K/L does not mean that the complete Phase 13 is finished.
+Sub-phases A, B, C, D, E, F, G, H, I, J, K, L and M are complete; sub-phase N is the next
+implementation gate. The completion of A/B/C/D/E/F/G/H/I/J/K/L/M does not mean that the complete
+Phase 13 is finished.
 
 
 

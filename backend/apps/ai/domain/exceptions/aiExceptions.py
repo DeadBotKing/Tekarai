@@ -1,4 +1,4 @@
-"""Stable AI domain errors for Phase 13-B, Phase 13-E and Phase 13-F.
+"""Stable AI domain errors for Phase 13-B, Phase 13-E, Phase 13-F and Phase 13-N.
 
 Provider-specific failures are mapped to these errors by later infrastructure
 adapters. No vendor exception is allowed to cross the AI boundary.
@@ -32,6 +32,53 @@ class AIRequestTimeout(AIError):
 class AIQuotaExceeded(AIError):
     code = "AI_QUOTA_EXCEEDED"
     httpStatus = 429
+
+
+class AICostLimitExceeded(AIQuotaExceeded):
+    """A COST-dimension quota (or the per-request cost cap) denied the attempt."""
+
+    code = "AI_COST_LIMIT_EXCEEDED"
+    httpStatus = 429
+
+
+class AIQuotaPolicyAlreadyRegistered(AIError):
+    code = "AI_QUOTA_POLICY_ALREADY_REGISTERED"
+    httpStatus = 409
+
+    def __init__(self, message: str = "AI quota policy is already registered.") -> None:
+        super().__init__(message)
+
+
+class AIQuotaPolicyNotFound(AIError):
+    code = "AI_QUOTA_POLICY_NOT_FOUND"
+    httpStatus = 404
+
+    def __init__(self, policyId: str = "") -> None:
+        super().__init__("AI quota policy was not found.")
+        self.policyId = policyId
+
+
+class AIQuotaPolicyInvalid(AIError):
+    code = "AI_QUOTA_POLICY_INVALID"
+    httpStatus = 422
+
+
+class AIUsageAttemptAlreadyRegistered(AIError):
+    code = "AI_USAGE_ATTEMPT_ALREADY_REGISTERED"
+    httpStatus = 409
+
+    def __init__(self, requestId: str = "") -> None:
+        super().__init__("AI usage attempt is already registered.")
+        self.requestId = requestId
+
+
+class AIUsageAttemptNotFound(AIError):
+    code = "AI_USAGE_ATTEMPT_NOT_FOUND"
+    httpStatus = 404
+
+    def __init__(self, attemptId: str = "") -> None:
+        super().__init__("AI usage attempt was not found.")
+        self.attemptId = attemptId
 
 
 class AITokenLimitExceeded(AIError):
@@ -274,7 +321,9 @@ class AICapabilityRequestTypeUnsupported(AIError):
     httpStatus = 422
 
     def __init__(self, capabilityCode: str, requestType: str) -> None:
-        super().__init__(f"AI capability {capabilityCode} does not accept request type {requestType}.")
+        super().__init__(
+            f"AI capability {capabilityCode} does not accept request type {requestType}."
+        )
         self.capabilityCode = capabilityCode
         self.requestType = requestType
 
@@ -395,7 +444,11 @@ class AIStructuredOutputInvalid(AIOutputValidationFailed):
     code = "AI_STRUCTURED_OUTPUT_INVALID"
     httpStatus = 422
 
-    def __init__(self, message: str = "Structured AI output failed schema validation.", issues: tuple[object, ...] = ()) -> None:
+    def __init__(
+        self,
+        message: str = "Structured AI output failed schema validation.",
+        issues: tuple[object, ...] = (),
+    ) -> None:
         super().__init__(message)
         self.issues = issues
 

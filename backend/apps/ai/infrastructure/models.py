@@ -14,6 +14,9 @@ class AIProviderModel(BaseAiModel):
     class Meta: db_table='aiProviders'; unique_together=[('tenantId','code')]
 class AIModelModel(BaseAiModel):
     provider=models.ForeignKey(AIProviderModel,on_delete=models.PROTECT,related_name='models'); code=models.CharField(max_length=120); name=models.CharField(max_length=160); modelType=models.CharField(max_length=40,default='LLM'); version=models.CharField(max_length=80,blank=True); contextWindow=models.PositiveIntegerField(default=8192); inputCapability=models.JSONField(default=list); outputCapability=models.JSONField(default=list); supportsStreaming=models.BooleanField(default=False); supportsTools=models.BooleanField(default=False); supportsEmbeddings=models.BooleanField(default=False); supportsVision=models.BooleanField(default=False); isActive=models.BooleanField(default=True); metadata=models.JSONField(default=dict,blank=True)
+    # Phase 13-N billable rates, denominated in AI_USAGE_DEFAULT_CURRENCY.
+    inputCostPer1k = models.DecimalField(max_digits=18, decimal_places=8, default=0)
+    outputCostPer1k = models.DecimalField(max_digits=18, decimal_places=8, default=0)
     class Meta: db_table='aiModels'; unique_together=[('tenantId','code','version')]
 class AICapabilityModel(BaseAiModel):
     code=models.CharField(max_length=100); name=models.CharField(max_length=160); description=models.TextField(blank=True); isActive=models.BooleanField(default=True); policy=models.JSONField(default=dict,blank=True)
@@ -48,3 +51,69 @@ class AIKnowledgeChunkModel(BaseAiModel):
 class AIAuditRecordModel(BaseAiModel):
     request=models.ForeignKey(AIRequestModel,on_delete=models.PROTECT); action=models.CharField(max_length=60); actorId=models.UUIDField(null=True); providerCode=models.CharField(max_length=100,blank=True); modelCode=models.CharField(max_length=160,blank=True); promptVersion=models.CharField(max_length=80,blank=True); contextSources=models.JSONField(default=list); resultClassification=models.CharField(max_length=30,blank=True); metadata=models.JSONField(default=dict); redacted=models.BooleanField(default=True)
     class Meta: db_table='aiAuditRecords'
+# Phase 13-N metering tables (clean style; the minified classes above are
+# pre-existing debt documented in the Phase 13-L execution report §6).
+class AIUsageAttemptModel(BaseAiModel):
+    request = models.ForeignKey(AIRequestModel, on_delete=models.PROTECT, related_name="usageAttempts")
+    operationId = models.UUIDField(null=True)
+    attemptNumber = models.PositiveIntegerField(default=1)
+    provider = models.ForeignKey(AIProviderModel, on_delete=models.PROTECT)
+    model = models.ForeignKey(AIModelModel, on_delete=models.PROTECT)
+    providerCode = models.CharField(max_length=100)
+    modelCode = models.CharField(max_length=160)
+    capabilityCode = models.CharField(max_length=100, blank=True)
+    requestedBy = models.UUIDField(null=True)
+    inputTokens = models.PositiveIntegerField(default=0)
+    outputTokens = models.PositiveIntegerField(default=0)
+    totalTokens = models.PositiveIntegerField(default=0)
+    estimatedCost = models.DecimalField(max_digits=18, decimal_places=8, default=0)
+    currency = models.CharField(max_length=3, default="USD")
+    queueTimeMs = models.PositiveIntegerField(default=0)
+    contextBuildTimeMs = models.PositiveIntegerField(default=0)
+    providerTimeMs = models.PositiveIntegerField(default=0)
+    validationTimeMs = models.PositiveIntegerField(default=0)
+    totalTimeMs = models.PositiveIntegerField(default=0)
+    outcome = models.CharField(max_length=20, default="SUCCEEDED")
+    errorCode = models.CharField(max_length=80, blank=True)
+    idempotencyKey = models.CharField(max_length=160, blank=True, db_index=True)
+    fingerprint = models.CharField(max_length=64, blank=True)
+    correlationId = models.CharField(max_length=128, blank=True)
+    traceId = models.CharField(max_length=128, blank=True)
+
+    class Meta:
+        db_table = "aiUsageAttempts"
+        unique_together = [("tenantId", "request", "attemptNumber")]
+        indexes = [
+            models.Index(fields=["tenantId", "createdAt"]),
+            models.Index(fields=["tenantId", "idempotencyKey"]),
+        ]
+
+
+class AIQuotaPolicyModel(BaseAiModel):
+    scope = models.CharField(max_length=20)
+    scopeReference = models.CharField(max_length=160, blank=True)
+    dimension = models.CharField(max_length=20)
+    window = models.CharField(max_length=20)
+    limitValue = models.DecimalField(max_digits=18, decimal_places=8)
+    currency = models.CharField(max_length=3, default="USD")
+    description = models.TextField(blank=True)
+    isActive = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "aiQuotaPolicies"
+        unique_together = [("tenantId", "scope", "scopeReference", "dimension", "window")]
+
+
+class AIQuotaCounterModel(BaseAiModel):
+    policy = models.ForeignKey(AIQuotaPolicyModel, on_delete=models.PROTECT, related_name="counters")
+    windowStart = models.DateTimeField(db_index=True)
+    consumedRequests = models.BigIntegerField(default=0)
+    consumedInputTokens = models.BigIntegerField(default=0)
+    consumedOutputTokens = models.BigIntegerField(default=0)
+    consumedCost = models.DecimalField(max_digits=18, decimal_places=8, default=0)
+    currency = models.CharField(max_length=3, default="USD")
+
+    class Meta:
+        db_table = "aiQuotaCounters"
+        unique_together = [("policy", "windowStart")]
+        indexes = [models.Index(fields=["tenantId", "windowStart"])]

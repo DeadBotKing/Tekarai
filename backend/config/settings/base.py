@@ -371,6 +371,31 @@ AI_EMBEDDING_SEARCH_CANDIDATE_LIMIT = int(
 AI_EMBEDDING_RETENTION_DAYS = int(env("aiEmbeddingRetentionDays", default="365") or 365)
 
 # ---------------------------------------------------------------------------
+# AI KNOWLEDGE PLATFORM (Phase 13-R)
+# ---------------------------------------------------------------------------
+# Configuration-driven ingestion defaults (Master Specification §42): the
+# fail-closed switch, the default chunking policy (strategy, budget,
+# overlap, minimum tail), whether new chunks are embedded automatically
+# through Phase 13-Q, the embed batch size, the per-source chunk ceiling,
+# and the retention horizon for archived sources.
+# Camel-case env names per ADR-001/ADR-009.
+AI_KNOWLEDGE_ENABLED = env.bool("aiKnowledgeEnabled", default=True)
+AI_KNOWLEDGE_CHUNK_STRATEGY = str(
+    env("aiKnowledgeChunkStrategy", default="PARAGRAPH") or "PARAGRAPH"
+).upper()
+AI_KNOWLEDGE_CHUNK_TOKENS = int(env("aiKnowledgeChunkTokens", default="512") or 512)
+AI_KNOWLEDGE_CHUNK_OVERLAP_TOKENS = int(
+    env("aiKnowledgeChunkOverlapTokens", default="64") or 64
+)
+AI_KNOWLEDGE_MIN_CHUNK_TOKENS = int(env("aiKnowledgeMinChunkTokens", default="32") or 32)
+AI_KNOWLEDGE_AUTO_EMBED = env.bool("aiKnowledgeAutoEmbed", default=True)
+AI_KNOWLEDGE_EMBED_BATCH_SIZE = int(env("aiKnowledgeEmbedBatchSize", default="32") or 32)
+AI_KNOWLEDGE_MAX_CHUNKS_PER_SOURCE = int(
+    env("aiKnowledgeMaxChunksPerSource", default="500") or 500
+)
+AI_KNOWLEDGE_RETENTION_DAYS = int(env("aiKnowledgeRetentionDays", default="730") or 730)
+
+# ---------------------------------------------------------------------------
 # GUARDS
 # ---------------------------------------------------------------------------
 if environment not in {"development", "testing", "production"}:

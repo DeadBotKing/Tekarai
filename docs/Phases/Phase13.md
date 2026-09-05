@@ -17,12 +17,12 @@ Implementation is split into 26 tracked sub-phases (A–Z). Start with
 `docs/Phases/Phase13/Phase13-I.md`, `docs/Phases/Phase13/Phase13-J.md`,
 `docs/Phases/Phase13/Phase13-K.md`, `docs/Phases/Phase13/Phase13-L.md`,
 `docs/Phases/Phase13/Phase13-M.md`, `docs/Phases/Phase13/Phase13-N.md`,
-`docs/Phases/Phase13/Phase13-O.md`, `docs/Phases/Phase13/Phase13-P.md` and
-`docs/Phases/Phase13/Phase13-Q.md`.
+`docs/Phases/Phase13/Phase13-O.md`, `docs/Phases/Phase13/Phase13-P.md`,
+`docs/Phases/Phase13/Phase13-Q.md` and `docs/Phases/Phase13/Phase13-R.md`.
 
-Sub-phases A through Q are complete; sub-phase R (Knowledge Ingestion, Chunking
-and Indexing) is the next implementation gate. The completion of A–Q does not
-mean that the complete Phase 13 is finished.
+Sub-phases A through R are complete; sub-phase S (Retrieval, RAG and Reranking)
+is the next implementation gate. The completion of A–R does not mean that the
+complete Phase 13 is finished.
 
 
 
@@ -2802,7 +2802,7 @@ Phase 13 زمانی Done است که:
 
 
 
-\[ ] Knowledge Foundation آماده باشد.
+\[x] Knowledge Foundation آماده باشد. (Sub-phase R — Phase13-R.md)
 
 
 

@@ -684,3 +684,57 @@ class AIEmbeddingBatchTooLarge(AIError):
 
     code = "AI_EMBEDDING_BATCH_TOO_LARGE"
     httpStatus = 422
+
+
+# ---------------------------------------------------------------------------
+# Phase 13-R — knowledge ingestion, chunking, indexing
+# ---------------------------------------------------------------------------
+class AIKnowledgeSourceAlreadyRegistered(AIError):
+    code = "AI_KNOWLEDGE_SOURCE_ALREADY_REGISTERED"
+    httpStatus = 409
+
+    def __init__(self, reference: str = "") -> None:
+        super().__init__("AI knowledge source is already registered.")
+        self.reference = reference
+
+
+class AIKnowledgeSourceNotFound(AIError):
+    code = "AI_KNOWLEDGE_SOURCE_NOT_FOUND"
+    httpStatus = 404
+
+    def __init__(self, reference: str = "") -> None:
+        super().__init__("AI knowledge source was not found.")
+        self.reference = reference
+
+
+class AIKnowledgeSourceInvalid(AIError):
+    code = "AI_KNOWLEDGE_SOURCE_INVALID"
+    httpStatus = 422
+
+
+class AIKnowledgeSourceArchived(AIError):
+    """An archived source is terminal: it can be deleted, never re-indexed."""
+
+    code = "AI_KNOWLEDGE_SOURCE_ARCHIVED"
+    httpStatus = 409
+
+
+class AIKnowledgeChunkInvalid(AIError):
+    code = "AI_KNOWLEDGE_CHUNK_INVALID"
+    httpStatus = 422
+
+
+class AIKnowledgeChunkNotFound(AIError):
+    code = "AI_KNOWLEDGE_CHUNK_NOT_FOUND"
+    httpStatus = 404
+
+    def __init__(self, chunkId: str = "") -> None:
+        super().__init__("AI knowledge chunk was not found.")
+        self.chunkId = chunkId
+
+
+class AIKnowledgeIngestionFailed(AIError):
+    """The ingestion run failed; the source is left in FAILED, never half-READY."""
+
+    code = "AI_KNOWLEDGE_INGESTION_FAILED"
+    httpStatus = 500

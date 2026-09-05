@@ -25,8 +25,8 @@
 | [O](Phase13-O.md) | Audit و Governance | ✅ تکمیل شد |
 | [P](Phase13-P.md) | Async Execution، Queue و Worker | ✅ تکمیل شد |
 | [Q](Phase13-Q.md) | Embedding Foundation | ✅ تکمیل شد |
-| R | Knowledge Ingestion، Chunking و Indexing | ⏳ بعدی |
-| S | Retrieval، RAG و Reranking | ⏳ |
+| [R](Phase13-R.md) | Knowledge Ingestion، Chunking و Indexing | ✅ تکمیل شد |
+| S | Retrieval، RAG و Reranking | ⏳ بعدی |
 | T | AI Memory | ⏳ |
 | U | Evaluation | ⏳ |
 | V | Feedback | ⏳ |
@@ -88,3 +88,5 @@
 - گزارش زیر‌فاز P: [`Phase13-P-ExecutionReport.md`](Phase13-P-ExecutionReport.md)
 - قرارداد Q: [`Phase13-Q.md`](Phase13-Q.md)
 - گزارش زیر‌فاز Q: [`Phase13-Q-ExecutionReport.md`](Phase13-Q-ExecutionReport.md)
+- قرارداد R: [`Phase13-R.md`](Phase13-R.md)
+- گزارش زیر‌فاز R: [`Phase13-R-ExecutionReport.md`](Phase13-R-ExecutionReport.md)

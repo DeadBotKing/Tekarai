@@ -256,3 +256,60 @@ class AIStoredEmbeddingModel(BaseAiModel):
             models.Index(fields=["tenantId", "spaceCode", "sourceType", "sourceId"]),
             models.Index(fields=["tenantId", "spaceCode", "createdAt"]),
         ]
+
+
+# Phase 13-R knowledge ingestion tables (clean style). The register holds a
+# *reference* to a business row plus the content checksum — never the source
+# content itself (Master Specification §37). Chunks are a derived, purgeable
+# index; they cascade from their source because they have no meaning without
+# it, while vectors in `aiEmbeddingVectors` are unlinked on purpose and are
+# removed explicitly by the application layer (contract §R.11).
+class AIKnowledgeSourceModel(BaseAiModel):
+    """Registered, indexable reference to a business row (§R.4)."""
+
+    sourceDomain = models.CharField(max_length=40)
+    sourceEntityType = models.CharField(max_length=100)
+    sourceEntityId = models.CharField(max_length=160)
+    title = models.CharField(max_length=300)
+    checksum = models.CharField(max_length=64)
+    classification = models.CharField(max_length=30, default="INTERNAL")
+    status = models.CharField(max_length=30, default="PENDING")
+    spaceCode = models.CharField(max_length=80, blank=True)
+    policySignature = models.CharField(max_length=120, blank=True)
+    revision = models.PositiveIntegerField(default=0)
+    chunkCount = models.PositiveIntegerField(default=0)
+    tokenCount = models.PositiveIntegerField(default=0)
+    errorCode = models.CharField(max_length=80, blank=True)
+    lastIndexedAt = models.DateTimeField(null=True)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = "aiKnowledgeSources"
+        unique_together = [("tenantId", "sourceDomain", "sourceEntityType", "sourceEntityId")]
+        indexes = [
+            models.Index(fields=["tenantId", "status", "updatedAt"]),
+            models.Index(fields=["tenantId", "sourceDomain"]),
+        ]
+
+
+class AIKnowledgeChunkRecordModel(BaseAiModel):
+    """One retrievable unit derived from a source's content (§R.5)."""
+
+    source = models.ForeignKey(
+        AIKnowledgeSourceModel, on_delete=models.CASCADE, related_name="chunkRecords"
+    )
+    ordinal = models.PositiveIntegerField()
+    text = models.TextField()
+    checksum = models.CharField(max_length=64)
+    tokenCount = models.PositiveIntegerField(default=0)
+    startOffset = models.PositiveIntegerField(default=0)
+    endOffset = models.PositiveIntegerField(default=0)
+    classification = models.CharField(max_length=30, default="INTERNAL")
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = "aiKnowledgeChunkRecords"
+        indexes = [
+            models.Index(fields=["tenantId", "source", "ordinal"]),
+            models.Index(fields=["tenantId", "checksum"]),
+        ]

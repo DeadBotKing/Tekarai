@@ -64,7 +64,7 @@ def makeRequest(tenantId: uuid.UUID, **overrides: object) -> GovernanceRequest:
 
 class AuditVocabularyTests(unittest.TestCase):
     def testAuditActionsCoverSection36PlusGovernanceNeeds(self) -> None:
-        self.assertEqual(len(AUDIT_ACTIONS), 23)
+        self.assertEqual(len(AUDIT_ACTIONS), 27)
         for action in (
             "REQUEST_CREATED",
             "REQUEST_STARTED",
@@ -90,6 +90,11 @@ class AuditVocabularyTests(unittest.TestCase):
             "VECTOR_SPACE_DEACTIVATED",
             "EMBEDDING_CREATED",
             "EMBEDDING_DELETED",
+            # Phase 13-R amendment: knowledge ingestion lifecycle.
+            "KNOWLEDGE_INGESTED",
+            "KNOWLEDGE_REINDEXED",
+            "KNOWLEDGE_ARCHIVED",
+            "KNOWLEDGE_PURGED",
         ):
             self.assertIn(action, AUDIT_ACTIONS)
 

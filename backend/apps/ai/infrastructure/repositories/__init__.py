@@ -1,5 +1,5 @@
-"""Phase 13-N/O/P/Q Django persistence for metering, audit, queue, and
-embedding ports."""
+"""Phase 13-N/O/P/Q/R Django persistence for metering, audit, queue,
+embedding, and knowledge ports."""
 
 from apps.ai.infrastructure.repositories.auditRepositories import (  # noqa: F401
     DjangoAuditRecordStore,
@@ -13,6 +13,12 @@ from apps.ai.infrastructure.repositories.embeddingRepositories import (  # noqa:
     DjangoVectorSpaceStore,
     embeddingToEntity,
     spaceToEntity,
+)
+from apps.ai.infrastructure.repositories.knowledgeRepositories import (  # noqa: F401
+    DjangoKnowledgeChunkStore,
+    DjangoKnowledgeSourceStore,
+    chunkToEntity,
+    sourceToEntity,
 )
 from apps.ai.infrastructure.repositories.queueRepositories import (  # noqa: F401
     DjangoJobStore,
@@ -34,6 +40,8 @@ __all__ = [
     "DjangoEmbeddingStore",
     "DjangoGovernancePolicyStore",
     "DjangoJobStore",
+    "DjangoKnowledgeChunkStore",
+    "DjangoKnowledgeSourceStore",
     "DjangoQuotaCounterStore",
     "DjangoQuotaPolicyStore",
     "DjangoRetentionPurger",
@@ -41,10 +49,12 @@ __all__ = [
     "DjangoVectorSpaceStore",
     "attemptToEntity",
     "auditToEntity",
+    "chunkToEntity",
     "counterToEntity",
     "embeddingToEntity",
     "governancePolicyToEntity",
     "jobToEntity",
     "policyToEntity",
+    "sourceToEntity",
     "spaceToEntity",
 ]

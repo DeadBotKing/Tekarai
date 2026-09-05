@@ -303,6 +303,21 @@ AI_GOVERNANCE_DEFAULT_CURRENCY = str(
     env("aiGovernanceDefaultCurrency", default="USD") or "USD"
 ).upper()
 
+# Phase 13-P async execution: the DB-backed job ledger, lease claiming,
+# exponential retry backoff, and the worker loop
+# (docs/Phases/Phase13/Phase13-P.md). Fail-closed: a disabled queue refuses
+# submissions instead of silently dropping them.
+AI_QUEUE_ENABLED = env.bool("aiQueueEnabled", default=True)
+AI_QUEUE_RETENTION_DAYS = int(env("aiQueueRetentionDays", default="30") or 30)
+AI_QUEUE_DEFAULT_MAX_ATTEMPTS = int(env("aiQueueDefaultMaxAttempts", default="3") or 3)
+AI_QUEUE_CLAIM_LIMIT = int(env("aiQueueClaimLimit", default="10") or 10)
+AI_WORKER_ID = str(env("aiWorkerId", default="aiWorker") or "aiWorker")
+AI_WORKER_LEASE_SECONDS = int(env("aiWorkerLeaseSeconds", default="120") or 120)
+AI_WORKER_RETRY_BASE_SECONDS = int(env("aiWorkerRetryBaseSeconds", default="30") or 30)
+AI_WORKER_RETRY_MULTIPLIER = float(env("aiWorkerRetryMultiplier", default="2.0") or 2.0)
+AI_WORKER_RETRY_MAX_SECONDS = int(env("aiWorkerRetryMaxSeconds", default="600") or 600)
+AI_WORKER_IDLE_SLEEP_SECONDS = int(env("aiWorkerIdleSleepSeconds", default="5") or 5)
+
 # ---------------------------------------------------------------------------
 # GUARDS
 # ---------------------------------------------------------------------------

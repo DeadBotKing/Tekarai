@@ -145,6 +145,10 @@ GovernanceAllow، GovernanceDeny، GovernancePolicyDefined،
 GovernancePolicyUpdated، QuotaDenied، RetentionPurged
 ```
 
+**اصلاحیهٔ فاز P:** چهار action چرخه‌عمر کار (`JOB_ENQUEUED`، `JOB_STARTED`،
+`JOB_COMPLETED`، `JOB_FAILED`) به این واژگان افزوده شد (جمعاً ۱۹) تا ورکر P
+گذارهایش را با همان `logAudit` ثبت کند؛ هیچ action دیگری افزوده نشده است.
+
 مقادیر به‌صورت SCREAMING_SNAKE در دامنه نگه داشته می‌شوند
 (`REQUEST_CREATED`، …، `GOVERNANCE_ALLOW`، …). action نامعتبر →
 `AIAuditRecordInvalid` (422). actor از `ACTOR_TYPES =

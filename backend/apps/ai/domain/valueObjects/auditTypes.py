@@ -3,12 +3,13 @@
 This module defines the closed vocabularies used by the audit ledger and
 the governance engine:
 
-- ``AUDIT_ACTIONS`` — the 15 auditable actions. The first nine mirror the
+- ``AUDIT_ACTIONS`` — the 19 auditable actions. The first nine mirror the
   §36 platform events (``AIRequestCreated`` … ``AIFeedbackReceived``); the
-  last six are owned by sub-phase O (governance decisions, policy
-  administration, quota denials, retention purges). Lifecycle (G) and
-  executor (M) phases log through ``logAudit``; O never invents new
-  actions outside this tuple.
+  next six are owned by sub-phase O (governance decisions, policy
+  administration, quota denials, retention purges); the last four are the
+  sub-phase P job lifecycle (``JobEnqueued`` … ``JobFailed``), appended by
+  the documented Phase 13-P amendment. Lifecycle (G) and executor (M)
+  phases log through ``logAudit``.
 - ``ACTOR_TYPES`` — who performed the audited operation;
 - ``AUDIT_OUTCOMES`` — the recorded result of the audited operation;
 - ``SECRET_KEY_PATTERNS`` — case-insensitive key fragments whose values
@@ -37,6 +38,10 @@ AUDIT_ACTIONS = (
     "GOVERNANCE_POLICY_UPDATED",
     "QUOTA_DENIED",
     "RETENTION_PURGED",
+    "JOB_ENQUEUED",
+    "JOB_STARTED",
+    "JOB_COMPLETED",
+    "JOB_FAILED",
 )
 ACTOR_TYPES = (
     "USER",

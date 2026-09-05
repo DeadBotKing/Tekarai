@@ -23,7 +23,7 @@
 | M | Fallback، Retry، Timeout و Error Boundary | ⏳ بعدی |
 | [N](Phase13-N.md) | Usage، Token، Latency، Cost و Quota | ✅ تکمیل شد |
 | [O](Phase13-O.md) | Audit و Governance | ✅ تکمیل شد |
-| P | Async Execution، Queue و Worker | ⏳ |
+| [P](Phase13-P.md) | Async Execution، Queue و Worker | ✅ تکمیل شد |
 | Q | Embedding Foundation | ⏳ |
 | R | Knowledge Ingestion، Chunking و Indexing | ⏳ |
 | S | Retrieval، RAG و Reranking | ⏳ |
@@ -82,3 +82,5 @@
 - گزارش زیر‌فاز N: [`Phase13-N-ExecutionReport.md`](Phase13-N-ExecutionReport.md)
 - قرارداد O: [`Phase13-O.md`](Phase13-O.md)
 - گزارش زیر‌فاز O: [`Phase13-O-ExecutionReport.md`](Phase13-O-ExecutionReport.md)
+- قرارداد P: [`Phase13-P.md`](Phase13-P.md)
+- گزارش زیر‌فاز P: [`Phase13-P-ExecutionReport.md`](Phase13-P-ExecutionReport.md)

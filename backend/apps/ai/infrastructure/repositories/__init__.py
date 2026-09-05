@@ -1,4 +1,4 @@
-"""Phase 13-N/O Django persistence for the metering and audit ports."""
+"""Phase 13-N/O/P Django persistence for metering, audit, and queue ports."""
 
 from apps.ai.infrastructure.repositories.auditRepositories import (  # noqa: F401
     DjangoAuditRecordStore,
@@ -6,6 +6,10 @@ from apps.ai.infrastructure.repositories.auditRepositories import (  # noqa: F40
     DjangoRetentionPurger,
     auditToEntity,
     governancePolicyToEntity,
+)
+from apps.ai.infrastructure.repositories.queueRepositories import (  # noqa: F401
+    DjangoJobStore,
+    jobToEntity,
 )
 from apps.ai.infrastructure.repositories.usageRepositories import (  # noqa: F401
     DjangoCostRateResolver,
@@ -21,6 +25,7 @@ __all__ = [
     "DjangoAuditRecordStore",
     "DjangoCostRateResolver",
     "DjangoGovernancePolicyStore",
+    "DjangoJobStore",
     "DjangoQuotaCounterStore",
     "DjangoQuotaPolicyStore",
     "DjangoRetentionPurger",
@@ -29,5 +34,6 @@ __all__ = [
     "auditToEntity",
     "counterToEntity",
     "governancePolicyToEntity",
+    "jobToEntity",
     "policyToEntity",
 ]

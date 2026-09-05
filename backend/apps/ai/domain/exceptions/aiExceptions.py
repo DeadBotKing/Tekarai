@@ -1,5 +1,5 @@
-"""Stable AI domain errors for Phase 13-B, Phase 13-E, Phase 13-F, Phase 13-N
-and Phase 13-O.
+"""Stable AI domain errors for Phase 13-B, Phase 13-E, Phase 13-F, Phase 13-N,
+Phase 13-O and Phase 13-P.
 
 Provider-specific failures are mapped to these errors by later infrastructure
 adapters. No vendor exception is allowed to cross the AI boundary.
@@ -572,3 +572,45 @@ class AIAuditTrailTampered(AIError):
 
     code = "AI_AUDIT_TRAIL_TAMPERED"
     httpStatus = 500
+
+
+class AIJobAlreadyRegistered(AIError):
+    code = "AI_JOB_ALREADY_REGISTERED"
+    httpStatus = 409
+
+    def __init__(self, jobId: str = "") -> None:
+        super().__init__("AI job is already registered.")
+        self.jobId = jobId
+
+
+class AIJobNotFound(AIError):
+    code = "AI_JOB_NOT_FOUND"
+    httpStatus = 404
+
+    def __init__(self, jobId: str = "") -> None:
+        super().__init__("AI job was not found.")
+        self.jobId = jobId
+
+
+class AIJobInvalid(AIError):
+    code = "AI_JOB_INVALID"
+    httpStatus = 422
+
+
+class AIJobLeaseConflict(AIError):
+    """The job is held under a live lease by another worker."""
+
+    code = "AI_JOB_LEASE_CONFLICT"
+    httpStatus = 409
+
+
+class AIJobHandlerMissing(AIError):
+    """No handler is registered for the job kind (permanent failure)."""
+
+    code = "AI_JOB_HANDLER_MISSING"
+    httpStatus = 500
+
+
+class AIEventInvalid(AIError):
+    code = "AI_EVENT_INVALID"
+    httpStatus = 422

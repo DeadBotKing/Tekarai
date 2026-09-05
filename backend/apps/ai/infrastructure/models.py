@@ -169,3 +169,39 @@ class AIGovernancePolicyModel(BaseAiModel):
         constraints = [
             models.UniqueConstraint(fields=["tenantId"], name="unique_governance_policy_per_tenant")
         ]
+
+
+class AIJobModel(BaseAiModel):
+    """Durable async job ledger row (Phase 13-P, contract §P.8).
+
+    ``requestId`` is a plain UUID with no foreign key: purging referenced
+    rows must never cascade into the ledger (same pattern as the O audit
+    trail). Tenant-scoped idempotency keys are unique; rows submitted
+    without a key store a ``none:<jobId>`` sentinel (translated back to
+    ``""`` by the repository), so the plain unique constraint also works
+    on backends without partial-index support.
+    """
+
+    kind = models.CharField(max_length=40)
+    requestId = models.UUIDField(null=True)
+    payload = models.JSONField(default=dict)
+    idempotencyKey = models.CharField(max_length=128, blank=True)
+    status = models.CharField(max_length=20, default="PENDING")
+    priority = models.PositiveIntegerField(default=5)
+    attempts = models.PositiveIntegerField(default=0)
+    maxAttempts = models.PositiveIntegerField(default=3)
+    runAt = models.DateTimeField()
+    claimedBy = models.CharField(max_length=128, blank=True)
+    leaseExpiresAt = models.DateTimeField(null=True)
+    resultSummary = models.JSONField(default=dict)
+    errorCode = models.CharField(max_length=80, blank=True)
+    correlationId = models.CharField(max_length=128, blank=True)
+    traceId = models.CharField(max_length=128, blank=True)
+
+    class Meta:
+        db_table = "aiJobs"
+        unique_together = [("tenantId", "idempotencyKey")]
+        indexes = [
+            models.Index(fields=["tenantId", "status", "runAt"]),
+            models.Index(fields=["tenantId", "createdAt"]),
+        ]

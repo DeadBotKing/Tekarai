@@ -64,7 +64,7 @@ def makeRequest(tenantId: uuid.UUID, **overrides: object) -> GovernanceRequest:
 
 class AuditVocabularyTests(unittest.TestCase):
     def testAuditActionsCoverSection36PlusGovernanceNeeds(self) -> None:
-        self.assertEqual(len(AUDIT_ACTIONS), 15)
+        self.assertEqual(len(AUDIT_ACTIONS), 19)
         for action in (
             "REQUEST_CREATED",
             "REQUEST_STARTED",
@@ -81,6 +81,10 @@ class AuditVocabularyTests(unittest.TestCase):
             "GOVERNANCE_POLICY_UPDATED",
             "QUOTA_DENIED",
             "RETENTION_PURGED",
+            "JOB_ENQUEUED",
+            "JOB_STARTED",
+            "JOB_COMPLETED",
+            "JOB_FAILED",
         ):
             self.assertIn(action, AUDIT_ACTIONS)
 

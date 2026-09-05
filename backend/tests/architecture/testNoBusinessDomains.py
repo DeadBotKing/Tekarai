@@ -24,6 +24,7 @@ OPENED_CONTEXTS = {
     "identity": "Phase 06 (exemplar context #2)",
     "communication": "Phase 08 (Communication Platform)",
     "notifications": "Phase 09 (Notification Platform)",
+    "ai": "Phase 13 (AI Platform & Intelligence Foundation)",
 }
 
 #: Bounded contexts from the approved domain map — still not opened.
@@ -47,7 +48,6 @@ FORBIDDEN_APP_DIRECTORIES = {
     "workflow",
     "reporting",
     "analytics",
-    "ai",
     "integration",
     "platformcore",
 }
@@ -148,6 +148,8 @@ class ContextOpeningRegisterTests(SimpleTestCase):
             "apps.identity",
             "apps.communication",
             "apps.notifications",
+            # Phase 13: AI Platform & Intelligence Foundation context.
+            "apps.ai",
         }
         unexpectedApps = sorted(set(settings.INSTALLED_APPS) - allowedApps)
         self.assertEqual(

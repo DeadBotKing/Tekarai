@@ -359,7 +359,7 @@ class ResponseDescriptor:
 
 
 @dataclass
-class _RegisteredResponse:
+class RegisteredResponseState:
     response: AIResponse
     hasStructuredData: bool
     structuredOutputValidated: bool
@@ -382,7 +382,7 @@ class AIResponseService:
             raise TypeError("now must be callable.")
         self.requestLifecycle = requestLifecycle
         self._now = now
-        self._responses: dict[tuple[uuid.UUID, uuid.UUID], _RegisteredResponse] = {}
+        self._responses: dict[tuple[uuid.UUID, uuid.UUID], RegisteredResponseState] = {}
 
     def createResponse(
         self,
@@ -523,7 +523,7 @@ class AIResponseService:
         key = (response.tenantId, response.id)
         if key in self._responses:
             raise AIResponseAlreadyRegistered(str(response.id))
-        registered = _RegisteredResponse(
+        registered = RegisteredResponseState(
             response=response,
             hasStructuredData=(hasStructuredData if hasStructuredData is not None else bool(response.structuredData)),
             structuredOutputValidated=(

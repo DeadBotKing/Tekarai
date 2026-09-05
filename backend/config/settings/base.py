@@ -228,6 +228,47 @@ API_RATE_LIMIT_POLICIES: dict[str, tuple[int, int]] = {
 SESSION_TTL_MINUTES = 480
 
 # ---------------------------------------------------------------------------
+# AI PROVIDER ADAPTERS (Phase 13-L)
+# ---------------------------------------------------------------------------
+# Configuration-driven provider wiring (Master Specification §42): values come
+# exclusively from the environment, secrets never have a real default, and an
+# entry is instantiated only when its configuration is complete
+# (apps.ai.infrastructure.providers.providerWiring.buildConfiguredProviderAdapters).
+# Camel-case env names per ADR-001/ADR-009.
+aiProviderTimeoutSeconds = float(env("aiProviderTimeoutSeconds", default="30") or 30)
+
+AI_PROVIDER_ADAPTERS: dict[str, dict[str, object]] = {
+    "OPENAI": {
+        "baseUrl": env("aiProviderOpenAiBaseUrl", default="https://api.openai.com/v1"),
+        "apiKey": env("aiProviderOpenAiApiKey", default=""),
+        "timeoutSeconds": aiProviderTimeoutSeconds,
+    },
+    "AZURE_OPENAI": {
+        "baseUrl": env("aiProviderAzureOpenAiBaseUrl", default=""),
+        "apiKey": env("aiProviderAzureOpenAiApiKey", default=""),
+        "apiVersion": env("aiProviderAzureOpenAiApiVersion", default="2024-10-21"),
+        "timeoutSeconds": aiProviderTimeoutSeconds,
+    },
+    "OLLAMA": {
+        "baseUrl": env("aiProviderOllamaBaseUrl", default="http://127.0.0.1:11434"),
+        "apiKey": env("aiProviderOllamaApiKey", default=""),
+        "timeoutSeconds": aiProviderTimeoutSeconds,
+    },
+    "ANTHROPIC": {
+        "baseUrl": env("aiProviderAnthropicBaseUrl", default="https://api.anthropic.com"),
+        "apiKey": env("aiProviderAnthropicApiKey", default=""),
+        "anthropicVersion": env("aiProviderAnthropicVersion", default="2023-06-01"),
+        "timeoutSeconds": aiProviderTimeoutSeconds,
+    },
+    "LOCAL": {
+        "baseUrl": env("aiProviderLocalBaseUrl", default=""),
+        "apiKey": env("aiProviderLocalApiKey", default=""),
+        "supportsEmbedding": env.bool("aiProviderLocalSupportsEmbedding", default=False),
+        "timeoutSeconds": aiProviderTimeoutSeconds,
+    },
+}
+
+# ---------------------------------------------------------------------------
 # GUARDS
 # ---------------------------------------------------------------------------
 if environment not in {"development", "testing", "production"}:

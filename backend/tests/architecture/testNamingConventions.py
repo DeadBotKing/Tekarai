@@ -44,6 +44,9 @@ FRAMEWORK_HOOKS = {
     "receive_json",  # Channels AsyncJsonWebsocketConsumer hook (Phase 08)
     "communication_event",  # Channels group_send handler name (Phase 08)
     "notification_event",  # Channels group_send handler name (Phase 09)
+    "log_message",  # http.server BaseHTTPRequestHandler hook (Phase 13)
+    "do_POST",  # http.server verb dispatch hook (Phase 13)
+    "do_GET",  # http.server verb dispatch hook (Phase 13)
 }
 FUNCTION_EXEMPTIONS = FRAMEWORK_HOOKS
 MODULE_EXEMPTIONS = {"manage.py", "wsgi.py", "asgi.py", "urls.py"}

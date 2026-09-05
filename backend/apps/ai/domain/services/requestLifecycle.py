@@ -136,7 +136,7 @@ class OperationDescriptor:
 
 
 @dataclass
-class _RegisteredRequest:
+class RegisteredRequestState:
     request: AIRequest
     operationId: uuid.UUID | None
     fingerprint: str
@@ -165,7 +165,7 @@ class RequestLifecycleService:
         self.capabilityRegistry = capabilityRegistry
         self._now = now
         self._operations: dict[tuple[uuid.UUID, uuid.UUID], AIOperation] = {}
-        self._requests: dict[tuple[uuid.UUID, uuid.UUID], _RegisteredRequest] = {}
+        self._requests: dict[tuple[uuid.UUID, uuid.UUID], RegisteredRequestState] = {}
         self._idempotency: dict[tuple[uuid.UUID, str], tuple[str, uuid.UUID]] = {}
 
     # ------------------------------------------------------------------
@@ -288,7 +288,7 @@ class RequestLifecycleService:
         # All validation is complete before either aggregate is mutated.
         if operation is not None:
             operation.addRequest(request.id)
-        self._requests[requestKey] = _RegisteredRequest(
+        self._requests[requestKey] = RegisteredRequestState(
             request=request,
             operationId=associatedOperationId,
             fingerprint=fingerprint,
@@ -649,7 +649,7 @@ class RequestLifecycleService:
         self,
         tenantId: uuid.UUID | str,
         requestId: uuid.UUID | str,
-    ) -> _RegisteredRequest:
+    ) -> RegisteredRequestState:
         tenant = requireUuid(tenantId, "tenantId")
         identifier = requireUuid(requestId, "requestId")
         registration = self._requests.get((tenant, identifier))

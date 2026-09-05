@@ -19,8 +19,8 @@
 | [I](Phase13-I.md) | Prompt Platform و Versioning | ✅ تکمیل شد |
 | [J](Phase13-J.md) | Context Engine و Context Builder | ✅ تکمیل شد |
 | [K](Phase13-K.md) | Tenant Isolation، Authorization و Permission Filtering | ✅ تکمیل شد |
-| L | Provider Adapterها | ⏳ بعدی |
-| M | Fallback، Retry، Timeout و Error Boundary | ⏳ |
+| [L](Phase13-L.md) | Provider Adapterها | ✅ تکمیل شد |
+| M | Fallback، Retry، Timeout و Error Boundary | ⏳ بعدی |
 | N | Usage، Token، Latency، Cost و Quota | ⏳ |
 | O | Audit و Governance | ⏳ |
 | P | Async Execution، Queue و Worker | ⏳ |
@@ -76,3 +76,5 @@
 - گزارش زیر‌فاز J: [`Phase13-J-ExecutionReport.md`](Phase13-J-ExecutionReport.md)
 - قرارداد K: [`Phase13-K.md`](Phase13-K.md)
 - گزارش زیر‌فاز K: [`Phase13-K-ExecutionReport.md`](Phase13-K-ExecutionReport.md)
+- قرارداد L: [`Phase13-L.md`](Phase13-L.md)
+- گزارش زیر‌فاز L: [`Phase13-L-ExecutionReport.md`](Phase13-L-ExecutionReport.md)

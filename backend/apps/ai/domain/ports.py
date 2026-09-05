@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import math
 import uuid
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any, Iterable, Iterator, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from apps.sharedKernel.domain.errors import ValidationFailedError
 
@@ -41,7 +42,9 @@ def requireUuid(value: uuid.UUID | str, fieldName: str) -> uuid.UUID:
 def normalizeFeature(value: str) -> str:
     normalized = str(value or "").strip().upper()
     if normalized not in MODEL_FEATURES:
-        raise ValidationFailedError("Unknown provider feature.", fieldErrors={"feature": normalized})
+        raise ValidationFailedError(
+            "Unknown provider feature.", fieldErrors={"feature": normalized}
+        )
     return normalized
 
 
@@ -95,13 +98,10 @@ class GenerationRequest:
             or self.temperature < 0
         ):
             raise ValidationFailedError("Provider temperature must be finite and non-negative.")
-        if (
-            self.maxTokens is not None
-            and (
-                not isinstance(self.maxTokens, int)
-                or isinstance(self.maxTokens, bool)
-                or self.maxTokens < 1
-            )
+        if self.maxTokens is not None and (
+            not isinstance(self.maxTokens, int)
+            or isinstance(self.maxTokens, bool)
+            or self.maxTokens < 1
         ):
             raise ValidationFailedError("Provider maxTokens must be a positive integer.")
         responseFormat = str(self.responseFormat or "").strip().upper()
@@ -246,6 +246,20 @@ class ProviderHealth:
         if self.latencyMs is not None and self.latencyMs < 0:
             raise ValidationFailedError("Provider health latency cannot be negative.")
         object.__setattr__(self, "status", status)
+
+
+def resolvedRequestId(context: ProviderRequestContext | None) -> uuid.UUID | None:
+    """Typed accessor for the normalized request id carried by a context.
+
+    ``ProviderRequestContext.__post_init__`` normalizes ``requestId`` to a
+    UUID; this helper exposes that guarantee to adapters so results and
+    stream chunks can carry a strictly typed identifier.
+    """
+
+    if context is None or context.requestId is None:
+        return None
+    requestId = context.requestId
+    return requestId if isinstance(requestId, uuid.UUID) else None
 
 
 def validateGenerationResult(
@@ -408,11 +422,13 @@ class DeterministicAIProvider:
             outputTokens=self.countTokens(text=output, model=request.model) if output else 1,
             model=request.model,
             provider="deterministic",
-            requestId=request.context.requestId if request.context else None,
+            requestId=resolvedRequestId(request.context),
             correlationId=request.context.correlationId if request.context else "",
             traceId=request.context.traceId if request.context else "",
         )
-        return validateGenerationResult(result, expectedModel=request.model, expectedProvider="deterministic")
+        return validateGenerationResult(
+            result, expectedModel=request.model, expectedProvider="deterministic"
+        )
 
     def generateRequest(self, request: GenerationRequest) -> GenerationResult:
         return self.generate(
@@ -511,7 +527,9 @@ class DeterministicAIProvider:
         return len(text.split()) if text.strip() else 0
 
     def healthCheck(self, *, model: str = "", **kwargs: Any) -> ProviderHealth:
-        return ProviderHealth(status="HEALTHY", latencyMs=0, detail="offline deterministic provider")
+        return ProviderHealth(
+            status="HEALTHY", latencyMs=0, detail="offline deterministic provider"
+        )
 
     @staticmethod
     def _structuredData(schema: dict[str, Any], prompt: str, model: str) -> dict[str, Any]:
@@ -551,6 +569,7 @@ __all__ = [
     "ProviderRequestContext",
     "RESPONSE_FORMATS",
     "normalizeFeature",
+    "resolvedRequestId",
     "requireProviderFeature",
     "validateEmbeddingVector",
     "validateGenerationResult",

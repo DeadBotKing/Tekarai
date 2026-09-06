@@ -317,6 +317,7 @@ class MessageListView(IdempotencyMixin, APIView):
                 messageType=data["messageType"],
                 replyToId=str(data["replyToId"]) if data["replyToId"] else "",
                 clientRequestId=data["clientRequestId"],
+                clientMessageId=(str(data["clientMessageId"]) if data["clientMessageId"] else ""),
                 attachments=list(data["attachments"]),
             )
         )

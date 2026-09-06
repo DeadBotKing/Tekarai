@@ -47,6 +47,10 @@ class Message(AggregateRoot):
         mentions: tuple[str, ...] = (),
         editedAt: datetime | None = None,
         deletedAt: datetime | None = None,
+        forwardedFromId: uuid.UUID | None = None,
+        forwardedById: uuid.UUID | None = None,
+        forwardedAt: datetime | None = None,
+        forwardSnapshot: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(id)
         if messageType not in MESSAGE_TYPES:
@@ -69,6 +73,14 @@ class Message(AggregateRoot):
         self.mentions = tuple(mentions)
         self.editedAt = editedAt
         self.deletedAt = deletedAt
+        self.forwardedFromId = forwardedFromId
+        self.forwardedById = forwardedById
+        self.forwardedAt = forwardedAt
+        self.forwardSnapshot = dict(forwardSnapshot or {})
+        if forwardedFromId is None and any((forwardedById, forwardedAt, self.forwardSnapshot)):
+            from apps.sharedKernel.domain.errors import ValidationFailedError
+
+            raise ValidationFailedError("Forward metadata requires an original message reference.")
 
     # -- factory ----------------------------------------------------------------
 
@@ -85,6 +97,10 @@ class Message(AggregateRoot):
         threadRootId: uuid.UUID | None = None,
         clientRequestId: str = "",
         mentions: tuple[str, ...] = (),
+        messageId: uuid.UUID | None = None,
+        forwardedFromId: uuid.UUID | None = None,
+        forwardedById: uuid.UUID | None = None,
+        forwardSnapshot: dict[str, Any] | None = None,
     ) -> Message:
         if not body.strip() and messageType == MESSAGE_TEXT:
             from apps.sharedKernel.domain.errors import ValidationFailedError
@@ -103,7 +119,7 @@ class Message(AggregateRoot):
         # message itself (§14).
         root = threadRootId if threadRootId is not None else replyToId
         message = Message(
-            id=newId(),
+            id=messageId or newId(),
             tenantId=tenantId,
             conversationId=conversationId,
             senderId=senderId,
@@ -114,6 +130,10 @@ class Message(AggregateRoot):
             threadRootId=root,
             clientRequestId=clientRequestId,
             mentions=mentions,
+            forwardedFromId=forwardedFromId,
+            forwardedById=forwardedById,
+            forwardedAt=now if forwardedFromId is not None else None,
+            forwardSnapshot=forwardSnapshot,
         )
         message.recordEvent(
             DomainEvent(
@@ -126,6 +146,7 @@ class Message(AggregateRoot):
                     "messageType": messageType,
                     "replyToId": str(replyToId) if replyToId else "",
                     "mentioned": len(mentions),
+                    "forwardedFromId": str(forwardedFromId) if forwardedFromId else "",
                 },
             )
         )
@@ -197,6 +218,9 @@ class Message(AggregateRoot):
             "replyToId": str(self.replyToId) if self.replyToId else "",
             "deleted": self.isDeleted(),
             "edited": self.editedAt is not None,
+            "forwardedFromId": str(self.forwardedFromId) if self.forwardedFromId else "",
+            "forwardedById": str(self.forwardedById) if self.forwardedById else "",
+            "forwardedAt": self.forwardedAt.isoformat() if self.forwardedAt else "",
         }
 
 
@@ -214,6 +238,10 @@ class MessageAttachment(AggregateRoot):
         createdAt: datetime,
         *,
         documentRef: str = "",
+        checksum: str = "",
+        storageKey: str = "",
+        scanStatus: str = "PENDING",
+        classification: str = "INTERNAL",
     ) -> None:
         super().__init__(id)
         self.tenantId = tenantId
@@ -223,6 +251,10 @@ class MessageAttachment(AggregateRoot):
         self.sizeBytes = sizeBytes
         self.createdAt = createdAt
         self.documentRef = documentRef
+        self.checksum = checksum
+        self.storageKey = storageKey
+        self.scanStatus = scanStatus
+        self.classification = classification
 
     def snapshot(self) -> dict[str, Any]:
         return {
@@ -231,6 +263,10 @@ class MessageAttachment(AggregateRoot):
             "mimeType": self.mimeType,
             "sizeBytes": self.sizeBytes,
             "documentRef": self.documentRef,
+            "checksum": self.checksum,
+            "storageKey": self.storageKey,
+            "scanStatus": self.scanStatus,
+            "classification": self.classification,
         }
 
 

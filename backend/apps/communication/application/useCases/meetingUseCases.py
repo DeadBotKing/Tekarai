@@ -818,6 +818,9 @@ def recordingDto(recording: Recording) -> RecordingDto:
         stoppedAt=recording.stoppedAt.isoformat() if recording.stoppedAt else "",
         durationSeconds=recording.durationSeconds,
         storageRef=recording.storageRef,
+        storageKey=recording.storageKey,
+        fileSizeBytes=recording.fileSizeBytes,
+        checksum=recording.checksum,
     )
 
 

@@ -225,6 +225,7 @@ class CommunicationConsumer(AsyncJsonWebsocketConsumer):
             messageType=str(payload.get("messageType", "TEXT")),
             replyToId=str(payload.get("replyToId", "") or ""),
             clientRequestId=str(payload.get("clientRequestId", "") or ""),
+            clientMessageId=str(payload.get("clientMessageId", "") or ""),
             attachments=list(payload.get("attachments") or []),
         )
         useCase = await self._useCase(container.sendMessageUseCase)

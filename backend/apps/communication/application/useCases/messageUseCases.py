@@ -54,7 +54,9 @@ from apps.communication.domain.repositories.communicationRepositories import (
     ReadStateRepository,
 )
 from apps.communication.domain.services import communicationRules
+from apps.communication.domain.valueObjects.phase14Types import AttachmentPolicy
 from apps.sharedKernel.domain.errors import (
+    ConflictError,
     EntityNotFoundError,
     PermissionDeniedError,
     ValidationFailedError,
@@ -78,6 +80,7 @@ class SendMessageUseCase(CommunicationUseCase[SendMessageCommand, MessageDto]):
         readStateRepository: ReadStateRepository,
         userDirectory: UserDirectory,
         blockRepository: object = None,
+        attachmentPolicy: AttachmentPolicy | None = None,
         **kernel: object,
     ) -> None:
         super().__init__(**kernel)
@@ -90,10 +93,21 @@ class SendMessageUseCase(CommunicationUseCase[SendMessageCommand, MessageDto]):
         # Phase 10 §70 — optional block guard (direct messages); injected by
         # the container, absent in bare Phase-08 callers (behaviour unchanged).
         self.blockRepository = blockRepository
+        self.attachmentPolicy = attachmentPolicy or AttachmentPolicy()
 
     def perform(self, command: SendMessageCommand) -> MessageDto:
         self.noteSendStarted()  # §39 messageDeliveryLatency
         senderId, tenantId = actorOf()  # §17 — never trust payload identity
+
+        # Phase 14 §41 — offline clients may preallocate the UUID. Reusing it
+        # for another sender/conversation is a conflict, never an overwrite.
+        clientMessageId = asUuid(command.clientMessageId) if command.clientMessageId else None
+        if clientMessageId is not None:
+            byId = self.messageRepository.getById(clientMessageId, tenantId)
+            if byId is not None:
+                if byId.senderId == senderId and byId.conversationId == asUuid(command.conversationId):
+                    return messageDtoFromDomain(byId)
+                raise ConflictError("Client message ID is already in use.")
 
         # §24 idempotency: a retry returns the original message
         if command.clientRequestId:
@@ -156,6 +170,22 @@ class SendMessageUseCase(CommunicationUseCase[SendMessageCommand, MessageDto]):
 
         mentionedIds = self._resolveMentions(command.body, tenantId)
 
+        # Phase 14 §17/§45 — attachment metadata is accepted only after a
+        # clean malware verdict, checksum validation and server-key preflight.
+        for meta in command.attachments:
+            self.attachmentPolicy.validate(
+                fileName=str(meta.get("fileName", "")),
+                mimeType=str(meta.get("mimeType", "")),
+                sizeBytes=int(meta.get("sizeBytes", 0)),
+                checksum=str(meta.get("checksum", "")),
+                scanStatus=str(meta.get("scanStatus", "")),
+                classification=str(meta.get("classification", "INTERNAL")),
+            )
+            storageKey = str(meta.get("storageKey", ""))
+            expectedPrefix = f"communication/{tenantId}/"
+            if not storageKey.startswith(expectedPrefix) or ".." in storageKey:
+                raise ValidationFailedError("Attachment storage key was not issued for this tenant.")
+
         now = self.clock.nowUtc()
         message = Message.send(
             tenantId=tenantId,
@@ -168,6 +198,7 @@ class SendMessageUseCase(CommunicationUseCase[SendMessageCommand, MessageDto]):
             threadRootId=threadRootId,
             clientRequestId=command.clientRequestId,
             mentions=mentionedIds,
+            messageId=clientMessageId,
         )
         self.messageRepository.create(message)
         for meta in command.attachments:
@@ -181,6 +212,10 @@ class SendMessageUseCase(CommunicationUseCase[SendMessageCommand, MessageDto]):
                     sizeBytes=int(meta.get("sizeBytes", 0)),
                     createdAt=now,
                     documentRef=str(meta.get("documentRef", "")),
+                    checksum=str(meta.get("checksum", "")).lower(),
+                    storageKey=str(meta.get("storageKey", "")),
+                    scanStatus=str(meta.get("scanStatus", "")).upper(),
+                    classification=str(meta.get("classification", "INTERNAL")).upper(),
                 )
             )
         self.collectEventsFrom(message)
@@ -232,6 +267,10 @@ class SendMessageUseCase(CommunicationUseCase[SendMessageCommand, MessageDto]):
                     mimeType=str(a.get("mimeType", "application/octet-stream")),
                     sizeBytes=int(a.get("sizeBytes", 0)),
                     documentRef=str(a.get("documentRef", "")),
+                    checksum=str(a.get("checksum", "")).lower(),
+                    storageKey=str(a.get("storageKey", "")),
+                    scanStatus=str(a.get("scanStatus", "")).upper(),
+                    classification=str(a.get("classification", "INTERNAL")).upper(),
                 )
                 for a in command.attachments
             ],
@@ -669,12 +708,15 @@ class ListMessagesUseCase(CommunicationUseCase[ListMessagesQuery, MessagePageDto
             limit=query.limit,
             threadRootId=asUuid(query.threadRootId) if query.threadRootId else None,
         )
+        messageIds = [message.id for message in page.items]
+        reactionMap = self.reactionRepository.listForMessages(messageIds)
+        attachmentMap = self.attachmentRepository.listForMessages(messageIds)
         items = [
             messageDtoFromDomain(
                 message,
                 reactions=[
                     ReactionDto(userId=str(r.userId), reaction=r.reaction)
-                    for r in self.reactionRepository.listForMessage(message.id)
+                    for r in reactionMap.get(message.id, [])
                 ],
                 attachments=[
                     AttachmentDto(
@@ -683,8 +725,12 @@ class ListMessagesUseCase(CommunicationUseCase[ListMessagesQuery, MessagePageDto
                         mimeType=a.mimeType,
                         sizeBytes=a.sizeBytes,
                         documentRef=a.documentRef,
+                        checksum=a.checksum,
+                        storageKey=a.storageKey,
+                        scanStatus=a.scanStatus,
+                        classification=a.classification,
                     )
-                    for a in self.attachmentRepository.listForMessage(message.id)
+                    for a in attachmentMap.get(message.id, [])
                 ],
             )
             for message in page.items

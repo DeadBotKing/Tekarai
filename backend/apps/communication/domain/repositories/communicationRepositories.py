@@ -148,6 +148,10 @@ class AttachmentRepository(Protocol):
 
     def listForMessage(self, messageId: uuid.UUID) -> list[MessageAttachment]: ...
 
+    def listForMessages(
+        self, messageIds: list[uuid.UUID]
+    ) -> dict[uuid.UUID, list[MessageAttachment]]: ...
+
 
 @runtime_checkable
 class ReactionRepository(Protocol):
@@ -156,6 +160,10 @@ class ReactionRepository(Protocol):
     def remove(self, messageId: uuid.UUID, userId: uuid.UUID, reaction: str) -> bool: ...
 
     def listForMessage(self, messageId: uuid.UUID) -> list[MessageReaction]: ...
+
+    def listForMessages(
+        self, messageIds: list[uuid.UUID]
+    ) -> dict[uuid.UUID, list[MessageReaction]]: ...
 
     def exists(self, messageId: uuid.UUID, userId: uuid.UUID, reaction: str) -> bool: ...
 

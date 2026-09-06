@@ -390,6 +390,7 @@ def sendMessageUseCase():
         readStateRepository=readStateRepository(),
         userDirectory=userDirectory(),
         blockRepository=userBlockRepository(),
+        attachmentPolicy=attachmentPreflightUseCase().policy,
         **commPorts(),
     )
 
@@ -1354,4 +1355,98 @@ def releaseLegalHoldUseCase():
 
     return ReleaseLegalHoldUseCase(
         legalHoldRepository=legalHoldRepository(), **commPorts()
+    )
+
+
+# -- Phase 14 completion -------------------------------------------------------------
+
+
+def unifiedSearchPort():
+    from apps.communication.infrastructure.repositories.phase14RepositoriesImpl import (
+        UnifiedCommunicationSearchDjango,
+    )
+
+    return UnifiedCommunicationSearchDjango()
+
+
+def offlineSyncReceiptStore():
+    from apps.communication.infrastructure.repositories.phase14RepositoriesImpl import (
+        OfflineSyncReceiptStoreDjango,
+    )
+
+    return OfflineSyncReceiptStoreDjango()
+
+
+def communicationRetentionStore():
+    from apps.communication.infrastructure.repositories.phase14RepositoriesImpl import (
+        CommunicationRetentionStoreDjango,
+    )
+
+    return CommunicationRetentionStoreDjango()
+
+
+def forwardMessageUseCase():
+    from apps.communication.application.useCases.phase14UseCases import ForwardMessageUseCase
+
+    return ForwardMessageUseCase(
+        messageRepository=messageRepository(),
+        participantRepository=participantRepository(),
+        **commPorts(),
+    )
+
+
+def attachmentPreflightUseCase():
+    from django.conf import settings
+
+    from apps.communication.application.useCases.phase14UseCases import (
+        AttachmentPreflightUseCase,
+    )
+    from apps.communication.domain.valueObjects.phase14Types import AttachmentPolicy
+
+    defaults = AttachmentPolicy()
+    return AttachmentPreflightUseCase(
+        AttachmentPolicy(
+            maxSizeBytes=int(
+                getattr(settings, "COMMUNICATION_MAX_ATTACHMENT_BYTES", defaults.maxSizeBytes)
+            ),
+            allowedMimeTypes=tuple(
+                getattr(
+                    settings,
+                    "COMMUNICATION_ALLOWED_ATTACHMENT_TYPES",
+                    defaults.allowedMimeTypes,
+                )
+            ),
+            requireCleanScan=bool(
+                getattr(settings, "COMMUNICATION_REQUIRE_CLEAN_SCAN", True)
+            ),
+        )
+    )
+
+
+def unifiedSearchUseCase():
+    from apps.communication.application.useCases.phase14UseCases import UnifiedSearchUseCase
+
+    return UnifiedSearchUseCase(unifiedSearchPort())
+
+
+def offlineSyncUseCase():
+    from apps.communication.application.useCases.phase14UseCases import OfflineSyncUseCase
+
+    return OfflineSyncUseCase(
+        offlineSyncReceiptStore(),
+        sendMessageUseCase(),
+        editMessageUseCase(),
+        deleteMessageUseCase(),
+    )
+
+
+def runRetentionUseCase():
+    from django.conf import settings
+
+    from apps.communication.application.useCases.phase14UseCases import RunRetentionUseCase
+
+    return RunRetentionUseCase(
+        retentionStore=communicationRetentionStore(),
+        defaultRetentionDays=int(getattr(settings, "COMMUNICATION_RETENTION_DAYS", 2555)),
+        **commPorts(),
     )

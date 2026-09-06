@@ -351,6 +351,10 @@ class MessageRepositoryDjango:
             clientRequestId=message.clientRequestId,
             editedAt=message.editedAt,
             deletedAt=message.deletedAt,
+            forwardedFromId=message.forwardedFromId,
+            forwardedById=message.forwardedById,
+            forwardedAt=message.forwardedAt,
+            forwardSnapshot=message.forwardSnapshot,
         )
         rows = [
             MessageMentionModel(
@@ -422,8 +426,13 @@ class MessageRepositoryDjango:
         models = list(queryset.order_by("-createdAt")[: limit + 1])
         hasNext = len(models) > limit
         models = list(reversed(models[:limit]))
+        mentionMap: dict[uuid.UUID, list[str]] = {model.id: [] for model in models}
+        for messageId, mentionedUserId in MessageMentionModel.objects.filter(
+            messageId__in=mentionMap
+        ).order_by("id").values_list("messageId", "mentionedUserId"):
+            mentionMap[messageId].append(str(mentionedUserId))
         return MessagePage(
-            items=[self.toDomain(model) for model in models],
+            items=[self.toDomain(model, tuple(mentionMap[model.id])) for model in models],
             totalCount=total,
             hasNext=hasNext,
         )
@@ -456,13 +465,16 @@ class MessageRepositoryDjango:
         return messageId
 
     @staticmethod
-    def toDomain(model: MessageModel) -> Message:
-        mentions = tuple(
-            str(value)
-            for value in MessageMentionModel.objects.filter(messageId=model.id)
-            .order_by("id")
-            .values_list("mentionedUserId", flat=True)
-        )
+    def toDomain(
+        model: MessageModel, mentions: tuple[str, ...] | None = None
+    ) -> Message:
+        if mentions is None:
+            mentions = tuple(
+                str(value)
+                for value in MessageMentionModel.objects.filter(messageId=model.id)
+                .order_by("id")
+                .values_list("mentionedUserId", flat=True)
+            )
         return Message(
             id=model.id,
             tenantId=model.tenantId,
@@ -477,6 +489,10 @@ class MessageRepositoryDjango:
             mentions=mentions,
             editedAt=model.editedAt,
             deletedAt=model.deletedAt,
+            forwardedFromId=model.forwardedFromId,
+            forwardedById=model.forwardedById,
+            forwardedAt=model.forwardedAt,
+            forwardSnapshot=dict(model.forwardSnapshot or {}),
         )
 
 
@@ -490,6 +506,10 @@ class AttachmentRepositoryDjango:
             mimeType=attachment.mimeType,
             sizeBytes=attachment.sizeBytes,
             documentRef=attachment.documentRef,
+            checksum=attachment.checksum,
+            storageKey=attachment.storageKey,
+            scanStatus=attachment.scanStatus,
+            classification=attachment.classification,
         )
 
     def listForMessage(self, messageId: uuid.UUID) -> list[MessageAttachment]:
@@ -504,9 +524,36 @@ class AttachmentRepositoryDjango:
                 sizeBytes=model.sizeBytes,
                 createdAt=model.createdAt,
                 documentRef=model.documentRef,
+                checksum=model.checksum,
+                storageKey=model.storageKey,
+                scanStatus=model.scanStatus,
+                classification=model.classification,
             )
             for model in models
         ]
+
+    def listForMessages(
+        self, messageIds: list[uuid.UUID]
+    ) -> dict[uuid.UUID, list[MessageAttachment]]:
+        result = {messageId: [] for messageId in messageIds}
+        for model in MessageAttachmentModel.objects.filter(messageId__in=messageIds):
+            result.setdefault(model.messageId, []).append(
+                MessageAttachment(
+                    id=model.id,
+                    tenantId=model.tenantId,
+                    messageId=model.messageId,
+                    fileName=model.fileName,
+                    mimeType=model.mimeType,
+                    sizeBytes=model.sizeBytes,
+                    createdAt=model.createdAt,
+                    documentRef=model.documentRef,
+                    checksum=model.checksum,
+                    storageKey=model.storageKey,
+                    scanStatus=model.scanStatus,
+                    classification=model.classification,
+                )
+            )
+        return result
 
 
 class ReactionRepositoryDjango:
@@ -538,6 +585,23 @@ class ReactionRepositoryDjango:
             )
             for model in models
         ]
+
+    def listForMessages(
+        self, messageIds: list[uuid.UUID]
+    ) -> dict[uuid.UUID, list[MessageReaction]]:
+        result = {messageId: [] for messageId in messageIds}
+        for model in MessageReactionModel.objects.filter(messageId__in=messageIds):
+            result.setdefault(model.messageId, []).append(
+                MessageReaction(
+                    id=model.id,
+                    tenantId=model.tenantId,
+                    messageId=model.messageId,
+                    userId=model.userId,
+                    reaction=model.reaction,
+                    createdAt=model.createdAt,
+                )
+            )
+        return result
 
     def exists(self, messageId: uuid.UUID, userId: uuid.UUID, reaction: str) -> bool:
         return MessageReactionModel.objects.filter(
@@ -956,6 +1020,10 @@ class RecordingRepositoryDjango:
             recordingStatus=recording.recordingStatus,
             startedAt=recording.startedAt,
             stoppedAt=recording.stoppedAt,
+            storageRef=recording.storageRef,
+            storageKey=recording.storageKey,
+            fileSizeBytes=recording.fileSizeBytes,
+            checksum=recording.checksum,
         )
 
     def update(self, recording: Recording) -> None:
@@ -964,6 +1032,9 @@ class RecordingRepositoryDjango:
             startedAt=recording.startedAt,
             stoppedAt=recording.stoppedAt,
             storageRef=recording.storageRef,
+            storageKey=recording.storageKey,
+            fileSizeBytes=recording.fileSizeBytes,
+            checksum=recording.checksum,
             durationSeconds=recording.durationSeconds,
             failureReason=recording.failureReason,
             updatedAt=datetime.now(tz=timezone.utc),
@@ -1008,6 +1079,9 @@ class RecordingRepositoryDjango:
             startedAt=model.startedAt,
             stoppedAt=model.stoppedAt,
             storageRef=model.storageRef,
+            storageKey=model.storageKey,
+            fileSizeBytes=model.fileSizeBytes,
+            checksum=model.checksum,
             durationSeconds=model.durationSeconds,
             failureReason=model.failureReason,
         )

@@ -132,6 +132,12 @@ class MessageModel(models.Model):
     replyToId = models.UUIDField(null=True, blank=True, db_index=True)
     # Phase 10 §14 — thread root for nested replies (indexed per §42).
     threadRootId = models.UUIDField(null=True, blank=True, db_index=True)
+    # Phase 14 §16 — preserve the original reference plus a bounded historical
+    # snapshot; forwarding never duplicates the original identity.
+    forwardedFromId = models.UUIDField(null=True, blank=True, db_index=True)
+    forwardedById = models.UUIDField(null=True, blank=True)
+    forwardedAt = models.DateTimeField(null=True, blank=True)
+    forwardSnapshot = models.JSONField(default=dict, blank=True)
     clientRequestId = models.CharField(max_length=80, blank=True, default="")
     editedAt = models.DateTimeField(null=True, blank=True)
     deletedAt = models.DateTimeField(null=True, blank=True)
@@ -164,6 +170,10 @@ class MessageAttachmentModel(models.Model):
     mimeType = models.CharField(max_length=120, default="application/octet-stream")
     sizeBytes = models.BigIntegerField(default=0)
     documentRef = models.CharField(max_length=255, blank=True, default="")
+    checksum = models.CharField(max_length=64, blank=True, default="")
+    storageKey = models.CharField(max_length=255, blank=True, default="")
+    scanStatus = models.CharField(max_length=12, default="PENDING", db_index=True)
+    classification = models.CharField(max_length=16, default="INTERNAL")
     createdAt = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -336,6 +346,9 @@ class RecordingModel(models.Model):
     startedAt = models.DateTimeField(null=True, blank=True)
     stoppedAt = models.DateTimeField(null=True, blank=True)
     storageRef = models.CharField(max_length=255, blank=True, default="")
+    storageKey = models.CharField(max_length=255, blank=True, default="")
+    fileSizeBytes = models.BigIntegerField(default=0)
+    checksum = models.CharField(max_length=64, blank=True, default="")
     durationSeconds = models.IntegerField(default=0)
     failureReason = models.CharField(max_length=300, blank=True, default="")
     createdAt = models.DateTimeField(auto_now_add=True)
@@ -799,4 +812,52 @@ class LegalHoldModel(models.Model):
                 condition=models.Q(holdStatus="ACTIVE"),
                 name="UQ_Hold_active_scope_target",
             ),
+        ]
+
+
+# ---------------------------------------------------------------------------
+# Phase 14 completion records — offline idempotency and governed retention.
+# ---------------------------------------------------------------------------
+
+
+class CommunicationSyncReceiptModel(models.Model):
+    """One immutable result for an offline batch (tenant + actor + client id)."""
+
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    userId = models.UUIDField(db_index=True)
+    clientBatchId = models.CharField(max_length=100)
+    requestHash = models.CharField(max_length=64)
+    result = models.JSONField(default=dict)
+    createdAt = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "communicationSyncReceipts"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenantId", "userId", "clientBatchId"],
+                name="UQ_CommSync_t_user_batch",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["tenantId", "userId", "createdAt"], name="IX_CommSync_t_user")
+        ]
+
+
+class CommunicationRetentionRunModel(models.Model):
+    """Immutable summary of a preview or execution of the retention policy."""
+
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    requestedById = models.UUIDField(null=True, blank=True)
+    dryRun = models.BooleanField(default=True)
+    status = models.CharField(max_length=12, default="COMPLETED")
+    cutoff = models.DateTimeField()
+    counts = models.JSONField(default=dict)
+    createdAt = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "communicationRetentionRuns"
+        indexes = [
+            models.Index(fields=["tenantId", "createdAt"], name="IX_CommRet_t_created")
         ]

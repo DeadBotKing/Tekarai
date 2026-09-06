@@ -566,6 +566,31 @@ AI_AGENT_MAX_INPUT_BYTES = int(env("aiAgentMaxInputBytes", default="65536") or 6
 AI_AGENT_APPROVAL_TTL_SECONDS = int(env("aiAgentApprovalTtlSeconds", default="3600") or 3600)
 AI_AGENT_RETENTION_DAYS = int(env("aiAgentRetentionDays", default="365") or 365)
 
+# Phase 14 — attachment intake and physical communication retention are
+# operational policy, not domain constants.
+COMMUNICATION_MAX_ATTACHMENT_BYTES = int(
+    env("communicationMaxAttachmentBytes", default=str(25 * 1024 * 1024))
+    or 25 * 1024 * 1024
+)
+COMMUNICATION_ALLOWED_ATTACHMENT_TYPES = tuple(
+    env.list(
+        "communicationAllowedAttachmentTypes",
+        default=[
+            "application/pdf",
+            "image/jpeg",
+            "image/png",
+            "text/plain",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ],
+    )
+)
+COMMUNICATION_REQUIRE_CLEAN_SCAN = env.bool(
+    "communicationRequireCleanScan", default=True
+)
+COMMUNICATION_RETENTION_DAYS = int(
+    env("communicationRetentionDays", default="2555") or 2555
+)
+
 # ---------------------------------------------------------------------------
 # GUARDS
 # ---------------------------------------------------------------------------

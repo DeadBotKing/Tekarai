@@ -92,6 +92,7 @@ class SendMessageCommand(Command):
     messageType: str = "TEXT"
     replyToId: str = ""
     clientRequestId: str = ""  # §24 idempotency for offline retries
+    clientMessageId: str = ""  # Phase 14 §41 offline-generated UUID
     attachments: list[dict] = field(default_factory=list)  # §3.4 metadata refs
 
 

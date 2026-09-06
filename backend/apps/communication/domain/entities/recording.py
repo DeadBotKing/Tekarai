@@ -35,6 +35,9 @@ class Recording(AggregateRoot):
         startedAt: datetime | None = None,
         stoppedAt: datetime | None = None,
         storageRef: str = "",
+        storageKey: str = "",
+        fileSizeBytes: int = 0,
+        checksum: str = "",
         durationSeconds: int = 0,
         failureReason: str = "",
     ) -> None:
@@ -47,6 +50,9 @@ class Recording(AggregateRoot):
         self.startedAt = startedAt
         self.stoppedAt = stoppedAt
         self.storageRef = storageRef
+        self.storageKey = storageKey
+        self.fileSizeBytes = fileSizeBytes
+        self.checksum = checksum
         self.durationSeconds = durationSeconds
         self.failureReason = failureReason
 
@@ -105,9 +111,25 @@ class Recording(AggregateRoot):
                 DomainEvent(name="recordingFailed", occurredAt=now, tenantId=self.tenantId)
             )
 
-    def attachStorageRef(self, storageRef: str) -> None:
-        """Publication step — the Documents subsystem mints the reference."""
+    def attachStorageRef(
+        self,
+        storageRef: str,
+        *,
+        storageKey: str = "",
+        fileSizeBytes: int = 0,
+        checksum: str = "",
+    ) -> None:
+        """Publication step — storage metadata is supplied by trusted infrastructure."""
+        from apps.sharedKernel.domain.errors import ValidationFailedError
+
+        if fileSizeBytes < 0:
+            raise ValidationFailedError("Recording file size cannot be negative.")
+        if checksum and (len(checksum) != 64 or any(c not in "0123456789abcdefABCDEF" for c in checksum)):
+            raise ValidationFailedError("Recording checksum must be a SHA-256 hex digest.")
         self.storageRef = storageRef
+        self.storageKey = storageKey
+        self.fileSizeBytes = fileSizeBytes
+        self.checksum = checksum.lower()
 
     def snapshot(self) -> dict[str, Any]:
         return {
@@ -116,4 +138,7 @@ class Recording(AggregateRoot):
             "status": self.recordingStatus,
             "durationSeconds": self.durationSeconds,
             "storageRef": self.storageRef,
+            "storageKey": self.storageKey,
+            "fileSizeBytes": self.fileSizeBytes,
+            "checksum": self.checksum,
         }

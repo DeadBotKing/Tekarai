@@ -69,6 +69,21 @@ class PreferencesSerializer(serializers.Serializer):
     )
 
 
+class AttachmentMetadataSerializer(serializers.Serializer):
+    fileName = serializers.CharField(max_length=255)
+    mimeType = serializers.CharField(max_length=120)
+    sizeBytes = serializers.IntegerField(min_value=1)
+    checksum = serializers.RegexField(regex=r"^[0-9A-Fa-f]{64}$")
+    storageKey = serializers.CharField(max_length=255)
+    scanStatus = serializers.ChoiceField(choices=["CLEAN"])
+    classification = serializers.ChoiceField(
+        choices=["PUBLIC", "INTERNAL", "CONFIDENTIAL", "RESTRICTED"], default="INTERNAL"
+    )
+    documentRef = serializers.CharField(
+        max_length=255, required=False, allow_blank=True, default=""
+    )
+
+
 class SendMessageSerializer(serializers.Serializer):
     body = serializers.CharField(max_length=8000)
     messageType = serializers.ChoiceField(choices=MESSAGE_TYPE_CHOICES, default="TEXT")
@@ -76,9 +91,8 @@ class SendMessageSerializer(serializers.Serializer):
     clientRequestId = serializers.CharField(
         max_length=80, required=False, allow_blank=True, default=""
     )
-    attachments = serializers.ListField(
-        child=serializers.DictField(), required=False, default=list
-    )
+    clientMessageId = serializers.UUIDField(required=False, allow_null=True, default=None)
+    attachments = AttachmentMetadataSerializer(many=True, required=False, default=list)
 
 
 class EditMessageSerializer(serializers.Serializer):

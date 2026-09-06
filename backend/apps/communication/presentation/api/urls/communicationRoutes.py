@@ -44,6 +44,13 @@ from apps.communication.presentation.api.views.phase10Views import (
     UserBlockDetailView,
     UserBlockView,
 )
+from apps.communication.presentation.api.views.phase14Views import (
+    AttachmentPreflightView,
+    MessageForwardView,
+    OfflineSyncView,
+    RetentionRunView,
+    UnifiedSearchView,
+)
 from apps.communication.presentation.api.views.phase11Views import (
     ActionItemDispatchView,
     ActionItemReviewView,
@@ -126,6 +133,17 @@ urlpatterns = [
         "messages/search",
         MessageSearchView.as_view(),
         name="commMessageSearch",
+    ),
+    # -- Phase 14 completion: unified search, secure attachment intake,
+    # reference-preserving forwards, offline replay and retention operations.
+    path("search", UnifiedSearchView.as_view(), name="commUnifiedSearch"),
+    path("attachments/preflight", AttachmentPreflightView.as_view(), name="commAttachmentPreflight"),
+    path("sync", OfflineSyncView.as_view(), name="commOfflineSync"),
+    path("retention/runs", RetentionRunView.as_view(), name="commRetentionRun"),
+    path(
+        "messages/<str:messageId>/forward",
+        MessageForwardView.as_view(),
+        name="commMessageForward",
     ),
     path(
         "messages/<str:messageId>",

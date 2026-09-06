@@ -43,6 +43,10 @@ class AttachmentDto:
     mimeType: str
     sizeBytes: int
     documentRef: str = ""
+    checksum: str = ""
+    storageKey: str = ""
+    scanStatus: str = "PENDING"
+    classification: str = "INTERNAL"
 
 
 @dataclass(frozen=True)
@@ -65,6 +69,9 @@ class MessageDto:
     editedAt: str = ""
     deletedAt: str = ""
     deleted: bool = False
+    forwardedFromId: str = ""
+    forwardedById: str = ""
+    forwardedAt: str = ""
     attachments: list[AttachmentDto] = field(default_factory=list)
     reactions: list[ReactionDto] = field(default_factory=list)
 
@@ -132,6 +139,9 @@ class RecordingDto:
     stoppedAt: str = ""
     durationSeconds: int = 0
     storageRef: str = ""
+    storageKey: str = ""
+    fileSizeBytes: int = 0
+    checksum: str = ""
 
 
 @dataclass(frozen=True)
@@ -180,6 +190,9 @@ def messageDtoFromDomain(
         editedAt=message.editedAt.isoformat() if message.editedAt else "",
         deletedAt=message.deletedAt.isoformat() if message.deletedAt else "",
         deleted=message.deletedAt is not None,
+        forwardedFromId=str(message.forwardedFromId) if message.forwardedFromId else "",
+        forwardedById=str(message.forwardedById) if message.forwardedById else "",
+        forwardedAt=message.forwardedAt.isoformat() if message.forwardedAt else "",
         attachments=attachments or [],
         reactions=reactions or [],
     )

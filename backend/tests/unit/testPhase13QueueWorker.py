@@ -66,6 +66,8 @@ class QueueVocabularyTests(unittest.TestCase):
                 "EMBEDDING",
                 "INDEXING",
                 "PREDICTION",
+                # Phase 13-U amendment: batch evaluation runs.
+                "EVALUATION",
                 "GENERIC",
                 "EVENT_DISPATCH",
             ),

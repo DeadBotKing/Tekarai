@@ -805,3 +805,50 @@ class AIMemoryBudgetExceeded(AIError):
 class AIMemoryPolicyInvalid(AIError):
     code = "AI_MEMORY_POLICY_INVALID"
     httpStatus = 422
+
+
+# ---------------------------------------------------------------------------
+# Phase 13-U — evaluation
+# ---------------------------------------------------------------------------
+class AIEvaluationInvalid(AIError):
+    code = "AI_EVALUATION_INVALID"
+    httpStatus = 422
+
+
+class AIEvaluationCriteriaInvalid(AIError):
+    code = "AI_EVALUATION_CRITERIA_INVALID"
+    httpStatus = 422
+
+
+class AIEvaluationCaseAlreadyRegistered(AIError):
+    code = "AI_EVALUATION_CASE_ALREADY_REGISTERED"
+    httpStatus = 409
+
+    def __init__(self, qualifiedCode: str = "") -> None:
+        super().__init__("AI evaluation case is already registered.")
+        self.qualifiedCode = qualifiedCode
+
+
+class AIEvaluationCaseNotFound(AIError):
+    code = "AI_EVALUATION_CASE_NOT_FOUND"
+    httpStatus = 404
+
+    def __init__(self, qualifiedCode: str = "") -> None:
+        super().__init__("AI evaluation case was not found.")
+        self.qualifiedCode = qualifiedCode
+
+
+class AIEvaluationRunNotFound(AIError):
+    code = "AI_EVALUATION_RUN_NOT_FOUND"
+    httpStatus = 404
+
+    def __init__(self, runId: str = "") -> None:
+        super().__init__("AI evaluation run was not found.")
+        self.runId = runId
+
+
+class AIEvaluationFailed(AIError):
+    """The run itself broke (not a quality failure, an execution failure)."""
+
+    code = "AI_EVALUATION_FAILED"
+    httpStatus = 500

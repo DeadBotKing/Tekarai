@@ -28,8 +28,8 @@
 | [R](Phase13-R.md) | Knowledge Ingestion، Chunking و Indexing | ✅ تکمیل شد |
 | [S](Phase13-S.md) | Retrieval، RAG و Reranking | ✅ تکمیل شد |
 | [T](Phase13-T.md) | AI Memory | ✅ تکمیل شد |
-| U | Evaluation | ⏳ بعدی |
-| V | Feedback | ⏳ |
+| [U](Phase13-U.md) | Evaluation | ✅ تکمیل شد |
+| V | Feedback | ⏳ بعدی |
 | W | Observability و Monitoring | ⏳ |
 | X | Tool Registry و Tool Execution | ⏳ |
 | Y | Agent Foundation | ⏳ |
@@ -94,3 +94,5 @@
 - گزارش زیر‌فاز S: [`Phase13-S-ExecutionReport.md`](Phase13-S-ExecutionReport.md)
 - قرارداد T: [`Phase13-T.md`](Phase13-T.md)
 - گزارش زیر‌فاز T: [`Phase13-T-ExecutionReport.md`](Phase13-T-ExecutionReport.md)
+- قرارداد U: [`Phase13-U.md`](Phase13-U.md)
+- گزارش زیر‌فاز U: [`Phase13-U-ExecutionReport.md`](Phase13-U-ExecutionReport.md)

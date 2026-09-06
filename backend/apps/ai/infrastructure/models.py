@@ -352,3 +352,85 @@ class AIMemoryEntryModel(BaseAiModel):
             models.Index(fields=["tenantId", "isActive", "createdAt"]),
             models.Index(fields=["tenantId", "conversationId"]),
         ]
+
+
+# Phase 13-U evaluation tables (clean style). Runs and their results are
+# append-only history: a run is never edited after it settles, so quality
+# over time stays comparable and a regression can always be attributed to
+# a specific run (contract §U.7). ``caseCode`` is duplicated onto the
+# result row on purpose — deleting a golden case must not erase the record
+# of how it once scored.
+class AIEvaluationCaseModel(BaseAiModel):
+    """One golden case of one suite (§U.4)."""
+
+    suiteCode = models.CharField(max_length=80)
+    caseCode = models.CharField(max_length=80)
+    question = models.TextField()
+    expectedTerms = models.JSONField(default=list, blank=True)
+    forbiddenTerms = models.JSONField(default=list, blank=True)
+    expectedSchema = models.JSONField(default=dict, blank=True)
+    minimumCitations = models.PositiveIntegerField(default=0)
+    latencyBudgetMs = models.PositiveIntegerField(default=0)
+    costBudget = models.DecimalField(max_digits=18, decimal_places=8, default=0)
+    spaceCode = models.CharField(max_length=80, blank=True)
+    isActive = models.BooleanField(default=True)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = "aiEvaluationCases"
+        unique_together = [("tenantId", "suiteCode", "caseCode")]
+        indexes = [models.Index(fields=["tenantId", "suiteCode", "isActive"])]
+
+
+class AIEvaluationRunModel(BaseAiModel):
+    """One execution of one suite (§U.7)."""
+
+    suiteCode = models.CharField(max_length=80)
+    method = models.CharField(max_length=20, default="AUTOMATIC")
+    criteriaSignature = models.CharField(max_length=500, blank=True)
+    status = models.CharField(max_length=20, default="PENDING")
+    verdict = models.CharField(max_length=10, default="PASS")
+    caseCount = models.PositiveIntegerField(default=0)
+    passedCount = models.PositiveIntegerField(default=0)
+    warnedCount = models.PositiveIntegerField(default=0)
+    failedCount = models.PositiveIntegerField(default=0)
+    overallScore = models.DecimalField(max_digits=9, decimal_places=6, default=0)
+    baselineRunId = models.UUIDField(null=True)
+    triggeredBy = models.UUIDField(null=True)
+    errorCode = models.CharField(max_length=80, blank=True)
+    startedAt = models.DateTimeField(null=True)
+    completedAt = models.DateTimeField(null=True)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = "aiEvaluationRuns"
+        indexes = [
+            models.Index(fields=["tenantId", "suiteCode", "createdAt"]),
+            models.Index(fields=["tenantId", "status"]),
+        ]
+
+
+class AIEvaluationResultModel(BaseAiModel):
+    """One case outcome inside one run (§U.8)."""
+
+    run = models.ForeignKey(
+        AIEvaluationRunModel, on_delete=models.CASCADE, related_name="results"
+    )
+    caseCode = models.CharField(max_length=80)
+    verdict = models.CharField(max_length=10, default="PASS")
+    score = models.DecimalField(max_digits=9, decimal_places=6, default=0)
+    scores = models.JSONField(default=list)
+    latencyMs = models.PositiveIntegerField(default=0)
+    totalTokens = models.PositiveIntegerField(default=0)
+    cost = models.DecimalField(max_digits=18, decimal_places=8, default=0)
+    citationCount = models.PositiveIntegerField(default=0)
+    answerFingerprint = models.CharField(max_length=64, blank=True)
+    requestId = models.UUIDField(null=True)
+    errorCode = models.CharField(max_length=80, blank=True)
+    notes = models.TextField(blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = "aiEvaluationResults"
+        unique_together = [("run", "caseCode")]
+        indexes = [models.Index(fields=["tenantId", "caseCode", "createdAt"])]

@@ -19,10 +19,11 @@ Implementation is split into 26 tracked sub-phases (A–Z). Start with
 `docs/Phases/Phase13/Phase13-M.md`, `docs/Phases/Phase13/Phase13-N.md`,
 `docs/Phases/Phase13/Phase13-O.md`, `docs/Phases/Phase13/Phase13-P.md`,
 `docs/Phases/Phase13/Phase13-Q.md`, `docs/Phases/Phase13/Phase13-R.md`,
-`docs/Phases/Phase13/Phase13-S.md` and `docs/Phases/Phase13/Phase13-T.md`.
+`docs/Phases/Phase13/Phase13-S.md`, `docs/Phases/Phase13/Phase13-T.md` and
+`docs/Phases/Phase13/Phase13-U.md`.
 
-Sub-phases A through T are complete; sub-phase U (Evaluation) is the next
-implementation gate. The completion of A–T does not mean that the complete
+Sub-phases A through U are complete; sub-phase V (Feedback) is the next
+implementation gate. The completion of A–U does not mean that the complete
 Phase 13 is finished.
 
 
@@ -2807,7 +2808,7 @@ Phase 13 زمانی Done است که:
 
 
 
-\[ ] Evaluation Foundation آماده باشد.
+\[x] Evaluation Foundation آماده باشد. (Sub-phase U — Phase13-U.md)
 
 
 

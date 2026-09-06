@@ -437,6 +437,32 @@ AI_MEMORY_RETENTION_DAYS = int(env("aiMemoryRetentionDays", default="365") or 36
 AI_MEMORY_USE_SCOPE_DEFAULTS = env.bool("aiMemoryUseScopeDefaults", default=True)
 
 # ---------------------------------------------------------------------------
+# AI EVALUATION (Phase 13-U)
+# ---------------------------------------------------------------------------
+# Configuration-driven acceptance criteria (Master Specification §42) —
+# this block closes Open Question #9 from Phase 13-A: what counts as an
+# acceptable AI answer is data, not folklore. Groundedness and safety stay
+# mandatory metrics; configuration tunes their bands and the run-level
+# limits. aiEvaluationForbiddenTerms is a comma-separated deny list applied
+# to every suite on top of each case's own list.
+AI_EVALUATION_ENABLED = env.bool("aiEvaluationEnabled", default=True)
+AI_EVALUATION_MIN_OVERALL_SCORE = float(env("aiEvaluationMinOverallScore", default="0.7") or 0.7)
+AI_EVALUATION_MAX_FAILED_CASES = int(env("aiEvaluationMaxFailedCases", default="0") or 0)
+AI_EVALUATION_MAX_WARN_RATIO = float(env("aiEvaluationMaxWarnRatio", default="0.3") or 0.3)
+AI_EVALUATION_REGRESSION_TOLERANCE = float(
+    env("aiEvaluationRegressionTolerance", default="0.02") or 0.02
+)
+AI_EVALUATION_GROUNDEDNESS_FAIL_BELOW = float(
+    env("aiEvaluationGroundednessFailBelow", default="0.5") or 0.5
+)
+AI_EVALUATION_GROUNDEDNESS_WARN_BELOW = float(
+    env("aiEvaluationGroundednessWarnBelow", default="0.75") or 0.75
+)
+AI_EVALUATION_MAX_CASES_PER_RUN = int(env("aiEvaluationMaxCasesPerRun", default="200") or 200)
+AI_EVALUATION_RETENTION_DAYS = int(env("aiEvaluationRetentionDays", default="365") or 365)
+AI_EVALUATION_FORBIDDEN_TERMS = str(env("aiEvaluationForbiddenTerms", default="") or "")
+
+# ---------------------------------------------------------------------------
 # GUARDS
 # ---------------------------------------------------------------------------
 if environment not in {"development", "testing", "production"}:

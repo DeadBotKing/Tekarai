@@ -3,6 +3,7 @@
 from apps.ai.domain.valueObjects.aiTypes import *  # noqa: F401,F403
 from apps.ai.domain.valueObjects.auditTypes import *  # noqa: F401,F403
 from apps.ai.domain.valueObjects.embeddingTypes import *  # noqa: F401,F403
+from apps.ai.domain.valueObjects.evaluationTypes import *  # noqa: F401,F403
 from apps.ai.domain.valueObjects.knowledgeTypes import *  # noqa: F401,F403
 from apps.ai.domain.valueObjects.memoryTypes import *  # noqa: F401,F403
 from apps.ai.domain.valueObjects.queueTypes import *  # noqa: F401,F403

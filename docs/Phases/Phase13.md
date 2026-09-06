@@ -23,8 +23,8 @@ Implementation is split into 26 tracked sub-phases (A–Z). Start with
 `docs/Phases/Phase13/Phase13-U.md`, `docs/Phases/Phase13/Phase13-V.md`,
 `docs/Phases/Phase13/Phase13-W.md` and `docs/Phases/Phase13/Phase13-X.md`.
 
-Sub-phases A through X are complete; sub-phase Y (Agent Foundation) is the
-next implementation gate. The completion of A–X does not mean that the
+Sub-phases A through Y are complete; sub-phase Z (API/Migration/Release) is the
+next implementation gate. The completion of A–Y does not mean that the
 complete Phase 13 is finished.
 
 

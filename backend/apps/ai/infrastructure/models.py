@@ -612,3 +612,122 @@ class AIToolInvocationModel(BaseAiModel):
             models.Index(fields=["tenantId", "toolCode", "createdAt"]),
             models.Index(fields=["tenantId", "status", "createdAt"]),
         ]
+
+# Phase 13-Y agent tables. The registry is versioned and immutable-per-
+# version (mirror of X); runs and steps are append-only history: a run is
+# settled once, and every step row — including denied tool calls — stays,
+# so "what did the agent try?" always has an answer (contract §Y.8, Y-D7).
+class AIAgentDefinitionModel(BaseAiModel):
+    """One immutable version of one registered agent (§Y.4)."""
+
+    code = models.CharField(max_length=80)
+    version = models.PositiveIntegerField(default=1)
+    name = models.CharField(max_length=160)
+    description = models.TextField(blank=True)
+    instructions = models.TextField()
+    accessLevel = models.CharField(max_length=20, default="ADVISORY")
+    riskLevel = models.CharField(max_length=20, default="LOW")
+    capabilityCodes = models.JSONField(default=list)
+    toolCodes = models.JSONField(default=list)
+    outputSchema = models.JSONField(default=dict, blank=True)
+    contextPolicy = models.JSONField(default=dict, blank=True)
+    modelPolicy = models.JSONField(default=dict, blank=True)
+    permissionPolicy = models.JSONField(default=dict, blank=True)
+    executionPolicy = models.JSONField(default=dict, blank=True)
+    declaredApprovalMode = models.CharField(max_length=20, blank=True)
+    status = models.CharField(max_length=20, default="DRAFT")
+    approvedBy = models.UUIDField(null=True)
+    approvedAt = models.DateTimeField(null=True)
+    retiredAt = models.DateTimeField(null=True)
+    rejectionReason = models.CharField(max_length=500, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = "aiAgentDefinitions"
+        unique_together = [("tenantId", "code", "version")]
+        indexes = [
+            models.Index(fields=["tenantId", "code", "status"]),
+            models.Index(fields=["tenantId", "status"]),
+        ]
+
+
+class AIAgentApprovalModel(BaseAiModel):
+    """One human decision about one requested run (§Y.7)."""
+
+    agentCode = models.CharField(max_length=80)
+    agentVersion = models.PositiveIntegerField(default=1)
+    inputFingerprint = models.CharField(max_length=64)
+    mode = models.CharField(max_length=20, default="HUMAN_REQUIRED")
+    decision = models.CharField(max_length=20, default="PENDING")
+    requiredApprovals = models.PositiveSmallIntegerField(default=1)
+    approvals = models.JSONField(default=list)
+    requestedBy = models.UUIDField(null=True)
+    executionId = models.UUIDField(null=True)
+    reason = models.CharField(max_length=500, blank=True)
+    expiresAt = models.DateTimeField(null=True)
+    decidedAt = models.DateTimeField(null=True)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = "aiAgentApprovals"
+        indexes = [
+            models.Index(fields=["tenantId", "agentCode", "inputFingerprint"]),
+            models.Index(fields=["tenantId", "decision", "createdAt"]),
+        ]
+
+
+class AIAgentRunModel(BaseAiModel):
+    """One requested run and what happened to it (§Y.8)."""
+
+    agentId = models.UUIDField()
+    agentCode = models.CharField(max_length=80)
+    agentVersion = models.PositiveIntegerField(default=1)
+    requestedBy = models.UUIDField(null=True)
+    input = models.JSONField(default=dict)
+    inputFingerprint = models.CharField(max_length=64, db_index=True)
+    status = models.CharField(max_length=20, default="PENDING")
+    answer = models.TextField(blank=True)
+    output = models.JSONField(default=dict, blank=True)
+    errorCode = models.CharField(max_length=80, blank=True)
+    approvalId = models.UUIDField(null=True)
+    startedAt = models.DateTimeField(null=True)
+    completedAt = models.DateTimeField(null=True)
+    latencyMs = models.PositiveIntegerField(default=0)
+    modelCallCount = models.PositiveIntegerField(default=0)
+    toolCallCount = models.PositiveIntegerField(default=0)
+    inputTokens = models.PositiveIntegerField(default=0)
+    outputTokens = models.PositiveIntegerField(default=0)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = "aiAgentRuns"
+        indexes = [
+            models.Index(fields=["tenantId", "agentCode", "createdAt"]),
+            models.Index(fields=["tenantId", "status", "createdAt"]),
+        ]
+
+
+class AIAgentStepModel(BaseAiModel):
+    """One step of the plan-act loop — a model call or a tool call."""
+
+    runId = models.UUIDField(db_index=True)
+    ordinal = models.PositiveIntegerField()
+    kind = models.CharField(max_length=10)
+    status = models.CharField(max_length=20)
+    toolCode = models.CharField(max_length=80, blank=True)
+    toolVersion = models.PositiveIntegerField(default=0)
+    arguments = models.JSONField(default=dict, blank=True)
+    result = models.JSONField(default=dict, blank=True)
+    reason = models.CharField(max_length=500, blank=True)
+    tokensIn = models.PositiveIntegerField(default=0)
+    tokensOut = models.PositiveIntegerField(default=0)
+    latencyMs = models.PositiveIntegerField(default=0)
+    errorCode = models.CharField(max_length=80, blank=True)
+
+    class Meta:
+        db_table = "aiAgentSteps"
+        unique_together = [("runId", "ordinal")]
+        indexes = [
+            models.Index(fields=["runId", "kind"]),
+            models.Index(fields=["tenantId", "createdAt"]),
+        ]

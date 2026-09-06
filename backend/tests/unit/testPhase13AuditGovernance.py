@@ -64,7 +64,7 @@ def makeRequest(tenantId: uuid.UUID, **overrides: object) -> GovernanceRequest:
 
 class AuditVocabularyTests(unittest.TestCase):
     def testAuditActionsCoverSection36PlusGovernanceNeeds(self) -> None:
-        self.assertEqual(len(AUDIT_ACTIONS), 47)
+        self.assertEqual(len(AUDIT_ACTIONS), 51)
         for action in (
             "REQUEST_CREATED",
             "REQUEST_STARTED",
@@ -121,6 +121,11 @@ class AuditVocabularyTests(unittest.TestCase):
             "TOOL_APPROVED",
             "TOOL_INVOKED",
             "TOOL_DENIED",
+            # Phase 13-Y amendment: agent foundation lifecycle.
+            "AGENT_REGISTERED",
+            "AGENT_APPROVED",
+            "AGENT_INVOKED",
+            "AGENT_DENIED",
         ):
             self.assertIn(action, AUDIT_ACTIONS)
 

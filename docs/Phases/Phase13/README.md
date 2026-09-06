@@ -32,7 +32,7 @@
 | [V](Phase13-V.md) | Feedback | ✅ تکمیل شد |
 | [W](Phase13-W.md) | Observability و Monitoring | ✅ تکمیل شد |
 | [X](Phase13-X.md) | Tool Registry و Tool Execution | ✅ تکمیل شد |
-| Y | Agent Foundation | ⏳ بعدی |
+| [Y](Phase13-Y.md) | Agent Foundation | ✅ تکمیل شد — [گزارش](Phase13-Y-ExecutionReport.md) |
 | Z | API، Migration، تست نهایی و Release | ⏳ |
 
 ## قرارداد اجرای زیر‌فازها

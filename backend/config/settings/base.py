@@ -532,6 +532,30 @@ AI_TOOL_APPROVAL_TTL_SECONDS = int(env("aiToolApprovalTtlSeconds", default="3600
 AI_TOOL_RETENTION_DAYS = int(env("aiToolRetentionDays", default="365") or 365)
 
 # ---------------------------------------------------------------------------
+# Configuration-driven agent policy (Master Specification §31 and §42) —
+# this block closes Open Question #11: the agent's access level is
+# structural (its versioned definition), and these thresholds decide which
+# risk level needs a human, and which needs two, before a run may start.
+# An agent may declare a stricter approval mode than these thresholds
+# require; it can never declare a looser one.
+AI_AGENT_ENABLED = env.bool("aiAgentEnabled", default=True)
+AI_AGENT_AUTOMATIC_BELOW_RISK = str(
+    env("aiAgentAutomaticBelowRisk", default="HIGH") or "HIGH"
+).upper()
+AI_AGENT_DUAL_CONTROL_AT_RISK = str(
+    env("aiAgentDualControlAtRisk", default="CRITICAL") or "CRITICAL"
+).upper()
+AI_AGENT_MAX_STEPS_PER_RUN = int(env("aiAgentMaxStepsPerRun", default="10") or 10)
+AI_AGENT_MAX_TOOL_CALLS_PER_RUN = int(env("aiAgentMaxToolCallsPerRun", default="20") or 20)
+AI_AGENT_MAX_REPEATS_PER_RUN = int(env("aiAgentMaxRepeatsPerRun", default="2") or 2)
+AI_AGENT_MAX_DURATION_SECONDS = int(env("aiAgentMaxDurationSeconds", default="120") or 120)
+AI_AGENT_MAX_CONTEXT_TOKENS = int(env("aiAgentMaxContextTokens", default="16000") or 16_000)
+AI_AGENT_MAX_INSTRUCTIONS_BYTES = int(env("aiAgentMaxInstructionsBytes", default="16384") or 16_384)
+AI_AGENT_MAX_INPUT_BYTES = int(env("aiAgentMaxInputBytes", default="65536") or 65_536)
+AI_AGENT_APPROVAL_TTL_SECONDS = int(env("aiAgentApprovalTtlSeconds", default="3600") or 3600)
+AI_AGENT_RETENTION_DAYS = int(env("aiAgentRetentionDays", default="365") or 365)
+
+# ---------------------------------------------------------------------------
 # GUARDS
 # ---------------------------------------------------------------------------
 if environment not in {"development", "testing", "production"}:

@@ -1,5 +1,5 @@
 """Stable AI domain errors for Phase 13-B, Phase 13-E, Phase 13-F, Phase 13-N,
-Phase 13-O and Phase 13-P.
+Phase 13-O, Phase 13-P and Phase 13-Y.
 
 Provider-specific failures are mapped to these errors by later infrastructure
 adapters. No vendor exception is allowed to cross the AI boundary.
@@ -982,4 +982,87 @@ class AIToolExecutionFailed(AIError):
     """The tool ran and failed; the failure is recorded, not swallowed."""
 
     code = "AI_TOOL_EXECUTION_FAILED"
+    httpStatus = 502
+
+
+# ---------------------------------------------------------------------------
+# Phase 13-Y — Agent Foundation
+# ---------------------------------------------------------------------------
+
+
+class AIAgentInvalid(AIError):
+    code = "AI_AGENT_INVALID"
+    httpStatus = 422
+
+
+class AIAgentNotFound(AIError):
+    code = "AI_AGENT_NOT_FOUND"
+    httpStatus = 404
+
+    def __init__(self, agentCode: str = "") -> None:
+        super().__init__("AI agent was not found.")
+        self.agentCode = agentCode
+
+
+class AIAgentAlreadyRegistered(AIError):
+    code = "AI_AGENT_ALREADY_REGISTERED"
+    httpStatus = 409
+
+    def __init__(self, agentCode: str = "") -> None:
+        super().__init__("AI agent version is already registered.")
+        self.agentCode = agentCode
+
+
+class AIAgentNotApproved(AIError):
+    """The agent exists but has not cleared the registry approval gate."""
+
+    code = "AI_AGENT_NOT_APPROVED"
+    httpStatus = 409
+
+
+class AIAgentDenied(AIError):
+    """The principal is not permitted to run this agent."""
+
+    code = "AI_AGENT_DENIED"
+    httpStatus = 403
+
+
+class AIAgentPolicyInvalid(AIError):
+    code = "AI_AGENT_POLICY_INVALID"
+    httpStatus = 422
+
+
+class AIAgentApprovalRequired(AIError):
+    """A human must decide before this run may start."""
+
+    code = "AI_AGENT_APPROVAL_REQUIRED"
+    httpStatus = 202
+
+
+class AIAgentApprovalNotFound(AIError):
+    code = "AI_AGENT_APPROVAL_NOT_FOUND"
+    httpStatus = 404
+
+    def __init__(self, approvalId: str = "") -> None:
+        super().__init__("AI agent approval was not found.")
+        self.approvalId = approvalId
+
+
+class AIAgentBudgetExceeded(AIError):
+    """Too many steps/calls in one run, the same call in a loop, or the
+    duration ceiling passed."""
+
+    code = "AI_AGENT_BUDGET_EXCEEDED"
+    httpStatus = 429
+
+
+class AIAgentOutputInvalid(AIError):
+    code = "AI_AGENT_OUTPUT_INVALID"
+    httpStatus = 422
+
+
+class AIAgentExecutionFailed(AIError):
+    """The model boundary failed; the failure is recorded, not swallowed."""
+
+    code = "AI_AGENT_EXECUTION_FAILED"
     httpStatus = 502

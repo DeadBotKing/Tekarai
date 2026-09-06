@@ -1,5 +1,6 @@
 """Public AI value objects."""
 
+from apps.ai.domain.valueObjects.agentTypes import *  # noqa: F401,F403
 from apps.ai.domain.valueObjects.aiTypes import *  # noqa: F401,F403
 from apps.ai.domain.valueObjects.auditTypes import *  # noqa: F401,F403
 from apps.ai.domain.valueObjects.embeddingTypes import *  # noqa: F401,F403

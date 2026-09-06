@@ -2,6 +2,21 @@
 embedding, knowledge, memory, evaluation, feedback, observability, and tool
 ports."""
 
+from apps.ai.infrastructure.repositories.agentRepositories import (  # noqa: F401
+    DjangoAgentApprovalStore,
+    DjangoAgentDefinitionStore,
+    DjangoAgentExecutionStore,
+    stepToEntity,
+)
+from apps.ai.infrastructure.repositories.agentRepositories import (
+    approvalToEntity as agentApprovalToEntity,
+)
+from apps.ai.infrastructure.repositories.agentRepositories import (
+    definitionToEntity as agentDefinitionToEntity,
+)
+from apps.ai.infrastructure.repositories.agentRepositories import (
+    runToEntity as agentRunToEntity,
+)
 from apps.ai.infrastructure.repositories.auditRepositories import (  # noqa: F401
     DjangoAuditRecordStore,
     DjangoGovernancePolicyStore,
@@ -65,6 +80,9 @@ from apps.ai.infrastructure.repositories.usageRepositories import (  # noqa: F40
 )
 
 __all__ = [
+    "DjangoAgentApprovalStore",
+    "DjangoAgentDefinitionStore",
+    "DjangoAgentExecutionStore",
     "DjangoAlertEventStore",
     "DjangoAuditRecordStore",
     "DjangoCostRateResolver",
@@ -86,6 +104,10 @@ __all__ = [
     "DjangoToolInvocationStore",
     "DjangoUsageAttemptStore",
     "DjangoVectorSpaceStore",
+    "agentApprovalToEntity",
+    "agentDefinitionToEntity",
+    "agentRunToEntity",
+    "agentStepToEntity",
     "alertToEntity",
     "approvalToEntity",
     "attemptToEntity",

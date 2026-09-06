@@ -1,5 +1,6 @@
 """AI domain services."""
 
+from apps.ai.domain.services.agentEngine import *  # noqa: F401,F403
 from apps.ai.domain.services.aiRules import *  # noqa: F401,F403
 from apps.ai.domain.services.auditTrail import *  # noqa: F401,F403
 from apps.ai.domain.services.authorizationService import *  # noqa: F401,F403

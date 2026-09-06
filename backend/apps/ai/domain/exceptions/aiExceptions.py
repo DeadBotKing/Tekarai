@@ -769,3 +769,39 @@ class AIRagUngrounded(AIError):
 
     code = "AI_RAG_UNGROUNDED"
     httpStatus = 422
+
+
+# ---------------------------------------------------------------------------
+# Phase 13-T — AI memory
+# ---------------------------------------------------------------------------
+class AIMemoryInvalid(AIError):
+    code = "AI_MEMORY_INVALID"
+    httpStatus = 422
+
+
+class AIMemoryNotFound(AIError):
+    code = "AI_MEMORY_NOT_FOUND"
+    httpStatus = 404
+
+    def __init__(self, qualifiedKey: str = "") -> None:
+        super().__init__("AI memory entry was not found.")
+        self.qualifiedKey = qualifiedKey
+
+
+class AIMemoryValueTooLarge(AIError):
+    """The value exceeds the scope's byte ceiling (§T.11)."""
+
+    code = "AI_MEMORY_VALUE_TOO_LARGE"
+    httpStatus = 422
+
+
+class AIMemoryBudgetExceeded(AIError):
+    """The scope is full and its eviction strategy is NONE."""
+
+    code = "AI_MEMORY_BUDGET_EXCEEDED"
+    httpStatus = 409
+
+
+class AIMemoryPolicyInvalid(AIError):
+    code = "AI_MEMORY_POLICY_INVALID"
+    httpStatus = 422

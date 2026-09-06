@@ -313,3 +313,42 @@ class AIKnowledgeChunkRecordModel(BaseAiModel):
             models.Index(fields=["tenantId", "source", "ordinal"]),
             models.Index(fields=["tenantId", "checksum"]),
         ]
+
+
+# Phase 13-T memory table (clean style). The legacy `aiMemory` table from
+# the Phase 13-B skeleton is left untouched: it lacks the version lineage,
+# checksum, size accounting, classification, and expiry bookkeeping §17
+# requires, and rewriting it in place would break the B-era rows. Versions
+# are immutable rows; a write supersedes rather than edits (contract §T.5).
+class AIMemoryEntryModel(BaseAiModel):
+    """One immutable version of one memory slot (§T.4)."""
+
+    scope = models.CharField(max_length=40)
+    memoryKey = models.CharField(max_length=160)
+    kind = models.CharField(max_length=30, default="FACT")
+    userId = models.UUIDField(null=True)
+    # Non-null projection of ``userId`` ("tenant" when the slot belongs to
+    # the whole tenant). SQL treats two NULLs as distinct, so a nullable
+    # column in the unique key would silently allow duplicate versions of a
+    # tenant-wide slot — the same sentinel trick the Phase 13-P ledger uses.
+    ownerKey = models.CharField(max_length=64, default="tenant")
+    conversationId = models.CharField(max_length=160, blank=True)
+    classification = models.CharField(max_length=30, default="INTERNAL")
+    value = models.JSONField(default=dict)
+    checksum = models.CharField(max_length=64)
+    sizeBytes = models.PositiveIntegerField(default=0)
+    version = models.PositiveIntegerField(default=1)
+    isActive = models.BooleanField(default=True)
+    expiresAt = models.DateTimeField(null=True)
+    supersededAt = models.DateTimeField(null=True)
+    sourceReference = models.CharField(max_length=200, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = "aiMemoryEntries"
+        unique_together = [("tenantId", "scope", "memoryKey", "ownerKey", "version")]
+        indexes = [
+            models.Index(fields=["tenantId", "scope", "memoryKey", "isActive"]),
+            models.Index(fields=["tenantId", "isActive", "createdAt"]),
+            models.Index(fields=["tenantId", "conversationId"]),
+        ]

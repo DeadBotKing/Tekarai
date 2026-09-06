@@ -27,8 +27,8 @@
 | [Q](Phase13-Q.md) | Embedding Foundation | ✅ تکمیل شد |
 | [R](Phase13-R.md) | Knowledge Ingestion، Chunking و Indexing | ✅ تکمیل شد |
 | [S](Phase13-S.md) | Retrieval، RAG و Reranking | ✅ تکمیل شد |
-| T | AI Memory | ⏳ بعدی |
-| U | Evaluation | ⏳ |
+| [T](Phase13-T.md) | AI Memory | ✅ تکمیل شد |
+| U | Evaluation | ⏳ بعدی |
 | V | Feedback | ⏳ |
 | W | Observability و Monitoring | ⏳ |
 | X | Tool Registry و Tool Execution | ⏳ |
@@ -92,3 +92,5 @@
 - گزارش زیر‌فاز R: [`Phase13-R-ExecutionReport.md`](Phase13-R-ExecutionReport.md)
 - قرارداد S: [`Phase13-S.md`](Phase13-S.md)
 - گزارش زیر‌فاز S: [`Phase13-S-ExecutionReport.md`](Phase13-S-ExecutionReport.md)
+- قرارداد T: [`Phase13-T.md`](Phase13-T.md)
+- گزارش زیر‌فاز T: [`Phase13-T-ExecutionReport.md`](Phase13-T-ExecutionReport.md)

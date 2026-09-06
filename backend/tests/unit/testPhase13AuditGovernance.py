@@ -64,7 +64,7 @@ def makeRequest(tenantId: uuid.UUID, **overrides: object) -> GovernanceRequest:
 
 class AuditVocabularyTests(unittest.TestCase):
     def testAuditActionsCoverSection36PlusGovernanceNeeds(self) -> None:
-        self.assertEqual(len(AUDIT_ACTIONS), 30)
+        self.assertEqual(len(AUDIT_ACTIONS), 34)
         for action in (
             "REQUEST_CREATED",
             "REQUEST_STARTED",
@@ -99,6 +99,11 @@ class AuditVocabularyTests(unittest.TestCase):
             "RETRIEVAL_EXECUTED",
             "RETRIEVAL_DENIED",
             "RAG_ANSWERED",
+            # Phase 13-T amendment: memory lifecycle.
+            "MEMORY_WRITTEN",
+            "MEMORY_RECALLED",
+            "MEMORY_FORGOTTEN",
+            "MEMORY_EVICTED",
         ):
             self.assertIn(action, AUDIT_ACTIONS)
 

@@ -419,6 +419,24 @@ AI_RAG_REQUIRE_GROUNDING = env.bool("aiRagRequireGrounding", default=True)
 AI_RAG_ANSWER_MODEL = str(env("aiRagAnswerModel", default="") or "")
 
 # ---------------------------------------------------------------------------
+# AI MEMORY (Phase 13-T)
+# ---------------------------------------------------------------------------
+# Configuration-driven memory ceilings (Master Specification §42) — this
+# block closes Open Question #8 from Phase 13-A: nothing is unbounded.
+# Per-scope platform defaults apply unless aiMemoryUseScopeDefaults is
+# false; configuration may only narrow them, never widen them. A zero TTL
+# means "no expiry for scopes that do not define one".
+AI_MEMORY_ENABLED = env.bool("aiMemoryEnabled", default=True)
+AI_MEMORY_MAX_ENTRIES_PER_SCOPE = int(env("aiMemoryMaxEntriesPerScope", default="200") or 200)
+AI_MEMORY_DEFAULT_TTL_SECONDS = int(env("aiMemoryDefaultTtlSeconds", default="0") or 0)
+AI_MEMORY_MAX_VALUE_BYTES = int(env("aiMemoryMaxValueBytes", default="32768") or 32768)
+AI_MEMORY_EVICTION = str(env("aiMemoryEviction", default="OLDEST_FIRST") or "OLDEST_FIRST").upper()
+AI_MEMORY_CONTEXT_MAX_ENTRIES = int(env("aiMemoryContextMaxEntries", default="10") or 10)
+AI_MEMORY_CONTEXT_MAX_TOKENS = int(env("aiMemoryContextMaxTokens", default="1000") or 1000)
+AI_MEMORY_RETENTION_DAYS = int(env("aiMemoryRetentionDays", default="365") or 365)
+AI_MEMORY_USE_SCOPE_DEFAULTS = env.bool("aiMemoryUseScopeDefaults", default=True)
+
+# ---------------------------------------------------------------------------
 # GUARDS
 # ---------------------------------------------------------------------------
 if environment not in {"development", "testing", "production"}:

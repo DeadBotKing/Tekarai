@@ -511,6 +511,27 @@ AI_ALERT_FEEDBACK_SCORE = float(env("aiAlertFeedbackScore", default="0.5") or 0.
 AI_ALERT_EVALUATION_SCORE = float(env("aiAlertEvaluationScore", default="0.6") or 0.6)
 
 # ---------------------------------------------------------------------------
+# AI TOOL REGISTRY & EXECUTION (Phase 13-X)
+# ---------------------------------------------------------------------------
+# Configuration-driven tool policy (Master Specification §30 and §42) —
+# this block closes Open Question #10: which risk level needs a human, and
+# which needs two. A tool may declare a stricter approval mode than these
+# thresholds require; it can never declare a looser one.
+AI_TOOL_ENABLED = env.bool("aiToolEnabled", default=True)
+AI_TOOL_AUTOMATIC_BELOW_RISK = str(
+    env("aiToolAutomaticBelowRisk", default="HIGH") or "HIGH"
+).upper()
+AI_TOOL_DUAL_CONTROL_AT_RISK = str(
+    env("aiToolDualControlAtRisk", default="CRITICAL") or "CRITICAL"
+).upper()
+AI_TOOL_MAX_CALLS_PER_REQUEST = int(env("aiToolMaxCallsPerRequest", default="10") or 10)
+AI_TOOL_MAX_REPEATS_PER_REQUEST = int(env("aiToolMaxRepeatsPerRequest", default="2") or 2)
+AI_TOOL_TIMEOUT_SECONDS = int(env("aiToolTimeoutSeconds", default="30") or 30)
+AI_TOOL_MAX_ARGUMENT_BYTES = int(env("aiToolMaxArgumentBytes", default="16384") or 16384)
+AI_TOOL_APPROVAL_TTL_SECONDS = int(env("aiToolApprovalTtlSeconds", default="3600") or 3600)
+AI_TOOL_RETENTION_DAYS = int(env("aiToolRetentionDays", default="365") or 365)
+
+# ---------------------------------------------------------------------------
 # GUARDS
 # ---------------------------------------------------------------------------
 if environment not in {"development", "testing", "production"}:

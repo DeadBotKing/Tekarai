@@ -31,8 +31,8 @@
 | [U](Phase13-U.md) | Evaluation | ✅ تکمیل شد |
 | [V](Phase13-V.md) | Feedback | ✅ تکمیل شد |
 | [W](Phase13-W.md) | Observability و Monitoring | ✅ تکمیل شد |
-| X | Tool Registry و Tool Execution | ⏳ بعدی |
-| Y | Agent Foundation | ⏳ |
+| [X](Phase13-X.md) | Tool Registry و Tool Execution | ✅ تکمیل شد |
+| Y | Agent Foundation | ⏳ بعدی |
 | Z | API، Migration، تست نهایی و Release | ⏳ |
 
 ## قرارداد اجرای زیر‌فازها
@@ -100,3 +100,5 @@
 - گزارش زیر‌فاز V: [`Phase13-V-ExecutionReport.md`](Phase13-V-ExecutionReport.md)
 - قرارداد W: [`Phase13-W.md`](Phase13-W.md)
 - گزارش زیر‌فاز W: [`Phase13-W-ExecutionReport.md`](Phase13-W-ExecutionReport.md)
+- قرارداد X: [`Phase13-X.md`](Phase13-X.md)
+- گزارش زیر‌فاز X: [`Phase13-X-ExecutionReport.md`](Phase13-X-ExecutionReport.md)

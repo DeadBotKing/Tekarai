@@ -18,4 +18,5 @@ from apps.ai.domain.services.quotaEnforcement import *  # noqa: F401,F403
 from apps.ai.domain.services.requestLifecycle import *  # noqa: F401,F403
 from apps.ai.domain.services.responseLifecycle import *  # noqa: F401,F403
 from apps.ai.domain.services.retrievalPipeline import *  # noqa: F401,F403
+from apps.ai.domain.services.toolEngine import *  # noqa: F401,F403
 from apps.ai.domain.services.usageMetering import *  # noqa: F401,F403

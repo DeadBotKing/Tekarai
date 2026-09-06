@@ -523,3 +523,92 @@ class AIAlertEventModel(BaseAiModel):
             models.Index(fields=["tenantId", "state", "firedAt"]),
             models.Index(fields=["tenantId", "ruleCode", "firedAt"]),
         ]
+
+
+# Phase 13-X tool registry tables (clean style). The legacy `aiTools` /
+# `aiToolExecutions` shape from the Phase 13-B skeleton is superseded here:
+# it had no version lineage, no risk level, no registry lifecycle and no
+# approval link, and §30 needs all four. Definitions are immutable per
+# version, so an invocation recorded last month can still be read against
+# the contract it actually used (contract §X.5).
+class AIToolDefinitionModel(BaseAiModel):
+    """One immutable version of one registered tool (§X.4)."""
+
+    code = models.CharField(max_length=80)
+    version = models.PositiveIntegerField(default=1)
+    name = models.CharField(max_length=160)
+    description = models.TextField()
+    effect = models.CharField(max_length=20, default="READ_ONLY")
+    riskLevel = models.CharField(max_length=20, default="LOW")
+    inputSchema = models.JSONField(default=dict, blank=True)
+    outputSchema = models.JSONField(default=dict, blank=True)
+    requiredPermission = models.CharField(max_length=100, blank=True)
+    declaredApprovalMode = models.CharField(max_length=20, blank=True)
+    timeoutSeconds = models.PositiveIntegerField(default=30)
+    maxCallsPerRequest = models.PositiveIntegerField(default=5)
+    status = models.CharField(max_length=20, default="DRAFT")
+    approvedBy = models.UUIDField(null=True)
+    approvedAt = models.DateTimeField(null=True)
+    retiredAt = models.DateTimeField(null=True)
+    rejectionReason = models.CharField(max_length=500, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = "aiToolDefinitions"
+        unique_together = [("tenantId", "code", "version")]
+        indexes = [
+            models.Index(fields=["tenantId", "code", "status"]),
+            models.Index(fields=["tenantId", "status"]),
+        ]
+
+
+class AIToolApprovalModel(BaseAiModel):
+    """One human decision about one proposed call (§X.7)."""
+
+    toolCode = models.CharField(max_length=80)
+    toolVersion = models.PositiveIntegerField(default=1)
+    argumentFingerprint = models.CharField(max_length=64)
+    mode = models.CharField(max_length=20, default="HUMAN_REQUIRED")
+    decision = models.CharField(max_length=20, default="PENDING")
+    requiredApprovals = models.PositiveSmallIntegerField(default=1)
+    approvals = models.JSONField(default=list)
+    requestedBy = models.UUIDField(null=True)
+    invocationId = models.UUIDField(null=True)
+    reason = models.CharField(max_length=500, blank=True)
+    expiresAt = models.DateTimeField(null=True)
+    decidedAt = models.DateTimeField(null=True)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = "aiToolApprovals"
+        indexes = [
+            models.Index(fields=["tenantId", "toolCode", "argumentFingerprint"]),
+            models.Index(fields=["tenantId", "decision", "createdAt"]),
+        ]
+
+
+class AIToolInvocationModel(BaseAiModel):
+    """One proposed call and what happened to it (§X.8)."""
+
+    toolCode = models.CharField(max_length=80)
+    toolVersion = models.PositiveIntegerField(default=1)
+    toolId = models.UUIDField(null=True)
+    requestId = models.UUIDField(null=True, db_index=True)
+    actorId = models.UUIDField(null=True)
+    approvalId = models.UUIDField(null=True)
+    arguments = models.JSONField(default=dict)
+    fingerprint = models.CharField(max_length=64, db_index=True)
+    status = models.CharField(max_length=20, default="PENDING")
+    result = models.JSONField(default=dict, blank=True)
+    errorCode = models.CharField(max_length=80, blank=True)
+    startedAt = models.DateTimeField(null=True)
+    completedAt = models.DateTimeField(null=True)
+    latencyMs = models.PositiveIntegerField(default=0)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = "aiToolInvocations"
+        indexes = [
+            models.Index(fields=["tenantId", "toolCode", "createdAt"]),
+            models.Index(fields=["tenantId", "status", "createdAt"]),
+        ]

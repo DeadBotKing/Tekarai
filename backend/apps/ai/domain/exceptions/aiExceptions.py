@@ -910,3 +910,76 @@ class AIObservabilityWindowInvalid(AIError):
 
     code = "AI_OBSERVABILITY_WINDOW_INVALID"
     httpStatus = 422
+
+
+# ---------------------------------------------------------------------------
+# Phase 13-X — tool registry and tool execution
+# ---------------------------------------------------------------------------
+class AIToolInvalid(AIError):
+    code = "AI_TOOL_INVALID"
+    httpStatus = 422
+
+
+class AIToolNotFound(AIError):
+    code = "AI_TOOL_NOT_FOUND"
+    httpStatus = 404
+
+    def __init__(self, toolCode: str = "") -> None:
+        super().__init__("AI tool was not found.")
+        self.toolCode = toolCode
+
+
+class AIToolAlreadyRegistered(AIError):
+    code = "AI_TOOL_ALREADY_REGISTERED"
+    httpStatus = 409
+
+    def __init__(self, toolCode: str = "") -> None:
+        super().__init__("AI tool version is already registered.")
+        self.toolCode = toolCode
+
+
+class AIToolNotApproved(AIError):
+    """The tool exists but has not cleared the registry approval gate."""
+
+    code = "AI_TOOL_NOT_APPROVED"
+    httpStatus = 409
+
+
+class AIToolArgumentsInvalid(AIError):
+    code = "AI_TOOL_ARGUMENTS_INVALID"
+    httpStatus = 422
+
+
+class AIToolOutputInvalid(AIError):
+    code = "AI_TOOL_OUTPUT_INVALID"
+    httpStatus = 422
+
+
+class AIToolBudgetExceeded(AIError):
+    """Too many calls in one request, or the same call in a loop."""
+
+    code = "AI_TOOL_BUDGET_EXCEEDED"
+    httpStatus = 429
+
+
+class AIToolApprovalRequired(AIError):
+    """A human must decide before this call may run."""
+
+    code = "AI_TOOL_APPROVAL_REQUIRED"
+    httpStatus = 202
+
+
+class AIToolApprovalNotFound(AIError):
+    code = "AI_TOOL_APPROVAL_NOT_FOUND"
+    httpStatus = 404
+
+    def __init__(self, approvalId: str = "") -> None:
+        super().__init__("AI tool approval was not found.")
+        self.approvalId = approvalId
+
+
+class AIToolExecutionFailed(AIError):
+    """The tool ran and failed; the failure is recorded, not swallowed."""
+
+    code = "AI_TOOL_EXECUTION_FAILED"
+    httpStatus = 502

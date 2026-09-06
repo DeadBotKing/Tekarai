@@ -64,7 +64,7 @@ def makeRequest(tenantId: uuid.UUID, **overrides: object) -> GovernanceRequest:
 
 class AuditVocabularyTests(unittest.TestCase):
     def testAuditActionsCoverSection36PlusGovernanceNeeds(self) -> None:
-        self.assertEqual(len(AUDIT_ACTIONS), 43)
+        self.assertEqual(len(AUDIT_ACTIONS), 47)
         for action in (
             "REQUEST_CREATED",
             "REQUEST_STARTED",
@@ -116,6 +116,11 @@ class AuditVocabularyTests(unittest.TestCase):
             "ALERT_FIRED",
             "ALERT_RESOLVED",
             "ALERT_ACKNOWLEDGED",
+            # Phase 13-X amendment: tool registry and execution.
+            "TOOL_REGISTERED",
+            "TOOL_APPROVED",
+            "TOOL_INVOKED",
+            "TOOL_DENIED",
         ):
             self.assertIn(action, AUDIT_ACTIONS)
 

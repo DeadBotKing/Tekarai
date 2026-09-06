@@ -3,7 +3,7 @@
 This module defines the closed vocabularies used by the audit ledger and
 the governance engine:
 
-- ``AUDIT_ACTIONS`` — the 43 auditable actions. The first nine mirror the
+- ``AUDIT_ACTIONS`` — the 47 auditable actions. The first nine mirror the
   §36 platform events (``AIRequestCreated`` … ``AIFeedbackReceived``); the
   next six are owned by sub-phase O (governance decisions, policy
   administration, quota denials, retention purges); the last four are the
@@ -23,7 +23,8 @@ the governance engine:
   from the §36 event list, and inventing a second name for it would
   split one concept across two actions. Sub-phase W appends the three
   alert lifecycle actions (``ALERT_FIRED``, ``ALERT_RESOLVED``,
-  ``ALERT_ACKNOWLEDGED``).
+  ``ALERT_ACKNOWLEDGED``). Sub-phase X appends the four tool lifecycle
+  actions (``TOOL_REGISTERED`` … ``TOOL_DENIED``).
 - ``ACTOR_TYPES`` — who performed the audited operation;
 - ``AUDIT_OUTCOMES`` — the recorded result of the audited operation;
 - ``SECRET_KEY_PATTERNS`` — case-insensitive key fragments whose values
@@ -80,6 +81,10 @@ AUDIT_ACTIONS = (
     "ALERT_FIRED",
     "ALERT_RESOLVED",
     "ALERT_ACKNOWLEDGED",
+    "TOOL_REGISTERED",
+    "TOOL_APPROVED",
+    "TOOL_INVOKED",
+    "TOOL_DENIED",
 )
 ACTOR_TYPES = (
     "USER",

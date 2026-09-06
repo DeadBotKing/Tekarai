@@ -20,12 +20,12 @@ Implementation is split into 26 tracked sub-phases (A–Z). Start with
 `docs/Phases/Phase13/Phase13-O.md`, `docs/Phases/Phase13/Phase13-P.md`,
 `docs/Phases/Phase13/Phase13-Q.md`, `docs/Phases/Phase13/Phase13-R.md`,
 `docs/Phases/Phase13/Phase13-S.md`, `docs/Phases/Phase13/Phase13-T.md`,
-`docs/Phases/Phase13/Phase13-U.md`, `docs/Phases/Phase13/Phase13-V.md` and
-`docs/Phases/Phase13/Phase13-W.md`.
+`docs/Phases/Phase13/Phase13-U.md`, `docs/Phases/Phase13/Phase13-V.md`,
+`docs/Phases/Phase13/Phase13-W.md` and `docs/Phases/Phase13/Phase13-X.md`.
 
-Sub-phases A through W are complete; sub-phase X (Tool Registry and Tool
-Execution) is the next implementation gate. The completion of A–W does not
-mean that the complete Phase 13 is finished.
+Sub-phases A through X are complete; sub-phase Y (Agent Foundation) is the
+next implementation gate. The completion of A–X does not mean that the
+complete Phase 13 is finished.
 
 
 

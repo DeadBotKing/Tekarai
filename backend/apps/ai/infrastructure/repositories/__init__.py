@@ -1,5 +1,6 @@
-"""Phase 13-N/O/P/Q/R/T/U/V/W Django persistence for metering, audit, queue,
-embedding, knowledge, memory, evaluation, feedback, and observability ports."""
+"""Phase 13-N/O/P/Q/R/T/U/V/W/X Django persistence for metering, audit, queue,
+embedding, knowledge, memory, evaluation, feedback, observability, and tool
+ports."""
 
 from apps.ai.infrastructure.repositories.auditRepositories import (  # noqa: F401
     DjangoAuditRecordStore,
@@ -45,6 +46,14 @@ from apps.ai.infrastructure.repositories.queueRepositories import (  # noqa: F40
     DjangoJobStore,
     jobToEntity,
 )
+from apps.ai.infrastructure.repositories.toolRepositories import (  # noqa: F401
+    DjangoToolApprovalStore,
+    DjangoToolDefinitionStore,
+    DjangoToolInvocationStore,
+    approvalToEntity,
+    definitionToEntity,
+    invocationToEntity,
+)
 from apps.ai.infrastructure.repositories.usageRepositories import (  # noqa: F401
     DjangoCostRateResolver,
     DjangoQuotaCounterStore,
@@ -72,17 +81,23 @@ __all__ = [
     "DjangoQuotaCounterStore",
     "DjangoQuotaPolicyStore",
     "DjangoRetentionPurger",
+    "DjangoToolApprovalStore",
+    "DjangoToolDefinitionStore",
+    "DjangoToolInvocationStore",
     "DjangoUsageAttemptStore",
     "DjangoVectorSpaceStore",
     "alertToEntity",
+    "approvalToEntity",
     "attemptToEntity",
     "auditToEntity",
     "caseToEntity",
     "chunkToEntity",
     "counterToEntity",
+    "definitionToEntity",
     "embeddingToEntity",
     "feedbackToEntity",
     "governancePolicyToEntity",
+    "invocationToEntity",
     "jobToEntity",
     "memoryToEntity",
     "policyToEntity",

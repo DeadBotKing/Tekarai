@@ -70,6 +70,8 @@ class QueueVocabularyTests(unittest.TestCase):
                 "EVALUATION",
                 # Phase 13-V amendment: feedback promotion sweeps.
                 "FEEDBACK",
+                # Phase 13-W amendment: scheduled metric collection.
+                "MONITORING",
                 "GENERIC",
                 "EVENT_DISPATCH",
             ),

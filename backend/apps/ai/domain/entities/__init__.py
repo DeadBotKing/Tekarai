@@ -8,4 +8,5 @@ from apps.ai.domain.entities.feedbackRecords import *  # noqa: F401,F403
 from apps.ai.domain.entities.jobRecords import *  # noqa: F401,F403
 from apps.ai.domain.entities.knowledgeRecords import *  # noqa: F401,F403
 from apps.ai.domain.entities.memoryRecords import *  # noqa: F401,F403
+from apps.ai.domain.entities.observabilityRecords import *  # noqa: F401,F403
 from apps.ai.domain.entities.usageRecords import *  # noqa: F401,F403

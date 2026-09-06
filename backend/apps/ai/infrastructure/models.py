@@ -475,3 +475,51 @@ class AIFeedbackEntryModel(BaseAiModel):
             models.Index(fields=["tenantId", "sentiment", "createdAt"]),
             models.Index(fields=["tenantId", "modelCode"]),
         ]
+
+
+# Phase 13-W observability tables (clean style). Snapshots are immutable
+# roll-ups of one collection window: keeping them means a dashboard can
+# still answer "what did last month look like?" after the raw attempt and
+# job rows have aged out under their own retention (contract §W.6).
+# Alerts are events, not flags, so a rule that fires twice leaves two rows.
+class AIMetricSnapshotModel(BaseAiModel):
+    """Frozen metrics of one collection window (§W.6)."""
+
+    windowStart = models.DateTimeField()
+    windowEnd = models.DateTimeField()
+    metrics = models.JSONField(default=dict)
+    labels = models.JSONField(default=dict, blank=True)
+    sampleCount = models.PositiveIntegerField(default=0)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = "aiMetricSnapshots"
+        indexes = [
+            models.Index(fields=["tenantId", "windowEnd"]),
+            models.Index(fields=["tenantId", "createdAt"]),
+        ]
+
+
+class AIAlertEventModel(BaseAiModel):
+    """One firing of one alert rule (§W.8)."""
+
+    ruleCode = models.CharField(max_length=80)
+    metric = models.CharField(max_length=80)
+    severity = models.CharField(max_length=20, default="WARNING")
+    state = models.CharField(max_length=20, default="FIRING")
+    observedValue = models.DecimalField(max_digits=18, decimal_places=6, default=0)
+    threshold = models.DecimalField(max_digits=18, decimal_places=6, default=0)
+    message = models.CharField(max_length=500, blank=True)
+    firedAt = models.DateTimeField()
+    resolvedAt = models.DateTimeField(null=True)
+    acknowledgedAt = models.DateTimeField(null=True)
+    acknowledgedBy = models.UUIDField(null=True)
+    snapshotId = models.UUIDField(null=True)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = "aiAlertEvents"
+        indexes = [
+            models.Index(fields=["tenantId", "state", "firedAt"]),
+            models.Index(fields=["tenantId", "ruleCode", "firedAt"]),
+        ]

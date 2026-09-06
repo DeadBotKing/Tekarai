@@ -1,6 +1,8 @@
 """Public Phase 13 AI errors."""
 
 from apps.ai.domain.exceptions.aiExceptions import (
+    AIAlertNotFound,
+    AIAlertRuleInvalid,
     AIAuditRecordInvalid,
     AIAuditRecordNotFound,
     AIAuditTrailTampered,
@@ -65,6 +67,7 @@ from apps.ai.domain.exceptions.aiExceptions import (
     AIMemoryNotFound,
     AIMemoryPolicyInvalid,
     AIMemoryValueTooLarge,
+    AIMetricInvalid,
     AIModelAlreadyRegistered,
     AIModelAmbiguous,
     AIModelInactive,
@@ -72,6 +75,7 @@ from apps.ai.domain.exceptions.aiExceptions import (
     AIModelProviderOwnershipInvalid,
     AIModelRegistrationInvalid,
     AIModelUnavailable,
+    AIObservabilityWindowInvalid,
     AIOperationAlreadyRegistered,
     AIOperationLifecycleInvalid,
     AIOperationNotFound,
@@ -124,6 +128,8 @@ from apps.ai.domain.exceptions.aiExceptions import (
 )
 
 __all__ = [
+    "AIAlertNotFound",
+    "AIAlertRuleInvalid",
     "AIAuditRecordInvalid",
     "AIAuditRecordNotFound",
     "AIAuditTrailTampered",
@@ -188,6 +194,7 @@ __all__ = [
     "AIMemoryNotFound",
     "AIMemoryPolicyInvalid",
     "AIMemoryValueTooLarge",
+    "AIMetricInvalid",
     "AIModelAlreadyRegistered",
     "AIModelAmbiguous",
     "AIModelInactive",
@@ -195,6 +202,7 @@ __all__ = [
     "AIModelProviderOwnershipInvalid",
     "AIModelRegistrationInvalid",
     "AIModelUnavailable",
+    "AIObservabilityWindowInvalid",
     "AIOperationAlreadyRegistered",
     "AIOperationLifecycleInvalid",
     "AIOperationNotFound",

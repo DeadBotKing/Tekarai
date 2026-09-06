@@ -20,10 +20,11 @@ Implementation is split into 26 tracked sub-phases (A–Z). Start with
 `docs/Phases/Phase13/Phase13-O.md`, `docs/Phases/Phase13/Phase13-P.md`,
 `docs/Phases/Phase13/Phase13-Q.md`, `docs/Phases/Phase13/Phase13-R.md`,
 `docs/Phases/Phase13/Phase13-S.md`, `docs/Phases/Phase13/Phase13-T.md`,
-`docs/Phases/Phase13/Phase13-U.md` and `docs/Phases/Phase13/Phase13-V.md`.
+`docs/Phases/Phase13/Phase13-U.md`, `docs/Phases/Phase13/Phase13-V.md` and
+`docs/Phases/Phase13/Phase13-W.md`.
 
-Sub-phases A through V are complete; sub-phase W (Observability and
-Monitoring) is the next implementation gate. The completion of A–V does not
+Sub-phases A through W are complete; sub-phase X (Tool Registry and Tool
+Execution) is the next implementation gate. The completion of A–W does not
 mean that the complete Phase 13 is finished.
 
 
@@ -2816,7 +2817,7 @@ Phase 13 زمانی Done است که:
 
 
 
-\[ ] Observability آماده باشد.
+\[x] Observability آماده باشد. (Sub-phase W — Phase13-W.md)
 
 
 

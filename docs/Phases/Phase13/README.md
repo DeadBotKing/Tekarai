@@ -30,8 +30,8 @@
 | [T](Phase13-T.md) | AI Memory | ✅ تکمیل شد |
 | [U](Phase13-U.md) | Evaluation | ✅ تکمیل شد |
 | [V](Phase13-V.md) | Feedback | ✅ تکمیل شد |
-| W | Observability و Monitoring | ⏳ بعدی |
-| X | Tool Registry و Tool Execution | ⏳ |
+| [W](Phase13-W.md) | Observability و Monitoring | ✅ تکمیل شد |
+| X | Tool Registry و Tool Execution | ⏳ بعدی |
 | Y | Agent Foundation | ⏳ |
 | Z | API، Migration، تست نهایی و Release | ⏳ |
 
@@ -98,3 +98,5 @@
 - گزارش زیر‌فاز U: [`Phase13-U-ExecutionReport.md`](Phase13-U-ExecutionReport.md)
 - قرارداد V: [`Phase13-V.md`](Phase13-V.md)
 - گزارش زیر‌فاز V: [`Phase13-V-ExecutionReport.md`](Phase13-V-ExecutionReport.md)
+- قرارداد W: [`Phase13-W.md`](Phase13-W.md)
+- گزارش زیر‌فاز W: [`Phase13-W-ExecutionReport.md`](Phase13-W-ExecutionReport.md)

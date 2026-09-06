@@ -487,6 +487,30 @@ AI_FEEDBACK_GOLDEN_SUITE = str(
 AI_FEEDBACK_RETENTION_DAYS = int(env("aiFeedbackRetentionDays", default="730") or 730)
 
 # ---------------------------------------------------------------------------
+# AI OBSERVABILITY & ALERTING (Phase 13-W)
+# ---------------------------------------------------------------------------
+# Configuration-driven monitoring defaults (Master Specification §42 and
+# §34): the collection window, the alert thresholds for the four failures
+# that actually hurt, and the retention of snapshots and alerts. Metric
+# labels are allow-listed in code, not here: they leave the tenant
+# boundary and must never carry free-form text (§47).
+AI_OBSERVABILITY_ENABLED = env.bool("aiObservabilityEnabled", default=True)
+AI_OBSERVABILITY_WINDOW_MINUTES = int(env("aiObservabilityWindowMinutes", default="60") or 60)
+AI_OBSERVABILITY_MAX_WINDOW_HOURS = int(env("aiObservabilityMaxWindowHours", default="24") or 24)
+AI_OBSERVABILITY_SNAPSHOT_RETENTION_DAYS = int(
+    env("aiObservabilitySnapshotRetentionDays", default="90") or 90
+)
+AI_OBSERVABILITY_ALERT_RETENTION_DAYS = int(
+    env("aiObservabilityAlertRetentionDays", default="365") or 365
+)
+AI_ALERTING_ENABLED = env.bool("aiAlertingEnabled", default=True)
+AI_ALERT_ERROR_RATIO = float(env("aiAlertErrorRatio", default="0.1") or 0.1)
+AI_ALERT_LATENCY_P95_MS = int(env("aiAlertLatencyP95Ms", default="15000") or 15000)
+AI_ALERT_QUEUE_DEPTH = int(env("aiAlertQueueDepth", default="100") or 100)
+AI_ALERT_FEEDBACK_SCORE = float(env("aiAlertFeedbackScore", default="0.5") or 0.5)
+AI_ALERT_EVALUATION_SCORE = float(env("aiAlertEvaluationScore", default="0.6") or 0.6)
+
+# ---------------------------------------------------------------------------
 # GUARDS
 # ---------------------------------------------------------------------------
 if environment not in {"development", "testing", "production"}:

@@ -881,3 +881,32 @@ class AIFeedbackNotPromotable(AIError):
 
     code = "AI_FEEDBACK_NOT_PROMOTABLE"
     httpStatus = 409
+
+
+# ---------------------------------------------------------------------------
+# Phase 13-W — observability and monitoring
+# ---------------------------------------------------------------------------
+class AIMetricInvalid(AIError):
+    code = "AI_METRIC_INVALID"
+    httpStatus = 422
+
+
+class AIAlertRuleInvalid(AIError):
+    code = "AI_ALERT_RULE_INVALID"
+    httpStatus = 422
+
+
+class AIAlertNotFound(AIError):
+    code = "AI_ALERT_NOT_FOUND"
+    httpStatus = 404
+
+    def __init__(self, alertId: str = "") -> None:
+        super().__init__("AI alert was not found.")
+        self.alertId = alertId
+
+
+class AIObservabilityWindowInvalid(AIError):
+    """The collection window is empty, inverted, or absurdly wide."""
+
+    code = "AI_OBSERVABILITY_WINDOW_INVALID"
+    httpStatus = 422

@@ -1,5 +1,5 @@
-"""Phase 13-N/O/P/Q/R/T/U/V Django persistence for metering, audit, queue,
-embedding, knowledge, memory, evaluation, and feedback ports."""
+"""Phase 13-N/O/P/Q/R/T/U/V/W Django persistence for metering, audit, queue,
+embedding, knowledge, memory, evaluation, feedback, and observability ports."""
 
 from apps.ai.infrastructure.repositories.auditRepositories import (  # noqa: F401
     DjangoAuditRecordStore,
@@ -35,6 +35,12 @@ from apps.ai.infrastructure.repositories.memoryRepositories import (  # noqa: F4
     DjangoMemoryEntryStore,
     memoryToEntity,
 )
+from apps.ai.infrastructure.repositories.observabilityRepositories import (  # noqa: F401
+    DjangoAlertEventStore,
+    DjangoMetricSnapshotStore,
+    alertToEntity,
+    snapshotToEntity,
+)
 from apps.ai.infrastructure.repositories.queueRepositories import (  # noqa: F401
     DjangoJobStore,
     jobToEntity,
@@ -50,6 +56,7 @@ from apps.ai.infrastructure.repositories.usageRepositories import (  # noqa: F40
 )
 
 __all__ = [
+    "DjangoAlertEventStore",
     "DjangoAuditRecordStore",
     "DjangoCostRateResolver",
     "DjangoEmbeddingStore",
@@ -61,11 +68,13 @@ __all__ = [
     "DjangoKnowledgeChunkStore",
     "DjangoKnowledgeSourceStore",
     "DjangoMemoryEntryStore",
+    "DjangoMetricSnapshotStore",
     "DjangoQuotaCounterStore",
     "DjangoQuotaPolicyStore",
     "DjangoRetentionPurger",
     "DjangoUsageAttemptStore",
     "DjangoVectorSpaceStore",
+    "alertToEntity",
     "attemptToEntity",
     "auditToEntity",
     "caseToEntity",
@@ -79,6 +88,7 @@ __all__ = [
     "policyToEntity",
     "resultToEntity",
     "runToEntity",
+    "snapshotToEntity",
     "sourceToEntity",
     "spaceToEntity",
 ]

@@ -12,6 +12,7 @@ from apps.ai.domain.services.governance import *  # noqa: F401,F403
 from apps.ai.domain.services.jobQueue import *  # noqa: F401,F403
 from apps.ai.domain.services.knowledgeChunker import *  # noqa: F401,F403
 from apps.ai.domain.services.memoryEngine import *  # noqa: F401,F403
+from apps.ai.domain.services.observabilityEngine import *  # noqa: F401,F403
 from apps.ai.domain.services.promptPlatform import *  # noqa: F401,F403
 from apps.ai.domain.services.quotaEnforcement import *  # noqa: F401,F403
 from apps.ai.domain.services.requestLifecycle import *  # noqa: F401,F403

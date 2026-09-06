@@ -268,6 +268,17 @@ AI_PROVIDER_ADAPTERS: dict[str, dict[str, object]] = {
     },
 }
 
+# Phase 13-Z public agent runtime and release gate. Production remains
+# fail-closed until an explicit provider/model pair is selected. The fake
+# provider can only be enabled deliberately (testing.py does so).
+AI_AGENT_DEFAULT_PROVIDER = str(
+    env("aiAgentDefaultProvider", default="") or ""
+).upper()
+AI_AGENT_DEFAULT_MODEL = str(env("aiAgentDefaultModel", default="") or "")
+AI_AGENT_ALLOW_DETERMINISTIC_PROVIDER = env.bool(
+    "aiAgentAllowDeterministicProvider", default=False
+)
+
 # ---------------------------------------------------------------------------
 # AI USAGE METERING (Phase 13-N)
 # ---------------------------------------------------------------------------

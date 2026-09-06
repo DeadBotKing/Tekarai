@@ -36,6 +36,12 @@ PASSWORD_HASHERS = [
 # ---------------------------------------------------------------------------
 from config.environment import buildDatabaseConfig  # noqa: E402 — after base import
 
+# Phase 13-Z integration tests are offline and deterministic (§41). Production
+# keeps this provider disabled unless explicitly opted in.
+AI_AGENT_ALLOW_DETERMINISTIC_PROVIDER = True
+AI_AGENT_DEFAULT_PROVIDER = "DETERMINISTIC"
+AI_AGENT_DEFAULT_MODEL = "test"
+
 DATABASES = {
     "default": buildDatabaseConfig(
         dbEngine=env("dbEngine", default="sqlite"),

@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import logging
 import time
-import uuid
 from dataclasses import asdict
 from typing import Any
 
@@ -22,35 +21,11 @@ logger = logging.getLogger(__name__)
 
 
 def buildQueueService() -> Any:
-    """Compose the production worker graph (lazy imports keep startup light)."""
+    """Compose the production worker graph, including the Z agent handler."""
 
-    from django.conf import settings as djangoSettings
+    from apps.ai.infrastructure import container
 
-    from apps.ai.application.services.auditService import AuditApplicationService
-    from apps.ai.application.services.queueService import (
-        QueueApplicationService,
-        QueueSettings,
-    )
-    from apps.ai.infrastructure.repositories.auditRepositories import (
-        DjangoAuditRecordStore,
-        DjangoGovernancePolicyStore,
-        DjangoRetentionPurger,
-    )
-    from apps.ai.infrastructure.repositories.queueRepositories import DjangoJobStore
-
-    queueSettings = QueueSettings.fromDjangoSettings(djangoSettings)
-    auditService = AuditApplicationService(
-        DjangoAuditRecordStore(),
-        DjangoGovernancePolicyStore(),
-        DjangoRetentionPurger(),
-    )
-    workerId = f"{queueSettings.workerId}-{uuid.uuid4().hex[:8]}"
-    return QueueApplicationService(
-        DjangoJobStore(),
-        auditService=auditService,
-        queueSettings=queueSettings,
-        workerId=workerId,
-    )
+    return container.queueService(withHandlers=True)
 
 
 def tick(

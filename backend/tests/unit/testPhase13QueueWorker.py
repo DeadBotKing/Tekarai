@@ -56,7 +56,7 @@ class FixedClock:
 
 
 class QueueVocabularyTests(unittest.TestCase):
-    def testJobKindsAreClosedToEight(self) -> None:
+    def testJobKindsAreClosedAndVersioned(self) -> None:
         self.assertEqual(
             JOB_KINDS,
             (
@@ -72,6 +72,8 @@ class QueueVocabularyTests(unittest.TestCase):
                 "FEEDBACK",
                 # Phase 13-W amendment: scheduled metric collection.
                 "MONITORING",
+                # Phase 13-Z amendment: governed asynchronous agent runs.
+                "AGENT_RUN",
                 "GENERIC",
                 "EVENT_DISPATCH",
             ),

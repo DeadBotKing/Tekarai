@@ -21,11 +21,13 @@ Implementation is split into 26 tracked sub-phases (A–Z). Start with
 `docs/Phases/Phase13/Phase13-Q.md`, `docs/Phases/Phase13/Phase13-R.md`,
 `docs/Phases/Phase13/Phase13-S.md`, `docs/Phases/Phase13/Phase13-T.md`,
 `docs/Phases/Phase13/Phase13-U.md`, `docs/Phases/Phase13/Phase13-V.md`,
-`docs/Phases/Phase13/Phase13-W.md` and `docs/Phases/Phase13/Phase13-X.md`.
+`docs/Phases/Phase13/Phase13-W.md`, `docs/Phases/Phase13/Phase13-X.md`,
+`docs/Phases/Phase13/Phase13-Y.md` and `docs/Phases/Phase13/Phase13-Z.md`.
 
-Sub-phases A through Y are complete; sub-phase Z (API/Migration/Release) is the
-next implementation gate. The completion of A–Y does not mean that the
-complete Phase 13 is finished.
+Sub-phases A through Z are complete. The public REST boundary, asynchronous
+`AGENT_RUN` worker bridge, approval queue, migration/readiness gate and release
+runbooks were completed by Z on 2026-09-06. See
+`docs/Phases/Phase13/Phase13-Z-ExecutionReport.md` for reproducible evidence.
 
 
 
@@ -2729,47 +2731,47 @@ Phase 13 زمانی Done است که:
 
 
 
-\[ ] AI Domain طراحی شده باشد.
+\[x] AI Domain طراحی شده باشد.
 
 
 
-\[ ] Provider abstraction کامل باشد.
+\[x] Provider abstraction کامل باشد.
 
 
 
-\[ ] حداقل یک Test Provider وجود داشته باشد.
+\[x] حداقل یک Test Provider وجود داشته باشد.
 
 
 
-\[ ] Model Registry وجود داشته باشد.
+\[x] Model Registry وجود داشته باشد.
 
 
 
-\[ ] Capability Registry وجود داشته باشد.
+\[x] Capability Registry وجود داشته باشد.
 
 
 
-\[ ] AI Request/Response وجود داشته باشد.
+\[x] AI Request/Response وجود داشته باشد.
 
 
 
-\[ ] Prompt Versioning وجود داشته باشد.
+\[x] Prompt Versioning وجود داشته باشد.
 
 
 
-\[ ] Context Engine وجود داشته باشد.
+\[x] Context Engine وجود داشته باشد.
 
 
 
-\[ ] Permission Filtering وجود داشته باشد.
+\[x] Permission Filtering وجود داشته باشد.
 
 
 
-\[ ] AI Service وجود داشته باشد.
+\[x] AI Service وجود داشته باشد.
 
 
 
-\[ ] Provider Adapter قابل تعویض باشد.
+\[x] Provider Adapter قابل تعویض باشد.
 
 
 
@@ -2785,11 +2787,11 @@ Phase 13 زمانی Done است که:
 
 
 
-\[ ] Tenant Isolation تست شده باشد.
+\[x] Tenant Isolation تست شده باشد.
 
 
 
-\[ ] Security Policy تست شده باشد.
+\[x] Security Policy تست شده باشد.
 
 
 
@@ -2821,47 +2823,47 @@ Phase 13 زمانی Done است که:
 
 
 
-\[ ] Agent Foundation آماده باشد.
+\[x] Agent Foundation آماده باشد.
 
 
 
-\[ ] Unit Tests وجود داشته باشند.
+\[x] Unit Tests وجود داشته باشند.
 
 
 
-\[ ] Integration Tests وجود داشته باشند.
+\[x] Integration Tests وجود داشته باشند.
 
 
 
-\[ ] Documentation کامل باشد.
+\[x] Documentation کامل باشد.
 
 
 
-\[ ] هیچ Provider خاصی به Core وابسته نباشد.
+\[x] هیچ Provider خاصی به Core وابسته نباشد.
 
 
 
-\[ ] هیچ Domainی مستقیماً Provider را صدا نزند.
+\[x] هیچ Domainی مستقیماً Provider را صدا نزند.
 
 
 
-\[ ] هیچ Secretی در Source Code قرار نگرفته باشد.
+\[x] هیچ Secretی در Source Code قرار نگرفته باشد.
 
 
 
-\[ ] تمام عملیات حساس Audit شوند.
+\[x] تمام عملیات حساس Audit شوند.
 
 
 
-\[ ] تمام Queryهای Tenant-aware دارای Isolation باشند.
+\[x] تمام Queryهای Tenant-aware دارای Isolation باشند.
 
 
 
-\[ ] django check بدون Error باشد.
+\[x] django check بدون Error باشد.
 
 
 
-\[ ] Migrationها بدون Error اجرا شوند.
+\[x] Migrationها بدون Error اجرا شوند.
 
 
 

@@ -431,7 +431,11 @@ class AgentApplicationService:
         return self._now() if self._now is not None else _utcNow()
 
     def _currentClock(self) -> Any:
-        return self._clock if self._clock is not None else _utcNow
+        # A fixed ``now`` is also the natural monotonic wall-clock for a
+        # deterministic execution unless a separate advancing clock was
+        # explicitly injected. Falling back to real UTC here made tests and
+        # replay jobs expire merely because they ran later in the day.
+        return self._clock or self._now or _utcNow
 
     def _plannerFor(self) -> AgentPlanner:
         if self._planner is not None:

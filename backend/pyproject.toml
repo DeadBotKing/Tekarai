@@ -1,7 +1,7 @@
 [project]
 name = "tekarai-backend"
-version = "0.1.0"
-description = "Tekarai Enterprise Operations Platform — backend (Phase 01 foundation)"
+version = "0.13.0"
+description = "Tekarai Enterprise Operations Platform — backend (Phase 13 AI Platform release)"
 requires-python = ">=3.12"
 
 # ============================================================================

@@ -26,10 +26,9 @@ urlpatterns = [
                 ),
                 path(
                     "notifications/",
-                    include(
-                        "apps.notifications.presentation.api.urls.notificationRoutes"
-                    ),
+                    include("apps.notifications.presentation.api.urls.notificationRoutes"),
                 ),
+                path("ai/", include("apps.ai.presentation.api.urls")),
             ]
         ),
     ),

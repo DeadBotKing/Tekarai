@@ -3,8 +3,9 @@
 This module defines the closed vocabularies and small pure helpers used
 by async execution:
 
-- ``JOB_KINDS`` — the eleven enqueuable work kinds. Ten are domain work
-  (owned by future phases, executed through caller-registered handlers);
+- ``JOB_KINDS`` — the twelve enqueuable work kinds. ``AGENT_RUN`` is the
+  Phase 13-Z public async bridge; the remaining domain kinds are executed
+  through caller-registered handlers;
   ``EVENT_DISPATCH`` is the internal event-transport kind executed by the
   worker itself (§P.6). ``EVALUATION`` was appended by the documented
   Phase 13-U amendment and ``FEEDBACK`` by the Phase 13-V one and
@@ -29,6 +30,7 @@ JOB_KINDS = (
     "EVALUATION",
     "FEEDBACK",
     "MONITORING",
+    "AGENT_RUN",
     "GENERIC",
     "EVENT_DISPATCH",
 )

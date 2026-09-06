@@ -43,6 +43,12 @@ ACTIONS: list[tuple[str, str]] = [
     ("notification.send", "Send and schedule notifications"),
     ("notification.manage", "Manage templates, policies, channels and tenant rules"),
     ("audit.view", "Read the audit trail"),
+    # -- Phase 13-Z AI Platform public boundary ------------------------------
+    ("ai.agent.read", "Read AI agent definitions, runs, approvals and jobs"),
+    ("ai.agent.manage", "Register and manage versioned AI agent definitions"),
+    ("ai.agent.run", "Run approved AI agents synchronously or asynchronously"),
+    ("ai.agent.approve", "Approve agent definitions and governed executions"),
+    ("ai.tool.invoke", "Invoke an approved AI tool through the governed chain"),
 ]
 
 PLATFORM_ADMIN_ROLE = "platformAdmin"
@@ -74,6 +80,11 @@ ROLE_PRESETS: dict[str, list[str]] = {
         "tenant.view",
         "notification.send",
         "notification.manage",
+        "ai.agent.read",
+        "ai.agent.manage",
+        "ai.agent.run",
+        "ai.agent.approve",
+        "ai.tool.invoke",
     ],
-    MEMBER_ROLE: ["user.view", "tenant.view"],
+    MEMBER_ROLE: ["user.view", "tenant.view", "ai.agent.read", "ai.agent.run"],
 }

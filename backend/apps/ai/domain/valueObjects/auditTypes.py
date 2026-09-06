@@ -3,7 +3,7 @@
 This module defines the closed vocabularies used by the audit ledger and
 the governance engine:
 
-- ``AUDIT_ACTIONS`` — the 38 auditable actions. The first nine mirror the
+- ``AUDIT_ACTIONS`` — the 40 auditable actions. The first nine mirror the
   §36 platform events (``AIRequestCreated`` … ``AIFeedbackReceived``); the
   next six are owned by sub-phase O (governance decisions, policy
   administration, quota denials, retention purges); the last four are the
@@ -18,7 +18,10 @@ the governance engine:
   ``RETRIEVAL_DENIED``, ``RAG_ANSWERED``). Sub-phase T appends the four
   memory lifecycle actions (``MEMORY_WRITTEN`` … ``MEMORY_EVICTED``), and
   sub-phase U the four evaluation actions (``EVALUATION_STARTED`` …
-  ``EVALUATION_REGRESSED``).
+  ``EVALUATION_REGRESSED``). Sub-phase V adds only ``FEEDBACK_TRIAGED``
+  and ``FEEDBACK_PROMOTED``: submission already had ``FEEDBACK_RECEIVED``
+  from the §36 event list, and inventing a second name for it would
+  split one concept across two actions.
 - ``ACTOR_TYPES`` — who performed the audited operation;
 - ``AUDIT_OUTCOMES`` — the recorded result of the audited operation;
 - ``SECRET_KEY_PATTERNS`` — case-insensitive key fragments whose values
@@ -70,6 +73,8 @@ AUDIT_ACTIONS = (
     "EVALUATION_COMPLETED",
     "EVALUATION_FAILED",
     "EVALUATION_REGRESSED",
+    "FEEDBACK_TRIAGED",
+    "FEEDBACK_PROMOTED",
 )
 ACTOR_TYPES = (
     "USER",

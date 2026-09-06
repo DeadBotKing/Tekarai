@@ -434,3 +434,44 @@ class AIEvaluationResultModel(BaseAiModel):
         db_table = "aiEvaluationResults"
         unique_together = [("run", "caseCode")]
         indexes = [models.Index(fields=["tenantId", "caseCode", "createdAt"])]
+
+
+# Phase 13-V feedback table (clean style). The legacy `aiFeedback` table
+# from the Phase 13-B skeleton stays untouched: it has no triage lifecycle,
+# no reason vocabulary, no provenance (model + prompt version, §33) and no
+# promotion link, and rewriting it in place would break the B-era rows.
+# The fingerprint column is unique per tenant so one human leaves one
+# signal of one kind per response (contract §V.5).
+class AIFeedbackEntryModel(BaseAiModel):
+    """One human signal about one AI answer (§V.4)."""
+
+    requestId = models.UUIDField(db_index=True)
+    responseId = models.UUIDField(null=True)
+    userId = models.UUIDField(null=True)
+    kind = models.CharField(max_length=20, default="RATING")
+    rating = models.PositiveSmallIntegerField(null=True)
+    sentiment = models.CharField(max_length=20, default="NEUTRAL")
+    reason = models.CharField(max_length=30, blank=True)
+    comment = models.TextField(blank=True)
+    correction = models.TextField(blank=True)
+    question = models.TextField(blank=True)
+    modelCode = models.CharField(max_length=160, blank=True)
+    promptVersion = models.CharField(max_length=80, blank=True)
+    capabilityCode = models.CharField(max_length=100, blank=True)
+    suiteCode = models.CharField(max_length=80, blank=True)
+    status = models.CharField(max_length=20, default="NEW")
+    promotedCaseCode = models.CharField(max_length=80, blank=True)
+    rejectionReason = models.CharField(max_length=500, blank=True)
+    triagedBy = models.UUIDField(null=True)
+    triagedAt = models.DateTimeField(null=True)
+    fingerprint = models.CharField(max_length=64)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = "aiFeedbackEntries"
+        unique_together = [("tenantId", "fingerprint")]
+        indexes = [
+            models.Index(fields=["tenantId", "status", "createdAt"]),
+            models.Index(fields=["tenantId", "sentiment", "createdAt"]),
+            models.Index(fields=["tenantId", "modelCode"]),
+        ]

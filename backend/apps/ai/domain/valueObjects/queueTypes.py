@@ -3,11 +3,11 @@
 This module defines the closed vocabularies and small pure helpers used
 by async execution:
 
-- ``JOB_KINDS`` — the nine enqueuable work kinds. Eight are domain work
+- ``JOB_KINDS`` — the ten enqueuable work kinds. Nine are domain work
   (owned by future phases, executed through caller-registered handlers);
   ``EVENT_DISPATCH`` is the internal event-transport kind executed by the
   worker itself (§P.6). ``EVALUATION`` was appended by the documented
-  Phase 13-U amendment;
+  Phase 13-U amendment and ``FEEDBACK`` by the Phase 13-V one;
 - ``JOB_STATUSES`` — the six lifecycle states (three terminal);
 - ``computeBackoff`` — deterministic exponential retry delays.
 
@@ -26,6 +26,7 @@ JOB_KINDS = (
     "INDEXING",
     "PREDICTION",
     "EVALUATION",
+    "FEEDBACK",
     "GENERIC",
     "EVENT_DISPATCH",
 )

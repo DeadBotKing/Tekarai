@@ -64,7 +64,7 @@ def makeRequest(tenantId: uuid.UUID, **overrides: object) -> GovernanceRequest:
 
 class AuditVocabularyTests(unittest.TestCase):
     def testAuditActionsCoverSection36PlusGovernanceNeeds(self) -> None:
-        self.assertEqual(len(AUDIT_ACTIONS), 38)
+        self.assertEqual(len(AUDIT_ACTIONS), 40)
         for action in (
             "REQUEST_CREATED",
             "REQUEST_STARTED",
@@ -109,6 +109,9 @@ class AuditVocabularyTests(unittest.TestCase):
             "EVALUATION_COMPLETED",
             "EVALUATION_FAILED",
             "EVALUATION_REGRESSED",
+            # Phase 13-V amendment: feedback triage and promotion.
+            "FEEDBACK_TRIAGED",
+            "FEEDBACK_PROMOTED",
         ):
             self.assertIn(action, AUDIT_ACTIONS)
 

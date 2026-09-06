@@ -68,6 +68,8 @@ class QueueVocabularyTests(unittest.TestCase):
                 "PREDICTION",
                 # Phase 13-U amendment: batch evaluation runs.
                 "EVALUATION",
+                # Phase 13-V amendment: feedback promotion sweeps.
+                "FEEDBACK",
                 "GENERIC",
                 "EVENT_DISPATCH",
             ),

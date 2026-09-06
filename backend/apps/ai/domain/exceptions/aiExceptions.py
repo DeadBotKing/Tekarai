@@ -852,3 +852,32 @@ class AIEvaluationFailed(AIError):
 
     code = "AI_EVALUATION_FAILED"
     httpStatus = 500
+
+
+# ---------------------------------------------------------------------------
+# Phase 13-V — feedback
+# ---------------------------------------------------------------------------
+class AIFeedbackInvalid(AIError):
+    code = "AI_FEEDBACK_INVALID"
+    httpStatus = 422
+
+
+class AIFeedbackNotFound(AIError):
+    code = "AI_FEEDBACK_NOT_FOUND"
+    httpStatus = 404
+
+    def __init__(self, feedbackId: str = "") -> None:
+        super().__init__("AI feedback was not found.")
+        self.feedbackId = feedbackId
+
+
+class AIFeedbackPolicyInvalid(AIError):
+    code = "AI_FEEDBACK_POLICY_INVALID"
+    httpStatus = 422
+
+
+class AIFeedbackNotPromotable(AIError):
+    """The signal does not meet the bar for becoming a golden case."""
+
+    code = "AI_FEEDBACK_NOT_PROMOTABLE"
+    httpStatus = 409

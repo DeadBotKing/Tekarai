@@ -463,6 +463,30 @@ AI_EVALUATION_RETENTION_DAYS = int(env("aiEvaluationRetentionDays", default="365
 AI_EVALUATION_FORBIDDEN_TERMS = str(env("aiEvaluationForbiddenTerms", default="") or "")
 
 # ---------------------------------------------------------------------------
+# AI FEEDBACK (Phase 13-V)
+# ---------------------------------------------------------------------------
+# Configuration-driven feedback policy (Master Specification §42): when a
+# complaint becomes a Phase 13-U golden case, what counts as a negative
+# rating, the satisfaction bar, and the trend window. Promotion is manual
+# by default: turning a complaint into a permanent quality gate is a
+# decision, and aiFeedbackAutoPromote must be set deliberately.
+AI_FEEDBACK_ENABLED = env.bool("aiFeedbackEnabled", default=True)
+AI_FEEDBACK_PROMOTION_THRESHOLD = int(env("aiFeedbackPromotionThreshold", default="2") or 2)
+AI_FEEDBACK_REQUIRE_CORRECTION = env.bool("aiFeedbackRequireCorrection", default=True)
+AI_FEEDBACK_REQUIRE_REASON = env.bool("aiFeedbackRequireReason", default=True)
+AI_FEEDBACK_NEGATIVE_RATING_CEILING = int(
+    env("aiFeedbackNegativeRatingCeiling", default="2") or 2
+)
+AI_FEEDBACK_MIN_SATISFACTION = float(env("aiFeedbackMinSatisfaction", default="0.6") or 0.6)
+AI_FEEDBACK_TREND_TOLERANCE = float(env("aiFeedbackTrendTolerance", default="0.05") or 0.05)
+AI_FEEDBACK_TREND_WINDOW_DAYS = int(env("aiFeedbackTrendWindowDays", default="7") or 7)
+AI_FEEDBACK_AUTO_PROMOTE = env.bool("aiFeedbackAutoPromote", default=False)
+AI_FEEDBACK_GOLDEN_SUITE = str(
+    env("aiFeedbackGoldenSuite", default="FEEDBACK_GOLDEN") or "FEEDBACK_GOLDEN"
+).upper()
+AI_FEEDBACK_RETENTION_DAYS = int(env("aiFeedbackRetentionDays", default="730") or 730)
+
+# ---------------------------------------------------------------------------
 # GUARDS
 # ---------------------------------------------------------------------------
 if environment not in {"development", "testing", "production"}:

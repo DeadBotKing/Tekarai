@@ -1,5 +1,5 @@
-"""Phase 13-N/O/P/Q/R/T/U Django persistence for metering, audit, queue,
-embedding, knowledge, memory, and evaluation ports."""
+"""Phase 13-N/O/P/Q/R/T/U/V Django persistence for metering, audit, queue,
+embedding, knowledge, memory, evaluation, and feedback ports."""
 
 from apps.ai.infrastructure.repositories.auditRepositories import (  # noqa: F401
     DjangoAuditRecordStore,
@@ -20,6 +20,10 @@ from apps.ai.infrastructure.repositories.evaluationRepositories import (  # noqa
     caseToEntity,
     resultToEntity,
     runToEntity,
+)
+from apps.ai.infrastructure.repositories.feedbackRepositories import (  # noqa: F401
+    DjangoFeedbackStore,
+    feedbackToEntity,
 )
 from apps.ai.infrastructure.repositories.knowledgeRepositories import (  # noqa: F401
     DjangoKnowledgeChunkStore,
@@ -51,6 +55,7 @@ __all__ = [
     "DjangoEmbeddingStore",
     "DjangoEvaluationCaseStore",
     "DjangoEvaluationRunStore",
+    "DjangoFeedbackStore",
     "DjangoGovernancePolicyStore",
     "DjangoJobStore",
     "DjangoKnowledgeChunkStore",
@@ -67,6 +72,7 @@ __all__ = [
     "chunkToEntity",
     "counterToEntity",
     "embeddingToEntity",
+    "feedbackToEntity",
     "governancePolicyToEntity",
     "jobToEntity",
     "memoryToEntity",

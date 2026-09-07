@@ -1,0 +1,14 @@
+import { useState, type FormEvent, type ReactNode } from "react";
+import { useLocalization } from "../../core/localization/localizationContext";
+import { validateForm, type FormErrors, type FormFieldSchema, type FormValues } from "../types/formSchema";
+import { Button, SelectInput, TextArea, TextInput } from "./primitives";
+
+export function SchemaForm({ schema, initialValues = {}, onSubmit, submitLabel, footer }: { schema: FormFieldSchema[]; initialValues?: FormValues; onSubmit: (values: FormValues) => void | Promise<void>; submitLabel: string; footer?: ReactNode }): JSX.Element {
+  const { t } = useLocalization();
+  const [values, setValues] = useState<FormValues>(initialValues);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [submitting, setSubmitting] = useState(false);
+  const update = (name: string, value: string | number | boolean): void => { setValues((current) => ({ ...current, [name]: value })); setErrors((current) => { const next = { ...current }; delete next[name]; return next; }); };
+  const submit = async (event: FormEvent<HTMLFormElement>): Promise<void> => { event.preventDefault(); const nextErrors = validateForm(schema, values); if (Object.keys(nextErrors).length > 0) { setErrors(nextErrors); return; } setSubmitting(true); try { await onSubmit(values); } finally { setSubmitting(false); } };
+  return <form className="schema-form" onSubmit={submit} noValidate><div className="schema-form__fields">{schema.map((field) => { const value = values[field.name] ?? (field.type === "checkbox" ? false : ""); if (field.type === "textarea") return <TextArea key={field.name} name={field.name} label={field.label} placeholder={field.placeholder} hint={field.hint} error={errors[field.name]} value={String(value)} required={field.required} onChange={(event) => update(field.name, event.target.value)} />; if (field.type === "select") return <SelectInput key={field.name} name={field.name} label={field.label} options={field.options ?? []} value={String(value)} required={field.required} error={errors[field.name]} onChange={(event) => update(field.name, event.target.value)} />; if (field.type === "checkbox") return <label className="checkbox-label schema-form__checkbox" key={field.name}><input type="checkbox" name={field.name} checked={Boolean(value)} onChange={(event) => update(field.name, event.target.checked)} />{field.label}</label>; return <TextInput key={field.name} name={field.name} label={field.label} type={field.type} placeholder={field.placeholder} hint={field.hint} error={errors[field.name]} value={String(value)} min={field.min} max={field.max} required={field.required} onChange={(event) => update(field.name, field.type === "number" ? Number(event.target.value) : event.target.value)} />; })}</div><footer className="schema-form__footer">{footer}<Button type="submit" variant="primary" loading={submitting}>{submitLabel || t("common.save")}</Button></footer></form>;
+}

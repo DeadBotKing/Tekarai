@@ -65,7 +65,7 @@ Decisions: `docs/adr/` (ADR-001 … ADR-011).
 ```
 tekarai/
 ├── backend/            Django backend — Phase 01 foundation delivered
-├── frontend-web/       placeholder (GUI phase)
+├── frontend-web/       React/TypeScript GUI platform — Phase 18 delivered
 ├── mobile/             placeholder
 ├── desktop/            placeholder
 ├── agents/             placeholder

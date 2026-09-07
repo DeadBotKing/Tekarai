@@ -153,23 +153,17 @@ class ScreenShareTests(SimpleTestCase):
         self.user = uuid.uuid4()
 
     def testBeginAndEnd(self) -> None:
-        share = r.ScreenShareSession.begin(
-            self.tenant, self.meeting, self.user, "SCREEN", _now()
-        )
+        share = r.ScreenShareSession.begin(self.tenant, self.meeting, self.user, "SCREEN", _now())
         self.assertEqual(share.status, t.SCREEN_SHARE_ACTIVE)
         share.end(_now())
         self.assertEqual(share.status, t.SCREEN_SHARE_ENDED)
 
     def testUnknownKindRejected(self) -> None:
         with self.assertRaises(ValidationFailedError):
-            r.ScreenShareSession.begin(
-                self.tenant, self.meeting, self.user, "HOLOGRAM", _now()
-            )
+            r.ScreenShareSession.begin(self.tenant, self.meeting, self.user, "HOLOGRAM", _now())
 
     def testEndAlreadyEndedRejected(self) -> None:
-        share = r.ScreenShareSession.begin(
-            self.tenant, self.meeting, self.user, "WINDOW", _now()
-        )
+        share = r.ScreenShareSession.begin(self.tenant, self.meeting, self.user, "WINDOW", _now())
         share.end(_now())
         with self.assertRaises(ConflictError):
             share.end(_now())
@@ -182,7 +176,9 @@ class MeetingSummaryTests(SimpleTestCase):
 
     def _summary(self) -> r.MeetingSummary:
         return r.MeetingSummary.generate(
-            self.tenant, self.meeting, _now(),
+            self.tenant,
+            self.meeting,
+            _now(),
             summary="discussed budget",
             keyPoints=["budget approved"],
             decisions=["hire two"],
@@ -214,7 +210,9 @@ class MeetingSummaryTests(SimpleTestCase):
     def testConfidenceOutOfRangeRejected(self) -> None:
         with self.assertRaises(ValidationFailedError):
             r.MeetingSummary(
-                id=uuid.uuid4(), tenantId=self.tenant, meetingId=self.meeting,
+                id=uuid.uuid4(),
+                tenantId=self.tenant,
+                meetingId=self.meeting,
                 confidence=1.5,
             )
 
@@ -235,16 +233,12 @@ class ActionItemCandidateTests(SimpleTestCase):
         self.assertEqual(item.dispatchedItemRef, "task-abc-123")
 
     def testCannotDispatchUnapproved(self) -> None:
-        item = r.ActionItemCandidate.propose(
-            self.tenant, self.meeting, "do work", _now()
-        )
+        item = r.ActionItemCandidate.propose(self.tenant, self.meeting, "do work", _now())
         with self.assertRaises(ConflictError):
             item.markDispatched("task-1")
 
     def testRejectEndsWorkflow(self) -> None:
-        item = r.ActionItemCandidate.propose(
-            self.tenant, self.meeting, "maybe", _now()
-        )
+        item = r.ActionItemCandidate.propose(self.tenant, self.meeting, "maybe", _now())
         item.reject(uuid.uuid4(), _now(), "duplicate")
         self.assertEqual(item.state, t.ACTION_REJECTED)
         with self.assertRaises(ConflictError):
@@ -262,7 +256,12 @@ class OfficialMessageTests(SimpleTestCase):
 
     def _msg(self) -> r.OfficialMessage:
         return r.OfficialMessage.draft(
-            self.tenant, self.author, "ANNOUNCEMENT", "New policy", "body", _now(),
+            self.tenant,
+            self.author,
+            "ANNOUNCEMENT",
+            "New policy",
+            "body",
+            _now(),
             recipientIds=(uuid.uuid4(),),
         )
 
@@ -293,15 +292,11 @@ class OfficialMessageTests(SimpleTestCase):
 
     def testUnknownKindRejected(self) -> None:
         with self.assertRaises(ValidationFailedError):
-            r.OfficialMessage.draft(
-                self.tenant, self.author, "SPAM", "s", "b", _now()
-            )
+            r.OfficialMessage.draft(self.tenant, self.author, "SPAM", "s", "b", _now())
 
     def testEmptySubjectRejected(self) -> None:
         with self.assertRaises(ValidationFailedError):
-            r.OfficialMessage.draft(
-                self.tenant, self.author, "NOTICE", "  ", "b", _now()
-            )
+            r.OfficialMessage.draft(self.tenant, self.author, "NOTICE", "  ", "b", _now())
 
 
 class MessageReportTests(SimpleTestCase):
@@ -311,9 +306,7 @@ class MessageReportTests(SimpleTestCase):
         self.reporter = uuid.uuid4()
 
     def _report(self) -> r.MessageReport:
-        return r.MessageReport.open(
-            self.tenant, self.message, self.reporter, "SPAM", _now()
-        )
+        return r.MessageReport.open(self.tenant, self.message, self.reporter, "SPAM", _now())
 
     def testOpenStartsOpen(self) -> None:
         rep = self._report()
@@ -333,9 +326,7 @@ class MessageReportTests(SimpleTestCase):
 
     def testUnknownReasonRejected(self) -> None:
         with self.assertRaises(ValidationFailedError):
-            r.MessageReport.open(
-                self.tenant, self.message, self.reporter, "BOGUS", _now()
-            )
+            r.MessageReport.open(self.tenant, self.message, self.reporter, "BOGUS", _now())
 
 
 class LegalHoldTests(SimpleTestCase):

@@ -41,9 +41,7 @@ class Phase10ApiBase(TestCase):
             UserModel.objects.get(username=PLATFORM_ADMIN_USERNAME),
         )
         self.token = self.login(PLATFORM_ADMIN_USERNAME)
-        self.adminId = str(
-            UserModel.objects.get(username=PLATFORM_ADMIN_USERNAME).id
-        )
+        self.adminId = str(UserModel.objects.get(username=PLATFORM_ADMIN_USERNAME).id)
 
     def login(self, username: str, password: str = PLATFORM_ADMIN_PASSWORD) -> str:
         response = self.client.post(
@@ -93,9 +91,7 @@ class BlockApiTests(Phase10ApiBase):
         self.assertEqual(listing.status_code, 200)
         self.assertEqual(len(listing.json()["data"]), 1)
 
-        unblocked = self.client.delete(
-            f"{V1}/blocks/{member.id}", **self.auth()
-        )
+        unblocked = self.client.delete(f"{V1}/blocks/{member.id}", **self.auth())
         self.assertEqual(unblocked.status_code, 200, unblocked.content)
         self.assertEqual(unblocked.json()["data"]["status"], "REMOVED")
 
@@ -174,9 +170,7 @@ class TranscriptApiTests(Phase10ApiBase):
         self.assertEqual(data["status"], "READY")
         self.assertEqual(data["segmentCount"], 1)
 
-        fetched = self.client.get(
-            f"{V1}/meetings/{meetingId}/transcript", **self.auth()
-        )
+        fetched = self.client.get(f"{V1}/meetings/{meetingId}/transcript", **self.auth())
         self.assertEqual(fetched.status_code, 200)
         self.assertEqual(fetched.json()["data"]["status"], "READY")
 
@@ -261,9 +255,7 @@ class PresencePrivacyApiTests(Phase10ApiBase):
             **self.auth(),
         )
         self.assertEqual(setResp.status_code, 200, setResp.content)
-        got = self.client.get(
-            f"{V1}/presence?userIds={userId}", **self.auth()
-        )
+        got = self.client.get(f"{V1}/presence?userIds={userId}", **self.auth())
         self.assertEqual(got.status_code, 200)
         # §17 — an INVISIBLE user is presented to other viewers as OFFLINE
         self.assertEqual(got.json()["data"]["presence"][userId], "OFFLINE")
@@ -326,9 +318,7 @@ class MessageRevisionApiTests(Phase10ApiBase):
         )
         self.assertEqual(edited.status_code, 200, edited.content)
 
-        revisions = self.client.get(
-            f"{V1}/messages/{messageId}/revisions", **self.auth()
-        )
+        revisions = self.client.get(f"{V1}/messages/{messageId}/revisions", **self.auth())
         self.assertEqual(revisions.status_code, 200, revisions.content)
         items = revisions.json()["data"]
         self.assertEqual(len(items), 1)

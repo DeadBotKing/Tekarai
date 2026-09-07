@@ -226,9 +226,7 @@ class MessageReadStateModel(models.Model):
             models.Index(fields=["messageId", "userId"], name="IX_Read_m_u"),
         ]
         constraints = [
-            models.UniqueConstraint(
-                fields=["messageId", "userId"], name="UQ_ReadState_m_u"
-            ),
+            models.UniqueConstraint(fields=["messageId", "userId"], name="UQ_ReadState_m_u"),
         ]
 
 
@@ -285,9 +283,7 @@ class MeetingParticipantModel(models.Model):
     class Meta:
         db_table = "communicationMeetingParticipants"
         constraints = [
-            models.UniqueConstraint(
-                fields=["meetingId", "userId"], name="UQ_MeetingParticipant"
-            ),
+            models.UniqueConstraint(fields=["meetingId", "userId"], name="UQ_MeetingParticipant"),
         ]
 
 
@@ -374,9 +370,7 @@ class PinnedMessageModel(models.Model):
     class Meta:
         db_table = "communicationPins"
         constraints = [
-            models.UniqueConstraint(
-                fields=["conversationId", "messageId"], name="UQ_Pin_unique"
-            ),
+            models.UniqueConstraint(fields=["conversationId", "messageId"], name="UQ_Pin_unique"),
         ]
 
 
@@ -503,9 +497,7 @@ class TranscriptSegmentModel(models.Model):
     class Meta:
         db_table = "communicationTranscriptSegments"
         indexes = [
-            models.Index(
-                fields=["transcriptId", "sequence"], name="IX_Seg_tran_seq"
-            ),
+            models.Index(fields=["transcriptId", "sequence"], name="IX_Seg_tran_seq"),
         ]
         constraints = [
             models.UniqueConstraint(
@@ -622,9 +614,7 @@ class MessageDeliveryModel(models.Model):
             models.Index(fields=["messageId", "recipientId"], name="IX_Deliv_mr"),
         ]
         constraints = [
-            models.UniqueConstraint(
-                fields=["messageId", "recipientId"], name="UQ_Deliv_pair"
-            ),
+            models.UniqueConstraint(fields=["messageId", "recipientId"], name="UQ_Deliv_pair"),
         ]
 
 
@@ -665,9 +655,7 @@ class MeetingSessionModel(models.Model):
             models.Index(fields=["meetingId", "sequence"], name="IX_Sess_m_seq"),
         ]
         constraints = [
-            models.UniqueConstraint(
-                fields=["meetingId", "sequence"], name="UQ_Sess_meeting_seq"
-            ),
+            models.UniqueConstraint(fields=["meetingId", "sequence"], name="UQ_Sess_meeting_seq"),
         ]
 
 
@@ -858,6 +846,4 @@ class CommunicationRetentionRunModel(models.Model):
 
     class Meta:
         db_table = "communicationRetentionRuns"
-        indexes = [
-            models.Index(fields=["tenantId", "createdAt"], name="IX_CommRet_t_created")
-        ]
+        indexes = [models.Index(fields=["tenantId", "createdAt"], name="IX_CommRet_t_created")]

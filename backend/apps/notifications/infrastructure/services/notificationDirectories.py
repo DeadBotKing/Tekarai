@@ -29,16 +29,10 @@ class IdentityRecipientDirectory(RecipientDirectory):
     arrives with future phases.
     """
 
-    def resolveUserIds(
-        self, tenantId: uuid.UUID, recipientSpec: dict[str, Any]
-    ) -> list[uuid.UUID]:
+    def resolveUserIds(self, tenantId: uuid.UUID, recipientSpec: dict[str, Any]) -> list[uuid.UUID]:
         recipientType = str(recipientSpec.get("type", "") or "").upper()
         raw = recipientSpec.get("value")
-        values = (
-            [str(item) for item in raw]
-            if isinstance(raw, (list, tuple))
-            else [str(raw or "")]
-        )
+        values = [str(item) for item in raw] if isinstance(raw, (list, tuple)) else [str(raw or "")]
 
         if recipientType == "USER":
             return [self._asUuid(value) for value in values if self._asUuid(value)]
@@ -95,9 +89,7 @@ class IdentityRecipientDirectory(RecipientDirectory):
             return []
         return list(getattr(participantDirectory, functionName)(ids))
 
-    def _viaCommunicationChannel(
-        self, tenantId: uuid.UUID, values: list[str]
-    ) -> list[uuid.UUID]:
+    def _viaCommunicationChannel(self, tenantId: uuid.UUID, values: list[str]) -> list[uuid.UUID]:
         from apps.communication.application.services import participantDirectory
 
         ids = [self._asUuid(value) for value in values]

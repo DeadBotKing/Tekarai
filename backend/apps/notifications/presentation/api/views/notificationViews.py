@@ -107,8 +107,7 @@ class NotificationListView(APIView):
         query = ListNotificationsQuery(
             tenantId=_actorTenantId(request),
             recipientId=_actorUserId(request),
-            unreadOnly=str(request.query_params.get("unread", "")).lower()
-            in ("1", "true", "yes"),
+            unreadOnly=str(request.query_params.get("unread", "")).lower() in ("1", "true", "yes"),
             category=str(request.query_params.get("category", "") or ""),
             priority=str(request.query_params.get("priority", "") or ""),
             beforeId=(
@@ -224,9 +223,7 @@ class NotificationUnreadCountView(APIView):
 
     def get(self, request: Request) -> Response:
         result = container.unreadCountUseCase().execute(
-            UnreadCountQuery(
-                tenantId=_actorTenantId(request), recipientId=_actorUserId(request)
-            )
+            UnreadCountQuery(tenantId=_actorTenantId(request), recipientId=_actorUserId(request))
         )
         return Response(successEnvelope(result))
 
@@ -256,9 +253,7 @@ class PreferenceListView(APIView):
 
     def get(self, request: Request) -> Response:
         result = container.getPreferencesService().execute(
-            GetPreferencesQuery(
-                tenantId=_actorTenantId(request), userId=_actorUserId(request)
-            )
+            GetPreferencesQuery(tenantId=_actorTenantId(request), userId=_actorUserId(request))
         )
         return Response(
             successEnvelope(
@@ -332,9 +327,7 @@ class DeviceDetailView(APIView):
 
     def delete(self, request: Request, deviceId: str) -> Response:
         result = container.revokeDeviceService().execute(
-            RevokeDeviceCommand(
-                deviceId=uuid.UUID(deviceId), userId=_actorUserId(request)
-            )
+            RevokeDeviceCommand(deviceId=uuid.UUID(deviceId), userId=_actorUserId(request))
         )
         return Response(successEnvelope(result))
 
@@ -409,9 +402,7 @@ class AdminScheduleListView(APIView):
             notificationSerializers,
         )
 
-        serializer = notificationSerializers.ScheduleNotificationSerializer(
-            data=request.data
-        )
+        serializer = notificationSerializers.ScheduleNotificationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         recipientValue = data.get("recipientValue") or []
@@ -629,14 +620,10 @@ class NotificationMetricsView(APIView):
         totals = roots.notificationRepository().readAndAckCounts(
             _actorTenantId(request), _actorUserId(request)
         )
-        channelUsage = roots.deliveryRepository().channelUsageCounts(
-            _actorTenantId(request)
-        )
+        channelUsage = roots.deliveryRepository().channelUsageCounts(_actorTenantId(request))
         return Response(
             successEnvelope(
-                notificationMetrics().snapshot(
-                    totals=totals, channelUsage=channelUsage
-                )
+                notificationMetrics().snapshot(totals=totals, channelUsage=channelUsage)
             )
         )
 

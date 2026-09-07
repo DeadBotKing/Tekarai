@@ -214,9 +214,7 @@ class MessageRevisionUseCaseTests(Phase10UseCaseBase):
             )
 
             sent = container.sendMessageUseCase().execute(
-                SendMessageCommand(
-                    conversationId=conversation.id, body="original body"
-                )
+                SendMessageCommand(conversationId=conversation.id, body="original body")
             )
             container.editMessageUseCase().execute(
                 EditMessageCommand(messageId=sent.id, body="edited body")
@@ -254,9 +252,7 @@ class BlockEnforcementTests(Phase10UseCaseBase):
         with self.contextFor(self.other):
             with self.assertRaises(BusinessRuleViolationError):
                 container.sendMessageUseCase().execute(
-                    SendMessageCommand(
-                        conversationId=conversation.id, body="hello from blocked"
-                    )
+                    SendMessageCommand(conversationId=conversation.id, body="hello from blocked")
                 )
 
 
@@ -283,9 +279,7 @@ class BlockedCallAndInviteTests(Phase10UseCaseBase):
         with self.contextFor(self.other):
             with self.assertRaises(BusinessRuleViolationError):
                 container.startCallUseCase().execute(
-                    StartCallCommand(
-                        mediaType="AUDIO", conversationId=conversation.id
-                    )
+                    StartCallCommand(mediaType="AUDIO", conversationId=conversation.id)
                 )
 
     def testBlockedMeetingInvitationRefused(self) -> None:
@@ -301,14 +295,10 @@ class BlockedCallAndInviteTests(Phase10UseCaseBase):
         with self.contextFor(self.user):
             # a group conversation the organizer and invitee share
             convo = container.createGroupUseCase().execute(
-                CreateGroupConversationCommand(
-                    name="Project", memberIds=[str(self.other.id)]
-                )
+                CreateGroupConversationCommand(name="Project", memberIds=[str(self.other.id)])
             )
             container.blockUserUseCase().execute(
-                BlockUserCommand(
-                    blockedUserId=str(self.other.id), scopes=["MEETING_INVITATION"]
-                )
+                BlockUserCommand(blockedUserId=str(self.other.id), scopes=["MEETING_INVITATION"])
             )
             with self.assertRaises(BusinessRuleViolationError):
                 container.createMeetingUseCase().execute(
@@ -329,9 +319,7 @@ class CrossTenantIsolationTests(Phase10UseCaseBase):
                 BlockUserCommand(blockedUserId=str(self.other.id), scopes=["DIRECT_MESSAGE"])
             )
             # blocks of tenant A are not visible to tenant B
-            blocks = container.userBlockRepository().listForBlocker(
-                otherTenant.id, outsider.id
-            )
+            blocks = container.userBlockRepository().listForBlocker(otherTenant.id, outsider.id)
             self.assertEqual(blocks, [])
         # a block row in tenant A cannot be lifted by a user in tenant B
         with ctx(otherTenant.id, outsider.id):

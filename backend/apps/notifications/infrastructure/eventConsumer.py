@@ -10,7 +10,8 @@ change in the engine, only a new row in ``NOTIFICATION_EVENT_ROUTES``
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from apps.sharedKernel.domain.events import DomainEvent
 from apps.sharedKernel.infrastructure.wiring import defaultEventDispatcher
@@ -146,8 +147,11 @@ def makeNotificationHandler(route: dict[str, Any]) -> Callable[[DomainEvent], No
             data={
                 "templateKey": route.get("templateKey", ""),
                 "actionUrl": route.get("actionUrl", ""),
-                **{key: value for key, value in payload.items()
-                   if isinstance(value, (str, int, float, bool))},
+                **{
+                    key: value
+                    for key, value in payload.items()
+                    if isinstance(value, (str, int, float, bool))
+                },
             },
             templateKey=route.get("templateKey", ""),
             correlationId=event.correlationId,

@@ -6,7 +6,7 @@ import hashlib
 import unittest
 import uuid
 from dataclasses import FrozenInstanceError
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from pathlib import Path
 
 from apps.ai.domain.entities.aiRecords import AIContext
@@ -18,7 +18,9 @@ from apps.ai.domain.exceptions import (
     AIContextTenantMismatch,
 )
 from apps.ai.domain.policies.aiPolicies import ContextPolicy
+from apps.ai.domain.services.aiRules import estimateTokens
 from apps.ai.domain.services.contextEngine import (
+    REDACTED_RESTRICTED_TEXT,
     AIContextBuilder,
     AIContextEngine,
     ContextBuilder,
@@ -27,9 +29,7 @@ from apps.ai.domain.services.contextEngine import (
     ContextService,
     ContextSourceCandidate,
     InMemoryContextEngine,
-    REDACTED_RESTRICTED_TEXT,
 )
-from apps.ai.domain.services.aiRules import estimateTokens
 from apps.ai.domain.valueObjects.aiTypes import ContextSource
 
 
@@ -76,10 +76,13 @@ class Phase13JContextEngineTests(unittest.TestCase):
         self.assertEqual(result.context.content, "Alpha\n\nBeta")
         self.assertEqual(result.context.tokenCount, estimateTokens("Alpha\n\nBeta"))
         self.assertEqual(result.descriptor.sourceCount, 2)
-        self.assertEqual(result.descriptor.includedSourceKeys, (
-            ("projects", "document", "1"),
-            ("projects", "document", "2"),
-        ))
+        self.assertEqual(
+            result.descriptor.includedSourceKeys,
+            (
+                ("projects", "document", "1"),
+                ("projects", "document", "2"),
+            ),
+        )
         self.assertEqual(
             result.descriptor.contentFingerprint,
             hashlib.sha256(result.context.content.encode("utf-8")).hexdigest(),
@@ -122,7 +125,9 @@ class Phase13JContextEngineTests(unittest.TestCase):
             externalProvider=True,
         )
         self.assertEqual(external.context.content, "")
-        self.assertEqual(external.excludedSources[0].exclusionReason, "EXTERNAL_PROVIDER_NOT_PERMITTED")
+        self.assertEqual(
+            external.excludedSources[0].exclusionReason, "EXTERNAL_PROVIDER_NOT_PERMITTED"
+        )
         allowedExternal = self.builder.build(
             self.tenantId,
             self.requestId,
@@ -198,7 +203,9 @@ class Phase13JContextEngineTests(unittest.TestCase):
         with self.assertRaises(AIContextSourceInvalid):
             ContextSourceCandidate(self.tenantId, "", "type", "id", "content")
         with self.assertRaises(AIContextSourceInvalid):
-            ContextSourceCandidate(self.tenantId, "domain", "type", "id", "content", classification="UNKNOWN")
+            ContextSourceCandidate(
+                self.tenantId, "domain", "type", "id", "content", classification="UNKNOWN"
+            )
 
     def testSensitiveMetadataIsRedactedAndNotPresentInContextEntityOrDescriptors(self) -> None:
         result = self.builder.build(
@@ -257,7 +264,9 @@ class Phase13JContextEngineTests(unittest.TestCase):
             self.requestId,
             [self.source("3", "other", tenantId=self.otherTenantId)],
         )
-        self.assertEqual(self.engine.latestForRequest(self.tenantId, self.requestId).context.id, first.context.id)
+        self.assertEqual(
+            self.engine.latestForRequest(self.tenantId, self.requestId).context.id, first.context.id
+        )
         self.assertIsNone(self.engine.latestForRequest(self.otherTenantId, self.otherRequestId))
         self.assertEqual(len(self.engine.listContexts(self.tenantId)), 2)
         self.assertEqual(len(self.engine.listContexts(self.tenantId, requestId=self.requestId)), 1)
@@ -310,9 +319,9 @@ class Phase13JContextEngineTests(unittest.TestCase):
         self.engine.buildContext(self.tenantId, self.requestId, [self.source("1", "one")])
         self.engine.clear()
         self.assertEqual(self.engine.listContexts(self.tenantId), ())
-        source = (Path(__file__).resolve().parents[2] / "apps/ai/domain/services/contextEngine.py").read_text(
-            encoding="utf-8"
-        )
+        source = (
+            Path(__file__).resolve().parents[2] / "apps/ai/domain/services/contextEngine.py"
+        ).read_text(encoding="utf-8")
         for forbidden in (
             "django",
             "rest_framework",

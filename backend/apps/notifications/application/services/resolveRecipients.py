@@ -39,7 +39,9 @@ class ResolveRecipientsService(NotificationUseCase):
 
     # -- direct API (called by CreateNotificationService, not via execute) ----
 
-    def resolve(self, tenantId: uuid.UUID, recipientSpec: dict[str, Any]) -> list[ResolvedRecipient]:
+    def resolve(
+        self, tenantId: uuid.UUID, recipientSpec: dict[str, Any]
+    ) -> list[ResolvedRecipient]:
         recipientType = str(recipientSpec.get("type", "") or "").upper()
         if not recipientType:
             raise ValidationFailedError(

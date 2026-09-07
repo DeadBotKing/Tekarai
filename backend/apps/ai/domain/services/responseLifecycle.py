@@ -20,26 +20,30 @@ import json
 import math
 import re
 import uuid
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from types import MappingProxyType
-from typing import Any, Mapping
+from typing import Any
 
 from apps.ai.domain.entities.aiRecords import AIRequest, AIResponse, requireUuid, utcNow
 from apps.ai.domain.exceptions import (
     AIError,
+    AIPermissionDenied,
     AIResponseAlreadyRegistered,
     AIResponseInvalid,
     AIResponseNotFound,
     AIResponseRequestInvalid,
     AIStructuredOutputInvalid,
     AIStructuredSchemaInvalid,
-    AIPermissionDenied,
 )
 from apps.ai.domain.services.aiRules import enforceAuthoritativeChange
 from apps.ai.domain.services.requestLifecycle import RequestLifecycleService
-from apps.ai.domain.valueObjects.aiTypes import OUTPUT_CLASSIFICATIONS, RESPONSE_STATUSES, ensureEnum
-
+from apps.ai.domain.valueObjects.aiTypes import (
+    OUTPUT_CLASSIFICATIONS,
+    RESPONSE_STATUSES,
+    ensureEnum,
+)
 
 JSON_SCHEMA_TYPES = frozenset({"object", "array", "string", "number", "integer", "boolean", "null"})
 
@@ -93,7 +97,9 @@ def _validateSchemaDefinition(schema: Any, path: str = "$") -> None:
             raise AIStructuredSchemaInvalid(f"JSON Schema type at {path} is invalid.")
     if "required" in schema:
         required = schema["required"]
-        if not isinstance(required, (list, tuple)) or any(not isinstance(item, str) for item in required):
+        if not isinstance(required, (list, tuple)) or any(
+            not isinstance(item, str) for item in required
+        ):
             raise AIStructuredSchemaInvalid(f"JSON Schema required at {path} is invalid.")
     if "properties" in schema:
         properties = schema["properties"]
@@ -106,7 +112,9 @@ def _validateSchemaDefinition(schema: Any, path: str = "$") -> None:
     if "additionalProperties" in schema:
         additional = schema["additionalProperties"]
         if not isinstance(additional, (bool, Mapping)):
-            raise AIStructuredSchemaInvalid(f"JSON Schema additionalProperties at {path} is invalid.")
+            raise AIStructuredSchemaInvalid(
+                f"JSON Schema additionalProperties at {path} is invalid."
+            )
         if isinstance(additional, Mapping):
             _validateSchemaDefinition(additional, f"{path}.additionalProperties")
     if "items" in schema:
@@ -127,9 +135,18 @@ def _validateSchemaDefinition(schema: Any, path: str = "$") -> None:
             re.compile(schema["pattern"])
         except re.error as exc:
             raise AIStructuredSchemaInvalid(f"JSON Schema pattern at {path} is invalid.") from exc
-    for keyword in ("minLength", "maxLength", "minItems", "maxItems", "minProperties", "maxProperties"):
+    for keyword in (
+        "minLength",
+        "maxLength",
+        "minItems",
+        "maxItems",
+        "minProperties",
+        "maxProperties",
+    ):
         if keyword in schema and (
-            not isinstance(schema[keyword], int) or isinstance(schema[keyword], bool) or schema[keyword] < 0
+            not isinstance(schema[keyword], int)
+            or isinstance(schema[keyword], bool)
+            or schema[keyword] < 0
         ):
             raise AIStructuredSchemaInvalid(f"JSON Schema {keyword} at {path} is invalid.")
     for keyword in ("minimum", "maximum"):
@@ -199,14 +216,18 @@ class ValidationIssue:
     message: str
 
 
-def _validateValue(value: Any, schema: Mapping[str, Any], path: str, issues: list[ValidationIssue]) -> None:
+def _validateValue(
+    value: Any, schema: Mapping[str, Any], path: str, issues: list[ValidationIssue]
+) -> None:
     if "const" in schema and value != schema["const"]:
         issues.append(ValidationIssue(path, "const", "Value does not equal const"))
     if "enum" in schema and value not in schema["enum"]:
         issues.append(ValidationIssue(path, "enum", "Value is not in enum"))
 
     expected = schema.get("type")
-    expectedTypes = expected if isinstance(expected, (list, tuple)) else ((expected,) if expected else ())
+    expectedTypes = (
+        expected if isinstance(expected, (list, tuple)) else ((expected,) if expected else ())
+    )
     if expectedTypes and not any(_schemaTypeMatches(value, item) for item in expectedTypes):
         issues.append(ValidationIssue(path, "type", f"Expected {', '.join(expectedTypes)}"))
         return
@@ -215,14 +236,20 @@ def _validateValue(value: Any, schema: Mapping[str, Any], path: str, issues: lis
         required = schema.get("required", ())
         for name in required:
             if name not in value:
-                issues.append(ValidationIssue(f"{path}.{name}", "required", "Required property is missing"))
+                issues.append(
+                    ValidationIssue(f"{path}.{name}", "required", "Required property is missing")
+                )
         properties = schema.get("properties", {})
         additional = schema.get("additionalProperties", True)
         for name, item in value.items():
             if name in properties:
                 issues.extend(_validateWithCombinators(item, properties[name], f"{path}.{name}"))
             elif additional is False:
-                issues.append(ValidationIssue(f"{path}.{name}", "additionalProperties", "Property is not allowed"))
+                issues.append(
+                    ValidationIssue(
+                        f"{path}.{name}", "additionalProperties", "Property is not allowed"
+                    )
+                )
             elif isinstance(additional, Mapping):
                 issues.extend(_validateWithCombinators(item, additional, f"{path}.{name}"))
         if "minProperties" in schema and len(value) < schema["minProperties"]:
@@ -251,9 +278,13 @@ def _validateValue(value: Any, schema: Mapping[str, Any], path: str, issues: lis
             issues.append(ValidationIssue(path, "maximum", "Number is above maximum"))
 
 
-def _validateWithCombinators(value: Any, schema: Mapping[str, Any], path: str) -> list[ValidationIssue]:
+def _validateWithCombinators(
+    value: Any, schema: Mapping[str, Any], path: str
+) -> list[ValidationIssue]:
     issues: list[ValidationIssue] = []
-    baseSchema = {key: item for key, item in schema.items() if key not in {"oneOf", "anyOf", "allOf"}}
+    baseSchema = {
+        key: item for key, item in schema.items() if key not in {"oneOf", "anyOf", "allOf"}
+    }
     _validateValue(value, baseSchema, path, issues)
     if "allOf" in schema:
         for child in schema["allOf"]:
@@ -266,7 +297,9 @@ def _validateWithCombinators(value: Any, schema: Mapping[str, Any], path: str) -
         branchIssues = [_validateWithCombinators(value, child, path) for child in schema["oneOf"]]
         matches = sum(not branch for branch in branchIssues)
         if matches != 1:
-            issues.append(ValidationIssue(path, "oneOf", "Value must match exactly one alternative"))
+            issues.append(
+                ValidationIssue(path, "oneOf", "Value must match exactly one alternative")
+            )
     return issues
 
 
@@ -283,7 +316,9 @@ class StructuredOutputSchema:
             raise AIStructuredSchemaInvalid("JSON Schema must be an object.")
         _validateSchemaDefinition(self.schema)
         if not str(self.name or "").strip() or not str(self.version or "").strip():
-            raise AIStructuredSchemaInvalid("Structured output schema name and version are required.")
+            raise AIStructuredSchemaInvalid(
+                "Structured output schema name and version are required."
+            )
         object.__setattr__(self, "name", str(self.name).strip())
         object.__setattr__(self, "version", str(self.version).strip())
         object.__setattr__(self, "schema", _freezeValue(_plainValue(self.schema)))
@@ -376,7 +411,9 @@ class AIResponseService:
         requestLifecycle: RequestLifecycleService | None = None,
         now: Any = utcNow,
     ) -> None:
-        if requestLifecycle is not None and not isinstance(requestLifecycle, RequestLifecycleService):
+        if requestLifecycle is not None and not isinstance(
+            requestLifecycle, RequestLifecycleService
+        ):
             raise TypeError("requestLifecycle must be a RequestLifecycleService.")
         if not callable(now):
             raise TypeError("now must be callable.")
@@ -464,7 +501,11 @@ class AIResponseService:
             totalTokens=totalTokens,
             latencyMs=latencyMs,
             outputClassification=normalizedClassification,
-            promptVersionId=(requireUuid(promptVersionId, "promptVersionId") if promptVersionId is not None else None),
+            promptVersionId=(
+                requireUuid(promptVersionId, "promptVersionId")
+                if promptVersionId is not None
+                else None
+            ),
             id=(requireUuid(responseId, "responseId") if responseId is not None else uuid.uuid4()),
             errorCode=errorCode,
             createdAt=self._now(),
@@ -509,7 +550,9 @@ class AIResponseService:
             if not response.content and not inferredHasData:
                 raise AIResponseInvalid("A completed response requires content or structured data.")
             if outputSchema is not None:
-                response.structuredData = self._normalizeAndValidate(response.structuredData, outputSchema)
+                response.structuredData = self._normalizeAndValidate(
+                    response.structuredData, outputSchema
+                )
             elif response.structuredData:
                 response.structuredData = normalizeStructuredOutput(response.structuredData)
         elif response.status == "FAILED" and not str(response.errorCode or "").strip():
@@ -518,14 +561,20 @@ class AIResponseService:
             if not str(response.errorCode or "").strip():
                 raise AIResponseInvalid("A validation-failed response requires an error code.")
             if response.structuredData:
-                raise AIResponseInvalid("A validation-failed response cannot retain output payload.")
+                raise AIResponseInvalid(
+                    "A validation-failed response cannot retain output payload."
+                )
 
         key = (response.tenantId, response.id)
         if key in self._responses:
             raise AIResponseAlreadyRegistered(str(response.id))
         registered = RegisteredResponseState(
             response=response,
-            hasStructuredData=(hasStructuredData if hasStructuredData is not None else bool(response.structuredData)),
+            hasStructuredData=(
+                hasStructuredData
+                if hasStructuredData is not None
+                else bool(response.structuredData)
+            ),
             structuredOutputValidated=(
                 structuredOutputValidated
                 if structuredOutputValidated is not None
@@ -546,7 +595,9 @@ class AIResponseService:
         normalized = normalizeStructuredOutput(value)
         issues = outputSchema.validate(normalized)
         if issues:
-            raise AIStructuredOutputInvalid("Structured AI output failed schema validation.", issues)
+            raise AIStructuredOutputInvalid(
+                "Structured AI output failed schema validation.", issues
+            )
         return StructuredOutput(
             normalized,
             schemaFingerprint=outputSchema.fingerprint(),
@@ -620,7 +671,9 @@ class AIResponseService:
         ]
         return tuple(sorted(descriptors, key=lambda item: (item.createdAt, str(item.responseId))))
 
-    def responseCount(self, tenantId: uuid.UUID | str, requestId: uuid.UUID | str | None = None) -> int:
+    def responseCount(
+        self, tenantId: uuid.UUID | str, requestId: uuid.UUID | str | None = None
+    ) -> int:
         return len(self.listResponses(tenantId, requestId=requestId))
 
     def register(self, response: AIResponse, **kwargs: Any) -> AIResponse:

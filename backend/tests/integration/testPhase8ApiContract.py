@@ -7,19 +7,17 @@ prove §17 (identity from context, never payload).
 
 from __future__ import annotations
 
-import uuid
-
 from django.core.cache import cache
 from django.test import TestCase
 from rest_framework.test import APIClient
 
 from apps.identity.infrastructure.models import UserModel
+from apps.tenancy.infrastructure.models import TenantModel
 from tests.support.phase6Helpers import (
     PLATFORM_ADMIN_PASSWORD,
     PLATFORM_ADMIN_USERNAME,
     seedPlatform,
 )
-from apps.tenancy.infrastructure.models import TenantModel
 from tests.support.phase8Helpers import ensureUser, grantCommAdmin
 
 V1 = "/api/v1/communication"
@@ -65,9 +63,7 @@ class ConversationApiTests(Phase8ApiBase):
     def setUp(self) -> None:
         super().setUp()
         self.adminToken = self.loginAs(PLATFORM_ADMIN_USERNAME)
-        self.adminId = str(
-            UserModel.objects.get(username=PLATFORM_ADMIN_USERNAME).id
-        )
+        self.adminId = str(UserModel.objects.get(username=PLATFORM_ADMIN_USERNAME).id)
 
     def testDirectConversationRoundTrip(self) -> None:
         member = ensureUserForTenant(self.tenantId, "api-member")
@@ -118,7 +114,6 @@ class ConversationApiTests(Phase8ApiBase):
         # a second user self-joins the public channel (§4)
         other = ensureUserForTenant(self.tenantId, "api-joiner")
         grantCommAdminForTenant(self.tenantId, other)
-        otherToken = self.loginAs("api-joiner", password="!") if False else None
         # platform users are created with a random password; join through the
         # admin context is covered in application tests — here we verify the
         # endpoint exists and enforces auth.
@@ -191,11 +186,17 @@ class MessageApiTests(Phase8ApiBase):
         self.assertEqual(read.status_code, 200, read.content)
 
         reaction = self.client.post(
-            f"{V1}/messages/{messageId}/reactions", {"reaction": "👍"}, format="json", **self.headers
+            f"{V1}/messages/{messageId}/reactions",
+            {"reaction": "👍"},
+            format="json",
+            **self.headers,
         )
         self.assertEqual(reaction.status_code, 201, reaction.content)
         duplicate = self.client.post(
-            f"{V1}/messages/{messageId}/reactions", {"reaction": "👍"}, format="json", **self.headers
+            f"{V1}/messages/{messageId}/reactions",
+            {"reaction": "👍"},
+            format="json",
+            **self.headers,
         )
         self.assertEqual(duplicate.status_code, 409)  # §3.5
 
@@ -214,9 +215,7 @@ class PresenceAndMetricsApiTests(Phase8ApiBase):
         token = self.loginAs(PLATFORM_ADMIN_USERNAME)
         headers = self.bearer(token)
         userId = str(UserModel.objects.get(username=PLATFORM_ADMIN_USERNAME).id)
-        put = self.client.put(
-            f"{V1}/presence", {"status": "BUSY"}, format="json", **headers
-        )
+        put = self.client.put(f"{V1}/presence", {"status": "BUSY"}, format="json", **headers)
         self.assertEqual(put.status_code, 200, put.content)
         got = self.client.get(f"{V1}/presence?userIds={userId}", **headers)
         self.assertEqual(got.status_code, 200)

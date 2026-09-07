@@ -1,5 +1,7 @@
 from django.test import SimpleTestCase
+
 from apps.ai.domain.ports import DeterministicAIProvider
+
 
 class Phase13AiProviderTests(SimpleTestCase):
     def testDeterministicProviderIsOfflineAndRepeatable(self):

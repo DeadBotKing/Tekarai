@@ -210,9 +210,7 @@ class ListNotificationsUseCase(NotificationUseCase):
             )
             for notification in notifications
         ]
-        return NotificationPageDto(
-            items=items, unreadCount=unreadCount, hasNext=hasNext
-        )
+        return NotificationPageDto(items=items, unreadCount=unreadCount, hasNext=hasNext)
 
 
 class GetNotificationUseCase(NotificationUseCase):
@@ -252,6 +250,8 @@ class UnreadCountUseCase(NotificationUseCase):
         self.notificationRepository = notificationRepository
 
     def perform(self, query: UnreadCountQuery) -> dict:
-        return {"unreadCount": self.notificationRepository.unreadCount(
-            query.tenantId, query.recipientId
-        )}
+        return {
+            "unreadCount": self.notificationRepository.unreadCount(
+                query.tenantId, query.recipientId
+            )
+        }

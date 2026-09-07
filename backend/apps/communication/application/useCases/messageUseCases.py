@@ -9,6 +9,7 @@ returns the original message instead of duplicating it.
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from apps.communication.application.commands.communicationCommands import (
     DeleteMessageCommand,
@@ -81,7 +82,7 @@ class SendMessageUseCase(CommunicationUseCase[SendMessageCommand, MessageDto]):
         userDirectory: UserDirectory,
         blockRepository: object = None,
         attachmentPolicy: AttachmentPolicy | None = None,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.conversationRepository = conversationRepository
@@ -105,7 +106,9 @@ class SendMessageUseCase(CommunicationUseCase[SendMessageCommand, MessageDto]):
         if clientMessageId is not None:
             byId = self.messageRepository.getById(clientMessageId, tenantId)
             if byId is not None:
-                if byId.senderId == senderId and byId.conversationId == asUuid(command.conversationId):
+                if byId.senderId == senderId and byId.conversationId == asUuid(
+                    command.conversationId
+                ):
                     return messageDtoFromDomain(byId)
                 raise ConflictError("Client message ID is already in use.")
 
@@ -120,9 +123,7 @@ class SendMessageUseCase(CommunicationUseCase[SendMessageCommand, MessageDto]):
             if existing is not None:
                 return messageDtoFromDomain(existing)
 
-        conversation = self.conversationRepository.getById(
-            asUuid(command.conversationId), tenantId
-        )
+        conversation = self.conversationRepository.getById(asUuid(command.conversationId), tenantId)
         if conversation is None or not conversation.isActive:
             raise EntityNotFoundError("Conversation", command.conversationId)
         participant = self.participantRepository.get(conversation.id, senderId)
@@ -159,9 +160,7 @@ class SendMessageUseCase(CommunicationUseCase[SendMessageCommand, MessageDto]):
             communicationRules.validateThread(
                 replyToId=replyToId,
                 rootFound=root is not None,
-                rootSameConversation=(
-                    root is not None and root.conversationId == conversation.id
-                ),
+                rootSameConversation=(root is not None and root.conversationId == conversation.id),
             )
             # If the parent is itself a reply, inherit ITS root; otherwise the
             # parent is the root of the new thread.
@@ -184,7 +183,9 @@ class SendMessageUseCase(CommunicationUseCase[SendMessageCommand, MessageDto]):
             storageKey = str(meta.get("storageKey", ""))
             expectedPrefix = f"communication/{tenantId}/"
             if not storageKey.startswith(expectedPrefix) or ".." in storageKey:
-                raise ValidationFailedError("Attachment storage key was not issued for this tenant.")
+                raise ValidationFailedError(
+                    "Attachment storage key was not issued for this tenant."
+                )
 
         now = self.clock.nowUtc()
         message = Message.send(
@@ -295,7 +296,7 @@ class EditMessageUseCase(CommunicationUseCase[EditMessageCommand, MessageDto]):
         messageRepository: MessageRepository,
         participantRepository: ParticipantRepository,
         revisionRepository: object = None,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.messageRepository = messageRepository
@@ -312,9 +313,7 @@ class EditMessageUseCase(CommunicationUseCase[EditMessageCommand, MessageDto]):
             raise EntityNotFoundError("Message", command.messageId)
         participant = self.participantRepository.get(message.conversationId, actorId)
         isModerator = (
-            participant is not None
-            and participant.isModerator()
-            and participant.isActive()
+            participant is not None and participant.isModerator() and participant.isActive()
         )
         allowed, reason = communicationRules.canEditMessage(
             senderId=message.senderId,
@@ -325,9 +324,7 @@ class EditMessageUseCase(CommunicationUseCase[EditMessageCommand, MessageDto]):
             editWindowMinutes=EDIT_WINDOW_MINUTES,
         )
         if not allowed:
-            raise PermissionDeniedError(
-                f"Message edit refused ({reason}).", action="message.edit"
-            )
+            raise PermissionDeniedError(f"Message edit refused ({reason}).", action="message.edit")
         now = self.clock.nowUtc()
         previousBody = message.body
         message.edit(command.body, now)
@@ -338,9 +335,7 @@ class EditMessageUseCase(CommunicationUseCase[EditMessageCommand, MessageDto]):
                 MessageRevision,
             )
 
-            revisionNumber = self.revisionRepository.nextRevisionNumber(
-                tenantId, message.id
-            )
+            revisionNumber = self.revisionRepository.nextRevisionNumber(tenantId, message.id)
             revision = MessageRevision.record(
                 tenantId=tenantId,
                 messageId=message.id,
@@ -380,7 +375,7 @@ class DeleteMessageUseCase(CommunicationUseCase[DeleteMessageCommand, object]):
         self,
         messageRepository: MessageRepository,
         participantRepository: ParticipantRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.messageRepository = messageRepository
@@ -393,9 +388,7 @@ class DeleteMessageUseCase(CommunicationUseCase[DeleteMessageCommand, object]):
             raise EntityNotFoundError("Message", command.messageId)
         participant = self.participantRepository.get(message.conversationId, actorId)
         isModerator = (
-            participant is not None
-            and participant.isModerator()
-            and participant.isActive()
+            participant is not None and participant.isModerator() and participant.isActive()
         )
         if not communicationRules.canDeleteMessage(
             senderId=message.senderId, actorId=actorId, isModerator=isModerator
@@ -404,9 +397,7 @@ class DeleteMessageUseCase(CommunicationUseCase[DeleteMessageCommand, object]):
         message.delete(self.clock.nowUtc())
         self.messageRepository.update(message)
         self.collectEventsFrom(message)
-        self.emitIntegrationEvent(
-            tenantId, "MessageDeleted", {"messageId": str(message.id)}
-        )
+        self.emitIntegrationEvent(tenantId, "MessageDeleted", {"messageId": str(message.id)})
         self.broadcastConversation(
             message.conversationId, {"type": "message.deleted", "messageId": str(message.id)}
         )
@@ -429,7 +420,7 @@ class ReactToMessageUseCase(CommunicationUseCase[ReactToMessageCommand, object])
         messageRepository: MessageRepository,
         reactionRepository: ReactionRepository,
         participantRepository: ParticipantRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.messageRepository = messageRepository
@@ -477,7 +468,7 @@ class RemoveReactionUseCase(CommunicationUseCase[RemoveReactionCommand, object])
         messageRepository: MessageRepository,
         reactionRepository: ReactionRepository,
         participantRepository: ParticipantRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.messageRepository = messageRepository
@@ -489,9 +480,7 @@ class RemoveReactionUseCase(CommunicationUseCase[RemoveReactionCommand, object])
         message = self.messageRepository.getById(asUuid(command.messageId), tenantId)
         if message is None:
             raise EntityNotFoundError("Message", command.messageId)
-        removed = self.reactionRepository.remove(
-            message.id, actorId, command.reaction
-        )
+        removed = self.reactionRepository.remove(message.id, actorId, command.reaction)
         if not removed:
             raise EntityNotFoundError("Reaction", command.reaction)
         self.broadcastConversation(
@@ -506,9 +495,7 @@ class RemoveReactionUseCase(CommunicationUseCase[RemoveReactionCommand, object])
         return {"removed": True}
 
 
-class MarkConversationReadUseCase(
-    CommunicationUseCase[MarkConversationReadCommand, object]
-):
+class MarkConversationReadUseCase(CommunicationUseCase[MarkConversationReadCommand, object]):
     """§32 — bulk read receipts (one statement, no per-message writes)."""
 
     requiredAction = ""
@@ -519,7 +506,7 @@ class MarkConversationReadUseCase(
         messageRepository: MessageRepository,
         participantRepository: ParticipantRepository,
         readStateRepository: ReadStateRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.conversationRepository = conversationRepository
@@ -529,9 +516,7 @@ class MarkConversationReadUseCase(
 
     def perform(self, command: MarkConversationReadCommand) -> object:
         actorId, tenantId = actorOf()
-        conversation = self.conversationRepository.getById(
-            asUuid(command.conversationId), tenantId
-        )
+        conversation = self.conversationRepository.getById(asUuid(command.conversationId), tenantId)
         if conversation is None:
             raise EntityNotFoundError("Conversation", command.conversationId)
         participant = self.participantRepository.get(conversation.id, actorId)
@@ -580,7 +565,7 @@ class PinMessageUseCase(CommunicationUseCase[PinMessageCommand, PinDto]):
         messageRepository: MessageRepository,
         participantRepository: ParticipantRepository,
         pinRepository: PinRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.conversationRepository = conversationRepository
@@ -590,9 +575,7 @@ class PinMessageUseCase(CommunicationUseCase[PinMessageCommand, PinDto]):
 
     def perform(self, command: PinMessageCommand) -> PinDto:
         actorId, tenantId = actorOf()
-        conversation = self.conversationRepository.getById(
-            asUuid(command.conversationId), tenantId
-        )
+        conversation = self.conversationRepository.getById(asUuid(command.conversationId), tenantId)
         if conversation is None:
             raise EntityNotFoundError("Conversation", command.conversationId)
         participant = self.participantRepository.get(conversation.id, actorId)
@@ -642,7 +625,7 @@ class UnpinMessageUseCase(CommunicationUseCase[UnpinMessageCommand, object]):
         conversationRepository: ConversationRepository,
         participantRepository: ParticipantRepository,
         pinRepository: PinRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.conversationRepository = conversationRepository
@@ -651,9 +634,7 @@ class UnpinMessageUseCase(CommunicationUseCase[UnpinMessageCommand, object]):
 
     def perform(self, command: UnpinMessageCommand) -> object:
         actorId, tenantId = actorOf()
-        conversation = self.conversationRepository.getById(
-            asUuid(command.conversationId), tenantId
-        )
+        conversation = self.conversationRepository.getById(asUuid(command.conversationId), tenantId)
         if conversation is None:
             raise EntityNotFoundError("Conversation", command.conversationId)
         participant = self.participantRepository.get(conversation.id, actorId)
@@ -681,7 +662,7 @@ class ListMessagesUseCase(CommunicationUseCase[ListMessagesQuery, MessagePageDto
         messageRepository: MessageRepository,
         reactionRepository: ReactionRepository,
         attachmentRepository: AttachmentRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.conversationRepository = conversationRepository
@@ -692,9 +673,7 @@ class ListMessagesUseCase(CommunicationUseCase[ListMessagesQuery, MessagePageDto
 
     def perform(self, query: ListMessagesQuery) -> MessagePageDto:
         actorId, tenantId = actorOf()
-        conversation = self.conversationRepository.getById(
-            asUuid(query.conversationId), tenantId
-        )
+        conversation = self.conversationRepository.getById(asUuid(query.conversationId), tenantId)
         if conversation is None:
             raise EntityNotFoundError("Conversation", query.conversationId)
         if conversation.conversationType != "CHANNEL":
@@ -735,9 +714,7 @@ class ListMessagesUseCase(CommunicationUseCase[ListMessagesQuery, MessagePageDto
             )
             for message in page.items
         ]
-        return MessagePageDto(
-            items=items, totalCount=page.totalCount, hasNext=page.hasNext
-        )
+        return MessagePageDto(items=items, totalCount=page.totalCount, hasNext=page.hasNext)
 
 
 class SearchMessagesUseCase(CommunicationUseCase[SearchMessagesQuery, list[MessageDto]]):
@@ -749,16 +726,14 @@ class SearchMessagesUseCase(CommunicationUseCase[SearchMessagesQuery, list[Messa
     def __init__(
         self,
         messageRepository: MessageRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.messageRepository = messageRepository
 
     def validateCommand(self, query: SearchMessagesQuery) -> None:
         if not query.query.strip():
-            raise ValidationFailedError(
-                "Search query is required.", fieldErrors={"query": "empty"}
-            )
+            raise ValidationFailedError("Search query is required.", fieldErrors={"query": "empty"})
 
     def perform(self, query: SearchMessagesQuery) -> list[MessageDto]:
         actorId, tenantId = actorOf()
@@ -776,7 +751,7 @@ class ListPinsUseCase(CommunicationUseCase[ListPinsQuery, list[PinDto]]):
         conversationRepository: ConversationRepository,
         participantRepository: ParticipantRepository,
         pinRepository: PinRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.conversationRepository = conversationRepository
@@ -785,9 +760,7 @@ class ListPinsUseCase(CommunicationUseCase[ListPinsQuery, list[PinDto]]):
 
     def perform(self, query: ListPinsQuery) -> list[PinDto]:
         actorId, tenantId = actorOf()
-        conversation = self.conversationRepository.getById(
-            asUuid(query.conversationId), tenantId
-        )
+        conversation = self.conversationRepository.getById(asUuid(query.conversationId), tenantId)
         if conversation is None:
             raise EntityNotFoundError("Conversation", query.conversationId)
         if conversation.conversationType != "CHANNEL":

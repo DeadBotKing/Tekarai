@@ -36,9 +36,9 @@ from apps.notifications.domain.valueObjects.notificationTypes import (
     SCHEDULE_DELAYED,
     SCHEDULE_DIGEST,
     SCHEDULE_IMMEDIATE,
+    SCHEDULE_KINDS,
     SCHEDULE_RECURRING,
     SCHEDULE_SCHEDULED,
-    SCHEDULE_KINDS,
 )
 from apps.sharedKernel.domain.errors import (
     EntityNotFoundError,

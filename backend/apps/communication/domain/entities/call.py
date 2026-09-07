@@ -106,9 +106,7 @@ class Call(AggregateRoot):
     def transitionTo(self, target: str, now: datetime) -> None:
         allowed = CALL_TRANSITIONS.get(self.callStatus, ())
         if target not in allowed:
-            raise InvalidStateTransitionError(
-                f"Call cannot move {self.callStatus} → {target}."
-            )
+            raise InvalidStateTransitionError(f"Call cannot move {self.callStatus} → {target}.")
         self.callStatus = target
         if target == CALL_ACTIVE:
             self.startedAt = now

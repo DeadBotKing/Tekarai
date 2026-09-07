@@ -143,9 +143,7 @@ class TranscriptSegment(AggregateRoot):
                 fieldErrors={"confidence": str(confidence)},
             )
         if not text.strip():
-            raise ValidationFailedError(
-                "Segment text is required.", fieldErrors={"text": "empty"}
-            )
+            raise ValidationFailedError("Segment text is required.", fieldErrors={"text": "empty"})
         self.tenantId = tenantId
         self.transcriptId = transcriptId
         self.sequence = sequence
@@ -253,9 +251,7 @@ class MeetingTranscript(AggregateRoot):
             TRANSCRIPT_READY: "transcriptReady",
             "FAILED": "transcriptFailed",
         }.get(target, "transcriptUpdated")
-        self.recordEvent(
-            DomainEvent(name=eventName, occurredAt=now, tenantId=self.tenantId)
-        )
+        self.recordEvent(DomainEvent(name=eventName, occurredAt=now, tenantId=self.tenantId))
 
     def applySegmentCount(self, count: int) -> None:
         if count < 0:
@@ -306,9 +302,7 @@ class UserBlock(AggregateRoot):
             )
         for scope in scopes:
             if scope not in BLOCK_SCOPES:
-                raise ValidationFailedError(
-                    "Unknown block scope.", fieldErrors={"scope": scope}
-                )
+                raise ValidationFailedError("Unknown block scope.", fieldErrors={"scope": scope})
         if not scopes:
             raise ValidationFailedError(
                 "At least one block scope is required.",

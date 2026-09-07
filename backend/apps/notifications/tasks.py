@@ -32,9 +32,7 @@ def notificationWorkerTick(limit: int = 200) -> dict:
     from apps.notifications.management.commands.runNotificationWorker import tick
 
     result = tick(limit=limit)
-    result["broadcastRetries"] = phase12Container.deliveryRetryService().processDue(
-        limit=limit
-    )
+    result["broadcastRetries"] = phase12Container.deliveryRetryService().processDue(limit=limit)
     return result
 
 

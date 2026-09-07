@@ -16,9 +16,7 @@ from apps.communication.domain.entities.recording import Recording
 from apps.communication.domain.services import communicationRules
 from apps.communication.domain.services.communicationRules import SignalingProtocol
 from apps.sharedKernel.domain.errors import (
-    BusinessRuleViolationError,
     ConflictError,
-    PermissionDeniedError,
     ValidationFailedError,
 )
 
@@ -45,9 +43,7 @@ class DirectKeyTests(SimpleTestCase):
 class MentionTests(SimpleTestCase):
     def testMentionsExtractDistinctUsernames(self) -> None:
         body = "سلام @alice جان، @bob و @alice دوباره"
-        self.assertEqual(
-            sorted(communicationRules.mentionedUsernames(body)), ["alice", "bob"]
-        )
+        self.assertEqual(sorted(communicationRules.mentionedUsernames(body)), ["alice", "bob"])
 
     def testEmailsAreNotMentions(self) -> None:
         self.assertEqual(communicationRules.mentionedUsernames("mail: a@b.com"), ())
@@ -56,8 +52,11 @@ class MentionTests(SimpleTestCase):
 class EditPolicyTests(SimpleTestCase):
     def testSenderWithinWindowMayEdit(self) -> None:
         allowed, reason = communicationRules.canEditMessage(
-            senderId=ALICE, actorId=ALICE, createdAt=NOW,
-            now=NOW + timedelta(minutes=5), isModerator=False,
+            senderId=ALICE,
+            actorId=ALICE,
+            createdAt=NOW,
+            now=NOW + timedelta(minutes=5),
+            isModerator=False,
         )
         self.assertTrue(allowed)
         self.assertEqual(reason, "sender")
@@ -104,9 +103,7 @@ class ThreadValidationTests(SimpleTestCase):
 
 class SignalingProtocolTests(SimpleTestCase):
     def testValidEnvelopeRoundTrip(self) -> None:
-        envelope = signalingEnvelope(
-            "OFFER", callId=str(uuid.uuid4()), payload={"sdp": "v=0"}
-        )
+        envelope = signalingEnvelope("OFFER", callId=str(uuid.uuid4()), payload={"sdp": "v=0"})
         kind, callId, payload = SignalingProtocol.validate(envelope)
         self.assertEqual(kind, "OFFER")
         self.assertEqual(payload["sdp"], "v=0")
@@ -124,9 +121,7 @@ class ConversationAggregateTests(SimpleTestCase):
     def testDirectConversationStoresDirectKey(self) -> None:
         conversation = Conversation.createDirect(TENANT, ALICE, BOB, NOW)
         self.assertEqual(conversation.conversationType, "DIRECT")
-        self.assertEqual(
-            conversation.directKey, communicationRules.directKeyOf(ALICE, BOB)
-        )
+        self.assertEqual(conversation.directKey, communicationRules.directKeyOf(ALICE, BOB))
 
     def testChannelRequiresUniqueCodeAtRepoLevelAndKeepsIt(self) -> None:
         channel = Conversation.createChannel(TENANT, ALICE, "general", NOW, code="general")
@@ -215,9 +210,7 @@ class LetterTests(SimpleTestCase):
         self.assertFalse(re.match(r"^\d{4}-\d{6}$", "26-1"))
 
     def testWorkflowHappyPath(self) -> None:
-        letter = OfficialLetter.draft(
-            TENANT, ALICE, BOB, "subject", "2026-000001", NOW
-        )
+        letter = OfficialLetter.draft(TENANT, ALICE, BOB, "subject", "2026-000001", NOW)
         letter.transitionTo("IN_REVIEW", NOW)
         letter.approve(NOW, BOB)
         letter.sign(NOW, ALICE)
@@ -252,15 +245,25 @@ class MessageAggregateTests(SimpleTestCase):
 
     def testReadStateIsMonotonic(self) -> None:
         read = MessageReadState(
-            id=uuid.uuid4(), tenantId=TENANT, conversationId=uuid.uuid4(),
-            messageId=uuid.uuid4(), userId=BOB, state="READ", updatedAt=NOW,
+            id=uuid.uuid4(),
+            tenantId=TENANT,
+            conversationId=uuid.uuid4(),
+            messageId=uuid.uuid4(),
+            userId=BOB,
+            state="READ",
+            updatedAt=NOW,
         )
         # §3.6 — monotonic: backward transitions are refused (no-op)
         self.assertFalse(read.advance("SENT", NOW))
         self.assertTrue(read.advance("READ", NOW) is False)  # same state is not a change
         delivered = MessageReadState(
-            id=uuid.uuid4(), tenantId=TENANT, conversationId=uuid.uuid4(),
-            messageId=uuid.uuid4(), userId=BOB, state="DELIVERED", updatedAt=NOW,
+            id=uuid.uuid4(),
+            tenantId=TENANT,
+            conversationId=uuid.uuid4(),
+            messageId=uuid.uuid4(),
+            userId=BOB,
+            state="DELIVERED",
+            updatedAt=NOW,
         )
         self.assertTrue(delivered.advance("READ", NOW))
 

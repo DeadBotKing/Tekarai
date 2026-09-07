@@ -57,9 +57,7 @@ class RenderNotificationService(NotificationUseCase):
     def perform(self, message: Any) -> Any:  # pragma: no cover — routed via render()
         raise NotImplementedError
 
-    def resolveLanguageFor(
-        self, tenantId: uuid.UUID, userId: uuid.UUID | None
-    ) -> str:
+    def resolveLanguageFor(self, tenantId: uuid.UUID, userId: uuid.UUID | None) -> str:
         userLanguage = ""
         if userId is not None:
             userLanguage = self.userContacts.languageOf(tenantId, userId)

@@ -25,6 +25,7 @@ OPENED_CONTEXTS = {
     "communication": "Phase 08 (Communication Platform)",
     "notifications": "Phase 09 (Notification Platform)",
     "ai": "Phase 13 (AI Platform & Intelligence Foundation)",
+    "learning": "Phase 16 (Self-Learning Platform)",
 }
 
 #: Bounded contexts from the approved domain map — still not opened.
@@ -106,6 +107,7 @@ class ContextOpeningRegisterTests(SimpleTestCase):
             "Notification",
         )
         allowedFiles = {Path(__file__).name}
+
         def _isThirdParty(path: Path) -> bool:
             # Skip virtual environments and dependency caches (venv / .venv /
             # site-packages / node_modules) so only first-party source is scanned.
@@ -152,6 +154,8 @@ class ContextOpeningRegisterTests(SimpleTestCase):
             "apps.notifications",
             # Phase 13: AI Platform & Intelligence Foundation context.
             "apps.ai",
+            # Phase 16: governed Self-Learning Platform context.
+            "apps.learning",
         }
         unexpectedApps = sorted(set(settings.INSTALLED_APPS) - allowedApps)
         self.assertEqual(

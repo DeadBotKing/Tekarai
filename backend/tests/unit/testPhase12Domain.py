@@ -47,9 +47,7 @@ class BroadcastTests(SimpleTestCase):
             r.BroadcastNotification.create(self.tenant, "X", "t", "b", [], _now())
 
     def testReadStatePerRecipientIndependent(self) -> None:
-        n = r.BroadcastNotification.create(
-            self.tenant, "X", "t", "b", self.users, _now()
-        )
+        n = r.BroadcastNotification.create(self.tenant, "X", "t", "b", self.users, _now())
         n.recipients[0].markRead(_now())
         # recipient A READ, recipient B UNREAD — notification itself has no flag
         self.assertEqual(n.recipients[0].state, t.RECIPIENT_READ)
@@ -69,9 +67,7 @@ class RecipientStateTests(SimpleTestCase):
     def setUp(self) -> None:
         self.tenant = uuid.uuid4()
         self.user = uuid.uuid4()
-        self.n = r.BroadcastNotification.create(
-            self.tenant, "X", "t", "b", [self.user], _now()
-        )
+        self.n = r.BroadcastNotification.create(self.tenant, "X", "t", "b", [self.user], _now())
         self.rcp = self.n.recipients[0]
 
     def testReadUnreadArchiveDismiss(self) -> None:
@@ -84,9 +80,7 @@ class RecipientStateTests(SimpleTestCase):
         self.rcp.archive(_now())
         self.assertEqual(self.rcp.state, t.RECIPIENT_ARCHIVED)
         # dismiss directly from unread
-        n2 = r.BroadcastNotification.create(
-            self.tenant, "Y", "t", "b", [self.user], _now()
-        )
+        n2 = r.BroadcastNotification.create(self.tenant, "Y", "t", "b", [self.user], _now())
         n2.recipients[0].dismiss(_now())
         self.assertEqual(n2.recipients[0].state, t.RECIPIENT_DISMISSED)
         self.assertIsNotNone(n2.recipients[0].dismissedAt)
@@ -105,12 +99,8 @@ class DeliveryStateTests(SimpleTestCase):
         self.policy = t.RetryPolicy(maxAttempts=3, initialDelaySeconds=10)
 
     def _delivery(self) -> r.RecipientDelivery:
-        n = r.BroadcastNotification.create(
-            self.tenant, "X", "t", "b", [self.user], _now()
-        )
-        return r.RecipientDelivery.queue(
-            self.tenant, n.id, self.user, "EMAIL", _now()
-        )
+        n = r.BroadcastNotification.create(self.tenant, "X", "t", "b", [self.user], _now())
+        return r.RecipientDelivery.queue(self.tenant, n.id, self.user, "EMAIL", _now())
 
     def testQueueThenProcessThenDelivered(self) -> None:
         d = self._delivery()
@@ -133,7 +123,10 @@ class DeliveryStateTests(SimpleTestCase):
         for _ in range(3):
             d.markProcessing(_now())
             d.recordAttempt(
-                _now(), succeeded=False, delivered=False, retryPolicy=self.policy,
+                _now(),
+                succeeded=False,
+                delivered=False,
+                retryPolicy=self.policy,
                 errorCode="BOUNCE",
             )
         self.assertEqual(d.status, t.DLV_DEAD_LETTER)
@@ -161,8 +154,10 @@ class DeliveryStateTests(SimpleTestCase):
 class RetryPolicyTests(SimpleTestCase):
     def testExponentialBackoff(self) -> None:
         policy = t.RetryPolicy(
-            maxAttempts=5, initialDelaySeconds=30,
-            backoffMultiplier=2.0, maxDelaySeconds=3600,
+            maxAttempts=5,
+            initialDelaySeconds=30,
+            backoffMultiplier=2.0,
+            maxDelaySeconds=3600,
         )
         self.assertEqual(policy.delayForAttempt(1), 0)
         self.assertEqual(policy.delayForAttempt(2), 30)
@@ -226,32 +221,30 @@ class RuleTests(SimpleTestCase):
 
     def testRuleMatchesCondition(self) -> None:
         rule = r.NotificationRule.define(
-            self.tenant, "overdue high", "TASK_OVERDUE", self.now,
-            condition={"priority": "HIGH"}, channels=("IN_APP", "EMAIL"),
+            self.tenant,
+            "overdue high",
+            "TASK_OVERDUE",
+            self.now,
+            condition={"priority": "HIGH"},
+            channels=("IN_APP", "EMAIL"),
         )
         self.assertTrue(rule.matches("TASK_OVERDUE", {"priority": "HIGH"}))
         self.assertFalse(rule.matches("TASK_OVERDUE", {"priority": "LOW"}))
         self.assertFalse(rule.matches("OTHER_EVENT", {"priority": "HIGH"}))
 
     def testEmptyConditionMatchesByType(self) -> None:
-        rule = r.NotificationRule.define(
-            self.tenant, "all", "DOCUMENT_APPROVED", self.now
-        )
+        rule = r.NotificationRule.define(self.tenant, "all", "DOCUMENT_APPROVED", self.now)
         self.assertTrue(rule.matches("DOCUMENT_APPROVED", {}))
 
     def testInactiveRuleDoesNotMatch(self) -> None:
-        rule = r.NotificationRule.define(
-            self.tenant, "x", "X", self.now
-        )
+        rule = r.NotificationRule.define(self.tenant, "x", "X", self.now)
         rule.isActive = False
         self.assertFalse(rule.matches("X", {}))
 
 
 class InboundEventTests(SimpleTestCase):
     def testIdempotentEnvelope(self) -> None:
-        ev = r.InboundNotificationEvent.ingest(
-            uuid.uuid4(), "evt-1", "TASK_ASSIGNED", _now()
-        )
+        ev = r.InboundNotificationEvent.ingest(uuid.uuid4(), "evt-1", "TASK_ASSIGNED", _now())
         self.assertFalse(ev.processed)
         ev.markProcessed()
         self.assertTrue(ev.processed)

@@ -7,6 +7,7 @@ consumer).
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from apps.communication.application.commands.communicationCommands import (
     UpdatePresenceCommand,
@@ -48,7 +49,7 @@ class UpdatePresenceUseCase(CommunicationUseCase[UpdatePresenceCommand, object])
         self,
         presenceRepository: PresenceRepository,
         participantRepository: ParticipantRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.presenceRepository = presenceRepository
@@ -60,9 +61,7 @@ class UpdatePresenceUseCase(CommunicationUseCase[UpdatePresenceCommand, object])
     def perform(self, command: UpdatePresenceCommand) -> object:
         actorId, tenantId = actorOf()
         now = self.clock.nowUtc()
-        self.presenceRepository.set(
-            tenantId, actorId, command.status, PRESENCE_TTL_SECONDS, now
-        )
+        self.presenceRepository.set(tenantId, actorId, command.status, PRESENCE_TTL_SECONDS, now)
         for conversationId in self.participantRepository.activeConversationIdsOf(actorId):
             self.realtime.toConversation(
                 conversationId,
@@ -81,7 +80,7 @@ class GetPresenceUseCase(CommunicationUseCase[PresenceQuery, dict]):
     def __init__(
         self,
         presenceRepository: PresenceRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.presenceRepository = presenceRepository
@@ -91,9 +90,7 @@ class GetPresenceUseCase(CommunicationUseCase[PresenceQuery, dict]):
         ids = [part.strip() for part in query.userIds.split(",") if part.strip()]
         if not ids:
             return {"presence": {}}
-        presence = self.presenceRepository.getMany(
-            tenantId, [asUuid(value) for value in ids[:100]]
-        )
+        presence = self.presenceRepository.getMany(tenantId, [asUuid(value) for value in ids[:100]])
         # Phase 10 §17 — INVISIBLE is a privacy state: other users must see the
         # caller as OFFLINE even though the connection is tracked for delivery.
         return {
@@ -119,7 +116,7 @@ class GenerateMeetingSummaryUseCase(CommunicationUseCase[object, AiSummaryDto]):
         meetingParticipantRepository: MeetingParticipantRepository,
         transcriptReader: object,
         aiAssistant: object,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.meetingRepository = meetingRepository
@@ -205,23 +202,13 @@ class RealtimeRelayService:
         )
         return True
 
-    def markOnline(
-        self, tenantId: uuid.UUID, userId: uuid.UUID, now: object
-    ) -> None:
-        self.presenceRepository.set(
-            tenantId, userId, "ONLINE", PRESENCE_TTL_SECONDS, now
-        )
+    def markOnline(self, tenantId: uuid.UUID, userId: uuid.UUID, now: object) -> None:
+        self.presenceRepository.set(tenantId, userId, "ONLINE", PRESENCE_TTL_SECONDS, now)
 
-    def markOffline(
-        self, tenantId: uuid.UUID, userId: uuid.UUID, now: object
-    ) -> None:
-        self.presenceRepository.set(
-            tenantId, userId, "OFFLINE", PRESENCE_TTL_SECONDS, now
-        )
+    def markOffline(self, tenantId: uuid.UUID, userId: uuid.UUID, now: object) -> None:
+        self.presenceRepository.set(tenantId, userId, "OFFLINE", PRESENCE_TTL_SECONDS, now)
 
-    def markInMeeting(
-        self, tenantId: uuid.UUID, userId: uuid.UUID, now: object
-    ) -> None:
+    def markInMeeting(self, tenantId: uuid.UUID, userId: uuid.UUID, now: object) -> None:
         self.presenceRepository.set(
             tenantId, userId, PRESENCE_IN_MEETING, PRESENCE_TTL_SECONDS, now
         )

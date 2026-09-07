@@ -149,7 +149,7 @@ DELIVERY_PENDING = "PENDING"
 DELIVERY_SENT = "SENT"
 DELIVERY_DELIVERED = "DELIVERED"
 DELIVERY_FAILED = "FAILED"
-DELIVERY_SKIPPED = "SKIPPED"          # preference/policy disabled the channel
+DELIVERY_SKIPPED = "SKIPPED"  # preference/policy disabled the channel
 DELIVERY_RETRY_SCHEDULED = "RETRY_SCHEDULED"
 DELIVERY_PERMANENTLY_FAILED = "PERMANENTLY_FAILED"
 
@@ -203,9 +203,9 @@ RECIPIENT_TYPES = (
 # §10 preference levels — the most specific applicable preference wins
 # ---------------------------------------------------------------------------
 
-PREF_LEVEL_GLOBAL = "GLOBAL"        # per user, all notifications
-PREF_LEVEL_CATEGORY = "CATEGORY"    # per user + category
-PREF_LEVEL_TYPE = "TYPE"            # per user + notificationType
+PREF_LEVEL_GLOBAL = "GLOBAL"  # per user, all notifications
+PREF_LEVEL_CATEGORY = "CATEGORY"  # per user + category
+PREF_LEVEL_TYPE = "TYPE"  # per user + notificationType
 
 PREFERENCE_LEVELS = (PREF_LEVEL_GLOBAL, PREF_LEVEL_CATEGORY, PREF_LEVEL_TYPE)
 
@@ -257,8 +257,8 @@ SUPPORTED_LANGUAGES = ("fa-IR", "en-US", "de-DE")
 # ---------------------------------------------------------------------------
 
 DEFAULT_MAX_ATTEMPTS = 3
-RETRY_BASE_DELAY_SECONDS = 30        # attempt 1 → 30s
-RETRY_BACKOFF_MULTIPLIER = 4         # 30s → 2m → 10m (spec example)
+RETRY_BASE_DELAY_SECONDS = 30  # attempt 1 → 30s
+RETRY_BACKOFF_MULTIPLIER = 4  # 30s → 2m → 10m (spec example)
 RETRY_MAX_DELAY_SECONDS = 600
 
 #: §28 rate limiting — identical-notification cooldown per user+type
@@ -267,7 +267,7 @@ RATE_WINDOW_SECONDS = 60
 RATE_MAX_PER_WINDOW = 20
 
 #: §23 expiration default for time-boxed notifications (e.g. security codes)
-DEFAULT_EXPIRY_SECONDS = 0           # 0 = no expiry
+DEFAULT_EXPIRY_SECONDS = 0  # 0 = no expiry
 
 # ---------------------------------------------------------------------------
 # §29 deduplication key
@@ -284,9 +284,7 @@ def idempotencyKeyOf(
 ) -> str:
     """Stable, hashed dedup key (§29): the same logical event + recipient +
     type can never create a second notification row."""
-    raw = "|".join(
-        [str(tenantId), eventType, eventId, recipientId, notificationType]
-    )
+    raw = "|".join([str(tenantId), eventType, eventId, recipientId, notificationType])
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 

@@ -18,9 +18,10 @@ from __future__ import annotations
 import copy
 import hashlib
 import uuid
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Callable, Iterable, Mapping
+from typing import Any
 
 from apps.ai.domain.entities.aiRecords import requireUuid, utcNow
 from apps.ai.domain.exceptions import (
@@ -39,7 +40,6 @@ from apps.ai.domain.services.contextEngine import (
     ContextSourceCandidate,
 )
 from apps.ai.domain.valueObjects.aiTypes import DataClassification, validateCode
-
 
 PERMISSION_ACTIONS = (
     "AI_CONTEXT_BUILD",
@@ -129,8 +129,10 @@ def _normalizeClassification(value: str, errorType: type[Exception]) -> str:
 
 
 def _permissionMatches(granted: str, requested: str) -> bool:
-    return granted == "*" or granted == requested or (
-        granted.endswith("_*") and requested.startswith(granted[:-1])
+    return (
+        granted == "*"
+        or granted == requested
+        or (granted.endswith("_*") and requested.startswith(granted[:-1]))
     )
 
 
@@ -138,7 +140,7 @@ def _fingerprint(
     tenantId: uuid.UUID,
     subjectId: uuid.UUID,
     action: str,
-    resource: "AuthorizationResource",
+    resource: AuthorizationResource,
     allowed: bool,
     reason: str,
 ) -> str:
@@ -212,7 +214,9 @@ class AuthorizationResource:
         object.__setattr__(self, "tenantId", requireUuid(self.tenantId, "tenantId"))
         normalizedType = _normalizeResourceType(self.resourceType)
         if normalizedType == "*":
-            raise AIAuthorizationGrantInvalid("Authorization resources require a concrete resourceType.")
+            raise AIAuthorizationGrantInvalid(
+                "Authorization resources require a concrete resourceType."
+            )
         object.__setattr__(self, "resourceType", normalizedType)
         for name in ("resourceId", "sourceDomain", "sourceEntityType", "sourceEntityId"):
             object.__setattr__(self, name, _normalizeOptionalText(getattr(self, name), name))
@@ -238,7 +242,7 @@ class AuthorizationResource:
         *,
         classification: str = "",
         externalProvider: bool = False,
-    ) -> "AuthorizationResource":
+    ) -> AuthorizationResource:
         return cls(
             tenantId=tenantId,
             resourceType=resourceType,
@@ -254,7 +258,7 @@ class AuthorizationResource:
         contextId: uuid.UUID | str = "",
         *,
         externalProvider: bool = False,
-    ) -> "AuthorizationResource":
+    ) -> AuthorizationResource:
         return cls.entity(
             tenantId,
             "AI_CONTEXT",
@@ -263,9 +267,11 @@ class AuthorizationResource:
         )
 
     @classmethod
-    def source(cls, source: ContextSourceCandidate) -> "AuthorizationResource":
+    def source(cls, source: ContextSourceCandidate) -> AuthorizationResource:
         if not isinstance(source, ContextSourceCandidate):
-            raise AIAuthorizationGrantInvalid("Context source resource must be a ContextSourceCandidate.")
+            raise AIAuthorizationGrantInvalid(
+                "Context source resource must be a ContextSourceCandidate."
+            )
         return cls(
             tenantId=source.tenantId,
             resourceType="CONTEXT_SOURCE",
@@ -277,7 +283,7 @@ class AuthorizationResource:
         )
 
     @classmethod
-    def tenant(cls, tenantId: uuid.UUID | str) -> "AuthorizationResource":
+    def tenant(cls, tenantId: uuid.UUID | str) -> AuthorizationResource:
         return cls.entity(tenantId, "AI_TENANT", tenantId)
 
 
@@ -491,7 +497,9 @@ class AuthorizationService:
         semanticKey = self._grantKey(grant)
         existingId = self._grantKeys.get(semanticKey)
         if existingId is not None and existingId != grant.grantId:
-            raise AIAuthorizationAlreadyRegistered("Equivalent permission grant is already registered.")
+            raise AIAuthorizationAlreadyRegistered(
+                "Equivalent permission grant is already registered."
+            )
         key = (grant.tenantId, grant.grantId)
         if key in self._grants and not replace:
             raise AIAuthorizationAlreadyRegistered(str(grant.grantId))
@@ -641,9 +649,13 @@ class AuthorizationService:
         if not isinstance(resource, AuthorizationResource):
             raise AIAuthorizationPolicyInvalid("resource must be an AuthorizationResource.")
         if subject.tenantId != resource.tenantId:
-            raise AIAuthorizationTenantMismatch("Principal and resource belong to different Tenants.")
+            raise AIAuthorizationTenantMismatch(
+                "Principal and resource belong to different Tenants."
+            )
         if not subject.isActive:
-            return self._decision(subject, permission, resource, False, "INACTIVE_PRINCIPAL", None, now)
+            return self._decision(
+                subject, permission, resource, False, "INACTIVE_PRINCIPAL", None, now
+            )
 
         moment = now or self._now()
         matching = [
@@ -659,15 +671,25 @@ class AuthorizationService:
         allows = [grant for grant in matching if grant.effect == "ALLOW"]
         if denies and self.policy.denyOverridesAllow:
             selected = self._orderedGrant(denies)
-            return self._decision(subject, permission, resource, False, "EXPLICIT_DENY", selected.grantId, moment)
+            return self._decision(
+                subject, permission, resource, False, "EXPLICIT_DENY", selected.grantId, moment
+            )
         if allows:
             selected = self._orderedGrant(allows)
-            return self._decision(subject, permission, resource, True, "EXPLICIT_ALLOW", selected.grantId, moment)
-        if not denies and any(_permissionMatches(item, permission) for item in subject.directPermissions):
-            return self._decision(subject, permission, resource, True, "DIRECT_PERMISSION", None, moment)
+            return self._decision(
+                subject, permission, resource, True, "EXPLICIT_ALLOW", selected.grantId, moment
+            )
+        if not denies and any(
+            _permissionMatches(item, permission) for item in subject.directPermissions
+        ):
+            return self._decision(
+                subject, permission, resource, True, "DIRECT_PERMISSION", None, moment
+            )
         if denies:
             selected = self._orderedGrant(denies)
-            return self._decision(subject, permission, resource, False, "EXPLICIT_DENY", selected.grantId, moment)
+            return self._decision(
+                subject, permission, resource, False, "EXPLICIT_DENY", selected.grantId, moment
+            )
         return self._decision(subject, permission, resource, False, "DEFAULT_DENY", None, moment)
 
     def requirePermission(
@@ -680,9 +702,7 @@ class AuthorizationService:
     ) -> AuthorizationDecision:
         decision = self.authorize(principal, action, resource, now=now)
         if not decision.allowed:
-            raise AIAuthorizationDenied(
-                f"Permission denied for action {decision.action}."
-            )
+            raise AIAuthorizationDenied(f"Permission denied for action {decision.action}.")
         return decision
 
     def require(
@@ -979,9 +999,15 @@ class AuthorizationService:
         ):
             if grantValue and grantValue != resourceValue:
                 return False
-        if grant.allowedClassifications and resource.classification not in grant.allowedClassifications:
+        if (
+            grant.allowedClassifications
+            and resource.classification not in grant.allowedClassifications
+        ):
             return False
-        if grant.externalProvider is not None and grant.externalProvider != resource.externalProvider:
+        if (
+            grant.externalProvider is not None
+            and grant.externalProvider != resource.externalProvider
+        ):
             return False
         return True
 

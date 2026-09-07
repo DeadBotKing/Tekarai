@@ -52,7 +52,10 @@ def _dto(obj: object) -> dict:
         if hasattr(value, "hex") and not isinstance(value, (int, float, str, bool)):
             out[key] = str(value)
         elif isinstance(value, (list, tuple)):
-            out[key] = [str(v) if hasattr(v, "hex") and not isinstance(v, (int, float, str, bool)) else v for v in value]
+            out[key] = [
+                str(v) if hasattr(v, "hex") and not isinstance(v, (int, float, str, bool)) else v
+                for v in value
+            ]
         else:
             out[key] = value
     return out
@@ -71,9 +74,7 @@ class UpdatePolicySerializer(drf_serializers.Serializer):
     maxMessageLength = drf_serializers.IntegerField(required=False, min_value=1)
     maxGroupMembers = drf_serializers.IntegerField(required=False, min_value=1)
     maxMeetingParticipants = drf_serializers.IntegerField(required=False, min_value=1)
-    allowedFileTypes = drf_serializers.ListField(
-        child=drf_serializers.CharField(), required=False
-    )
+    allowedFileTypes = drf_serializers.ListField(child=drf_serializers.CharField(), required=False)
     allowExternalUsers = drf_serializers.BooleanField(required=False)
     allowRecording = drf_serializers.BooleanField(required=False)
     allowScreenSharing = drf_serializers.BooleanField(required=False)
@@ -92,20 +93,28 @@ class OpenRoomSerializer(drf_serializers.Serializer):
 
 
 class ScreenShareStartSerializer(drf_serializers.Serializer):
-    shareKind = drf_serializers.ChoiceField(
-        choices=["SCREEN", "WINDOW", "TAB"], default="SCREEN"
-    )
+    shareKind = drf_serializers.ChoiceField(choices=["SCREEN", "WINDOW", "TAB"], default="SCREEN")
     sessionId = drf_serializers.CharField(required=False, allow_blank=True, default="")
 
 
 class SummarySerializer(drf_serializers.Serializer):
     transcriptId = drf_serializers.CharField(required=False, allow_blank=True, default="")
     summary = drf_serializers.CharField(required=False, allow_blank=True, default="")
-    keyPoints = drf_serializers.ListField(child=drf_serializers.CharField(), required=False, default=list)
-    decisions = drf_serializers.ListField(child=drf_serializers.CharField(), required=False, default=list)
-    actionItems = drf_serializers.ListField(child=drf_serializers.CharField(), required=False, default=list)
-    risks = drf_serializers.ListField(child=drf_serializers.CharField(), required=False, default=list)
-    topics = drf_serializers.ListField(child=drf_serializers.CharField(), required=False, default=list)
+    keyPoints = drf_serializers.ListField(
+        child=drf_serializers.CharField(), required=False, default=list
+    )
+    decisions = drf_serializers.ListField(
+        child=drf_serializers.CharField(), required=False, default=list
+    )
+    actionItems = drf_serializers.ListField(
+        child=drf_serializers.CharField(), required=False, default=list
+    )
+    risks = drf_serializers.ListField(
+        child=drf_serializers.CharField(), required=False, default=list
+    )
+    topics = drf_serializers.ListField(
+        child=drf_serializers.CharField(), required=False, default=list
+    )
     confidence = drf_serializers.FloatField(min_value=0.0, max_value=1.0, default=0.0)
     modelReference = drf_serializers.CharField(required=False, default="tekarai.ai.summary.v1")
 
@@ -120,9 +129,7 @@ class DispatchActionItemSerializer(drf_serializers.Serializer):
 
 
 class CreateOfficialSerializer(drf_serializers.Serializer):
-    kind = drf_serializers.ChoiceField(
-        choices=["ANNOUNCEMENT", "DIRECTIVE", "CIRCULAR", "NOTICE"]
-    )
+    kind = drf_serializers.ChoiceField(choices=["ANNOUNCEMENT", "DIRECTIVE", "CIRCULAR", "NOTICE"])
     subject = drf_serializers.CharField(max_length=300)
     body = drf_serializers.CharField(required=False, allow_blank=True, default="")
     recipientIds = drf_serializers.ListField(
@@ -139,8 +146,12 @@ class TransitionOfficialSerializer(drf_serializers.Serializer):
 class ReportMessageSerializer(drf_serializers.Serializer):
     reason = drf_serializers.ChoiceField(
         choices=[
-            "SPAM", "ABUSE", "HARASSMENT", "INAPPROPRIATE",
-            "MISINFORMATION", "OTHER",
+            "SPAM",
+            "ABUSE",
+            "HARASSMENT",
+            "INAPPROPRIATE",
+            "MISINFORMATION",
+            "OTHER",
         ]
     )
     description = drf_serializers.CharField(required=False, allow_blank=True, default="")
@@ -255,9 +266,7 @@ class ScreenShareStopView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request: Request, shareId: str) -> Response:
-        share = container.stopScreenShareUseCase().execute(
-            StopScreenShareCommand(shareId=shareId)
-        )
+        share = container.stopScreenShareUseCase().execute(StopScreenShareCommand(shareId=shareId))
         return Response(successEnvelope(_dto(share)))
 
 
@@ -323,9 +332,7 @@ class ActionItemDispatchView(APIView):
         serializer = DispatchActionItemSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         item = container.dispatchActionItemUseCase().execute(
-            DispatchActionItemCommand(
-                itemId=itemId, taskRef=serializer.validated_data["taskRef"]
-            )
+            DispatchActionItemCommand(itemId=itemId, taskRef=serializer.validated_data["taskRef"])
         )
         return Response(successEnvelope(_dto(item)))
 
@@ -434,7 +441,5 @@ class LegalHoldReleaseView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request: Request, holdId: str) -> Response:
-        hold = container.releaseLegalHoldUseCase().execute(
-            ReleaseLegalHoldCommand(holdId=holdId)
-        )
+        hold = container.releaseLegalHoldUseCase().execute(ReleaseLegalHoldCommand(holdId=holdId))
         return Response(successEnvelope(_dto(hold)))

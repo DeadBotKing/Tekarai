@@ -7,16 +7,16 @@ import uuid
 from dataclasses import FrozenInstanceError
 from pathlib import Path
 
-from apps.ai.domain.entities.aiRecords import AICapability, AIModel
+from apps.ai.domain.entities.aiRecords import AICapability, AIModel, AIProvider
 from apps.ai.domain.exceptions import (
     AICapabilityAlreadyRegistered,
     AICapabilityInactive,
     AICapabilityModelNotSupported,
     AICapabilityNotRegistered,
     AICapabilityPolicyInvalid,
+    AICapabilityRegistrationInvalid,
     AICapabilityRequestTypeUnsupported,
     AICapabilityRoutingNoMatch,
-    AICapabilityRegistrationInvalid,
 )
 from apps.ai.domain.ports import DeterministicAIProvider
 from apps.ai.domain.registries.capabilityRegistry import (
@@ -27,9 +27,8 @@ from apps.ai.domain.registries.capabilityRegistry import (
     CapabilitySelectionRequest,
     RegisteredCapability,
 )
-from apps.ai.domain.registries.modelRegistry import ModelRegistry, ModelRoutingPolicy
+from apps.ai.domain.registries.modelRegistry import ModelRegistry
 from apps.ai.domain.registries.providerRegistry import ProviderRegistry
-from apps.ai.domain.entities.aiRecords import AIProvider
 
 
 class Phase13FCapabilityRegistryTests(unittest.TestCase):
@@ -93,7 +92,9 @@ class Phase13FCapabilityRegistryTests(unittest.TestCase):
         descriptor = self.capabilityRegistry.describeCapability(self.tenantId, "SUMMARIZATION")
         self.assertIsInstance(descriptor, CapabilityDescriptor)
         self.assertEqual(descriptor.supportedRequestTypes[0], "GENERATE")
-        self.assertTrue(self.capabilityRegistry.supportsRequestType(self.tenantId, "SUMMARIZATION", "SUMMARIZE"))
+        self.assertTrue(
+            self.capabilityRegistry.supportsRequestType(self.tenantId, "SUMMARIZATION", "SUMMARIZE")
+        )
         self.assertEqual(self.capabilityRegistry.listCapabilities(self.otherTenantId), ())
         with self.assertRaises(AICapabilityNotRegistered):
             self.capabilityRegistry.resolve(self.otherTenantId, "SUMMARIZATION")
@@ -116,7 +117,9 @@ class Phase13FCapabilityRegistryTests(unittest.TestCase):
         self.capabilityRegistry.registerCapability(inactive)
         with self.assertRaises(AICapabilityInactive):
             self.capabilityRegistry.resolveCapability(self.tenantId, "EXTRACTION")
-        self.assertFalse(self.capabilityRegistry.supportsRequestType(self.tenantId, "EXTRACTION", "EXTRACT"))
+        self.assertFalse(
+            self.capabilityRegistry.supportsRequestType(self.tenantId, "EXTRACTION", "EXTRACT")
+        )
         descriptor = self.capabilityRegistry.activateCapability(self.tenantId, "EXTRACTION")
         self.assertTrue(descriptor.isActive)
 
@@ -125,10 +128,20 @@ class Phase13FCapabilityRegistryTests(unittest.TestCase):
             policy={"allowedRequestTypes": ("ASK", "EXTRACT")},
         )
         self.capabilityRegistry.registerCapability(restricted)
-        self.assertTrue(self.capabilityRegistry.supportsRequestType(self.tenantId, "DOCUMENT_ANALYSIS", "ASK"))
-        self.assertFalse(self.capabilityRegistry.supportsRequestType(self.tenantId, "DOCUMENT_ANALYSIS", "SUMMARIZE"))
+        self.assertTrue(
+            self.capabilityRegistry.supportsRequestType(self.tenantId, "DOCUMENT_ANALYSIS", "ASK")
+        )
+        self.assertFalse(
+            self.capabilityRegistry.supportsRequestType(
+                self.tenantId, "DOCUMENT_ANALYSIS", "SUMMARIZE"
+            )
+        )
         restricted.policy["allowedRequestTypes"] = ("SUMMARIZE",)
-        self.assertTrue(self.capabilityRegistry.supportsRequestType(self.tenantId, "DOCUMENT_ANALYSIS", "SUMMARIZE"))
+        self.assertTrue(
+            self.capabilityRegistry.supportsRequestType(
+                self.tenantId, "DOCUMENT_ANALYSIS", "SUMMARIZE"
+            )
+        )
         with self.assertRaises(AICapabilityRequestTypeUnsupported):
             self.capabilityRegistry.resolveForRequest(
                 self.tenantId,
@@ -148,10 +161,16 @@ class Phase13FCapabilityRegistryTests(unittest.TestCase):
             )
         empty = self._capability("RECOMMENDATION", policy={"allowedRequestTypes": ()})
         self.capabilityRegistry.registerCapability(empty)
-        self.assertFalse(self.capabilityRegistry.supportsRequestType(self.tenantId, "RECOMMENDATION", "RECOMMEND"))
+        self.assertFalse(
+            self.capabilityRegistry.supportsRequestType(
+                self.tenantId, "RECOMMENDATION", "RECOMMEND"
+            )
+        )
         custom = self._capability("CUSTOM_FINANCE_INSIGHT")
         self.capabilityRegistry.registerCapability(custom)
-        self.assertEqual(self.capabilityRegistry.resolve(self.tenantId, "custom_finance_insight"), custom)
+        self.assertEqual(
+            self.capabilityRegistry.resolve(self.tenantId, "custom_finance_insight"), custom
+        )
 
     def testCapabilityDescriptorAndRegistrationDoNotExposePolicyMetadata(self) -> None:
         capability = self._capability(
@@ -168,7 +187,9 @@ class Phase13FCapabilityRegistryTests(unittest.TestCase):
         self.assertNotIn("allowedRequestTypes", repr(descriptor))
 
     def testModelCapabilityListingUsesActiveTenantOwnedModels(self) -> None:
-        capability = self._capability("SUMMARIZATION", policy={"allowedRequestTypes": ("SUMMARIZE",)})
+        capability = self._capability(
+            "SUMMARIZATION", policy={"allowedRequestTypes": ("SUMMARIZE",)}
+        )
         self.capabilityRegistry.registerCapability(capability)
         model = self._model()
         self.modelRegistry.registerModel(model, "DETERMINISTIC")
@@ -178,19 +199,27 @@ class Phase13FCapabilityRegistryTests(unittest.TestCase):
             requestType="SUMMARIZE",
         )
         self.assertEqual(tuple(descriptor.code for descriptor in listed), ("SUMMARY_MODEL",))
-        self.assertTrue(self.capabilityRegistry.modelSupportsCapability(self.tenantId, "SUMMARIZATION", model))
+        self.assertTrue(
+            self.capabilityRegistry.modelSupportsCapability(self.tenantId, "SUMMARIZATION", model)
+        )
         otherModel = AIModel(
             tenantId=self.otherTenantId,
             providerId=self.providerDefinition.id,
             code="OTHER_MODEL",
             name="Other model",
         )
-        self.assertFalse(self.capabilityRegistry.supportsModel(self.tenantId, "SUMMARIZATION", otherModel))
+        self.assertFalse(
+            self.capabilityRegistry.supportsModel(self.tenantId, "SUMMARIZATION", otherModel)
+        )
         with self.assertRaises(AICapabilityModelNotSupported):
-            self.capabilityRegistry.modelSupportsCapability(self.tenantId, "SUMMARIZATION", object())
+            self.capabilityRegistry.modelSupportsCapability(
+                self.tenantId, "SUMMARIZATION", object()
+            )
 
     def testCapabilityRoutingChecksCapabilityThenDelegatesToModelRouting(self) -> None:
-        capability = self._capability("SUMMARIZATION", policy={"allowedRequestTypes": ("SUMMARIZE",)})
+        capability = self._capability(
+            "SUMMARIZATION", policy={"allowedRequestTypes": ("SUMMARIZE",)}
+        )
         self.capabilityRegistry.registerCapability(capability)
         self.modelRegistry.registerModel(self._model(), "DETERMINISTIC")
         request = CapabilityRoutingRequest(
@@ -202,7 +231,10 @@ class Phase13FCapabilityRegistryTests(unittest.TestCase):
         decision = self.capabilityRegistry.routeForCapability(request)
         self.assertEqual(decision.modelCode, "SUMMARY_MODEL")
         self.assertEqual(decision.tenantId, self.tenantId)
-        self.assertIs(self.capabilityRegistry.resolveModelForCapability(request), self.modelRegistry.resolveModel(self.tenantId, "DETERMINISTIC", "SUMMARY_MODEL"))
+        self.assertIs(
+            self.capabilityRegistry.resolveModelForCapability(request),
+            self.modelRegistry.resolveModel(self.tenantId, "DETERMINISTIC", "SUMMARY_MODEL"),
+        )
 
         self.capabilityRegistry.deactivateCapability(self.tenantId, "SUMMARIZATION")
         with self.assertRaises(AICapabilityInactive):
@@ -211,8 +243,12 @@ class Phase13FCapabilityRegistryTests(unittest.TestCase):
     def testCapabilityRoutingNoMatchAndModelRegistryBoundary(self) -> None:
         capability = self._capability("SUMMARIZATION")
         self.capabilityRegistry.registerCapability(capability)
-        self.modelRegistry.registerModel(self._model(inputCapability=("CLASSIFICATION",)), "DETERMINISTIC")
-        request = CapabilitySelectionRequest(self.tenantId, "SUMMARIZATION", requestType="SUMMARIZE", modelType="LLM")
+        self.modelRegistry.registerModel(
+            self._model(inputCapability=("CLASSIFICATION",)), "DETERMINISTIC"
+        )
+        request = CapabilitySelectionRequest(
+            self.tenantId, "SUMMARIZATION", requestType="SUMMARIZE", modelType="LLM"
+        )
         with self.assertRaises(AICapabilityRoutingNoMatch):
             self.capabilityRegistry.routeForCapability(request)
         standalone = CapabilityRegistry()
@@ -228,10 +264,12 @@ class Phase13FCapabilityRegistryTests(unittest.TestCase):
             self.capabilityRegistry.getRegistration(self.tenantId, "TRANSLATION")
         self.capabilityRegistry.registerCapability(self._capability("TRANSLATION"))
         self.capabilityRegistry.clear()
-        self.assertEqual(self.capabilityRegistry.listCapabilities(self.tenantId, activeOnly=False), ())
-        source = (Path(__file__).resolve().parents[2] / "apps/ai/domain/registries/capabilityRegistry.py").read_text(
-            encoding="utf-8"
+        self.assertEqual(
+            self.capabilityRegistry.listCapabilities(self.tenantId, activeOnly=False), ()
         )
+        source = (
+            Path(__file__).resolve().parents[2] / "apps/ai/domain/registries/capabilityRegistry.py"
+        ).read_text(encoding="utf-8")
         for forbidden in (
             "django",
             "rest_framework",

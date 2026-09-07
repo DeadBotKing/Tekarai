@@ -8,9 +8,9 @@ from typing import Any
 
 from apps.notifications.domain.valueObjects.notificationTypes import (
     DIGEST_KINDS,
-    DIGEST_STATUSES,
     DIGEST_STATUS_OPEN,
     DIGEST_STATUS_SENT,
+    DIGEST_STATUSES,
     SCHEDULE_KINDS,
     SCHEDULE_PENDING,
     SCHEDULE_STATUSES,
@@ -37,13 +37,9 @@ class NotificationDigest(AggregateRoot):
     ) -> None:
         super().__init__(id)
         if kind not in DIGEST_KINDS:
-            raise ValidationFailedError(
-                "Unknown digest kind.", fieldErrors={"kind": kind}
-            )
+            raise ValidationFailedError("Unknown digest kind.", fieldErrors={"kind": kind})
         if status not in DIGEST_STATUSES:
-            raise ValidationFailedError(
-                "Unknown digest status.", fieldErrors={"status": status}
-            )
+            raise ValidationFailedError("Unknown digest status.", fieldErrors={"status": status})
         if periodEnd <= periodStart:
             raise ValidationFailedError(
                 "Digest period end must be after start.",
@@ -99,13 +95,9 @@ class NotificationSchedule(AggregateRoot):
     ) -> None:
         super().__init__(id)
         if kind not in SCHEDULE_KINDS:
-            raise ValidationFailedError(
-                "Unknown schedule kind.", fieldErrors={"kind": kind}
-            )
+            raise ValidationFailedError("Unknown schedule kind.", fieldErrors={"kind": kind})
         if status not in SCHEDULE_STATUSES:
-            raise ValidationFailedError(
-                "Unknown schedule status.", fieldErrors={"status": status}
-            )
+            raise ValidationFailedError("Unknown schedule status.", fieldErrors={"status": status})
         if kind == "RECURRING" and recurEverySeconds <= 0:
             raise ValidationFailedError(
                 "RECURRING schedule needs recurEverySeconds > 0.",

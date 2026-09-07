@@ -5,16 +5,17 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from typing import Any, Iterable
+from typing import Any
 
 from apps.ai.domain.exceptions import (
     AIContextTooLarge,
+    AIOutputValidationFailed,
     AIPermissionDenied,
     AIProviderRateLimited,
     AIRequestTimeout,
-    AIOutputValidationFailed,
 )
 from apps.ai.domain.policies.aiPolicies import ContextPolicy
 from apps.ai.domain.valueObjects.aiTypes import CostRate, RetryPolicy, TokenUsage
@@ -85,9 +86,14 @@ def validateJsonSchema(value: Any, schema: dict[str, Any]) -> bool:
         if any(key not in value for key in required):
             return False
         properties = schema.get("properties", {})
-        if schema.get("additionalProperties") is False and any(key not in properties for key in value):
+        if schema.get("additionalProperties") is False and any(
+            key not in properties for key in value
+        ):
             return False
-        if any(key in properties and not validateJsonSchema(item, properties[key]) for key, item in value.items()):
+        if any(
+            key in properties and not validateJsonSchema(item, properties[key])
+            for key, item in value.items()
+        ):
             return False
     if isinstance(value, list) and "items" in schema:
         if any(not validateJsonSchema(item, schema["items"]) for item in value):
@@ -147,7 +153,10 @@ def mapProviderFailure(error: Exception) -> Exception:
 
 def redact(value: Any) -> Any:
     if isinstance(value, dict):
-        return {key: "[REDACTED]" if key in SENSITIVE_KEYS else redact(item) for key, item in value.items()}
+        return {
+            key: "[REDACTED]" if key in SENSITIVE_KEYS else redact(item)
+            for key, item in value.items()
+        }
     if isinstance(value, list):
         return [redact(item) for item in value]
     return value

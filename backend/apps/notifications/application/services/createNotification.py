@@ -28,8 +28,8 @@ from apps.notifications.application.services.resolvePolicyAndPreferences import 
     ResolveNotificationPolicyService,
 )
 from apps.notifications.application.services.resolveRecipients import (
-    ResolveRecipientsService,
     ResolvedRecipient,
+    ResolveRecipientsService,
 )
 from apps.notifications.domain.entities.notification import Notification
 from apps.notifications.domain.repositories.notificationRepositories import (
@@ -102,9 +102,7 @@ class CreateNotificationService(NotificationUseCase):
                 "Unknown channel override.", fieldErrors={"channels": str(unknown)}
             )
         if not message.title.strip():
-            raise ValidationFailedError(
-                "Title is required.", fieldErrors={"title": "empty"}
-            )
+            raise ValidationFailedError("Title is required.", fieldErrors={"title": "empty"})
         if not str(message.eventId).strip():
             raise ValidationFailedError(
                 "eventId is required for deduplication.", fieldErrors={"eventId": "empty"}
@@ -135,9 +133,7 @@ class CreateNotificationService(NotificationUseCase):
                 outcome.notifications.append(notificationDtoFromDomain(existing))
                 continue
 
-            storm = self._stormControl(
-                command, recipient, policy.cooldownSeconds, now
-            )
+            storm = self._stormControl(command, recipient, policy.cooldownSeconds, now)
 
             payload = dict(command.data)
             if recipient.externalAddress:
@@ -175,8 +171,10 @@ class CreateNotificationService(NotificationUseCase):
                 resourceType="NotificationRecord",
                 resourceId=str(notification.id),
                 tenantId=command.tenantId,
-                after={"notificationType": notification.notificationType,
-                       "category": notification.category},
+                after={
+                    "notificationType": notification.notificationType,
+                    "category": notification.category,
+                },
             )
             self.noteCreated()
 

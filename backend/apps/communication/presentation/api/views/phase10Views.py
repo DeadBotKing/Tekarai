@@ -57,7 +57,9 @@ class TranscriptSegmentSerializer(drf_serializers.Serializer):
     startTimeSeconds = drf_serializers.FloatField(required=False, default=0.0)
     endTimeSeconds = drf_serializers.FloatField(required=False, default=0.0)
     text = drf_serializers.CharField()
-    confidence = drf_serializers.FloatField(required=False, default=1.0, min_value=0.0, max_value=1.0)
+    confidence = drf_serializers.FloatField(
+        required=False, default=1.0, min_value=0.0, max_value=1.0
+    )
 
 
 class CompleteTranscriptSerializer(drf_serializers.Serializer):
@@ -120,9 +122,7 @@ class TranscriptRequestView(APIView):
         return Response(successEnvelope(_dto(dto)), status=201)
 
     def get(self, request: Request, meetingId: str) -> Response:
-        dto = container.getTranscriptUseCase().execute(
-            GetTranscriptQuery(meetingId=meetingId)
-        )
+        dto = container.getTranscriptUseCase().execute(GetTranscriptQuery(meetingId=meetingId))
         return Response(successEnvelope(_dto(dto)))
 
 

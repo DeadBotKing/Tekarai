@@ -104,9 +104,13 @@ class CreateBroadcastService(NotificationUseCase):
         )
         self.broadcastRepository.save(notification)
         self.collectEventsFrom(notification)
-        self.audit("CREATE", "Notification", str(notification.id), tenantId,
-                  after={"type": command.notificationType,
-                         "recipients": len(notification.recipients)})
+        self.audit(
+            "CREATE",
+            "Notification",
+            str(notification.id),
+            tenantId,
+            after={"type": command.notificationType, "recipients": len(notification.recipients)},
+        )
         self.noteCreated(1)
         return notification
 
@@ -152,12 +156,9 @@ class RecipientStateService(NotificationUseCase):
         else:
             from apps.sharedKernel.domain.errors import ValidationFailedError
 
-            raise ValidationFailedError("unknown recipient action",
-                                        fieldErrors={"action": action})
+            raise ValidationFailedError("unknown recipient action", fieldErrors={"action": action})
         self.broadcastRepository.saveRecipient(recipient)
-        notification = self.broadcastRepository.getById(
-            tenantId, asUuid(command.notificationId)
-        )
+        notification = self.broadcastRepository.getById(tenantId, asUuid(command.notificationId))
         if notification is not None and notification.recipients:
             states = tuple(item.state for item in notification.recipients)
             if all(state == "READ" for state in states):
@@ -203,13 +204,13 @@ class BroadcastQueryService(NotificationUseCase):
     def perform(self, command: Any) -> Any:
         actorId, tenantId = _actor()
         if isinstance(command, UnreadCountQuery):
-            return {
-                "unreadCount": self.broadcastRepository.unreadCount(tenantId, actorId)
-            }
+            return {"unreadCount": self.broadcastRepository.unreadCount(tenantId, actorId)}
         if isinstance(command, ListBroadcastsQuery):
             notifications = self.broadcastRepository.listForRecipient(
-                tenantId, actorId,
-                unreadOnly=command.unreadOnly, limit=command.limit,
+                tenantId,
+                actorId,
+                unreadOnly=command.unreadOnly,
+                limit=command.limit,
             )
             return [self._dto(n, actorId) for n in notifications]
         raise TypeError(f"unsupported query {type(command)}")
@@ -257,7 +258,9 @@ class DeliveryDispatchService(NotificationUseCase):
         self.broadcastRepository = broadcastRepository
         self.deliveryRepository = deliveryRepository
 
-    def fanOut(self, notification: records.BroadcastNotification) -> list[records.RecipientDelivery]:
+    def fanOut(
+        self, notification: records.BroadcastNotification
+    ) -> list[records.RecipientDelivery]:
         now = self.clock.nowUtc()
         if not notification.canSend(now):
             if notification.expiresAt is not None and notification.expiresAt <= now:
@@ -266,9 +269,7 @@ class DeliveryDispatchService(NotificationUseCase):
             return []
         notification.queue(now)
         self.broadcastRepository.save(notification)
-        channels = types.PRIORITY_CHANNEL_ROUTING.get(
-            notification.priority, ("IN_APP",)
-        )
+        channels = types.PRIORITY_CHANNEL_ROUTING.get(notification.priority, ("IN_APP",))
         created: list[records.RecipientDelivery] = []
         for recipient in notification.recipients:
             for channel in channels:
@@ -281,15 +282,15 @@ class DeliveryDispatchService(NotificationUseCase):
         # Small fan-outs get an immediate realtime nudge. Large audiences are
         # intentionally left to stateless workers/REST reconciliation so an
         # HTTP request never performs thousands of transport calls (§19/§78).
-        realtimeRecipients = (
-            notification.recipients if len(notification.recipients) <= 100 else ()
-        )
+        realtimeRecipients = notification.recipients if len(notification.recipients) <= 100 else ()
         for recipient in realtimeRecipients:
             self.pushToUser(
                 recipient.userId,
-                {"type": "notification.created",
-                 "notificationId": str(notification.id),
-                 "title": notification.title},
+                {
+                    "type": "notification.created",
+                    "notificationId": str(notification.id),
+                    "title": notification.title,
+                },
             )
         return created
 
@@ -328,8 +329,7 @@ class DeliveryRetryService(NotificationUseCase):
                 deadLettered += 1
             elif outcome == "DELIVERED":
                 delivered += 1
-        return {"processed": processed, "deadLettered": deadLettered,
-                "delivered": delivered}
+        return {"processed": processed, "deadLettered": deadLettered, "delivered": delivered}
 
     def _attempt(self, delivery: records.RecipientDelivery) -> str:
         now = self.clock.nowUtc()
@@ -371,8 +371,13 @@ class DeliveryRetryService(NotificationUseCase):
                 notification.applyDeliveryStates(states, now)
                 self.broadcastRepository.save(notification)
         self.collectEventsFrom(delivery)
-        self.audit("ATTEMPT", "NotificationDelivery", str(delivery.id), delivery.tenantId,
-                  after={"channel": delivery.channel, "status": delivery.status})
+        self.audit(
+            "ATTEMPT",
+            "NotificationDelivery",
+            str(delivery.id),
+            delivery.tenantId,
+            after={"channel": delivery.channel, "status": delivery.status},
+        )
         if delivery.status == types.DLV_DELIVERED:
             self.noteDelivered()
             return "DELIVERED"
@@ -466,8 +471,13 @@ class RuleDefinitionService(NotificationUseCase):
             templateKey=command.templateKey,
         )
         self.ruleRepository.save(rule)
-        self.audit("CREATE", "NotificationRule", str(rule.id), tenantId,
-                  after={"eventType": rule.eventType})
+        self.audit(
+            "CREATE",
+            "NotificationRule",
+            str(rule.id),
+            tenantId,
+            after={"eventType": rule.eventType},
+        )
         return rule
 
 
@@ -500,7 +510,10 @@ class EventIntakeService(NotificationUseCase):
         if self.inboundEventRepository.findProcessed(tenantId, command.eventId):
             return []
         event = records.InboundNotificationEvent.ingest(
-            tenantId, command.eventId, command.eventType, self.clock.nowUtc(),
+            tenantId,
+            command.eventId,
+            command.eventType,
+            self.clock.nowUtc(),
             payload=dict(command.payload),
         )
         self.inboundEventRepository.save(event)
@@ -538,9 +551,7 @@ class EventIntakeService(NotificationUseCase):
         return created
 
     @staticmethod
-    def _resolveRecipients(
-        rule: records.NotificationRule, payload: dict
-    ) -> list[uuid.UUID]:
+    def _resolveRecipients(rule: records.NotificationRule, payload: dict) -> list[uuid.UUID]:
         """§12.24 recipient strategy. TARGET uses explicit ids; other strategies
         read well-known payload keys populated by the emitting domain."""
         raw: Any

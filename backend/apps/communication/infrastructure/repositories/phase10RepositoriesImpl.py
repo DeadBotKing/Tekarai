@@ -50,24 +50,18 @@ class MessageRevisionRepositoryDjango:
             editedAt=revision.editedAt,
         )
 
-    def nextRevisionNumber(
-        self, tenantId: uuid.UUID, messageId: uuid.UUID
-    ) -> int:
+    def nextRevisionNumber(self, tenantId: uuid.UUID, messageId: uuid.UUID) -> int:
         last = (
-            MessageRevisionModel.objects.filter(
-                tenantId=tenantId, messageId=messageId
-            )
+            MessageRevisionModel.objects.filter(tenantId=tenantId, messageId=messageId)
             .order_by("-revisionNumber")
             .first()
         )
         return (last.revisionNumber + 1) if last else 1
 
-    def listForMessage(
-        self, tenantId: uuid.UUID, messageId: uuid.UUID
-    ) -> list[MessageRevision]:
-        rows = MessageRevisionModel.objects.filter(
-            tenantId=tenantId, messageId=messageId
-        ).order_by("revisionNumber")
+    def listForMessage(self, tenantId: uuid.UUID, messageId: uuid.UUID) -> list[MessageRevision]:
+        rows = MessageRevisionModel.objects.filter(tenantId=tenantId, messageId=messageId).order_by(
+            "revisionNumber"
+        )
         return [
             MessageRevision(
                 id=row.id,
@@ -140,17 +134,15 @@ class TranscriptRepositoryDjango:
         row = qs.first()
         return self._toDomain(row) if row else None
 
-    def findForMeeting(
-        self, tenantId: uuid.UUID, meetingId: uuid.UUID
-    ) -> MeetingTranscript | None:
-        row = MeetingTranscriptModel.objects.filter(
-            tenantId=tenantId, meetingId=meetingId
-        ).order_by("-createdAt").first()
+    def findForMeeting(self, tenantId: uuid.UUID, meetingId: uuid.UUID) -> MeetingTranscript | None:
+        row = (
+            MeetingTranscriptModel.objects.filter(tenantId=tenantId, meetingId=meetingId)
+            .order_by("-createdAt")
+            .first()
+        )
         return self._toDomain(row) if row else None
 
-    def listSegments(
-        self, tenantId: uuid.UUID, transcriptId: uuid.UUID
-    ) -> list[TranscriptSegment]:
+    def listSegments(self, tenantId: uuid.UUID, transcriptId: uuid.UUID) -> list[TranscriptSegment]:
         rows = TranscriptSegmentModel.objects.filter(
             tenantId=tenantId, transcriptId=transcriptId
         ).order_by("sequence")
@@ -184,9 +176,9 @@ class UserBlockRepositoryDjango:
         )
 
     def update(self, block: UserBlock) -> None:
-        UserBlockModel.objects.filter(
-            id=block.id, tenantId=block.tenantId
-        ).update(blockStatus=block.blockStatus, removedAt=block.removedAt)
+        UserBlockModel.objects.filter(id=block.id, tenantId=block.tenantId).update(
+            blockStatus=block.blockStatus, removedAt=block.removedAt
+        )
 
     def findActive(
         self,
@@ -217,12 +209,10 @@ class UserBlockRepositoryDjango:
             ids.append(row.blockedUserId)
         return ids
 
-    def listForBlocker(
-        self, tenantId: uuid.UUID, blockerId: uuid.UUID
-    ) -> list[UserBlock]:
-        rows = UserBlockModel.objects.filter(
-            tenantId=tenantId, blockerId=blockerId
-        ).order_by("-createdAt")
+    def listForBlocker(self, tenantId: uuid.UUID, blockerId: uuid.UUID) -> list[UserBlock]:
+        rows = UserBlockModel.objects.filter(tenantId=tenantId, blockerId=blockerId).order_by(
+            "-createdAt"
+        )
         return [self._toDomain(row) for row in rows]
 
     def _toDomain(self, row: UserBlockModel) -> UserBlock:

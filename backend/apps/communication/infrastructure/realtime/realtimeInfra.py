@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from apps.sharedKernel.domain.events import DomainEvent
@@ -49,7 +49,7 @@ class RedisPresenceRepository:
         ttlSeconds: int,
         now: datetime | None = None,
     ) -> None:
-        now = now or datetime.now(tz=timezone.utc)
+        now = now or datetime.now(tz=UTC)
         if self.redis is not None:
             self.redis.set(self._key(tenantId, userId), status, ex=ttlSeconds)
         else:
@@ -58,9 +58,7 @@ class RedisPresenceRepository:
                 now + timedelta(seconds=ttlSeconds),
             )
 
-    def get(
-        self, tenantId: uuid.UUID, userId: uuid.UUID
-    ) -> str:
+    def get(self, tenantId: uuid.UUID, userId: uuid.UUID) -> str:
         if self.redis is not None:
             value = self.redis.get(self._key(tenantId, userId))
             if isinstance(value, bytes):
@@ -70,14 +68,12 @@ class RedisPresenceRepository:
         if entry is None:
             return "OFFLINE"
         status, expiresAt = entry
-        if datetime.now(tz=timezone.utc) > expiresAt:
+        if datetime.now(tz=UTC) > expiresAt:
             self.fallback.pop((tenantId, userId), None)
             return "OFFLINE"
         return status
 
-    def getMany(
-        self, tenantId: uuid.UUID, userIds: list[uuid.UUID]
-    ) -> dict[str, str]:
+    def getMany(self, tenantId: uuid.UUID, userIds: list[uuid.UUID]) -> dict[str, str]:
         return {str(userId): self.get(tenantId, userId) for userId in userIds}
 
 
@@ -194,7 +190,7 @@ class OutboxDispatcher:
 
         metrics = communicationMetrics()
         for row in self.outboxRepository.pending(limit=limit):
-            startedAt = datetime.now(tz=timezone.utc)
+            startedAt = datetime.now(tz=UTC)
             try:
                 self.eventDispatcher.dispatch(
                     DomainEvent(
@@ -206,7 +202,7 @@ class OutboxDispatcher:
                 )
                 self.outboxRepository.markPublished(row.id, self.clock.nowUtc())
                 metrics.observeEventProcessing(
-                    (datetime.now(tz=timezone.utc) - startedAt).total_seconds()
+                    (datetime.now(tz=UTC) - startedAt).total_seconds()
                 )  # §39 eventProcessingLatency
                 published += 1
             except Exception:  # noqa: BLE001 — §38 keep row pending on failure

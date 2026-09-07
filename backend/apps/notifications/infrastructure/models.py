@@ -54,9 +54,7 @@ class NotificationRecordModel(models.Model):
                 name="IX_Ntf_unread",
             ),
             models.Index(fields=["tenantId", "status"], name="IX_Ntf_t_status"),
-            models.Index(
-                fields=["tenantId", "category", "priority"], name="IX_Ntf_t_cat_pri"
-            ),
+            models.Index(fields=["tenantId", "category", "priority"], name="IX_Ntf_t_cat_pri"),
         ]
         constraints = [
             # §29/§37 — one notification per logical (event, recipient, type)
@@ -90,12 +88,8 @@ class NotificationDeliveryModel(models.Model):
         db_table = "notificationsDeliveries"
         indexes = [
             # §37 — retry worker scan: status + nextAttemptAt
-            models.Index(
-                fields=["status", "nextAttemptAt"], name="IX_Ndl_retry_scan"
-            ),
-            models.Index(
-                fields=["notificationId", "channel"], name="IX_Ndl_ntf_channel"
-            ),
+            models.Index(fields=["status", "nextAttemptAt"], name="IX_Ndl_retry_scan"),
+            models.Index(fields=["notificationId", "channel"], name="IX_Ndl_ntf_channel"),
         ]
         constraints = [
             models.UniqueConstraint(
@@ -252,9 +246,7 @@ class NotificationPolicyModel(models.Model):
             ),
         ]
         constraints = [
-            models.UniqueConstraint(
-                fields=["tenantId", "policyKey"], name="UQ_Policy_key"
-            ),
+            models.UniqueConstraint(fields=["tenantId", "policyKey"], name="UQ_Policy_key"),
         ]
 
 
@@ -274,9 +266,7 @@ class NotificationPolicyChannelModel(models.Model):
             models.Index(fields=["policyId", "channel"], name="IX_PolC_pol_channel"),
         ]
         constraints = [
-            models.UniqueConstraint(
-                fields=["policyId", "channel"], name="UQ_PolicyChannel"
-            ),
+            models.UniqueConstraint(fields=["policyId", "channel"], name="UQ_PolicyChannel"),
         ]
 
 
@@ -288,7 +278,9 @@ class NotificationDeviceModel(models.Model):
     userId = models.UUIDField(db_index=True)
     platform = models.CharField(max_length=12)
     deviceIdentifier = models.CharField(max_length=190)
-    pushToken = models.CharField(max_length=2048)  # authenticated envelope + key rotation headroom  # §33 — server-side only
+    pushToken = models.CharField(
+        max_length=2048
+    )  # authenticated envelope + key rotation headroom  # §33 — server-side only
     provider = models.CharField(max_length=48, default="FCM")
     isActive = models.BooleanField(default=True, db_index=True)
     createdAt = models.DateTimeField(auto_now_add=True)
@@ -477,9 +469,7 @@ class NotificationRecipientModel(models.Model):
             models.Index(fields=["notificationId", "userId"], name="IX_Recp_n_u"),
         ]
         constraints = [
-            models.UniqueConstraint(
-                fields=["notificationId", "userId"], name="UQ_Recp_notif_user"
-            ),
+            models.UniqueConstraint(fields=["notificationId", "userId"], name="UQ_Recp_notif_user"),
         ]
 
 
@@ -550,9 +540,7 @@ class NotificationAttemptModel(models.Model):
             models.Index(fields=["deliveryId", "attemptNumber"], name="IX_Att_dlv_num"),
         ]
         constraints = [
-            models.UniqueConstraint(
-                fields=["deliveryId", "attemptNumber"], name="UQ_Att_dlv_num"
-            ),
+            models.UniqueConstraint(fields=["deliveryId", "attemptNumber"], name="UQ_Att_dlv_num"),
         ]
 
 
@@ -592,9 +580,7 @@ class NotificationEventModel(models.Model):
     class Meta:
         db_table = "notificationEvents"
         constraints = [
-            models.UniqueConstraint(
-                fields=["tenantId", "eventId"], name="UQ_Event_tenant_evt"
-            ),
+            models.UniqueConstraint(fields=["tenantId", "eventId"], name="UQ_Event_tenant_evt"),
         ]
 
 
@@ -625,9 +611,7 @@ class NotificationPushSubscriptionModel(models.Model):
             )
         ]
         indexes = [
-            models.Index(
-                fields=["tenantId", "userId", "isActive"], name="IX_NtfPush_t_user"
-            )
+            models.Index(fields=["tenantId", "userId", "isActive"], name="IX_NtfPush_t_user")
         ]
 
 
@@ -670,9 +654,7 @@ class NotificationWebhookReceiptModel(models.Model):
                 name="UQ_NtfHook_t_provider_event",
             )
         ]
-        indexes = [
-            models.Index(fields=["tenantId", "receivedAt"], name="IX_NtfHook_t_received")
-        ]
+        indexes = [models.Index(fields=["tenantId", "receivedAt"], name="IX_NtfHook_t_received")]
 
 
 class NotificationAuditModel(models.Model):
@@ -687,9 +669,7 @@ class NotificationAuditModel(models.Model):
 
     class Meta:
         db_table = "notificationAudit"
-        indexes = [
-            models.Index(fields=["tenantId", "occurredAt"], name="IX_NtfAudit_t_time")
-        ]
+        indexes = [models.Index(fields=["tenantId", "occurredAt"], name="IX_NtfAudit_t_time")]
 
 
 class NotificationCleanupRunModel(models.Model):
@@ -703,6 +683,4 @@ class NotificationCleanupRunModel(models.Model):
 
     class Meta:
         db_table = "notificationCleanupRuns"
-        indexes = [
-            models.Index(fields=["tenantId", "createdAt"], name="IX_NtfClean_t_time")
-        ]
+        indexes = [models.Index(fields=["tenantId", "createdAt"], name="IX_NtfClean_t_time")]

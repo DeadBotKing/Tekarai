@@ -25,7 +25,6 @@ from apps.communication.domain.entities.officialLetter import OfficialLetter
 from apps.communication.domain.entities.participant import ConversationParticipant
 from apps.communication.domain.entities.recording import Recording
 
-
 # ---------------------------------------------------------------------------
 # read models (no ORM objects cross the border)
 # ---------------------------------------------------------------------------
@@ -63,14 +62,20 @@ class ConversationSummary:
 
 @runtime_checkable
 class ConversationRepository(Protocol):
-    def create(self, conversation: Conversation, *, code: str = "",
-               topic: str = "", visibility: str = "") -> None: ...
+    def create(
+        self, conversation: Conversation, *, code: str = "", topic: str = "", visibility: str = ""
+    ) -> None: ...
 
     def update(self, conversation: Conversation) -> None: ...
 
     def updateChannelProfile(
-        self, conversationId: uuid.UUID, *, topic: str | None,
-        visibility: str | None, description: str | None, name: str | None,
+        self,
+        conversationId: uuid.UUID,
+        *,
+        topic: str | None,
+        visibility: str | None,
+        description: str | None,
+        name: str | None,
     ) -> None: ...
 
     def getById(
@@ -119,8 +124,11 @@ class MessageRepository(Protocol):
     ) -> Message | None: ...
 
     def findByIdempotencyKey(
-        self, tenantId: uuid.UUID, conversationId: uuid.UUID,
-        senderId: uuid.UUID, clientRequestId: str,
+        self,
+        tenantId: uuid.UUID,
+        conversationId: uuid.UUID,
+        senderId: uuid.UUID,
+        clientRequestId: str,
     ) -> Message | None: ...
 
     def listByConversation(
@@ -173,21 +181,29 @@ class ReadStateRepository(Protocol):
     """§32 — bulk updates to avoid excessive writes."""
 
     def markConversationRead(
-        self, tenantId: uuid.UUID, conversationId: uuid.UUID,
-        userId: uuid.UUID, uptoMessageId: uuid.UUID, now: datetime,
+        self,
+        tenantId: uuid.UUID,
+        conversationId: uuid.UUID,
+        userId: uuid.UUID,
+        uptoMessageId: uuid.UUID,
+        now: datetime,
     ) -> int: ...
 
     def markDelivered(
-        self, tenantId: uuid.UUID, conversationId: uuid.UUID,
-        userIds: list[uuid.UUID], now: datetime,
+        self,
+        tenantId: uuid.UUID,
+        conversationId: uuid.UUID,
+        userIds: list[uuid.UUID],
+        now: datetime,
     ) -> int: ...
 
-    def statesForMessage(
-        self, messageId: uuid.UUID
-    ) -> list[MessageReadState]: ...
+    def statesForMessage(self, messageId: uuid.UUID) -> list[MessageReadState]: ...
 
     def unreadCount(
-        self, tenantId: uuid.UUID, conversationId: uuid.UUID, userId: uuid.UUID,
+        self,
+        tenantId: uuid.UUID,
+        conversationId: uuid.UUID,
+        userId: uuid.UUID,
         lastReadMessageId: uuid.UUID | None,
     ) -> int: ...
 
@@ -237,9 +253,7 @@ class MeetingParticipantRepository(Protocol):
 
     def update(self, participant: MeetingParticipant) -> None: ...
 
-    def get(
-        self, meetingId: uuid.UUID, userId: uuid.UUID
-    ) -> MeetingParticipant | None: ...
+    def get(self, meetingId: uuid.UUID, userId: uuid.UUID) -> MeetingParticipant | None: ...
 
     def listForMeeting(self, meetingId: uuid.UUID) -> list[MeetingParticipant]: ...
 
@@ -252,9 +266,7 @@ class CallRepository(Protocol):
 
     def update(self, call: Call) -> None: ...
 
-    def getById(
-        self, callId: uuid.UUID, tenantId: uuid.UUID | None = None
-    ) -> Call | None: ...
+    def getById(self, callId: uuid.UUID, tenantId: uuid.UUID | None = None) -> Call | None: ...
 
     def findActiveInConversation(
         self, tenantId: uuid.UUID, conversationId: uuid.UUID
@@ -308,7 +320,9 @@ class LetterRepository(Protocol):
         self, letterId: uuid.UUID, tenantId: uuid.UUID | None = None
     ) -> OfficialLetter | None: ...
 
-    def getByReference(self, tenantId: uuid.UUID, referenceNumber: str) -> OfficialLetter | None: ...
+    def getByReference(
+        self, tenantId: uuid.UUID, referenceNumber: str
+    ) -> OfficialLetter | None: ...
 
     def nextReferenceNumber(self, tenantId: uuid.UUID) -> str: ...
 
@@ -325,15 +339,17 @@ class LetterRepository(Protocol):
 @runtime_checkable
 class PresenceRepository(Protocol):
     def set(
-        self, tenantId: uuid.UUID, userId: uuid.UUID,
-        status: str, ttlSeconds: int, now: datetime,
+        self,
+        tenantId: uuid.UUID,
+        userId: uuid.UUID,
+        status: str,
+        ttlSeconds: int,
+        now: datetime,
     ) -> None: ...
 
     def get(self, tenantId: uuid.UUID, userId: uuid.UUID) -> str | None: ...
 
-    def getMany(
-        self, tenantId: uuid.UUID, userIds: list[uuid.UUID]
-    ) -> dict[str, str]: ...
+    def getMany(self, tenantId: uuid.UUID, userIds: list[uuid.UUID]) -> dict[str, str]: ...
 
 
 # ---------------------------------------------------------------------------
@@ -344,7 +360,11 @@ class PresenceRepository(Protocol):
 @runtime_checkable
 class OutboxRepository(Protocol):
     def enqueue(
-        self, *, tenantId: uuid.UUID, eventType: str, payload: dict[str, Any],
+        self,
+        *,
+        tenantId: uuid.UUID,
+        eventType: str,
+        payload: dict[str, Any],
         occurredAt: datetime,
     ) -> uuid.UUID: ...
 

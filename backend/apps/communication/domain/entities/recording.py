@@ -80,9 +80,7 @@ class Recording(AggregateRoot):
         )
         return recording
 
-    def transitionTo(
-        self, target: str, now: datetime, *, reason: str = ""
-    ) -> None:
+    def transitionTo(self, target: str, now: datetime, *, reason: str = "") -> None:
         allowed = RECORDING_TRANSITIONS.get(self.recordingStatus, ())
         if target not in allowed:
             raise InvalidStateTransitionError(
@@ -124,7 +122,9 @@ class Recording(AggregateRoot):
 
         if fileSizeBytes < 0:
             raise ValidationFailedError("Recording file size cannot be negative.")
-        if checksum and (len(checksum) != 64 or any(c not in "0123456789abcdefABCDEF" for c in checksum)):
+        if checksum and (
+            len(checksum) != 64 or any(c not in "0123456789abcdefABCDEF" for c in checksum)
+        ):
             raise ValidationFailedError("Recording checksum must be a SHA-256 hex digest.")
         self.storageRef = storageRef
         self.storageKey = storageKey

@@ -139,7 +139,11 @@ class ProviderWebhookService:
     def execute(self, command: ProcessProviderWebhookCommand) -> dict[str, Any]:
         tenantId = asUuid(command.tenantId)
         provider = command.provider.strip().upper()
-        if not provider or not command.providerEventId.strip() or not command.providerMessageId.strip():
+        if (
+            not provider
+            or not command.providerEventId.strip()
+            or not command.providerMessageId.strip()
+        ):
             raise ValidationFailedError("Provider callback identifiers are required.")
         status = command.status.strip().upper()
         if status not in PROVIDER_CALLBACK_STATUSES:
@@ -194,9 +198,7 @@ class ProviderConfigurationService(NotificationUseCase):
         credentialRef = command.credentialRef.strip()
         allowedRefPrefixes = ("vault://", "env://", "aws-sm://", "gcp-sm://", "azure-kv://")
         if credentialRef and not credentialRef.startswith(allowedRefPrefixes):
-            raise ValidationFailedError(
-                "credentialRef must point to an approved secret manager."
-            )
+            raise ValidationFailedError("credentialRef must point to an approved secret manager.")
         # Secret-like values are redacted by domain policy; credentials are
         # represented only by a vault/secret-manager reference.
         result = self.store.saveProviderConfiguration(
@@ -232,9 +234,7 @@ class NotificationCleanupService(NotificationUseCase):
         if days < 1 or days > 36500:
             raise ValidationFailedError("Retention days must be between 1 and 36500.")
         cutoff = self.clock.nowUtc() - timedelta(days=days)
-        counts = self.store.cleanup(
-            tenantId, actorId, cutoff, dryRun=bool(command.dryRun)
-        )
+        counts = self.store.cleanup(tenantId, actorId, cutoff, dryRun=bool(command.dryRun))
         self.audit(
             "CLEANUP_PREVIEW" if command.dryRun else "CLEANUP_EXECUTE",
             "NotificationRetention",

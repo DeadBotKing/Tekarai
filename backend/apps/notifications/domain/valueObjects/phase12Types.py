@@ -177,9 +177,7 @@ class RetryPolicy:
         """Delay (seconds) before the given 1-based attempt number."""
         if attemptNumber <= 1:
             return 0
-        raw = self.initialDelaySeconds * (
-            self.backoffMultiplier ** (attemptNumber - 2)
-        )
+        raw = self.initialDelaySeconds * (self.backoffMultiplier ** (attemptNumber - 2))
         return min(int(raw), self.maxDelaySeconds)
 
     def isExhausted(self, attemptCount: int) -> bool:
@@ -202,9 +200,7 @@ class QuietHours:
     def __init__(self, startMinute: int, endMinute: int) -> None:
         for label, value in (("startMinute", startMinute), ("endMinute", endMinute)):
             if not 0 <= value <= 24 * 60:
-                raise ValidationFailedError(
-                    f"{label} out of range.", fieldErrors={label: value}
-                )
+                raise ValidationFailedError(f"{label} out of range.", fieldErrors={label: value})
         if startMinute == endMinute:
             raise ValidationFailedError("quiet hours start and end cannot be equal.")
         self.startMinute = startMinute
@@ -220,10 +216,7 @@ class QuietHours:
 
 def shouldBypassQuietHours(priority: str, category: str) -> bool:
     """§12.21 — CRITICAL/URGENT and security/system alerts go out immediately."""
-    return (
-        priority in QUIET_HOURS_BYPASS_PRIORITIES
-        or category in QUIET_HOURS_BYPASS_CATEGORIES
-    )
+    return priority in QUIET_HOURS_BYPASS_PRIORITIES or category in QUIET_HOURS_BYPASS_CATEGORIES
 
 
 def validateOneOf(value: str, allowed: tuple[str, ...], *, field: str) -> str:

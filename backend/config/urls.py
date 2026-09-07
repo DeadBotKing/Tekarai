@@ -29,6 +29,10 @@ urlpatterns = [
                     include("apps.notifications.presentation.api.urls.notificationRoutes"),
                 ),
                 path("ai/", include("apps.ai.presentation.api.urls")),
+                path(
+                    "learning/",
+                    include("apps.learning.presentation.api.urls.learningRoutes"),
+                ),
             ]
         ),
     ),

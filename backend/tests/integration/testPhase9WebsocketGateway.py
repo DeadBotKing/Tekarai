@@ -8,15 +8,12 @@ only the optimization layer.
 
 from __future__ import annotations
 
-import uuid
-
 from channels.testing import WebsocketCommunicator
 from django.test import TransactionTestCase
 
-from config.asgi import application
-
 from apps.sharedKernel.application.requestContext import RequestContext, requestScope
 from apps.tenancy.infrastructure.models import TenantModel
+from config.asgi import application
 from tests.support.phase6Helpers import seedPlatform
 from tests.support.phase8Helpers import ensureUser
 from tests.support.phase9Helpers import (
@@ -48,7 +45,6 @@ class NotificationWebsocketTests(TransactionTestCase):
         return communicator
 
     async def arun(self, func, *args):
-        from asgiref.sync import async_to_sync
         from channels.db import database_sync_to_async
 
         return await database_sync_to_async(lambda: func(*args))()

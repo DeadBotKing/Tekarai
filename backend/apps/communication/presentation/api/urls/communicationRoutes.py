@@ -20,7 +20,6 @@ from apps.communication.presentation.api.views.communicationViews import (
     MeetingLifecycleView,
     MeetingListView,
     MeetingRsvpView,
-    MeetingSummaryView,
     MessageDetailView,
     MessageListView,
     MessageReactionsView,
@@ -44,13 +43,6 @@ from apps.communication.presentation.api.views.phase10Views import (
     UserBlockDetailView,
     UserBlockView,
 )
-from apps.communication.presentation.api.views.phase14Views import (
-    AttachmentPreflightView,
-    MessageForwardView,
-    OfflineSyncView,
-    RetentionRunView,
-    UnifiedSearchView,
-)
 from apps.communication.presentation.api.views.phase11Views import (
     ActionItemDispatchView,
     ActionItemReviewView,
@@ -70,6 +62,13 @@ from apps.communication.presentation.api.views.phase11Views import (
     OfficialMessageView,
     ScreenShareStopView,
     ScreenShareView,
+)
+from apps.communication.presentation.api.views.phase14Views import (
+    AttachmentPreflightView,
+    MessageForwardView,
+    OfflineSyncView,
+    RetentionRunView,
+    UnifiedSearchView,
 )
 
 urlpatterns = [
@@ -137,7 +136,9 @@ urlpatterns = [
     # -- Phase 14 completion: unified search, secure attachment intake,
     # reference-preserving forwards, offline replay and retention operations.
     path("search", UnifiedSearchView.as_view(), name="commUnifiedSearch"),
-    path("attachments/preflight", AttachmentPreflightView.as_view(), name="commAttachmentPreflight"),
+    path(
+        "attachments/preflight", AttachmentPreflightView.as_view(), name="commAttachmentPreflight"
+    ),
     path("sync", OfflineSyncView.as_view(), name="commOfflineSync"),
     path("retention/runs", RetentionRunView.as_view(), name="commRetentionRun"),
     path(

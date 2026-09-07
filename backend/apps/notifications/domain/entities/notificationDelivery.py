@@ -8,9 +8,8 @@ from datetime import datetime, timedelta
 from apps.notifications.domain.valueObjects.notificationTypes import (
     DEFAULT_MAX_ATTEMPTS,
     DELIVERY_DELIVERED,
-    DELIVERY_FAILED,
-    DELIVERY_PERMANENTLY_FAILED,
     DELIVERY_PENDING,
+    DELIVERY_PERMANENTLY_FAILED,
     DELIVERY_RETRY_SCHEDULED,
     DELIVERY_SENT,
     DELIVERY_SKIPPED,
@@ -49,9 +48,7 @@ class NotificationDelivery(AggregateRoot):
     ) -> None:
         super().__init__(id)
         if status not in DELIVERY_STATUSES:
-            raise ValidationFailedError(
-                "Unknown delivery status.", fieldErrors={"status": status}
-            )
+            raise ValidationFailedError("Unknown delivery status.", fieldErrors={"status": status})
         self.tenantId = tenantId
         self.notificationId = notificationId
         self.channel = channel
@@ -86,9 +83,7 @@ class NotificationDelivery(AggregateRoot):
         self.errorCode = ""
         self.errorMessage = ""
 
-    def markFailed(
-        self, now: datetime, *, errorCode: str, errorMessage: str
-    ) -> bool:
+    def markFailed(self, now: datetime, *, errorCode: str, errorMessage: str) -> bool:
         """Returns True when a retry is scheduled (§24 exponential backoff)."""
         self.lastAttemptAt = now
         self.errorCode = errorCode
@@ -102,9 +97,7 @@ class NotificationDelivery(AggregateRoot):
             self.failedAt = now
             return False
         self.status = DELIVERY_RETRY_SCHEDULED
-        self.nextAttemptAt = now + timedelta(
-            seconds=backoffDelay(self.attemptCount + 1)
-        )
+        self.nextAttemptAt = now + timedelta(seconds=backoffDelay(self.attemptCount + 1))
         return True
 
     def retryIsDue(self, now: datetime) -> bool:

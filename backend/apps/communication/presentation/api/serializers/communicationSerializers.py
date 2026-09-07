@@ -28,10 +28,10 @@ class CreateDirectSerializer(serializers.Serializer):
 
 class CreateGroupSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=160)
-    description = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
-    memberIds = serializers.ListField(
-        child=serializers.UUIDField(), required=False, default=list
+    description = serializers.CharField(
+        max_length=500, required=False, allow_blank=True, default=""
     )
+    memberIds = serializers.ListField(child=serializers.UUIDField(), required=False, default=list)
 
 
 class CreateChannelSerializer(serializers.Serializer):
@@ -39,7 +39,9 @@ class CreateChannelSerializer(serializers.Serializer):
     code = serializers.RegexField(regex=r"^[a-z0-9_-]{2,64}$")
     topic = serializers.CharField(max_length=300, required=False, allow_blank=True, default="")
     visibility = serializers.ChoiceField(choices=["PUBLIC", "PRIVATE", "RESTRICTED"])
-    description = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
+    description = serializers.CharField(
+        max_length=500, required=False, allow_blank=True, default=""
+    )
 
 
 class UpdateConversationSerializer(serializers.Serializer):
@@ -64,9 +66,7 @@ class ChangeRoleSerializer(serializers.Serializer):
 
 class PreferencesSerializer(serializers.Serializer):
     isMuted = serializers.BooleanField(required=False)
-    notificationLevel = serializers.ChoiceField(
-        choices=["ALL", "MENTIONS", "NONE"], required=False
-    )
+    notificationLevel = serializers.ChoiceField(choices=["ALL", "MENTIONS", "NONE"], required=False)
 
 
 class AttachmentMetadataSerializer(serializers.Serializer):
@@ -110,12 +110,12 @@ class MarkReadSerializer(serializers.Serializer):
 class CreateMeetingSerializer(serializers.Serializer):
     conversationId = serializers.UUIDField()
     title = serializers.CharField(max_length=200)
-    description = serializers.CharField(max_length=1000, required=False, allow_blank=True, default="")
+    description = serializers.CharField(
+        max_length=1000, required=False, allow_blank=True, default=""
+    )
     scheduledStart = serializers.CharField(required=False, allow_blank=True, default="")
     scheduledEnd = serializers.CharField(required=False, allow_blank=True, default="")
-    inviteeIds = serializers.ListField(
-        child=serializers.UUIDField(), required=False, default=list
-    )
+    inviteeIds = serializers.ListField(child=serializers.UUIDField(), required=False, default=list)
     clientRequestId = serializers.CharField(
         max_length=80, required=False, allow_blank=True, default=""
     )

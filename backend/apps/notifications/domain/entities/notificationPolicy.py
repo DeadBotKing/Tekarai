@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
 from typing import Any
 
 from apps.notifications.domain.valueObjects.notificationTypes import (
@@ -42,9 +41,7 @@ class NotificationPolicy(AggregateRoot):
                 "Policy key is required.", fieldErrors={"policyKey": "empty"}
             )
         if priority not in NOTIFICATION_PRIORITIES:
-            raise ValidationFailedError(
-                "Unknown priority.", fieldErrors={"priority": priority}
-            )
+            raise ValidationFailedError("Unknown priority.", fieldErrors={"priority": priority})
         unknown = [c for c in channels if c not in DELIVERY_CHANNELS]
         if unknown:
             raise ValidationFailedError(

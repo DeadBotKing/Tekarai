@@ -38,8 +38,9 @@ def activeUserIdsOfTenant(tenantId: uuid.UUID) -> list[uuid.UUID]:
     from apps.identity.infrastructure.models import TenantMembershipModel
 
     return list(
-        TenantMembershipModel.objects.filter(tenantId=tenantId, status="active")
-        .values_list("userId", flat=True)
+        TenantMembershipModel.objects.filter(tenantId=tenantId, status="active").values_list(
+            "userId", flat=True
+        )
     )
 
 
@@ -47,16 +48,14 @@ def userIdsOfRole(tenantId: uuid.UUID, roleNames: list[str]) -> list[uuid.UUID]:
     from apps.identity.infrastructure.models import RoleModel, UserRoleModel
 
     roleIds = list(
-        RoleModel.objects.filter(code__in=roleNames, isActive=True).values_list(
-            "id", flat=True
-        )
+        RoleModel.objects.filter(code__in=roleNames, isActive=True).values_list("id", flat=True)
     )
     if not roleIds:
         return []
     userMap: dict[uuid.UUID, None] = {}
-    for userId, grantTenantId in UserRoleModel.objects.filter(
-        roleId__in=roleIds
-    ).values_list("userId", "tenantId"):
+    for userId, grantTenantId in UserRoleModel.objects.filter(roleId__in=roleIds).values_list(
+        "userId", "tenantId"
+    ):
         if grantTenantId is None or grantTenantId == tenantId:
             userMap[userId] = None
     return list(userMap)
@@ -65,6 +64,4 @@ def userIdsOfRole(tenantId: uuid.UUID, roleNames: list[str]) -> list[uuid.UUID]:
 def _userRow(tenantId: uuid.UUID, userId: uuid.UUID):
     from apps.identity.infrastructure.models import UserModel
 
-    return UserModel.objects.filter(
-        tenantId=tenantId, id=userId, deletedAt__isnull=True
-    ).first()
+    return UserModel.objects.filter(tenantId=tenantId, id=userId, deletedAt__isnull=True).first()

@@ -17,9 +17,10 @@ from __future__ import annotations
 import copy
 import hashlib
 import uuid
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Callable, Iterable, Mapping
+from typing import Any
 
 from apps.ai.domain.entities.aiRecords import AIContext, requireUuid, utcNow
 from apps.ai.domain.exceptions import (
@@ -33,7 +34,6 @@ from apps.ai.domain.exceptions import (
 from apps.ai.domain.policies.aiPolicies import ContextPolicy
 from apps.ai.domain.services.aiRules import estimateTokens
 from apps.ai.domain.valueObjects.aiTypes import ContextSource, DataClassification
-
 
 REDACTED_RESTRICTED_TEXT = "[REDACTED:RESTRICTED]"
 SENSITIVE_METADATA_KEYS = frozenset(
@@ -80,7 +80,7 @@ def _contentFingerprint(content: str) -> str:
     return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
 
-def _sourceKey(source: "ContextSourceCandidate") -> tuple[str, str, str]:
+def _sourceKey(source: ContextSourceCandidate) -> tuple[str, str, str]:
     return source.sourceDomain, source.sourceEntityType, source.sourceEntityId
 
 
@@ -223,7 +223,9 @@ class ContextBuilder:
                 try:
                     permitted = bool(permissionFilter(source))
                 except Exception as exc:
-                    raise AIContextPolicyInvalid("Context permission filter failed safely.") from exc
+                    raise AIContextPolicyInvalid(
+                        "Context permission filter failed safely."
+                    ) from exc
                 if not permitted:
                     excludedDescriptors.append(
                         self._descriptor(source, included=False, reason="PERMISSION_FILTERED")
@@ -270,9 +272,7 @@ class ContextBuilder:
             pieces = candidatePieces
             redactedAny = redactedAny or wasRedacted
             includedKeys.append(key)
-            includedEntities.append(
-                source.toEntity(content=content, allowed=True)
-            )
+            includedEntities.append(source.toEntity(content=content, allowed=True))
             includedDescriptors.append(
                 self._descriptor(source, included=True, wasRedacted=wasRedacted)
             )
@@ -294,7 +294,9 @@ class ContextBuilder:
         except AIContextTooLarge:
             raise
         except (TypeError, ValueError) as exc:
-            raise AIContextPolicyInvalid("Context could not be assembled under the policy.") from exc
+            raise AIContextPolicyInvalid(
+                "Context could not be assembled under the policy."
+            ) from exc
 
         descriptor = ContextDescriptor(
             tenantId=tenant,
@@ -459,8 +461,13 @@ class ContextEngine:
             raise AIContextSourceInvalid(
                 "Only a ContextBuildResult produced by the Tenant-scoped builder may be registered."
             )
-        if result.descriptor.tenantId != result.context.tenantId or result.descriptor.contextId != result.context.id:
-            raise AIContextTenantMismatch("Context result descriptor does not belong to the Context.")
+        if (
+            result.descriptor.tenantId != result.context.tenantId
+            or result.descriptor.contextId != result.context.id
+        ):
+            raise AIContextTenantMismatch(
+                "Context result descriptor does not belong to the Context."
+            )
         key = (result.context.tenantId, result.context.id)
         if key in self._results:
             raise AIContextAlreadyRegistered(str(result.context.id))
@@ -469,17 +476,23 @@ class ContextEngine:
 
     createContext = buildContext
 
-    def register(self, context: AIContext, *, descriptor: ContextDescriptor | None = None) -> AIContext:
+    def register(
+        self, context: AIContext, *, descriptor: ContextDescriptor | None = None
+    ) -> AIContext:
         return self.registerContext(context, descriptor=descriptor)
 
     def getContext(self, tenantId: uuid.UUID | str, contextId: uuid.UUID | str) -> AIContext:
         result = self._getResult(tenantId, contextId)
         return copy.deepcopy(result.context)
 
-    def getResult(self, tenantId: uuid.UUID | str, contextId: uuid.UUID | str) -> ContextBuildResult:
+    def getResult(
+        self, tenantId: uuid.UUID | str, contextId: uuid.UUID | str
+    ) -> ContextBuildResult:
         return copy.deepcopy(self._getResult(tenantId, contextId))
 
-    def describeContext(self, tenantId: uuid.UUID | str, contextId: uuid.UUID | str) -> ContextDescriptor:
+    def describeContext(
+        self, tenantId: uuid.UUID | str, contextId: uuid.UUID | str
+    ) -> ContextDescriptor:
         return copy.deepcopy(self._getResult(tenantId, contextId).descriptor)
 
     def latestForRequest(
@@ -496,7 +509,9 @@ class ContextEngine:
         ]
         if not matches:
             return None
-        return copy.deepcopy(max(matches, key=lambda result: (result.context.createdAt, str(result.context.id))))
+        return copy.deepcopy(
+            max(matches, key=lambda result: (result.context.createdAt, str(result.context.id)))
+        )
 
     def listContexts(
         self,

@@ -38,7 +38,9 @@ class Phase13DProviderRegistryTests(unittest.TestCase):
         self.provider = DeterministicAIProvider()
         self.registry = ProviderRegistry()
 
-    def _definition(self, tenantId: uuid.UUID | None = None, code: str = "DETERMINISTIC") -> AIProvider:
+    def _definition(
+        self, tenantId: uuid.UUID | None = None, code: str = "DETERMINISTIC"
+    ) -> AIProvider:
         return AIProvider(
             tenantId=tenantId or self.tenantId,
             code=code,
@@ -125,7 +127,16 @@ class Phase13DProviderRegistryTests(unittest.TestCase):
         source = (
             Path(__file__).resolve().parents[2] / "apps/ai/domain/registries/providerRegistry.py"
         ).read_text(encoding="utf-8")
-        for forbidden in ("django", "rest_framework", "channels", "redis", "openai", "ollama", "azure", "anthropic"):
+        for forbidden in (
+            "django",
+            "rest_framework",
+            "channels",
+            "redis",
+            "openai",
+            "ollama",
+            "azure",
+            "anthropic",
+        ):
             self.assertNotIn(f"import {forbidden}", source.lower())
 
 

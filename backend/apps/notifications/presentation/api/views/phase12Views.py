@@ -63,9 +63,7 @@ class CreateBroadcastSerializer(drf_serializers.Serializer):
     notificationType = drf_serializers.CharField(max_length=120)
     title = drf_serializers.CharField(max_length=300)
     body = drf_serializers.CharField(required=False, allow_blank=True, default="")
-    recipientIds = drf_serializers.ListField(
-        child=drf_serializers.CharField(), allow_empty=False
-    )
+    recipientIds = drf_serializers.ListField(child=drf_serializers.CharField(), allow_empty=False)
     priority = drf_serializers.ChoiceField(
         choices=["LOW", "NORMAL", "HIGH", "URGENT", "CRITICAL"], default="NORMAL"
     )
@@ -165,9 +163,7 @@ class RecipientStateView(APIView):
             RecipientStateCommand(notificationId=notificationId, action=action)
         )
         return Response(
-            successEnvelope(
-                {"notificationId": notificationId, "state": recipient.state}
-            )
+            successEnvelope({"notificationId": notificationId, "state": recipient.state})
         )
 
 
@@ -178,9 +174,10 @@ class DeliveryListView(APIView):
     permission_classes = [actionPermission("notification.manage")]
 
     def get(self, request: Request) -> Response:
-        deadLetterOnly = str(
-            request.query_params.get("deadLetterOnly", "")
-        ).lower() in ("1", "true")
+        deadLetterOnly = str(request.query_params.get("deadLetterOnly", "")).lower() in (
+            "1",
+            "true",
+        )
         notificationId = request.query_params.get("notificationId", "")
         dtos = c.deliveryQueryService().execute(
             ListDeliveriesQuery(
@@ -196,13 +193,9 @@ class DeliveryRetryView(APIView):
     permission_classes = [actionPermission("notification.manage")]
 
     def post(self, request: Request, deliveryId: str) -> Response:
-        delivery = c.deliveryRetryService().execute(
-            RetryDeliveryCommand(deliveryId=deliveryId)
-        )
+        delivery = c.deliveryRetryService().execute(RetryDeliveryCommand(deliveryId=deliveryId))
         return Response(
-            successEnvelope(
-                {"deliveryId": str(delivery.id), "status": delivery.status}
-            )
+            successEnvelope({"deliveryId": str(delivery.id), "status": delivery.status})
         )
 
 
@@ -261,8 +254,7 @@ class EventIntakeView(APIView):
         )
         return Response(
             successEnvelope(
-                {"created": len(created),
-                 "notificationIds": [str(n.id) for n in created]}
+                {"created": len(created), "notificationIds": [str(n.id) for n in created]}
             ),
             status=201,
         )

@@ -9,6 +9,7 @@ audit. Call initiation is idempotent (§24).
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from apps.communication.application.commands.communicationCommands import (
     AcceptCallCommand,
@@ -54,7 +55,7 @@ class StartCallUseCase(CommunicationUseCase[StartCallCommand, CallDto]):
         participantRepository: ParticipantRepository,
         mediaRouter: MediaRouter,
         blockRepository: object = None,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.callRepository = callRepository
@@ -128,9 +129,7 @@ class StartCallUseCase(CommunicationUseCase[StartCallCommand, CallDto]):
             str(call.id), command.mediaType
         )  # §12 — SFU adapter may be a no-op for peer-to-peer
         self.callRepository.create(call)
-        self.callParticipantRepository.add(
-            CallParticipant.join(tenantId, call.id, actorId, now)
-        )
+        self.callParticipantRepository.add(CallParticipant.join(tenantId, call.id, actorId, now))
         self.collectEventsFrom(call)
         self.emitIntegrationEvent(
             tenantId, "CallStarted", {"callId": str(call.id), "mediaType": call.mediaType}
@@ -157,7 +156,7 @@ class AcceptCallUseCase(CommunicationUseCase[AcceptCallCommand, CallDto]):
         conversationRepository: ConversationRepository,
         participantRepository: ParticipantRepository,
         mediaRouter: MediaRouter,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.callRepository = callRepository
@@ -211,7 +210,7 @@ class RejectCallUseCase(CommunicationUseCase[RejectCallCommand, CallDto]):
         callParticipantRepository: CallParticipantRepository,
         conversationRepository: ConversationRepository,
         participantRepository: ParticipantRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.callRepository = callRepository
@@ -247,7 +246,7 @@ class EndCallUseCase(CommunicationUseCase[EndCallCommand, CallDto]):
         callRepository: CallRepository,
         callParticipantRepository: CallParticipantRepository,
         mediaRouter: MediaRouter,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.callRepository = callRepository
@@ -298,7 +297,7 @@ class RelaySignalUseCase(CommunicationUseCase[RelaySignalCommand, object]):
         self,
         callRepository: CallRepository,
         callParticipantRepository: CallParticipantRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.callRepository = callRepository
@@ -346,7 +345,7 @@ class GetCallUseCase(CommunicationUseCase[GetCallQuery, CallDto]):
         self,
         callRepository: CallRepository,
         callParticipantRepository: CallParticipantRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.callRepository = callRepository

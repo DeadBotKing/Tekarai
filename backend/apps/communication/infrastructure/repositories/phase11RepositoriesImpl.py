@@ -114,14 +114,10 @@ class MessageDeliveryRepositoryDjango:
             },
         )
 
-    def listForMessage(
-        self, tenantId: uuid.UUID, messageId: uuid.UUID
-    ) -> list[d.MessageDelivery]:
+    def listForMessage(self, tenantId: uuid.UUID, messageId: uuid.UUID) -> list[d.MessageDelivery]:
         return [
             self.toDomain(m)
-            for m in MessageDeliveryModel.objects.filter(
-                tenantId=tenantId, messageId=messageId
-            )
+            for m in MessageDeliveryModel.objects.filter(tenantId=tenantId, messageId=messageId)
         ]
 
     @staticmethod
@@ -180,9 +176,7 @@ class MeetingRoomRepositoryDjango:
             },
         )
 
-    def listSessions(
-        self, tenantId: uuid.UUID, meetingId: uuid.UUID
-    ) -> list[d.MeetingSession]:
+    def listSessions(self, tenantId: uuid.UUID, meetingId: uuid.UUID) -> list[d.MeetingSession]:
         return [
             d.MeetingSession(
                 id=m.id,
@@ -260,9 +254,11 @@ class ScreenShareRepositoryDjango:
 
 class MeetingSummaryRepositoryDjango:
     def findForMeeting(self, tenantId: uuid.UUID, meetingId: uuid.UUID) -> d.MeetingSummary | None:
-        model = MeetingSummaryModel.objects.filter(
-            tenantId=tenantId, meetingId=meetingId
-        ).order_by("-generatedAt").first()
+        model = (
+            MeetingSummaryModel.objects.filter(tenantId=tenantId, meetingId=meetingId)
+            .order_by("-generatedAt")
+            .first()
+        )
         return self.toDomain(model) if model else None
 
     def getById(self, tenantId: uuid.UUID, summaryId: uuid.UUID) -> d.MeetingSummary | None:
@@ -344,14 +340,10 @@ class ActionItemRepositoryDjango:
     ) -> list[d.ActionItemCandidate]:
         return [
             self.toDomain(m)
-            for m in ActionItemCandidateModel.objects.filter(
-                tenantId=tenantId, meetingId=meetingId
-            )
+            for m in ActionItemCandidateModel.objects.filter(tenantId=tenantId, meetingId=meetingId)
         ]
 
-    def listPending(
-        self, tenantId: uuid.UUID, *, limit: int = 50
-    ) -> list[d.ActionItemCandidate]:
+    def listPending(self, tenantId: uuid.UUID, *, limit: int = 50) -> list[d.ActionItemCandidate]:
         return [
             self.toDomain(m)
             for m in ActionItemCandidateModel.objects.filter(
@@ -501,17 +493,13 @@ class LegalHoldRepositoryDjango:
             releasedAt=hold.releasedAt,
         )
 
-    def activeFor(
-        self, tenantId: uuid.UUID, scope: str, targetId: uuid.UUID
-    ) -> d.LegalHold | None:
+    def activeFor(self, tenantId: uuid.UUID, scope: str, targetId: uuid.UUID) -> d.LegalHold | None:
         model = LegalHoldModel.objects.filter(
             tenantId=tenantId, holdScope=scope, targetId=targetId, holdStatus="ACTIVE"
         ).first()
         return self.toDomain(model) if model else None
 
-    def listActiveForTarget(
-        self, tenantId: uuid.UUID, targetId: uuid.UUID
-    ) -> list[d.LegalHold]:
+    def listActiveForTarget(self, tenantId: uuid.UUID, targetId: uuid.UUID) -> list[d.LegalHold]:
         return [
             self.toDomain(m)
             for m in LegalHoldModel.objects.filter(

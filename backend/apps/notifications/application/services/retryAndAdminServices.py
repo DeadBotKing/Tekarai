@@ -20,8 +20,8 @@ from apps.notifications.application.dto.notificationDtos import (
 )
 from apps.notifications.application.queries.notificationQueries import (
     ListPoliciesQuery,
-    ListTemplateVersionsQuery,
     ListTemplatesQuery,
+    ListTemplateVersionsQuery,
 )
 from apps.notifications.application.services.notificationSupport import (
     NotificationChannelRegistry,
@@ -91,8 +91,11 @@ class RetryNotificationDeliveryService(NotificationUseCase):
                 channel=delivery.channel,
                 fallbackTitle=notification.title,
                 fallbackBody=notification.body,
-                data={**notification.payload, "title": notification.title,
-                      "body": notification.body},
+                data={
+                    **notification.payload,
+                    "title": notification.title,
+                    "body": notification.body,
+                },
             )
             if adapter is None:
                 outcome = None
@@ -127,9 +130,7 @@ class RetryNotificationDeliveryService(NotificationUseCase):
             # §47 re-evaluate aggregate outcome from the full channel set
             siblings = self.deliveryRepository.getForNotification(notification.id)
             delivered = sum(1 for row in siblings if row.status == DELIVERY_DELIVERED)
-            failed = sum(
-                1 for row in siblings if row.status == DELIVERY_PERMANENTLY_FAILED
-            )
+            failed = sum(1 for row in siblings if row.status == DELIVERY_PERMANENTLY_FAILED)
             if delivered or failed:
                 notification.applyDeliveryOutcome(
                     deliveredChannels=delivered, failedChannels=failed, now=now
@@ -260,9 +261,7 @@ class SavePolicyService(NotificationUseCase):
 
     def perform(self, command: SavePolicyCommand) -> PolicyDto:
         existing = self.policyRepository.findByKey(command.tenantId, command.policyKey)
-        notificationType = (
-            command.matchValue if command.matchType == "TYPE" else ""
-        )
+        notificationType = command.matchValue if command.matchType == "TYPE" else ""
         category = command.matchValue if command.matchType == "CATEGORY" else ""
         policy = NotificationPolicy(
             id=existing.id if existing is not None else uuid.uuid4(),
@@ -326,6 +325,5 @@ class ListPoliciesService(NotificationUseCase):
 
     def perform(self, query: ListPoliciesQuery) -> list[PolicyDto]:
         return [
-            policyDtoFromDomain(policy)
-            for policy in self.policyRepository.listAll(query.tenantId)
+            policyDtoFromDomain(policy) for policy in self.policyRepository.listAll(query.tenantId)
         ]

@@ -9,7 +9,6 @@ from typing import Any
 from apps.notifications.application.commands.notificationCommands import (
     SendDueDigestsCommand,
 )
-from apps.notifications.application.dto.notificationDtos import digestDtoFromDomain
 from apps.notifications.application.services.notificationSupport import (
     NotificationUseCase,
 )
@@ -21,7 +20,6 @@ from apps.notifications.domain.repositories.notificationRepositories import (
 from apps.notifications.domain.valueObjects.notificationTypes import (
     DIGEST_DAILY,
     DIGEST_HOURLY,
-    DIGEST_STATUS_OPEN,
     DIGEST_WEEKLY,
 )
 

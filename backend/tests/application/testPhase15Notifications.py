@@ -264,9 +264,7 @@ class Phase15NotificationTests(Phase12Base):
 
     def testCeleryQueuePublishesOnlyAfterCommit(self) -> None:
         queue = CeleryNotificationQueue()
-        with mock.patch(
-            "apps.notifications.tasks.dispatchNotificationJob.delay"
-        ) as delay:
+        with mock.patch("apps.notifications.tasks.dispatchNotificationJob.delay") as delay:
             with self.captureOnCommitCallbacks(execute=True):
                 queue.submit({"kind": "DISPATCH", "notificationId": "n-1"})
         delay.assert_called_once_with("n-1")

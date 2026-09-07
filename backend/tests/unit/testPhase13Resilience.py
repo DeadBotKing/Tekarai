@@ -407,8 +407,9 @@ class ResilientExecutorTests(unittest.TestCase):
         executor.execute(
             self.tenantId, "PRIMARY", lambda adapter: adapter.generateRequest(self._request())
         )
-        self.assertEqual([record.outcome for record in records],
-                         [OUTCOME_RETRYABLE_ERROR, OUTCOME_SUCCESS])
+        self.assertEqual(
+            [record.outcome for record in records], [OUTCOME_RETRYABLE_ERROR, OUTCOME_SUCCESS]
+        )
 
     def testGenerateWithFallbackUsesConfiguredChain(self) -> None:
         primary = ScriptedProvider("PRIMARY", [AIProviderUnavailable("down")] * 3)

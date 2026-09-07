@@ -255,12 +255,8 @@ LEGAL_HOLD_STATES = (LEGAL_HOLD_ACTIVE, LEGAL_HOLD_RELEASED)
 #: OBSERVER = read-only attendee (may watch/listen, may not speak/chat).
 #: PRESENTER may present screen + speak/video/chat but cannot moderate.
 EXTENDED_ROLE_CAPABILITIES: dict[str, frozenset[str]] = {
-    MEETING_ROLE_OBSERVER: frozenset(
-        {CAP_JOIN}
-    ),
-    MEETING_ROLE_PRESENTER: frozenset(
-        {CAP_JOIN, CAP_SPEAK, CAP_VIDEO, CAP_SHARE_SCREEN, CAP_CHAT}
-    ),
+    MEETING_ROLE_OBSERVER: frozenset({CAP_JOIN}),
+    MEETING_ROLE_PRESENTER: frozenset({CAP_JOIN, CAP_SPEAK, CAP_VIDEO, CAP_SHARE_SCREEN, CAP_CHAT}),
 }
 
 
@@ -279,7 +275,5 @@ def roleCapabilitiesV11(role: str) -> frozenset[str]:
 def validateOneOf(value: str, allowed: tuple[str, ...], *, field: str) -> str:
     """Small domain guard reused by Phase 11 entities (raises ValidationFailed)."""
     if value not in allowed:
-        raise ValidationFailedError(
-            f"Invalid {field}.", fieldErrors={field: value}
-        )
+        raise ValidationFailedError(f"Invalid {field}.", fieldErrors={field: value})
     return value

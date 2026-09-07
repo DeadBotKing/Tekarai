@@ -15,8 +15,8 @@ from apps.communication.domain.valueObjects.communicationTypes import (
     NOTIFICATION_LEVELS,
     NOTIFY_ALL,
     PARTICIPANT_ADMIN,
-    PARTICIPANT_MODERATOR,
     PARTICIPANT_MEMBER,
+    PARTICIPANT_MODERATOR,
     PARTICIPANT_OWNER,
     PARTICIPANT_ROLES,
 )
@@ -43,9 +43,7 @@ class ConversationParticipant(AggregateRoot):
         if role not in PARTICIPANT_ROLES:
             from apps.sharedKernel.domain.errors import ValidationFailedError
 
-            raise ValidationFailedError(
-                "Unknown participant role.", fieldErrors={"role": role}
-            )
+            raise ValidationFailedError("Unknown participant role.", fieldErrors={"role": role})
         if notificationLevel not in NOTIFICATION_LEVELS:
             from apps.sharedKernel.domain.errors import ValidationFailedError
 
@@ -149,9 +147,7 @@ class ConversationParticipant(AggregateRoot):
         if newRole not in PARTICIPANT_ROLES:
             from apps.sharedKernel.domain.errors import ValidationFailedError
 
-            raise ValidationFailedError(
-                "Unknown participant role.", fieldErrors={"role": newRole}
-            )
+            raise ValidationFailedError("Unknown participant role.", fieldErrors={"role": newRole})
         if self.role == PARTICIPANT_OWNER or newRole == PARTICIPANT_OWNER:
             from apps.sharedKernel.domain.errors import PermissionDeniedError
 
@@ -162,9 +158,7 @@ class ConversationParticipant(AggregateRoot):
         self.role = newRole
         del now
 
-    def setPreferences(
-        self, *, isMuted: bool | None, notificationLevel: str | None
-    ) -> None:
+    def setPreferences(self, *, isMuted: bool | None, notificationLevel: str | None) -> None:
         if notificationLevel is not None and notificationLevel not in NOTIFICATION_LEVELS:
             from apps.sharedKernel.domain.errors import ValidationFailedError
 

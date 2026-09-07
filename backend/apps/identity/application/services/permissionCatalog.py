@@ -49,6 +49,15 @@ ACTIONS: list[tuple[str, str]] = [
     ("ai.agent.run", "Run approved AI agents synchronously or asynchronously"),
     ("ai.agent.approve", "Approve agent definitions and governed executions"),
     ("ai.tool.invoke", "Invoke an approved AI tool through the governed chain"),
+    # -- Phase 16 Self-Learning Platform ------------------------------------
+    ("learning.view", "Read tenant learning datasets, experiments and artifacts"),
+    ("learning.observe", "Record immutable operational learning experiences"),
+    ("learning.manage", "Build datasets, experiments, evaluations and validations"),
+    ("learning.run", "Queue governed asynchronous learning runs"),
+    ("learning.approve", "Approve or reject validated learning artifacts"),
+    ("learning.deploy", "Deploy, advance canaries and roll back artifacts"),
+    ("learning.feedback", "Record sourced human/system/business feedback"),
+    ("learning.monitor", "Record metrics and detect production drift"),
 ]
 
 PLATFORM_ADMIN_ROLE = "platformAdmin"
@@ -85,6 +94,22 @@ ROLE_PRESETS: dict[str, list[str]] = {
         "ai.agent.run",
         "ai.agent.approve",
         "ai.tool.invoke",
+        "learning.view",
+        "learning.observe",
+        "learning.manage",
+        "learning.run",
+        "learning.approve",
+        "learning.deploy",
+        "learning.feedback",
+        "learning.monitor",
     ],
-    MEMBER_ROLE: ["user.view", "tenant.view", "ai.agent.read", "ai.agent.run"],
+    MEMBER_ROLE: [
+        "user.view",
+        "tenant.view",
+        "ai.agent.read",
+        "ai.agent.run",
+        "learning.view",
+        "learning.observe",
+        "learning.feedback",
+    ],
 }

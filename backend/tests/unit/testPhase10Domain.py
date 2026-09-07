@@ -162,9 +162,7 @@ class TranscriptTests(SimpleTestCase):
         self.user = uuid.uuid4()
 
     def testRequestThenProcessThenReady(self) -> None:
-        tr = MeetingTranscript.request(
-            self.tenant, self.meeting, self.user, "fa-IR", _now()
-        )
+        tr = MeetingTranscript.request(self.tenant, self.meeting, self.user, "fa-IR", _now())
         self.assertEqual(tr.transcriptStatus, t.TRANSCRIPT_PENDING)
         tr.transitionTo(t.TRANSCRIPT_PROCESSING, _now())
         self.assertEqual(tr.transcriptStatus, t.TRANSCRIPT_PROCESSING)
@@ -175,17 +173,13 @@ class TranscriptTests(SimpleTestCase):
         self.assertIn("transcriptReady", [e.name for e in tr.pullEvents()])
 
     def testReadyRequiresContentReference(self) -> None:
-        tr = MeetingTranscript.request(
-            self.tenant, self.meeting, self.user, "en-US", _now()
-        )
+        tr = MeetingTranscript.request(self.tenant, self.meeting, self.user, "en-US", _now())
         tr.transitionTo(t.TRANSCRIPT_PROCESSING, _now())
         with self.assertRaises(ValidationFailedError):
             tr.transitionTo(t.TRANSCRIPT_READY, _now(), contentReference="")
 
     def testIllegalTransitionRejected(self) -> None:
-        tr = MeetingTranscript.request(
-            self.tenant, self.meeting, self.user, "en-US", _now()
-        )
+        tr = MeetingTranscript.request(self.tenant, self.meeting, self.user, "en-US", _now())
         with self.assertRaises(InvalidStateTransitionError):
             tr.transitionTo(t.TRANSCRIPT_READY, _now(), contentReference="x")
 

@@ -63,9 +63,11 @@ class CommunicationConsumer(AsyncJsonWebsocketConsumer):
 
         communicationMetrics().decrement("activeConnections")  # §39
         relay = await self.relay()
-        relay.markOffline(getattr(self, "tenantId", uuid.UUID(int=0)),
-                          getattr(self, "userId", uuid.UUID(int=0)),
-                          await self.nowUtc())
+        relay.markOffline(
+            getattr(self, "tenantId", uuid.UUID(int=0)),
+            getattr(self, "userId", uuid.UUID(int=0)),
+            await self.nowUtc(),
+        )
         for group in getattr(self, "groups", set()):
             try:
                 await self.channel_layer.group_discard(group, self.channel_name)
@@ -108,8 +110,11 @@ class CommunicationConsumer(AsyncJsonWebsocketConsumer):
             handler = self.HANDLERS.get(action)
             if handler is None:
                 await self.send_json(
-                    {"type": "error", "code": "SYS_VALIDATION_FAILED",
-                     "message": f"Unknown action '{action}'."}
+                    {
+                        "type": "error",
+                        "code": "SYS_VALIDATION_FAILED",
+                        "message": f"Unknown action '{action}'.",
+                    }
                 )
                 return
             await handler(self, payload)
@@ -132,13 +137,14 @@ class CommunicationConsumer(AsyncJsonWebsocketConsumer):
         """Join the live group of a conversation (membership-checked)."""
         conversationId = uuid.UUID(str(payload.get("conversationId", "")))
         relay = await self.relay()
-        member = await database_sync_to_async(relay.activeMembership)(
-            conversationId, self.userId
-        )
+        member = await database_sync_to_async(relay.activeMembership)(conversationId, self.userId)
         if not member:
             await self.send_json(
-                {"type": "error", "code": "PERM_PERMISSION_DENIED",
-                 "message": "Not a participant of this conversation."}
+                {
+                    "type": "error",
+                    "code": "PERM_PERMISSION_DENIED",
+                    "message": "Not a participant of this conversation.",
+                }
             )
             return
         group = f"conversation.{conversationId}"
@@ -165,8 +171,11 @@ class CommunicationConsumer(AsyncJsonWebsocketConsumer):
         )
         if not ok:
             await self.send_json(
-                {"type": "error", "code": "PERM_PERMISSION_DENIED",
-                 "message": "Not a participant of this conversation."}
+                {
+                    "type": "error",
+                    "code": "PERM_PERMISSION_DENIED",
+                    "message": "Not a participant of this conversation.",
+                }
             )
 
     async def handlePresence(self, payload: dict) -> None:

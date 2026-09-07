@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 
 from apps.sharedKernel.application.messaging import Command
 
-
 # -- conversations (§3.1/§4/§5/§6) ----------------------------------------------
 
 

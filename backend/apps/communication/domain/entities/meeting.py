@@ -251,9 +251,7 @@ class MeetingParticipant(AggregateRoot):
         self.status = MEETING_LEFT
         if self.joinedAt is not None:
             # Phase 10 §29 — accumulate attended seconds across join/leave cycles.
-            self.attendanceDuration += max(
-                0, int((now - self.joinedAt).total_seconds())
-            )
+            self.attendanceDuration += max(0, int((now - self.joinedAt).total_seconds()))
         self.leftAt = now
         self.recordEvent(
             DomainEvent(

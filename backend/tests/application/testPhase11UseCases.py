@@ -184,9 +184,7 @@ class MeetingRoomSessionUseCaseTests(Phase11UseCaseBase):
                 EndMeetingSessionCommand(sessionId=str(session.id))
             )
         self.assertEqual(ended.status, "ENDED")
-        self.assertEqual(
-            MeetingSessionModel.objects.get(id=session.id).sessionStatus, "ENDED"
-        )
+        self.assertEqual(MeetingSessionModel.objects.get(id=session.id).sessionStatus, "ENDED")
 
     def testRecurringSessionsIncrementSequence(self) -> None:
         meeting = self.makeMeeting()
@@ -301,9 +299,7 @@ class OfficialMessageUseCaseTests(Phase11UseCaseBase):
             )
             for action in ("review", "approve", "publish", "deliver"):
                 message = container.transitionOfficialMessageUseCase().execute(
-                    TransitionOfficialMessageCommand(
-                        officialId=str(message.id), action=action
-                    )
+                    TransitionOfficialMessageCommand(officialId=str(message.id), action=action)
                 )
             acked = container.acknowledgeOfficialMessageUseCase().execute(
                 AcknowledgeOfficialMessageCommand(officialId=str(message.id))
@@ -318,9 +314,7 @@ class OfficialMessageUseCaseTests(Phase11UseCaseBase):
             )
             with self.assertRaises(ConflictError):
                 container.transitionOfficialMessageUseCase().execute(
-                    TransitionOfficialMessageCommand(
-                        officialId=str(message.id), action="publish"
-                    )
+                    TransitionOfficialMessageCommand(officialId=str(message.id), action="publish")
                 )
 
 
@@ -329,9 +323,7 @@ class MessageReportUseCaseTests(Phase11UseCaseBase):
         message = self.makeMessage()
         with self.contextFor(self.tenant, self.user2):
             report = container.reportMessageUseCase().execute(
-                ReportMessageCommand(
-                    messageId=str(message.id), reason="SPAM", description="ads"
-                )
+                ReportMessageCommand(messageId=str(message.id), reason="SPAM", description="ads")
             )
         with self.contextFor(self.tenant, self.user):
             resolved = container.reviewMessageReportUseCase().execute(
@@ -369,13 +361,9 @@ class LegalHoldUseCaseTests(Phase11UseCaseBase):
             container.placeLegalHoldUseCase().execute(
                 PlaceLegalHoldCommand(scope="MEETING", targetId=str(target))
             )
-        self.assertFalse(
-            retentionPurgeAllowed(repo, self.tenant.id, "MEETING", target)
-        )
+        self.assertFalse(retentionPurgeAllowed(repo, self.tenant.id, "MEETING", target))
         # a different target is purgeable
-        self.assertTrue(
-            retentionPurgeAllowed(repo, self.tenant.id, "MEETING", uuid.uuid4())
-        )
+        self.assertTrue(retentionPurgeAllowed(repo, self.tenant.id, "MEETING", uuid.uuid4()))
 
     def testPurgeAllowedAfterRelease(self) -> None:
         target = uuid.uuid4()
@@ -387,9 +375,7 @@ class LegalHoldUseCaseTests(Phase11UseCaseBase):
             container.releaseLegalHoldUseCase().execute(
                 ReleaseLegalHoldCommand(holdId=str(hold.id))
             )
-        self.assertTrue(
-            retentionPurgeAllowed(repo, self.tenant.id, "USER", target)
-        )
+        self.assertTrue(retentionPurgeAllowed(repo, self.tenant.id, "USER", target))
 
     def testCrossTenantHoldNotVisible(self) -> None:
         target = uuid.uuid4()
@@ -399,6 +385,4 @@ class LegalHoldUseCaseTests(Phase11UseCaseBase):
                 PlaceLegalHoldCommand(scope="USER", targetId=str(target))
             )
         # other tenant sees no hold → purge "allowed" from their view
-        self.assertTrue(
-            retentionPurgeAllowed(repo, self.other.id, "USER", target)
-        )
+        self.assertTrue(retentionPurgeAllowed(repo, self.other.id, "USER", target))

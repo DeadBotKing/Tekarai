@@ -105,9 +105,7 @@ class Message(AggregateRoot):
         if not body.strip() and messageType == MESSAGE_TEXT:
             from apps.sharedKernel.domain.errors import ValidationFailedError
 
-            raise ValidationFailedError(
-                "Message body is required.", fieldErrors={"body": "empty"}
-            )
+            raise ValidationFailedError("Message body is required.", fieldErrors={"body": "empty"})
         if len(body) > BODY_MAX_LENGTH:
             from apps.sharedKernel.domain.errors import ValidationFailedError
 
@@ -162,9 +160,7 @@ class Message(AggregateRoot):
         if not newBody.strip():
             from apps.sharedKernel.domain.errors import ValidationFailedError
 
-            raise ValidationFailedError(
-                "Message body is required.", fieldErrors={"body": "empty"}
-            )
+            raise ValidationFailedError("Message body is required.", fieldErrors={"body": "empty"})
         if len(newBody) > BODY_MAX_LENGTH:
             from apps.sharedKernel.domain.errors import ValidationFailedError
 
@@ -286,9 +282,7 @@ class MessageReaction(AggregateRoot):
         if not reaction.strip() or len(reaction) > 16:
             from apps.sharedKernel.domain.errors import ValidationFailedError
 
-            raise ValidationFailedError(
-                "Invalid reaction.", fieldErrors={"reaction": reaction}
-            )
+            raise ValidationFailedError("Invalid reaction.", fieldErrors={"reaction": reaction})
         self.tenantId = tenantId
         self.messageId = messageId
         self.userId = userId
@@ -321,9 +315,7 @@ class MessageReadState(AggregateRoot):
         if state not in READ_STATE_RANK:
             from apps.sharedKernel.domain.errors import ValidationFailedError
 
-            raise ValidationFailedError(
-                "Unknown read state.", fieldErrors={"state": state}
-            )
+            raise ValidationFailedError("Unknown read state.", fieldErrors={"state": state})
         self.tenantId = tenantId
         self.conversationId = conversationId
         self.messageId = messageId

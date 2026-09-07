@@ -841,7 +841,7 @@ def getPresenceUseCase():
     )
 
 
-def generateMeetingSummaryUseCase():
+def generateLegacyMeetingSummaryUseCase():
     from apps.communication.application.useCases.presenceAndAiUseCases import (
         GenerateMeetingSummaryUseCase,
     )
@@ -907,6 +907,7 @@ def messageRevisionRepository():
         from apps.communication.infrastructure.repositories.phase10RepositoriesImpl import (
             MessageRevisionRepositoryDjango,
         )
+
         _messageRevisionRepositorySingleton = MessageRevisionRepositoryDjango()
     return _messageRevisionRepositorySingleton
 
@@ -917,6 +918,7 @@ def transcriptRepository():
         from apps.communication.infrastructure.repositories.phase10RepositoriesImpl import (
             TranscriptRepositoryDjango,
         )
+
         _transcriptRepositorySingleton = TranscriptRepositoryDjango()
     return _transcriptRepositorySingleton
 
@@ -927,6 +929,7 @@ def userBlockRepository():
         from apps.communication.infrastructure.repositories.phase10RepositoriesImpl import (
             UserBlockRepositoryDjango,
         )
+
         _userBlockRepositorySingleton = UserBlockRepositoryDjango()
     return _userBlockRepositorySingleton
 
@@ -937,6 +940,7 @@ def meetingCapabilityRepository():
         from apps.communication.infrastructure.repositories.phase10RepositoriesImpl import (
             MeetingCapabilityRepositoryDjango,
         )
+
         _meetingCapabilityRepositorySingleton = MeetingCapabilityRepositoryDjango()
     return _meetingCapabilityRepositorySingleton
 
@@ -949,6 +953,7 @@ def callProvider():
         from apps.communication.infrastructure.services.callProviderImpl import (
             WebRtcCallProvider,
         )
+
         _callProviderSingleton = WebRtcCallProvider()
     return _callProviderSingleton
 
@@ -960,6 +965,7 @@ def messageSearchProvider():
         from apps.communication.infrastructure.repositories.phase10RepositoriesImpl import (
             SqlMessageSearchProvider,
         )
+
         _messageSearchProviderSingleton = SqlMessageSearchProvider()
     return _messageSearchProviderSingleton
 
@@ -1239,9 +1245,7 @@ def stopScreenShareUseCase():
         StopScreenShareUseCase,
     )
 
-    return StopScreenShareUseCase(
-        screenShareRepository=screenShareRepository(), **commPorts()
-    )
+    return StopScreenShareUseCase(screenShareRepository=screenShareRepository(), **commPorts())
 
 
 def generateMeetingSummaryUseCase():
@@ -1261,9 +1265,7 @@ def reviewMeetingSummaryUseCase():
         ReviewMeetingSummaryUseCase,
     )
 
-    return ReviewMeetingSummaryUseCase(
-        summaryRepository=meetingSummaryRepository(), **commPorts()
-    )
+    return ReviewMeetingSummaryUseCase(summaryRepository=meetingSummaryRepository(), **commPorts())
 
 
 def reviewActionItemUseCase():
@@ -1271,9 +1273,7 @@ def reviewActionItemUseCase():
         ReviewActionItemUseCase,
     )
 
-    return ReviewActionItemUseCase(
-        actionItemRepository=actionItemRepository(), **commPorts()
-    )
+    return ReviewActionItemUseCase(actionItemRepository=actionItemRepository(), **commPorts())
 
 
 def dispatchActionItemUseCase():
@@ -1281,9 +1281,7 @@ def dispatchActionItemUseCase():
         DispatchActionItemUseCase,
     )
 
-    return DispatchActionItemUseCase(
-        actionItemRepository=actionItemRepository(), **commPorts()
-    )
+    return DispatchActionItemUseCase(actionItemRepository=actionItemRepository(), **commPorts())
 
 
 def createOfficialMessageUseCase():
@@ -1333,9 +1331,7 @@ def reviewMessageReportUseCase():
         ReviewMessageReportUseCase,
     )
 
-    return ReviewMessageReportUseCase(
-        reportRepository=messageReportRepository(), **commPorts()
-    )
+    return ReviewMessageReportUseCase(reportRepository=messageReportRepository(), **commPorts())
 
 
 def placeLegalHoldUseCase():
@@ -1343,9 +1339,7 @@ def placeLegalHoldUseCase():
         PlaceLegalHoldUseCase,
     )
 
-    return PlaceLegalHoldUseCase(
-        legalHoldRepository=legalHoldRepository(), **commPorts()
-    )
+    return PlaceLegalHoldUseCase(legalHoldRepository=legalHoldRepository(), **commPorts())
 
 
 def releaseLegalHoldUseCase():
@@ -1353,9 +1347,7 @@ def releaseLegalHoldUseCase():
         ReleaseLegalHoldUseCase,
     )
 
-    return ReleaseLegalHoldUseCase(
-        legalHoldRepository=legalHoldRepository(), **commPorts()
-    )
+    return ReleaseLegalHoldUseCase(legalHoldRepository=legalHoldRepository(), **commPorts())
 
 
 # -- Phase 14 completion -------------------------------------------------------------
@@ -1416,9 +1408,7 @@ def attachmentPreflightUseCase():
                     defaults.allowedMimeTypes,
                 )
             ),
-            requireCleanScan=bool(
-                getattr(settings, "COMMUNICATION_REQUIRE_CLEAN_SCAN", True)
-            ),
+            requireCleanScan=bool(getattr(settings, "COMMUNICATION_REQUIRE_CLEAN_SCAN", True)),
         )
     )
 

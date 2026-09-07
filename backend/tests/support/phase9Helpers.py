@@ -10,14 +10,12 @@ from apps.identity.infrastructure.models import (
     RoleModel,
     RolePermissionModel,
     SessionModel,
-    UserModel,
     UserRoleModel,
 )
 from apps.sharedKernel.application.requestContext import (
     RequestContext,
     requestScope,
 )
-from tests.support.phase8Helpers import ensureTenant, ensureUser
 
 NOTIFICATION_ADMIN_ACTIONS = ("notification.send", "notification.manage")
 
@@ -47,9 +45,7 @@ def grantNotificationAdmin(tenant, user) -> None:
 
 def asUser(tenantId: uuid.UUID, userId: uuid.UUID):
     return requestScope(
-        RequestContext(
-            actorId=str(userId), tenantId=str(tenantId), actorTenantId=str(tenantId)
-        )
+        RequestContext(actorId=str(userId), tenantId=str(tenantId), actorTenantId=str(tenantId))
     )
 
 

@@ -123,24 +123,25 @@ class RecipientStateApiTests(Phase12ApiBase):
         # admin is a recipient
         count = self.client.get(f"{BASE}/broadcasts/unread-count", **self.auth())
         self.assertEqual(count.json()["data"]["unreadCount"], 1)
-        read = self.client.post(
-            f"{BASE}/broadcasts/{nid}/read", {}, **self.auth()
-        )
+        read = self.client.post(f"{BASE}/broadcasts/{nid}/read", {}, **self.auth())
         self.assertEqual(read.status_code, 200, read.content)
         self.assertEqual(read.json()["data"]["state"], "READ")
         count = self.client.get(f"{BASE}/broadcasts/unread-count", **self.auth())
         self.assertEqual(count.json()["data"]["unreadCount"], 0)
-        unread = self.client.post(
-            f"{BASE}/broadcasts/{nid}/unread", {}, **self.auth()
-        )
+        unread = self.client.post(f"{BASE}/broadcasts/{nid}/unread", {}, **self.auth())
         self.assertEqual(unread.json()["data"]["state"], "UNREAD")
 
     def testInboxList(self) -> None:
         self.client.post(
             f"{BASE}/broadcasts",
-            {"notificationType": "X", "title": "a", "recipientIds": [str(self.admin.id)],
-             "priority": "LOW"},
-            format="json", **self.auth(),
+            {
+                "notificationType": "X",
+                "title": "a",
+                "recipientIds": [str(self.admin.id)],
+                "priority": "LOW",
+            },
+            format="json",
+            **self.auth(),
         )
         items = self.client.get(f"{BASE}/broadcasts", **self.auth()).json()["data"]
         self.assertEqual(len(items), 1)
@@ -152,9 +153,14 @@ class DeliveryApiTests(Phase12ApiBase):
         # create a CRITICAL broadcast then force a delivery into DEAD_LETTER
         res = self.client.post(
             f"{BASE}/broadcasts",
-            {"notificationType": "X", "title": "t",
-             "recipientIds": [str(self.u1.id)], "priority": "CRITICAL"},
-            format="json", **self.auth(),
+            {
+                "notificationType": "X",
+                "title": "t",
+                "recipientIds": [str(self.u1.id)],
+                "priority": "CRITICAL",
+            },
+            format="json",
+            **self.auth(),
         )
         nid = res.json()["data"]["id"]
         from apps.notifications.infrastructure.models import (
@@ -168,14 +174,10 @@ class DeliveryApiTests(Phase12ApiBase):
         delivery.deliveryStatus = "DEAD_LETTER"
         delivery.save()
         # ops lists dead letters
-        dead = self.client.get(
-            f"{BASE}/deliveries?deadLetterOnly=1", **self.auth()
-        ).json()["data"]
+        dead = self.client.get(f"{BASE}/deliveries?deadLetterOnly=1", **self.auth()).json()["data"]
         self.assertTrue(any(d["id"] == str(delivery.id) for d in dead))
         # manual retry
-        retry = self.client.post(
-            f"{BASE}/deliveries/{delivery.id}/retry", {}, **self.auth()
-        )
+        retry = self.client.post(f"{BASE}/deliveries/{delivery.id}/retry", {}, **self.auth())
         self.assertEqual(retry.status_code, 200, retry.content)
         self.assertIn(retry.json()["data"]["status"], ("DELIVERED", "QUEUED", "DEAD_LETTER"))
 
@@ -191,7 +193,8 @@ class RuleAndEventApiTests(Phase12ApiBase):
                 "channels": ["IN_APP"],
                 "priority": "HIGH",
             },
-            format="json", **self.auth(),
+            format="json",
+            **self.auth(),
         )
         self.assertEqual(rule.status_code, 201, rule.content)
         # ingest event twice -> only one notification
@@ -208,14 +211,23 @@ class RuleAndEventApiTests(Phase12ApiBase):
     def testEventNotMatchingRuleCreatesNothing(self) -> None:
         self.client.post(
             f"{BASE}/rules",
-            {"name": "high overdue", "eventType": "TASK_OVERDUE",
-             "condition": {"priority": "HIGH"}, "recipientStrategy": "TARGET"},
-            format="json", **self.auth(),
+            {
+                "name": "high overdue",
+                "eventType": "TASK_OVERDUE",
+                "condition": {"priority": "HIGH"},
+                "recipientStrategy": "TARGET",
+            },
+            format="json",
+            **self.auth(),
         )
         res = self.client.post(
             f"{BASE}/events",
-            {"eventId": "evt-api-2", "eventType": "TASK_OVERDUE",
-             "payload": {"priority": "LOW", "recipientIds": [str(self.u1.id)]}},
-            format="json", **self.auth(),
+            {
+                "eventId": "evt-api-2",
+                "eventType": "TASK_OVERDUE",
+                "payload": {"priority": "LOW", "recipientIds": [str(self.u1.id)]},
+            },
+            format="json",
+            **self.auth(),
         )
         self.assertEqual(res.json()["data"]["created"], 0)

@@ -52,9 +52,7 @@ class NotificationPlatformStoreDjango:
         beforeId: uuid.UUID | None,
         limit: int,
     ) -> tuple[dict[str, Any], ...]:
-        recipients = NotificationRecipientModel.objects.filter(
-            tenantId=tenantId, userId=userId
-        )
+        recipients = NotificationRecipientModel.objects.filter(tenantId=tenantId, userId=userId)
         if readState:
             recipients = recipients.filter(recipientState=readState)
         notificationIds = recipients.values("notificationId")
@@ -76,13 +74,21 @@ class NotificationPlatformStoreDjango:
             rows = rows.filter(id__in=deliveredIds)
         beforeCreated = None
         if beforeId:
-            beforeCreated = NotificationModel.objects.filter(
-                tenantId=tenantId, id=beforeId, id__in=notificationIds
-            ).values_list("createdAt", flat=True).first()
+            beforeCreated = (
+                NotificationModel.objects.filter(
+                    tenantId=tenantId, id=beforeId, id__in=notificationIds
+                )
+                .values_list("createdAt", flat=True)
+                .first()
+            )
             if beforeCreated is None:
-                beforeCreated = NotificationRecordModel.objects.filter(
-                    tenantId=tenantId, recipientId=userId, id=beforeId
-                ).values_list("createdAt", flat=True).first()
+                beforeCreated = (
+                    NotificationRecordModel.objects.filter(
+                        tenantId=tenantId, recipientId=userId, id=beforeId
+                    )
+                    .values_list("createdAt", flat=True)
+                    .first()
+                )
             if beforeCreated is not None:
                 rows = rows.filter(createdAt__lt=beforeCreated)
         selected = list(rows.order_by("-createdAt")[:limit])
@@ -105,7 +111,9 @@ class NotificationPlatformStoreDjango:
                 "deepLink": item.deepLink,
                 "payloadVersion": item.payloadVersion,
                 "readState": stateMap[item.id].recipientState,
-                "readAt": stateMap[item.id].readAt.isoformat() if stateMap[item.id].readAt else None,
+                "readAt": stateMap[item.id].readAt.isoformat()
+                if stateMap[item.id].readAt
+                else None,
                 "createdAt": item.createdAt.isoformat(),
             }
             for item in selected
@@ -256,9 +264,7 @@ class NotificationPlatformStoreDjango:
                 raise ConflictError("Provider event id is already bound to another payload.")
             return {"processed": False, "duplicate": True, "outcome": existing.outcome}
         repository = RecipientDeliveryRepositoryDjango()
-        delivery = repository.findByProviderMessageId(
-            tenantId, provider, providerMessageId
-        )
+        delivery = repository.findByProviderMessageId(tenantId, provider, providerMessageId)
         if delivery is None:
             raise EntityNotFoundError("NotificationDelivery", providerMessageId)
         delivery.applyProviderCallback(status, now, errorCode=errorCode)
@@ -319,9 +325,7 @@ class NotificationPlatformStoreDjango:
         )
         return self._providerDto(row)
 
-    def listProviderConfigurations(
-        self, tenantId: uuid.UUID
-    ) -> tuple[dict[str, Any], ...]:
+    def listProviderConfigurations(self, tenantId: uuid.UUID) -> tuple[dict[str, Any], ...]:
         return tuple(
             self._providerDto(row)
             for row in NotificationProviderConfigurationModel.objects.filter(

@@ -30,7 +30,6 @@ from apps.communication.application.commands.communicationCommands import (
     LeaveConversationCommand,
     MarkConversationReadCommand,
     PinMessageCommand,
-    ReactToMessageCommand,
     RelaySignalCommand,
     SendMessageCommand,
     SignLetterCommand,
@@ -40,23 +39,18 @@ from apps.communication.application.commands.communicationCommands import (
     SubmitLetterCommand,
     UpdatePresenceCommand,
 )
-from apps.communication.application.dto.communicationDtos import messageDtoFromDomain
 from apps.communication.application.queries.communicationQueries import (
     ListConversationsQuery,
     ListMessagesQuery,
     PresenceQuery,
     SearchMessagesQuery,
 )
+from apps.communication.domain.services.communicationRules import SignalingProtocol
 from apps.communication.infrastructure import container
 from apps.communication.infrastructure.metrics.communicationMetrics import (
     communicationMetrics,
 )
 from apps.communication.infrastructure.models import OutboxModel
-from apps.communication.infrastructure.realtime.realtimeInfra import (
-    ChannelsRealtimeBroadcaster,
-)
-from apps.communication.domain.services.communicationRules import SignalingProtocol
-from apps.sharedKernel.application.requestContext import RequestContext
 from apps.sharedKernel.domain.errors import (
     ConflictError,
     EntityNotFoundError,
@@ -85,14 +79,10 @@ class Phase8UseCaseTestBase(TestCase):
         grantCommAdmin(self.tenantA, self.admin)
         with asUser(self.tenantA.id, self.admin.id):
             self.conversation = container.createGroupUseCase().execute(
-                CreateGroupConversationCommand(
-                    name="اتاق پروژه", memberIds=[str(self.member.id)]
-                )
+                CreateGroupConversationCommand(name="اتاق پروژه", memberIds=[str(self.member.id)])
             )
             self.message = container.sendMessageUseCase().execute(
-                SendMessageCommand(
-                    conversationId=str(self.conversation.id), body="پیام اول"
-                )
+                SendMessageCommand(conversationId=str(self.conversation.id), body="پیام اول")
             )
 
     # helpers ---------------------------------------------------------------
@@ -115,9 +105,7 @@ class UnauthorizedConversationAccessTests(Phase8UseCaseTestBase):
         with asUser(self.tenantA.id, self.outsider.id):
             with self.assertRaises(PermissionDeniedError):
                 container.sendMessageUseCase().execute(
-                    SendMessageCommand(
-                        conversationId=str(self.conversation.id), body="spam"
-                    )
+                    SendMessageCommand(conversationId=str(self.conversation.id), body="spam")
                 )
             with self.assertRaises(PermissionDeniedError):
                 container.listMessagesUseCase().execute(
@@ -161,7 +149,10 @@ class CrossTenantIsolationTests(Phase8UseCaseTestBase):
 class DuplicateMessageTests(Phase8UseCaseTestBase):
     def testClientRequestIdMakesRetryIdempotent(self) -> None:
         key = f"retry-{uuid.uuid4()}"
-        first = self.sendAs(self.admin, "offline retry", )
+        first = self.sendAs(
+            self.admin,
+            "offline retry",
+        )
         with asUser(self.tenantA.id, self.admin.id):
             again = container.sendMessageUseCase().execute(
                 SendMessageCommand(
@@ -287,16 +278,10 @@ class MeetingStateTests(Phase8UseCaseTestBase):
     def testEndTwiceRejected(self) -> None:
         meeting = self.createMeeting()
         with asUser(self.tenantA.id, self.admin.id):
-            container.startMeetingUseCase().execute(
-                StartMeetingCommand(meetingId=str(meeting.id))
-            )
-            container.endMeetingUseCase().execute(
-                EndMeetingCommand(meetingId=str(meeting.id))
-            )
-            with self.assertRaises(Exception):
-                container.endMeetingUseCase().execute(
-                    EndMeetingCommand(meetingId=str(meeting.id))
-                )
+            container.startMeetingUseCase().execute(StartMeetingCommand(meetingId=str(meeting.id)))
+            container.endMeetingUseCase().execute(EndMeetingCommand(meetingId=str(meeting.id)))
+            with self.assertRaises(Exception):  # noqa: B017
+                container.endMeetingUseCase().execute(EndMeetingCommand(meetingId=str(meeting.id)))
 
     def testMeetingsAreIdempotentByClientRequestId(self) -> None:
         key = f"meeting-{uuid.uuid4()}"
@@ -333,9 +318,7 @@ class RecordingAuthorizationTests(Phase8UseCaseTestBase):
                     title="جلسه ضبط",
                 )
             )
-            container.startMeetingUseCase().execute(
-                StartMeetingCommand(meetingId=str(meeting.id))
-            )
+            container.startMeetingUseCase().execute(StartMeetingCommand(meetingId=str(meeting.id)))
         with asUser(self.tenantA.id, self.member.id):  # no recording.manage
             with self.assertRaises(PermissionDeniedError):
                 container.startRecordingUseCase().execute(
@@ -396,7 +379,8 @@ class CallAuthorizationTests(Phase8UseCaseTestBase):
                     RelaySignalCommand(envelope=_envelope(str(call.id)))
                 )
         self.assertGreater(
-            communicationMetrics().snapshot()["failedSignalingRequests"], 0  # §39
+            communicationMetrics().snapshot()["failedSignalingRequests"],
+            0,  # §39
         )
 
 
@@ -450,9 +434,7 @@ class DeleteAuthorizationTests(Phase8UseCaseTestBase):
     def testSenderSoftDeletesOwnMessage(self) -> None:
         target = self.sendAs(self.member, "پیام من")
         with asUser(self.tenantA.id, self.member.id):
-            container.deleteMessageUseCase().execute(
-                DeleteMessageCommand(messageId=str(target.id))
-            )
+            container.deleteMessageUseCase().execute(DeleteMessageCommand(messageId=str(target.id)))
         page = None
         with asUser(self.tenantA.id, self.admin.id):
             page = container.listMessagesUseCase().execute(
@@ -481,9 +463,7 @@ class EventDeliveryFailureTests(Phase8UseCaseTestBase):
             ):
                 with self.assertRaises(RuntimeError):
                     container.sendMessageUseCase().execute(
-                        SendMessageCommand(
-                            conversationId=str(self.conversation.id), body="رویداد"
-                        )
+                        SendMessageCommand(conversationId=str(self.conversation.id), body="رویداد")
                     )
         pending = OutboxModel.objects.filter(publishedAt__isnull=True).count()
         self.assertGreater(pending, 0)  # failure → row stays PENDING (§29/§38)
@@ -497,9 +477,7 @@ class EventDeliveryFailureTests(Phase8UseCaseTestBase):
         result = dispatcher.dispatchDue()
         dispatcher.eventDispatcher = original
         self.assertGreater(result["failed"], 0)
-        self.assertGreater(
-            OutboxModel.objects.filter(publishedAt__isnull=True).count(), 0
-        )
+        self.assertGreater(OutboxModel.objects.filter(publishedAt__isnull=True).count(), 0)
 
         # once healthy again the rows drain
         healthy = container.outboxDispatcher().dispatchDue()
@@ -520,9 +498,7 @@ class ChannelsAndPresenceTests(Phase8UseCaseTestBase):
             joined = container.joinChannelUseCase().execute(
                 JoinChannelCommand(conversationId=str(channel.id))
             )
-            listing = container.listConversationsUseCase().execute(
-                ListConversationsQuery()
-            )
+            listing = container.listConversationsUseCase().execute(ListConversationsQuery())
         self.assertTrue(joined.role)
         self.assertIn(str(channel.id), [item.id for item in listing])
 
@@ -540,14 +516,10 @@ class ChannelsAndPresenceTests(Phase8UseCaseTestBase):
     def testSearchRestrictedToMembership(self) -> None:
         self.sendAs(self.admin, "کیلیدواژه ویژه")
         with asUser(self.tenantA.id, self.member.id):
-            hits = container.searchMessagesUseCase().execute(
-                SearchMessagesQuery(query="کیلیدواژه")
-            )
+            hits = container.searchMessagesUseCase().execute(SearchMessagesQuery(query="کیلیدواژه"))
         self.assertTrue(hits)
         with asUser(self.tenantB.id, self.foreign.id):
-            hits = container.searchMessagesUseCase().execute(
-                SearchMessagesQuery(query="کیلیدواژه")
-            )
+            hits = container.searchMessagesUseCase().execute(SearchMessagesQuery(query="کیلیدواژه"))
         self.assertEqual(hits, [])
 
     def testArchiveHidesFromDefaultListing(self) -> None:
@@ -555,9 +527,7 @@ class ChannelsAndPresenceTests(Phase8UseCaseTestBase):
             container.archiveConversationUseCase().execute(
                 ArchiveConversationCommand(conversationId=str(self.conversation.id))
             )
-            listing = container.listConversationsUseCase().execute(
-                ListConversationsQuery()
-            )
+            listing = container.listConversationsUseCase().execute(ListConversationsQuery())
             withArchived = container.listConversationsUseCase().execute(
                 ListConversationsQuery(includeArchived=True)
             )
@@ -594,9 +564,7 @@ class LettersAndPinsTests(Phase8UseCaseTestBase):
         with asUser(self.tenantA.id, self.member.id):
             with self.assertRaises(PermissionDeniedError):
                 container.createLetterUseCase().execute(
-                    CreateLetterCommand(
-                        recipientId=str(self.admin.id), subject="بدون مجوز"
-                    )
+                    CreateLetterCommand(recipientId=str(self.admin.id), subject="بدون مجوز")
                 )
 
     def testModeratorPinsMessage(self) -> None:

@@ -19,7 +19,6 @@ from apps.tenancy.infrastructure.models import TenantModel
 from tests.support.phase6Helpers import seedPlatform
 from tests.support.phase8Helpers import ensureTenant, ensureUser
 from tests.support.phase9Helpers import (
-    asUser,
     grantNotificationAdmin,
     notificationOf,
 )
@@ -50,9 +49,7 @@ class NotificationEngineBase(TestCase):
         return container.deliveryRepository().getForNotification(notificationId)
 
     def policyFor(self, notificationType, category):
-        return container.resolvePolicyService().resolve(
-            self.tenant.id, notificationType, category
-        )
+        return container.resolvePolicyService().resolve(self.tenant.id, notificationType, category)
 
 
 class WorkerPipelineTests(NotificationEngineBase):
@@ -64,9 +61,7 @@ class WorkerPipelineTests(NotificationEngineBase):
         notification = container.notificationRepository().getById(notificationId)
         self.assertEqual(notification.status, "DELIVERED")
         deliveries = self.deliveriesOf(notificationId)
-        self.assertEqual(
-            [(d.channel, d.status) for d in deliveries], [("IN_APP", "DELIVERED")]
-        )
+        self.assertEqual([(d.channel, d.status) for d in deliveries], [("IN_APP", "DELIVERED")])
 
     def testDuplicateEventReturnsSameNotification(self) -> None:
         command = notificationOf(self.tenant, self.bob, eventId="dup-1")
@@ -74,9 +69,7 @@ class WorkerPipelineTests(NotificationEngineBase):
         second = self.create(notificationOf(self.tenant, self.bob, eventId="dup-1"))
         self.assertEqual(second.duplicates, 1)
         self.assertEqual(first.notifications[0].id, second.notifications[0].id)
-        rows = container.notificationRepository().listForRecipient(
-            self.tenant.id, self.bob.id
-        )[0]
+        rows = container.notificationRepository().listForRecipient(self.tenant.id, self.bob.id)[0]
         self.assertEqual(len(rows), 1)  # exactly one row (§29)
 
     def testDispatchIsIdempotentOnRerun(self) -> None:
@@ -160,9 +153,7 @@ class WorkerPipelineTests(NotificationEngineBase):
                     preferences=({"level": "GLOBAL", "channel": "EMAIL", "enabled": False},),
                 )
             )
-        outcome = self.create(
-            notificationOf(self.tenant, self.bob, notificationType="hr.payroll")
-        )
+        outcome = self.create(notificationOf(self.tenant, self.bob, notificationType="hr.payroll"))
         channels = [d.channel for d in self.deliveriesOf(uuid.UUID(outcome.notifications[0].id))]
         self.assertIn("EMAIL", channels)  # §11 org rule wins
 
@@ -171,22 +162,20 @@ class WorkerPipelineTests(NotificationEngineBase):
         from apps.notifications.application.commands.notificationCommands import (
             SavePolicyCommand,
         )
-        from apps.notifications.infrastructure.channels.deliveryChannels import (
-            EmailDeliveryChannel,
+        from apps.notifications.domain.repositories.notificationRepositories import (
+            DeliveryResult,
         )
         from apps.notifications.infrastructure.providers.channelProviders import (
             ProviderPool,
-        )
-        from apps.notifications.domain.repositories.notificationRepositories import (
-            DeliveryResult,
         )
 
         class BrokenEmailProvider:
             providerName = "broken"
 
             def send(self, **kwargs):
-                return DeliveryResult(ok=False, errorCode="PROVIDER_ERROR",
-                                      errorMessage="smtp down")
+                return DeliveryResult(
+                    ok=False, errorCode="PROVIDER_ERROR", errorMessage="smtp down"
+                )
 
         with self.createContext(self.alice):
             container.savePolicyService().execute(
@@ -200,7 +189,6 @@ class WorkerPipelineTests(NotificationEngineBase):
                 )
             )
         # swap the email adapter to a failing one
-        original = container.dispatchService
         try:
             import apps.notifications.infrastructure.channels.deliveryChannels as channelsModule
 
@@ -216,12 +204,10 @@ class WorkerPipelineTests(NotificationEngineBase):
             self.assertEqual(statuses["IN_APP"], "DELIVERED")
             self.assertEqual(statuses["EMAIL"], "RETRY_SCHEDULED")
         finally:
-            channelsModule.emailProviderPool = (
-                __import__(
-                    "apps.notifications.infrastructure.providers.channelProviders",
-                    fromlist=["emailProviderPool"],
-                ).emailProviderPool
-            )
+            channelsModule.emailProviderPool = __import__(
+                "apps.notifications.infrastructure.providers.channelProviders",
+                fromlist=["emailProviderPool"],
+            ).emailProviderPool
 
 
 class RetryTests(NotificationEngineBase):
@@ -229,11 +215,11 @@ class RetryTests(NotificationEngineBase):
         from apps.notifications.application.commands.notificationCommands import (
             SavePolicyCommand,
         )
-        from apps.notifications.infrastructure.providers.channelProviders import (
-            ProviderPool,
-        )
         from apps.notifications.domain.repositories.notificationRepositories import (
             DeliveryResult,
+        )
+        from apps.notifications.infrastructure.providers.channelProviders import (
+            ProviderPool,
         )
 
         class FlakyProvider:  # noqa: ANN106 — local test double
@@ -245,8 +231,7 @@ class RetryTests(NotificationEngineBase):
             def send(self, **kwargs):
                 self.attempts += 1
                 if self.attempts < 2:
-                    return DeliveryResult(ok=False, errorCode=errorCode,
-                                          errorMessage="flaky")
+                    return DeliveryResult(ok=False, errorCode=errorCode, errorMessage="flaky")
                 return DeliveryResult(ok=True)
 
         provider = FlakyProvider()
@@ -284,9 +269,7 @@ class RetryTests(NotificationEngineBase):
         NotificationDeliveryModel.objects.filter(id=delivery.id).update(
             nextAttemptAt=delivery.nextAttemptAt - timedelta(minutes=10)
         )
-        result = container.retryService().execute(
-            type("RetryCommand", (), {"limit": 10})()
-        )
+        result = container.retryService().execute(type("RetryCommand", (), {"limit": 10})())
         self.assertEqual(result["recovered"], 1)
         refreshed = self.deliveriesOf(notificationId)[0]
         self.assertEqual(refreshed.status, "DELIVERED")
@@ -305,9 +288,7 @@ class RetryTests(NotificationEngineBase):
             if delivery.nextAttemptAt
             else None
         )
-        result = container.retryService().execute(
-            type("RetryCommand", (), {"limit": 10})()
-        )
+        result = container.retryService().execute(type("RetryCommand", (), {"limit": 10})())
         self.assertEqual(result["retried"], 0)  # §24 never retried
 
 
@@ -334,12 +315,10 @@ class RateLimitAndDigestTests(NotificationEngineBase):
                 )
             )
         first = self.create(
-            notificationOf(self.tenant, self.bob, notificationType="chat.message",
-                           eventId="s-1")
+            notificationOf(self.tenant, self.bob, notificationType="chat.message", eventId="s-1")
         )
         second = self.create(
-            notificationOf(self.tenant, self.bob, notificationType="chat.message",
-                           eventId="s-2")
+            notificationOf(self.tenant, self.bob, notificationType="chat.message", eventId="s-2")
         )
         self.assertEqual(first.aggregatedToDigest, 0)
         self.assertEqual(second.aggregatedToDigest, 1)  # §28 cooldown hit
@@ -518,12 +497,9 @@ class DeviceRegistryTests(NotificationEngineBase):
                     priority="HIGH",
                 )
             )
-        outcome = self.create(
-            notificationOf(self.tenant, self.bob, notificationType="test.push")
-        )
+        outcome = self.create(notificationOf(self.tenant, self.bob, notificationType="test.push"))
         deliveryStatus = {
-            d.channel: d.status
-            for d in self.deliveriesOf(uuid.UUID(outcome.notifications[0].id))
+            d.channel: d.status for d in self.deliveriesOf(uuid.UUID(outcome.notifications[0].id))
         }
         self.assertEqual(deliveryStatus["PUSH"], "DELIVERED")
 
@@ -536,17 +512,14 @@ class DeviceRegistryTests(NotificationEngineBase):
                 RevokeDeviceCommand(deviceId=uuid.UUID(device.id), userId=self.bob.id)
             )
         second = self.create(
-            notificationOf(
-                self.tenant, self.bob, notificationType="test.push", eventId="p-2"
-            )
+            notificationOf(self.tenant, self.bob, notificationType="test.push", eventId="p-2")
         )
         secondRow = container.notificationRepository().getById(
             uuid.UUID(second.notifications[0].id)
         )
         self.assertEqual(secondRow.status, "PARTIALLY_DELIVERED")  # §47 in-app still works
         statuses = {
-            d.channel: d.status
-            for d in self.deliveriesOf(uuid.UUID(second.notifications[0].id))
+            d.channel: d.status for d in self.deliveriesOf(uuid.UUID(second.notifications[0].id))
         }
         self.assertEqual(statuses["PUSH"], "PERMANENTLY_FAILED")  # NO_ACTIVE_DEVICE
 
@@ -558,7 +531,7 @@ class SchedulingAndEscalationTests(NotificationEngineBase):
         )
 
         with self.createContext(self.alice):
-            dto = container.scheduleNotificationService().execute(
+            container.scheduleNotificationService().execute(
                 ScheduleNotificationCommand(
                     tenantId=self.tenant.id,
                     kind="DELAYED",
@@ -598,9 +571,7 @@ class SchedulingAndEscalationTests(NotificationEngineBase):
                     scheduledAt=self._now(),
                 )
             )
-        container.runDueSchedulesService().execute(
-            type("SchedulesCommand", (), {"limit": 10})()
-        )
+        container.runDueSchedulesService().execute(type("SchedulesCommand", (), {"limit": 10})())
         schedule = container.scheduleRepository().getById(uuid.UUID(dto.id))
         self.assertEqual(schedule.status, "PENDING")  # stays alive (§22)
 
@@ -624,9 +595,7 @@ class OutboxConsumerTests(NotificationEngineBase):
 
         with self.createContext(self.alice):
             conversation = commContainer.createGroupUseCase().execute(
-                CreateGroupConversationCommand(
-                    name="اتاق جلسات", memberIds=[str(self.bob.id)]
-                )
+                CreateGroupConversationCommand(name="اتاق جلسات", memberIds=[str(self.bob.id)])
             )
             commContainer.createMeetingUseCase().execute(
                 CreateMeetingCommand(
@@ -650,9 +619,7 @@ class OutboxConsumerTests(NotificationEngineBase):
         other = ensureTenant("ntf_other_tenant")
         from apps.identity.infrastructure.models import TenantMembershipModel
 
-        TenantMembershipModel.objects.create(
-            userId=self.bob.id, tenantId=other.id, status="active"
-        )
+        TenantMembershipModel.objects.create(userId=self.bob.id, tenantId=other.id, status="active")
         outcome = self.create(notificationOf(other, self.bob, eventId="iso-1"))
         # listing must be scoped per tenant (§34)
         rows, _unread, _hasNext = container.notificationRepository().listForRecipient(

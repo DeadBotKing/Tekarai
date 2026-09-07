@@ -9,7 +9,6 @@ No content ever enters a metric (§45).
 from __future__ import annotations
 
 import threading
-import time
 from collections import deque
 from typing import Any
 
@@ -75,9 +74,9 @@ class NotificationMetrics:
             "deliveryLatencyMs": round(self._avg(latencies) * 1000, 3),
             "channelUsage": channelUsageSnapshot or (channelUsage or {}),
             "retryAttempts": counters.get("retryAttempts", 0),
-            "providerFailureRate": round(
-                counters.get("providerFailures", 0) / created, 4
-            ) if created else 0.0,
+            "providerFailureRate": round(counters.get("providerFailures", 0) / created, 4)
+            if created
+            else 0.0,
             "notificationVolume": created,
             "digestsSent": counters.get("digestsSent", 0),
             "escalationsRaised": counters.get("escalationsRaised", 0),
@@ -88,9 +87,7 @@ class NotificationMetrics:
         if totals is not None:
             total, read, acknowledged = totals
             snapshot["readRate"] = round(read / total, 4) if total else 0.0
-            snapshot["acknowledgementRate"] = (
-                round(acknowledged / total, 4) if total else 0.0
-            )
+            snapshot["acknowledgementRate"] = round(acknowledged / total, 4) if total else 0.0
         else:
             snapshot["readRate"] = 0.0
             snapshot["acknowledgementRate"] = 0.0

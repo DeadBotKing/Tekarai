@@ -42,12 +42,14 @@ def decrypt_tokens(apps, schema_editor):
         value = device.pushToken
         if not value.startswith(_PREFIX):
             continue
-        packed = base64.urlsafe_b64decode(value[len(_PREFIX):].encode("ascii"))
+        packed = base64.urlsafe_b64decode(value[len(_PREFIX) :].encode("ascii"))
         nonce, tag, encrypted = packed[:16], packed[16:48], packed[48:]
         expected = hmac.new(key, nonce + encrypted, hashlib.sha256).digest()
         if not hmac.compare_digest(tag, expected):
             raise ValueError("Cannot reverse migration: token authentication failed")
-        raw = bytes(a ^ b for a, b in zip(encrypted, _stream(key, nonce, len(encrypted)), strict=True))
+        raw = bytes(
+            a ^ b for a, b in zip(encrypted, _stream(key, nonce, len(encrypted)), strict=True)
+        )
         Device.objects.filter(id=device.id).update(pushToken=raw.decode("utf-8"))
 
 

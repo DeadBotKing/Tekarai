@@ -100,6 +100,7 @@ INSTALLED_APPS = [
     "apps.communication",
     "apps.notifications",
     "apps.ai",
+    "apps.learning",
 ]
 
 # --------------------------------------------------------------------------- #
@@ -229,6 +230,13 @@ API_RATE_LIMIT_POLICIES: dict[str, tuple[int, int]] = {
     "notification:device": (20, 60),
     "notification:webhook": (300, 60),
     "notification:admin": (30, 60),
+    # Phase 16 Self-Learning Platform controls.
+    "learning:observe": (300, 60),
+    "learning:manage": (30, 60),
+    "learning:run": (10, 60),
+    "learning:action": (20, 60),
+    "learning:feedback": (120, 60),
+    "learning:monitor": (300, 60),
 }
 
 # Session lifetime (ADR-019 opaque tokens; refresh rotates within this TTL).
@@ -278,13 +286,9 @@ AI_PROVIDER_ADAPTERS: dict[str, dict[str, object]] = {
 # Phase 13-Z public agent runtime and release gate. Production remains
 # fail-closed until an explicit provider/model pair is selected. The fake
 # provider can only be enabled deliberately (testing.py does so).
-AI_AGENT_DEFAULT_PROVIDER = str(
-    env("aiAgentDefaultProvider", default="") or ""
-).upper()
+AI_AGENT_DEFAULT_PROVIDER = str(env("aiAgentDefaultProvider", default="") or "").upper()
 AI_AGENT_DEFAULT_MODEL = str(env("aiAgentDefaultModel", default="") or "")
-AI_AGENT_ALLOW_DETERMINISTIC_PROVIDER = env.bool(
-    "aiAgentAllowDeterministicProvider", default=False
-)
+AI_AGENT_ALLOW_DETERMINISTIC_PROVIDER = env.bool("aiAgentAllowDeterministicProvider", default=False)
 
 # ---------------------------------------------------------------------------
 # AI USAGE METERING (Phase 13-N)
@@ -402,15 +406,11 @@ AI_KNOWLEDGE_CHUNK_STRATEGY = str(
     env("aiKnowledgeChunkStrategy", default="PARAGRAPH") or "PARAGRAPH"
 ).upper()
 AI_KNOWLEDGE_CHUNK_TOKENS = int(env("aiKnowledgeChunkTokens", default="512") or 512)
-AI_KNOWLEDGE_CHUNK_OVERLAP_TOKENS = int(
-    env("aiKnowledgeChunkOverlapTokens", default="64") or 64
-)
+AI_KNOWLEDGE_CHUNK_OVERLAP_TOKENS = int(env("aiKnowledgeChunkOverlapTokens", default="64") or 64)
 AI_KNOWLEDGE_MIN_CHUNK_TOKENS = int(env("aiKnowledgeMinChunkTokens", default="32") or 32)
 AI_KNOWLEDGE_AUTO_EMBED = env.bool("aiKnowledgeAutoEmbed", default=True)
 AI_KNOWLEDGE_EMBED_BATCH_SIZE = int(env("aiKnowledgeEmbedBatchSize", default="32") or 32)
-AI_KNOWLEDGE_MAX_CHUNKS_PER_SOURCE = int(
-    env("aiKnowledgeMaxChunksPerSource", default="500") or 500
-)
+AI_KNOWLEDGE_MAX_CHUNKS_PER_SOURCE = int(env("aiKnowledgeMaxChunksPerSource", default="500") or 500)
 AI_KNOWLEDGE_RETENTION_DAYS = int(env("aiKnowledgeRetentionDays", default="730") or 730)
 
 # ---------------------------------------------------------------------------
@@ -427,7 +427,9 @@ AI_RETRIEVAL_STRATEGY = str(env("aiRetrievalStrategy", default="HYBRID") or "HYB
 AI_RETRIEVAL_TOP_K = int(env("aiRetrievalTopK", default="5") or 5)
 AI_RETRIEVAL_CANDIDATE_LIMIT = int(env("aiRetrievalCandidateLimit", default="200") or 200)
 AI_RETRIEVAL_MIN_SCORE = str(env("aiRetrievalMinScore", default="") or "")
-AI_RETRIEVAL_RERANK = str(env("aiRetrievalRerank", default="LEXICAL_BOOST") or "LEXICAL_BOOST").upper()
+AI_RETRIEVAL_RERANK = str(
+    env("aiRetrievalRerank", default="LEXICAL_BOOST") or "LEXICAL_BOOST"
+).upper()
 AI_RETRIEVAL_LEXICAL_WEIGHT = float(env("aiRetrievalLexicalWeight", default="0.3") or 0.3)
 AI_RETRIEVAL_MMR_LAMBDA = float(env("aiRetrievalMmrLambda", default="0.7") or 0.7)
 AI_RETRIEVAL_MAX_CONTEXT_TOKENS = int(env("aiRetrievalMaxContextTokens", default="4000") or 4000)
@@ -492,9 +494,7 @@ AI_FEEDBACK_ENABLED = env.bool("aiFeedbackEnabled", default=True)
 AI_FEEDBACK_PROMOTION_THRESHOLD = int(env("aiFeedbackPromotionThreshold", default="2") or 2)
 AI_FEEDBACK_REQUIRE_CORRECTION = env.bool("aiFeedbackRequireCorrection", default=True)
 AI_FEEDBACK_REQUIRE_REASON = env.bool("aiFeedbackRequireReason", default=True)
-AI_FEEDBACK_NEGATIVE_RATING_CEILING = int(
-    env("aiFeedbackNegativeRatingCeiling", default="2") or 2
-)
+AI_FEEDBACK_NEGATIVE_RATING_CEILING = int(env("aiFeedbackNegativeRatingCeiling", default="2") or 2)
 AI_FEEDBACK_MIN_SATISFACTION = float(env("aiFeedbackMinSatisfaction", default="0.6") or 0.6)
 AI_FEEDBACK_TREND_TOLERANCE = float(env("aiFeedbackTrendTolerance", default="0.05") or 0.05)
 AI_FEEDBACK_TREND_WINDOW_DAYS = int(env("aiFeedbackTrendWindowDays", default="7") or 7)
@@ -576,8 +576,7 @@ AI_AGENT_RETENTION_DAYS = int(env("aiAgentRetentionDays", default="365") or 365)
 # Phase 14 — attachment intake and physical communication retention are
 # operational policy, not domain constants.
 COMMUNICATION_MAX_ATTACHMENT_BYTES = int(
-    env("communicationMaxAttachmentBytes", default=str(25 * 1024 * 1024))
-    or 25 * 1024 * 1024
+    env("communicationMaxAttachmentBytes", default=str(25 * 1024 * 1024)) or 25 * 1024 * 1024
 )
 COMMUNICATION_ALLOWED_ATTACHMENT_TYPES = tuple(
     env.list(
@@ -591,25 +590,17 @@ COMMUNICATION_ALLOWED_ATTACHMENT_TYPES = tuple(
         ],
     )
 )
-COMMUNICATION_REQUIRE_CLEAN_SCAN = env.bool(
-    "communicationRequireCleanScan", default=True
-)
-COMMUNICATION_RETENTION_DAYS = int(
-    env("communicationRetentionDays", default="2555") or 2555
-)
+COMMUNICATION_REQUIRE_CLEAN_SCAN = env.bool("communicationRequireCleanScan", default=True)
+COMMUNICATION_RETENTION_DAYS = int(env("communicationRetentionDays", default="2555") or 2555)
 
 # Phase 15 — durable notification jobs, callback replay protection and cleanup.
-NOTIFICATION_RETENTION_DAYS = int(
-    env("notificationRetentionDays", default="365") or 365
-)
+NOTIFICATION_RETENTION_DAYS = int(env("notificationRetentionDays", default="365") or 365)
 NOTIFICATION_WEBHOOK_TOLERANCE_SECONDS = int(
     env("notificationWebhookToleranceSeconds", default="300") or 300
 )
 # Provider secrets are injected by deployment/secret-manager integrations.
 # Keys may be PROVIDER or "<tenant UUID>:PROVIDER"; values are never returned.
-NOTIFICATION_WEBHOOK_SECRETS: dict[str, str] = env.json(
-    "notificationWebhookSecrets", default={}
-)
+NOTIFICATION_WEBHOOK_SECRETS: dict[str, str] = env.json("notificationWebhookSecrets", default={})
 CELERY_BROKER_URL = env("notificationCeleryBrokerUrl", default="redis://127.0.0.1:6379/2")
 CELERY_RESULT_BACKEND = env("notificationCeleryResultBackend", default="redis://127.0.0.1:6379/3")
 CELERY_TASK_SERIALIZER = "json"
@@ -621,14 +612,29 @@ CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_TASK_ROUTES = {
     "notifications.dispatch": {"queue": "notifications.normal"},
     "notifications.workerTick": {"queue": "notifications.maintenance"},
+    "learning.processJob": {"queue": "learning.training"},
+    "learning.monitorDeployments": {"queue": "learning.monitoring"},
 }
 CELERY_BEAT_SCHEDULE = {
     "notification-worker-tick": {
         "task": "notifications.workerTick",
         "schedule": 10.0,
         "args": (200,),
-    }
+    },
+    "learning-monitor-heartbeat": {
+        "task": "learning.monitorDeployments",
+        "schedule": 60.0,
+    },
 }
+
+LEARNING_ARTIFACT_ROOT = BASE_DIR / "var" / "learningArtifacts"
+LEARNING_ENGINE_IMPL = (
+    "apps.learning.infrastructure.learning.deterministicEngine.DeterministicLearningEngine"
+)
+LEARNING_EVALUATION_IMPL = (
+    "apps.learning.infrastructure.evaluation.deterministicEvaluation.DeterministicEvaluationEngine"
+)
+LEARNING_QUEUE_IMPL = "apps.learning.infrastructure.queue.learningQueue.CeleryLearningJobQueue"
 
 # ---------------------------------------------------------------------------
 # GUARDS
@@ -647,6 +653,7 @@ MIGRATION_MODULES = {
     "communication": "apps.communication.infrastructure.migrations",
     "notifications": "apps.notifications.infrastructure.migrations",
     "ai": "apps.ai.infrastructure.migrations",
+    "learning": "apps.learning.infrastructure.migrations",
 }
 
 # Phase 07 §7/§8 — JWT configuration (ADR-022: in-house HS256, stdlib only).

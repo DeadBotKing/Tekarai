@@ -166,9 +166,7 @@ class Conversation(AggregateRoot):
             )
         )
 
-    def updateProfile(
-        self, *, name: str | None, description: str | None, now: datetime
-    ) -> None:
+    def updateProfile(self, *, name: str | None, description: str | None, now: datetime) -> None:
         if name is not None and name.strip():
             self.name = name.strip()
         if description is not None:

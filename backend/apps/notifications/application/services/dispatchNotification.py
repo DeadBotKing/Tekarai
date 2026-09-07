@@ -233,8 +233,9 @@ class DispatchNotificationService(NotificationUseCase):
                     DeliveryResult,
                 )
 
-                result = DeliveryResult(ok=False, errorCode="PROVIDER_ERROR",
-                                        errorMessage=str(exc)[:200])
+                result = DeliveryResult(
+                    ok=False, errorCode="PROVIDER_ERROR", errorMessage=str(exc)[:200]
+                )
 
             # steps 9/10 — persist result + retry classification (§24);
             # markFailed itself decides PERMANENTLY_FAILED vs RETRY_SCHEDULED
@@ -252,9 +253,7 @@ class DispatchNotificationService(NotificationUseCase):
                     {
                         "channel": channel,
                         "status": (
-                            DELIVERY_RETRY_SCHEDULED
-                            if retried
-                            else DELIVERY_PERMANENTLY_FAILED
+                            DELIVERY_RETRY_SCHEDULED if retried else DELIVERY_PERMANENTLY_FAILED
                         ),
                     }
                 )
@@ -263,19 +262,14 @@ class DispatchNotificationService(NotificationUseCase):
         # §47 — RETRY_SCHEDULED rows are still in flight: only PERMANENTLY_FAILED
         # channels count as failures for the aggregate outcome.
         siblings = self.deliveryRepository.getForNotification(notification.id)
-        hardFailed = sum(
-            1 for row in siblings if row.status == DELIVERY_PERMANENTLY_FAILED
-        )
+        hardFailed = sum(1 for row in siblings if row.status == DELIVERY_PERMANENTLY_FAILED)
         if deliveredCount or hardFailed:
             notification.applyDeliveryOutcome(
                 deliveredChannels=deliveredCount, failedChannels=hardFailed, now=now
             )
 
         # §27 — policy-driven escalation on total failure
-        if (
-            notification.status == "FAILED"
-            and policyResolution.policy.escalation
-        ):
+        if notification.status == "FAILED" and policyResolution.policy.escalation:
             self._scheduleEscalation(notification, policyResolution.policy.escalation, now)
             outcome.note("step10=escalation-scheduled")
 
@@ -295,8 +289,12 @@ class DispatchNotificationService(NotificationUseCase):
         deliveries = self.deliveryRepository.getForNotification(notification.id)
         if not deliveries:
             return False
-        parked = (DELIVERY_DELIVERED, DELIVERY_SKIPPED,
-                  DELIVERY_PERMANENTLY_FAILED, DELIVERY_RETRY_SCHEDULED)
+        parked = (
+            DELIVERY_DELIVERED,
+            DELIVERY_SKIPPED,
+            DELIVERY_PERMANENTLY_FAILED,
+            DELIVERY_RETRY_SCHEDULED,
+        )
         return all(row.status in parked for row in deliveries)
 
     def _load(self, notificationId: Any):
@@ -341,9 +339,7 @@ class DispatchNotificationService(NotificationUseCase):
     def _save(self, delivery: NotificationDelivery) -> None:
         self.deliveryRepository.update(delivery)
 
-    def _finalize(
-        self, notification: Any, outcome: DispatchOutcome, startedAt: float
-    ) -> None:
+    def _finalize(self, notification: Any, outcome: DispatchOutcome, startedAt: float) -> None:
         self.notificationRepository.update(notification)
         self.collectEventsFrom(notification)
         outcome.status = notification.status

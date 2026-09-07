@@ -67,7 +67,9 @@ class Phase13CProviderPortTests(unittest.TestCase):
         with self.assertRaises(ValidationFailedError):
             requireProviderFeature(capabilities, "tools")
         with self.assertRaises(ValidationFailedError):
-            ProviderCapabilities(providerCode="x", features=frozenset({"EMBEDDING"}), supportsJsonSchema=True)
+            ProviderCapabilities(
+                providerCode="x", features=frozenset({"EMBEDDING"}), supportsJsonSchema=True
+            )
 
     def testGenerationIsBackwardCompatibleAndCarriesNormalizedUsage(self) -> None:
         result = self.provider.generate(prompt="hello", model="test")
@@ -115,7 +117,9 @@ class Phase13CProviderPortTests(unittest.TestCase):
         context = ProviderRequestContext(tenantId=self.tenantId, idempotencyKey="request-4")
         chunks = list(self.provider.stream(prompt="hello world", model="test", context=context))
         self.assertGreater(len(chunks), 1)
-        self.assertEqual("".join(chunk.content for chunk in chunks), "[deterministic:test] hello world")
+        self.assertEqual(
+            "".join(chunk.content for chunk in chunks), "[deterministic:test] hello world"
+        )
         self.assertFalse(any(chunk.isFinal for chunk in chunks[:-1]))
         self.assertTrue(chunks[-1].isFinal)
         self.assertEqual(chunks[-1].finishReason, "STOP")
@@ -125,10 +129,13 @@ class Phase13CProviderPortTests(unittest.TestCase):
         vector = self.provider.embed(text="hello", model="test")
         self.assertEqual(len(vector), 8)
         self.assertEqual(vector, self.provider.embed(text="hello", model="test"))
-        self.assertEqual(self.provider.embedBatch(texts=("hello", "world"), model="test"), [
-            self.provider.embed(text="hello", model="test"),
-            self.provider.embed(text="world", model="test"),
-        ])
+        self.assertEqual(
+            self.provider.embedBatch(texts=("hello", "world"), model="test"),
+            [
+                self.provider.embed(text="hello", model="test"),
+                self.provider.embed(text="world", model="test"),
+            ],
+        )
         self.assertEqual(self.provider.countTokens(text="one two", model="test"), 2)
         self.assertEqual(self.provider.countTokens(text="", model="test"), 0)
         health = self.provider.healthCheck(model="test")
@@ -152,7 +159,16 @@ class Phase13CProviderPortTests(unittest.TestCase):
         source = (Path(__file__).resolve().parents[2] / "apps/ai/domain/ports.py").read_text(
             encoding="utf-8"
         )
-        for forbidden in ("django", "rest_framework", "openai", "ollama", "azure", "anthropic", "requests", "httpx"):
+        for forbidden in (
+            "django",
+            "rest_framework",
+            "openai",
+            "ollama",
+            "azure",
+            "anthropic",
+            "requests",
+            "httpx",
+        ):
             self.assertNotIn(f"import {forbidden}", source.lower())
 
 

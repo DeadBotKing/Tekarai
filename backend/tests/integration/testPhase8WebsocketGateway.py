@@ -12,12 +12,6 @@ import uuid
 from channels.testing import WebsocketCommunicator
 from django.test import TransactionTestCase
 
-from config.asgi import application
-
-from apps.identity.infrastructure.models import SessionModel, UserModel
-from apps.communication.infrastructure.models import ConversationModel, MessageModel
-from apps.sharedKernel.application.requestContext import RequestContext, requestScope
-from apps.tenancy.infrastructure.models import TenantModel
 from apps.communication.application.commands.communicationCommands import (
     CreateGroupConversationCommand,
     SendMessageCommand,
@@ -26,8 +20,12 @@ from apps.communication.application.useCases.conversationUseCases import (
     CreateGroupConversationUseCase,
 )
 from apps.communication.infrastructure import container
-from tests.support.phase8Helpers import ensureUser, grantCommAdmin
+from apps.identity.infrastructure.models import SessionModel
+from apps.sharedKernel.application.requestContext import RequestContext, requestScope
+from apps.tenancy.infrastructure.models import TenantModel
+from config.asgi import application
 from tests.support.phase6Helpers import seedPlatform
+from tests.support.phase8Helpers import ensureUser, grantCommAdmin
 
 WS = "/ws/communication/"
 
@@ -72,15 +70,9 @@ class WebsocketGatewayTests(TransactionTestCase):
                 participantRepository=container.participantRepository(),
                 userDirectory=container.userDirectory(),
                 **container.commPorts(),
-            ).execute(
-                CreateGroupConversationCommand(
-                    name="اتاق WS", memberIds=[str(self.bob.id)]
-                )
-            )
+            ).execute(CreateGroupConversationCommand(name="اتاق WS", memberIds=[str(self.bob.id)]))
             self.message = container.sendMessageUseCase().execute(
-                SendMessageCommand(
-                    conversationId=str(self.conversation.id), body="پیام پایه"
-                )
+                SendMessageCommand(conversationId=str(self.conversation.id), body="پیام پایه")
             )
 
     async def connect(self, user) -> WebsocketCommunicator:
@@ -108,9 +100,7 @@ class WebsocketGatewayTests(TransactionTestCase):
         import asyncio
 
         for _ in range(tries):
-            frame = await asyncio.wait_for(
-                communicator.receive_json_from(), timeout=5
-            )
+            frame = await asyncio.wait_for(communicator.receive_json_from(), timeout=5)
             if frame.get("type") == expectedType:
                 return frame
         raise AssertionError(f"never received {expectedType}")
@@ -153,7 +143,7 @@ class WebsocketGatewayTests(TransactionTestCase):
                     },
                 }
             )
-            read = await self.receiveUntil(communicator, "read.ack")
+            await self.receiveUntil(communicator, "read.ack")
 
             # live send (§30)
             await communicator.send_json_to(
@@ -207,9 +197,7 @@ class WebsocketGatewayTests(TransactionTestCase):
                     __import__(
                         "apps.communication.application.commands.communicationCommands",
                         fromlist=["StartCallCommand"],
-                    ).StartCallCommand(
-                        conversationId=str(self.conversation.id), mediaType="AUDIO"
-                    )
+                    ).StartCallCommand(conversationId=str(self.conversation.id), mediaType="AUDIO")
                 )
             )
         communicator = await self.connect(self.alice)
@@ -217,9 +205,7 @@ class WebsocketGatewayTests(TransactionTestCase):
             envelope = SignalingProtocol.envelope(
                 "OFFER", callId=call.id, fromUser="ignored", payload={"sdp": "v=0"}
             )
-            await communicator.send_json_to(
-                {"type": "signal", "payload": {"envelope": envelope}}
-            )
+            await communicator.send_json_to({"type": "signal", "payload": {"envelope": envelope}})
             ack = await self.receiveUntil(communicator, "signal.ack")
             self.assertTrue(ack["result"]["relayed"])
         finally:

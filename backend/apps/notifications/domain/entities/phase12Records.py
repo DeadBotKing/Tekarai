@@ -77,8 +77,10 @@ class DeliveryAttempt(AggregateRoot):
         errorMessage: str = "",
         responseMetadata: dict[str, Any] | None = None,
     ) -> DeliveryAttempt:
-        status = t.ATTEMPT_DELIVERED if delivered else (
-            t.ATTEMPT_SENT if succeeded else t.ATTEMPT_FAILED
+        status = (
+            t.ATTEMPT_DELIVERED
+            if delivered
+            else (t.ATTEMPT_SENT if succeeded else t.ATTEMPT_FAILED)
         )
         return DeliveryAttempt(
             id=newId(),
@@ -174,9 +176,7 @@ class RecipientDelivery(AggregateRoot):
 
     def _transition(self, target: str, now: datetime) -> None:
         if target not in t.DELIVERY_TRANSITIONS.get(self.status, ()):
-            raise ConflictError(
-                f"Cannot move delivery {self.status} -> {target}."
-            )
+            raise ConflictError(f"Cannot move delivery {self.status} -> {target}.")
         self.status = target
 
     def markProcessing(self, now: datetime) -> None:
@@ -339,9 +339,7 @@ class NotificationRecipient(AggregateRoot):
 
     def _move(self, target: str, now: datetime) -> None:
         if target not in t.RECIPIENT_TRANSITIONS.get(self.state, ()):
-            raise ConflictError(
-                f"Cannot move recipient {self.state} -> {target}."
-            )
+            raise ConflictError(f"Cannot move recipient {self.state} -> {target}.")
         self.state = target
 
     def markRead(self, now: datetime) -> None:
@@ -526,8 +524,7 @@ class BroadcastNotification(AggregateRoot):
             self.sentAt = self.sentAt or now
             self.deliveredAt = now
         elif all(
-            state in (t.DLV_DELIVERED, t.DLV_FAILED, t.DLV_DEAD_LETTER)
-            for state in states
+            state in (t.DLV_DELIVERED, t.DLV_FAILED, t.DLV_DEAD_LETTER) for state in states
         ) and any(state == t.DLV_DELIVERED for state in states):
             self.status = "PARTIALLY_DELIVERED"
             self.sentAt = self.sentAt or now
@@ -682,7 +679,10 @@ class InboundNotificationEvent(AggregateRoot):
 
     @staticmethod
     def ingest(
-        tenantId: uuid.UUID, eventId: str, eventType: str, now: datetime,
+        tenantId: uuid.UUID,
+        eventId: str,
+        eventType: str,
+        now: datetime,
         payload: dict[str, Any] | None = None,
     ) -> InboundNotificationEvent:
         return InboundNotificationEvent(

@@ -17,9 +17,10 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
+from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import UTC, datetime
-from typing import Any, Mapping
+from datetime import datetime
+from typing import Any
 
 from apps.ai.domain.entities.aiRecords import (
     AIOperation,
@@ -28,11 +29,11 @@ from apps.ai.domain.entities.aiRecords import (
     utcNow,
 )
 from apps.ai.domain.exceptions import (
+    AIError,
+    AIIdempotencyConflict,
     AIOperationAlreadyRegistered,
     AIOperationLifecycleInvalid,
     AIOperationNotFound,
-    AIError,
-    AIIdempotencyConflict,
     AIRequestAlreadyRegistered,
     AIRequestCapabilityInvalid,
     AIRequestLifecycleInvalid,
@@ -40,7 +41,6 @@ from apps.ai.domain.exceptions import (
 )
 from apps.ai.domain.registries.capabilityRegistry import CapabilityRegistry
 from apps.ai.domain.valueObjects.aiTypes import REQUEST_STATUSES, REQUEST_TYPES, ensureEnum
-
 
 OPERATION_STATUSES: tuple[str, ...] = (
     "PENDING",
@@ -63,8 +63,7 @@ def _stableValue(value: Any) -> Any:
 
     if isinstance(value, Mapping):
         return {
-            str(key): _stableValue(value[key])
-            for key in sorted(value, key=lambda item: str(item))
+            str(key): _stableValue(value[key]) for key in sorted(value, key=lambda item: str(item))
         }
     if isinstance(value, (list, tuple)):
         return [_stableValue(item) for item in value]
@@ -158,7 +157,9 @@ class RequestLifecycleService:
         capabilityRegistry: CapabilityRegistry | None = None,
         now: Any = utcNow,
     ) -> None:
-        if capabilityRegistry is not None and not isinstance(capabilityRegistry, CapabilityRegistry):
+        if capabilityRegistry is not None and not isinstance(
+            capabilityRegistry, CapabilityRegistry
+        ):
             raise TypeError("capabilityRegistry must be a CapabilityRegistry.")
         if not callable(now):
             raise TypeError("now must be callable.")
@@ -182,7 +183,9 @@ class RequestLifecycleService:
         operationId: uuid.UUID | str | None = None,
     ) -> AIOperation:
         tenant = requireUuid(tenantId, "tenantId")
-        identifier = requireUuid(operationId, "operationId") if operationId is not None else uuid.uuid4()
+        identifier = (
+            requireUuid(operationId, "operationId") if operationId is not None else uuid.uuid4()
+        )
         key = (tenant, identifier)
         if key in self._operations:
             raise AIOperationAlreadyRegistered(str(identifier))
@@ -254,7 +257,8 @@ class RequestLifecycleService:
             priority=priority,
             id=requireUuid(requestId, "requestId") if requestId is not None else uuid.uuid4(),
             status="PENDING",
-            correlationId=correlationId or (operation.correlationId if operation is not None else ""),
+            correlationId=correlationId
+            or (operation.correlationId if operation is not None else ""),
             traceId=traceId or (operation.traceId if operation is not None else ""),
             parentRequestId=parent,
             inputData=safeInput,
@@ -494,7 +498,9 @@ class RequestLifecycleService:
     ) -> OperationDescriptor:
         tenant = requireUuid(tenantId, "tenantId")
         operation = self._getOperationOrRaise(tenant, operationId)
-        statuses = tuple(self._getRequestOrRaise(tenant, requestId).status for requestId in operation.requestIds)
+        statuses = tuple(
+            self._getRequestOrRaise(tenant, requestId).status for requestId in operation.requestIds
+        )
         return OperationDescriptor(
             tenantId=operation.tenantId,
             operationId=operation.id,
@@ -519,7 +525,8 @@ class RequestLifecycleService:
         descriptors = [
             self.describeRequest(tenant, request.request.id)
             for (requestTenant, _), request in self._requests.items()
-            if requestTenant == tenant and (normalizedStatus is None or request.request.status == normalizedStatus)
+            if requestTenant == tenant
+            and (normalizedStatus is None or request.request.status == normalizedStatus)
         ]
         return tuple(sorted(descriptors, key=lambda item: (item.createdAt, str(item.requestId))))
 
@@ -530,11 +537,14 @@ class RequestLifecycleService:
         status: str | None = None,
     ) -> tuple[OperationDescriptor, ...]:
         tenant = requireUuid(tenantId, "tenantId")
-        normalizedStatus = ensureEnum(status, OPERATION_STATUSES, "operationStatus") if status else None
+        normalizedStatus = (
+            ensureEnum(status, OPERATION_STATUSES, "operationStatus") if status else None
+        )
         descriptors = [
             self.describeOperation(tenant, operation.id)
             for (operationTenant, _), operation in self._operations.items()
-            if operationTenant == tenant and (normalizedStatus is None or operation.status == normalizedStatus)
+            if operationTenant == tenant
+            and (normalizedStatus is None or operation.status == normalizedStatus)
         ]
         return tuple(sorted(descriptors, key=lambda item: (item.createdAt, str(item.operationId))))
 

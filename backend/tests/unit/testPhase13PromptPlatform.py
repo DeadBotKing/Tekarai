@@ -75,7 +75,9 @@ class Phase13IPromptPlatformTests(unittest.TestCase):
         self.assertNotIn("leadership", repr(rendered))
 
     def testVersioningIsMonotonicAndPreviousVersionsCannotBeOverwritten(self) -> None:
-        first = self.platform.createVersion(self.tenantId, self.prompt.id, "Version {value}", variables=("value",))
+        first = self.platform.createVersion(
+            self.tenantId, self.prompt.id, "Version {value}", variables=("value",)
+        )
         second = self.platform.createVersion(
             self.tenantId,
             self.prompt.id,
@@ -84,12 +86,18 @@ class Phase13IPromptPlatformTests(unittest.TestCase):
             version=2,
             activate=True,
         )
-        third = self.platform.createVersion(self.tenantId, self.prompt.id, "Version three {value}", variables=("value",))
+        third = self.platform.createVersion(
+            self.tenantId, self.prompt.id, "Version three {value}", variables=("value",)
+        )
         self.assertEqual((first.version, second.version, third.version), (1, 2, 3))
         with self.assertRaises(AIPromptVersionAlreadyRegistered):
-            self.platform.createVersion(self.tenantId, self.prompt.id, "Duplicate {value}", variables=("value",), version=2)
+            self.platform.createVersion(
+                self.tenantId, self.prompt.id, "Duplicate {value}", variables=("value",), version=2
+            )
         with self.assertRaises(AIPromptLifecycleInvalid):
-            self.platform.createVersion(self.tenantId, self.prompt.id, "Invalid version zero", version=0)
+            self.platform.createVersion(
+                self.tenantId, self.prompt.id, "Invalid version zero", version=0
+            )
         with self.assertRaises(AIPromptVersionImmutable):
             self.platform.registerVersion(
                 AIPromptVersion(
@@ -103,7 +111,9 @@ class Phase13IPromptPlatformTests(unittest.TestCase):
             )
         snapshot = self.platform.getVersion(self.tenantId, first.id)
         snapshot.template = "caller mutation must not alter registry"
-        self.assertEqual(self.platform.getVersion(self.tenantId, first.id).template, "Version {value}")
+        self.assertEqual(
+            self.platform.getVersion(self.tenantId, first.id).template, "Version {value}"
+        )
         self.assertEqual(self.platform.listVersions(self.tenantId, self.prompt.id)[1].version, 2)
 
     def testActivationKeepsOneActiveVersionAndPromptLifecycleIsExplicit(self) -> None:
@@ -111,7 +121,9 @@ class Phase13IPromptPlatformTests(unittest.TestCase):
         second = self.platform.createVersion(self.tenantId, self.prompt.id, "Two")
         self.platform.activateVersion(self.tenantId, self.prompt.id, second.id)
         self.assertFalse(self.platform.getVersion(self.tenantId, first.id).isActive)
-        self.assertEqual(self.platform.getActiveVersion(self.tenantId, "PROJECT_SUMMARY").id, second.id)
+        self.assertEqual(
+            self.platform.getActiveVersion(self.tenantId, "PROJECT_SUMMARY").id, second.id
+        )
         self.platform.deactivateVersion(self.tenantId, self.prompt.id, second.id)
         with self.assertRaises(AIPromptVersionNotFound):
             self.platform.getActiveVersion(self.tenantId, "PROJECT_SUMMARY")
@@ -126,11 +138,17 @@ class Phase13IPromptPlatformTests(unittest.TestCase):
         with self.assertRaises(AIPromptTemplateInvalid):
             self.platform.createVersion(self.tenantId, self.prompt.id, "Undeclared {name}")
         with self.assertRaises(AIPromptTemplateInvalid):
-            self.platform.createVersion(self.tenantId, self.prompt.id, "Unsafe {user.name}", variables=("user",))
+            self.platform.createVersion(
+                self.tenantId, self.prompt.id, "Unsafe {user.name}", variables=("user",)
+            )
         with self.assertRaises(AIPromptTemplateInvalid):
-            self.platform.createVersion(self.tenantId, self.prompt.id, "Unsafe {value!r}", variables=("value",))
+            self.platform.createVersion(
+                self.tenantId, self.prompt.id, "Unsafe {value!r}", variables=("value",)
+            )
         with self.assertRaises(AIPromptTemplateInvalid):
-            self.platform.createVersion(self.tenantId, self.prompt.id, "Unsafe {value:>10}", variables=("value",))
+            self.platform.createVersion(
+                self.tenantId, self.prompt.id, "Unsafe {value:>10}", variables=("value",)
+            )
         self.platform.createVersion(
             self.tenantId,
             self.prompt.id,
@@ -141,8 +159,13 @@ class Phase13IPromptPlatformTests(unittest.TestCase):
         with self.assertRaises(AIPromptTemplateInvalid):
             self.platform.render(self.tenantId, "PROJECT_SUMMARY", {})
         with self.assertRaises(AIPromptTemplateInvalid):
-            self.platform.render(self.tenantId, "PROJECT_SUMMARY", {"value": "ok", "extra": "not declared"})
-        self.assertEqual(self.platform.render(self.tenantId, "PROJECT_SUMMARY", {"value": "ok"}).asText(), "Literal {value} and ok")
+            self.platform.render(
+                self.tenantId, "PROJECT_SUMMARY", {"value": "ok", "extra": "not declared"}
+            )
+        self.assertEqual(
+            self.platform.render(self.tenantId, "PROJECT_SUMMARY", {"value": "ok"}).asText(),
+            "Literal {value} and ok",
+        )
 
     def testPromptDuplicateAndSameCodeTenantIsolation(self) -> None:
         with self.assertRaises(AIPromptAlreadyRegistered):
@@ -223,18 +246,25 @@ class Phase13IPromptPlatformTests(unittest.TestCase):
             isActive=True,
         )
         self.platform.registerPrompt(replacement, replace=True)
-        self.assertEqual(self.platform.getPrompt(self.otherTenantId, "EXTERNAL_PROMPT").name, "External renamed")
+        self.assertEqual(
+            self.platform.getPrompt(self.otherTenantId, "EXTERNAL_PROMPT").name, "External renamed"
+        )
         version = AIPromptVersion(self.otherTenantId, promptId, 1, "External text")
         self.platform.registerVersion(version)
         with self.assertRaises(AIPromptVersionNotFound):
             self.platform.render(self.otherTenantId, "EXTERNAL_PROMPT", {})
         self.platform.activateVersion(self.otherTenantId, promptId, version.id)
-        self.assertEqual(self.platform.render(self.otherTenantId, "EXTERNAL_PROMPT", {}).asText(), "External text")
+        self.assertEqual(
+            self.platform.render(self.otherTenantId, "EXTERNAL_PROMPT", {}).asText(),
+            "External text",
+        )
 
     def testSafeCopiesAndAliases(self) -> None:
         promptSnapshot = self.platform.getPrompt(self.tenantId, "PROJECT_SUMMARY")
         promptSnapshot.name = "mutated copy"
-        self.assertEqual(self.platform.getPrompt(self.tenantId, "PROJECT_SUMMARY").name, "Project summary")
+        self.assertEqual(
+            self.platform.getPrompt(self.tenantId, "PROJECT_SUMMARY").name, "Project summary"
+        )
         self.assertIs(AIPromptPlatformService, PromptPlatformService)
         self.assertIs(AIPromptRegistry, PromptPlatformService)
         self.assertIs(InMemoryPromptRegistry, PromptPlatformService)
@@ -247,9 +277,9 @@ class Phase13IPromptPlatformTests(unittest.TestCase):
         self.assertEqual(self.platform.listPrompts(self.tenantId), ())
 
     def testPureDomainBoundaryAndNoSecretOrProviderImports(self) -> None:
-        source = (Path(__file__).resolve().parents[2] / "apps/ai/domain/services/promptPlatform.py").read_text(
-            encoding="utf-8"
-        )
+        source = (
+            Path(__file__).resolve().parents[2] / "apps/ai/domain/services/promptPlatform.py"
+        ).read_text(encoding="utf-8")
         for forbidden in (
             "django",
             "rest_framework",

@@ -271,9 +271,7 @@ class NotificationContainer:
             CreateDigestService,
         )
 
-        return CreateDigestService(
-            **notificationPorts(), digestRepository=digestRepository()
-        )
+        return CreateDigestService(**notificationPorts(), digestRepository=digestRepository())
 
     def sendDigestService(self):
         from apps.notifications.application.services.digestServices import (
@@ -309,18 +307,14 @@ class NotificationContainer:
             CancelScheduleService,
         )
 
-        return CancelScheduleService(
-            **notificationPorts(), scheduleRepository=scheduleRepository()
-        )
+        return CancelScheduleService(**notificationPorts(), scheduleRepository=scheduleRepository())
 
     def listSchedulesService(self):
         from apps.notifications.application.services.scheduleAndExpiryServices import (
             ListSchedulesService,
         )
 
-        return ListSchedulesService(
-            **notificationPorts(), scheduleRepository=scheduleRepository()
-        )
+        return ListSchedulesService(**notificationPorts(), scheduleRepository=scheduleRepository())
 
     def cancelNotificationService(self):
         from apps.notifications.application.services.scheduleAndExpiryServices import (
@@ -475,18 +469,14 @@ class NotificationContainer:
             ListDevicesService,
         )
 
-        return ListDevicesService(
-            **notificationPorts(), deviceRepository=deviceRepository()
-        )
+        return ListDevicesService(**notificationPorts(), deviceRepository=deviceRepository())
 
     def saveTemplateService(self):
         from apps.notifications.application.services.retryAndAdminServices import (
             SaveTemplateService,
         )
 
-        return SaveTemplateService(
-            **notificationPorts(), templateRepository=templateRepository()
-        )
+        return SaveTemplateService(**notificationPorts(), templateRepository=templateRepository())
 
     def deactivateTemplateService(self):
         from apps.notifications.application.services.retryAndAdminServices import (
@@ -502,36 +492,28 @@ class NotificationContainer:
             ListTemplatesService,
         )
 
-        return ListTemplatesService(
-            **notificationPorts(), templateRepository=templateRepository()
-        )
+        return ListTemplatesService(**notificationPorts(), templateRepository=templateRepository())
 
     def savePolicyService(self):
         from apps.notifications.application.services.retryAndAdminServices import (
             SavePolicyService,
         )
 
-        return SavePolicyService(
-            **notificationPorts(), policyRepository=policyRepository()
-        )
+        return SavePolicyService(**notificationPorts(), policyRepository=policyRepository())
 
     def deletePolicyService(self):
         from apps.notifications.application.services.retryAndAdminServices import (
             DeletePolicyService,
         )
 
-        return DeletePolicyService(
-            **notificationPorts(), policyRepository=policyRepository()
-        )
+        return DeletePolicyService(**notificationPorts(), policyRepository=policyRepository())
 
     def listPoliciesService(self):
         from apps.notifications.application.services.retryAndAdminServices import (
             ListPoliciesService,
         )
 
-        return ListPoliciesService(
-            **notificationPorts(), policyRepository=policyRepository()
-        )
+        return ListPoliciesService(**notificationPorts(), policyRepository=policyRepository())
 
 
 container = NotificationContainer()
@@ -580,9 +562,7 @@ def createBroadcastService():
         CreateBroadcastService,
     )
 
-    return CreateBroadcastService(
-        broadcastRepository=broadcastRepository(), **notificationPorts()
-    )
+    return CreateBroadcastService(broadcastRepository=broadcastRepository(), **notificationPorts())
 
 
 def recipientStateService():
@@ -590,9 +570,7 @@ def recipientStateService():
         RecipientStateService,
     )
 
-    return RecipientStateService(
-        broadcastRepository=broadcastRepository(), **notificationPorts()
-    )
+    return RecipientStateService(broadcastRepository=broadcastRepository(), **notificationPorts())
 
 
 def broadcastQueryService():
@@ -600,9 +578,7 @@ def broadcastQueryService():
         BroadcastQueryService,
     )
 
-    return BroadcastQueryService(
-        broadcastRepository=broadcastRepository(), **notificationPorts()
-    )
+    return BroadcastQueryService(broadcastRepository=broadcastRepository(), **notificationPorts())
 
 
 def deliveryDispatchService():
@@ -644,9 +620,7 @@ def ruleDefinitionService():
         RuleDefinitionService,
     )
 
-    return RuleDefinitionService(
-        ruleRepository=notificationRuleRepository(), **notificationPorts()
-    )
+    return RuleDefinitionService(ruleRepository=notificationRuleRepository(), **notificationPorts())
 
 
 def eventIntakeService():
@@ -702,9 +676,7 @@ def phase15ProviderWebhookService():
         phase15Store(),
         SettingsWebhookSecretProvider(),
         sharedKernelProvider("clock")(),
-        toleranceSeconds=int(
-            getattr(settings, "NOTIFICATION_WEBHOOK_TOLERANCE_SECONDS", 300)
-        ),
+        toleranceSeconds=int(getattr(settings, "NOTIFICATION_WEBHOOK_TOLERANCE_SECONDS", 300)),
     )
 
 
@@ -725,8 +697,6 @@ def phase15CleanupService():
 
     return NotificationCleanupService(
         store=phase15Store(),
-        defaultRetentionDays=int(
-            getattr(settings, "NOTIFICATION_RETENTION_DAYS", 365)
-        ),
+        defaultRetentionDays=int(getattr(settings, "NOTIFICATION_RETENTION_DAYS", 365)),
         **notificationPorts(),
     )

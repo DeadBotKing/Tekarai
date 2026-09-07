@@ -257,6 +257,7 @@ class DomainPurityStillHoldsTests(SimpleTestCase):
             "communication",
             "notifications",
             "ai",
+            "learning",
         }
         entries = {
             entry.name

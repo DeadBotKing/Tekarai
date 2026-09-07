@@ -81,7 +81,7 @@ class NotificationTemplate(AggregateRoot):
 
     # -- §19 versioning ----------------------------------------------------------
 
-    def nextVersion(self, *, title: str, subject: str, body: str) -> "NotificationTemplate":
+    def nextVersion(self, *, title: str, subject: str, body: str) -> NotificationTemplate:
         return NotificationTemplate(
             id=uuid.uuid4(),
             tenantId=self.tenantId,

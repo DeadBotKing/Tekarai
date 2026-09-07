@@ -11,6 +11,7 @@ only orchestrate (validate -> authorize -> apply -> persist -> events).
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from apps.communication.application.commands.phase11Commands import (
     AcknowledgeOfficialMessageCommand,
@@ -71,12 +72,10 @@ def _actor():
 # ---------------------------------------------------------------------------
 
 
-class GetCommunicationPolicyUseCase(
-    CommunicationUseCase[object, records.CommunicationPolicy]
-):
+class GetCommunicationPolicyUseCase(CommunicationUseCase[object, records.CommunicationPolicy]):
     requiredAction = ""
 
-    def __init__(self, policyRepository: CommunicationPolicyRepository, **kernel: object) -> None:
+    def __init__(self, policyRepository: CommunicationPolicyRepository, **kernel: Any) -> None:
         super().__init__(**kernel)
         self.policyRepository = policyRepository
 
@@ -91,13 +90,15 @@ class UpdateCommunicationPolicyUseCase(
 ):
     requiredAction = "conversation.moderate"
 
-    def __init__(self, policyRepository: CommunicationPolicyRepository, **kernel: object) -> None:
+    def __init__(self, policyRepository: CommunicationPolicyRepository, **kernel: Any) -> None:
         super().__init__(**kernel)
         self.policyRepository = policyRepository
 
     def perform(self, command: UpdateCommunicationPolicyCommand) -> records.CommunicationPolicy:
         _actorId, tenantId = _actor()
-        policy = self.policyRepository.getForTenant(tenantId) or records.CommunicationPolicy.default(tenantId)
+        policy = self.policyRepository.getForTenant(
+            tenantId
+        ) or records.CommunicationPolicy.default(tenantId)
         policy.update(command.changes, self.clock.nowUtc())
         self.policyRepository.save(policy)
         self.collectEventsFrom(policy)
@@ -123,7 +124,7 @@ class RecordDeliveryUseCase(CommunicationUseCase[RecordDeliveryCommand, dict]):
         self,
         deliveryRepository: MessageDeliveryRepository,
         messageRepository: MessageRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.deliveryRepository = deliveryRepository
@@ -136,9 +137,9 @@ class RecordDeliveryUseCase(CommunicationUseCase[RecordDeliveryCommand, dict]):
         message = self.messageRepository.getById(messageId, tenantId)  # noqa: E501
         if message is None:
             raise EntityNotFoundError("Message", command.messageId)
-        delivery = self.deliveryRepository.get(tenantId, messageId, recipientId) or records.MessageDelivery.mark(
+        delivery = self.deliveryRepository.get(
             tenantId, messageId, recipientId
-        )
+        ) or records.MessageDelivery.mark(tenantId, messageId, recipientId)
         now = self.clock.nowUtc()
         if command.state == types.DELIVERY_DELIVERED:
             delivery.markDelivered(now)
@@ -146,7 +147,11 @@ class RecordDeliveryUseCase(CommunicationUseCase[RecordDeliveryCommand, dict]):
             delivery.markFailed(now, command.failedReason)
         self.deliveryRepository.save(delivery)
         self.collectEventsFrom(delivery)
-        return {"messageId": str(messageId), "recipientId": str(recipientId), "state": delivery.state}
+        return {
+            "messageId": str(messageId),
+            "recipientId": str(recipientId),
+            "state": delivery.state,
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -161,7 +166,7 @@ class OpenMeetingRoomUseCase(CommunicationUseCase[OpenMeetingRoomCommand, record
         self,
         roomRepository: MeetingRoomRepository,
         meetingRepository: MeetingRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.roomRepository = roomRepository
@@ -187,14 +192,16 @@ class OpenMeetingRoomUseCase(CommunicationUseCase[OpenMeetingRoomCommand, record
         return room
 
 
-class StartMeetingSessionUseCase(CommunicationUseCase[StartMeetingSessionCommand, records.MeetingSession]):
+class StartMeetingSessionUseCase(
+    CommunicationUseCase[StartMeetingSessionCommand, records.MeetingSession]
+):
     requiredAction = "meeting.manage"
 
     def __init__(
         self,
         roomRepository: MeetingRoomRepository,
         meetingRepository: MeetingRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.roomRepository = roomRepository
@@ -221,10 +228,12 @@ class StartMeetingSessionUseCase(CommunicationUseCase[StartMeetingSessionCommand
         return session
 
 
-class EndMeetingSessionUseCase(CommunicationUseCase[EndMeetingSessionCommand, records.MeetingSession]):
+class EndMeetingSessionUseCase(
+    CommunicationUseCase[EndMeetingSessionCommand, records.MeetingSession]
+):
     requiredAction = "meeting.manage"
 
-    def __init__(self, roomRepository: MeetingRoomRepository, **kernel: object) -> None:
+    def __init__(self, roomRepository: MeetingRoomRepository, **kernel: Any) -> None:
         super().__init__(**kernel)
         self.roomRepository = roomRepository
 
@@ -242,7 +251,9 @@ class EndMeetingSessionUseCase(CommunicationUseCase[EndMeetingSessionCommand, re
         self.collectEventsFrom(session)
         return session
 
-    def _findSession(self, tenantId: uuid.UUID, sessionId: uuid.UUID) -> records.MeetingSession | None:
+    def _findSession(
+        self, tenantId: uuid.UUID, sessionId: uuid.UUID
+    ) -> records.MeetingSession | None:
         from apps.communication.infrastructure.models import MeetingSessionModel
 
         model = MeetingSessionModel.objects.filter(tenantId=tenantId, id=sessionId).first()
@@ -266,14 +277,16 @@ class EndMeetingSessionUseCase(CommunicationUseCase[EndMeetingSessionCommand, re
 # ---------------------------------------------------------------------------
 
 
-class StartScreenShareUseCase(CommunicationUseCase[StartScreenShareCommand, records.ScreenShareSession]):
+class StartScreenShareUseCase(
+    CommunicationUseCase[StartScreenShareCommand, records.ScreenShareSession]
+):
     requiredAction = ""
 
     def __init__(
         self,
         screenShareRepository: ScreenShareRepository,
         meetingRepository: MeetingRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.screenShareRepository = screenShareRepository
@@ -301,10 +314,12 @@ class StartScreenShareUseCase(CommunicationUseCase[StartScreenShareCommand, reco
         return share
 
 
-class StopScreenShareUseCase(CommunicationUseCase[StopScreenShareCommand, records.ScreenShareSession]):
+class StopScreenShareUseCase(
+    CommunicationUseCase[StopScreenShareCommand, records.ScreenShareSession]
+):
     requiredAction = ""
 
-    def __init__(self, screenShareRepository: ScreenShareRepository, **kernel: object) -> None:
+    def __init__(self, screenShareRepository: ScreenShareRepository, **kernel: Any) -> None:
         super().__init__(**kernel)
         self.screenShareRepository = screenShareRepository
 
@@ -354,7 +369,7 @@ class GenerateMeetingSummaryUseCase(
         self,
         summaryRepository: MeetingSummaryRepository,
         meetingRepository: MeetingRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.summaryRepository = summaryRepository
@@ -395,7 +410,7 @@ class ReviewMeetingSummaryUseCase(
 ):
     requiredAction = "meeting.manage"
 
-    def __init__(self, summaryRepository: MeetingSummaryRepository, **kernel: object) -> None:
+    def __init__(self, summaryRepository: MeetingSummaryRepository, **kernel: Any) -> None:
         super().__init__(**kernel)
         self.summaryRepository = summaryRepository
 
@@ -412,17 +427,20 @@ class ReviewMeetingSummaryUseCase(
         else:
             from apps.sharedKernel.domain.errors import ValidationFailedError
 
-            raise ValidationFailedError("decision must be APPROVE or REJECT",
-                                        fieldErrors={"decision": command.decision})
+            raise ValidationFailedError(
+                "decision must be APPROVE or REJECT", fieldErrors={"decision": command.decision}
+            )
         self.summaryRepository.save(summary)
         self.collectEventsFrom(summary)
         return summary
 
 
-class ReviewActionItemUseCase(CommunicationUseCase[ReviewActionItemCommand, records.ActionItemCandidate]):
+class ReviewActionItemUseCase(
+    CommunicationUseCase[ReviewActionItemCommand, records.ActionItemCandidate]
+):
     requiredAction = "meeting.manage"
 
-    def __init__(self, actionItemRepository: ActionItemRepository, **kernel: object) -> None:
+    def __init__(self, actionItemRepository: ActionItemRepository, **kernel: Any) -> None:
         super().__init__(**kernel)
         self.actionItemRepository = actionItemRepository
 
@@ -439,8 +457,9 @@ class ReviewActionItemUseCase(CommunicationUseCase[ReviewActionItemCommand, reco
         else:
             from apps.sharedKernel.domain.errors import ValidationFailedError
 
-            raise ValidationFailedError("decision must be APPROVE or REJECT",
-                                        fieldErrors={"decision": command.decision})
+            raise ValidationFailedError(
+                "decision must be APPROVE or REJECT", fieldErrors={"decision": command.decision}
+            )
         self.actionItemRepository.save(item)
         self.collectEventsFrom(item)
         return item
@@ -453,7 +472,7 @@ class DispatchActionItemUseCase(
 
     requiredAction = "meeting.manage"
 
-    def __init__(self, actionItemRepository: ActionItemRepository, **kernel: object) -> None:
+    def __init__(self, actionItemRepository: ActionItemRepository, **kernel: Any) -> None:
         super().__init__(**kernel)
         self.actionItemRepository = actionItemRepository
 
@@ -509,7 +528,7 @@ class CreateOfficialMessageUseCase(
 ):
     requiredAction = "letter.create"
 
-    def __init__(self, officialRepository: OfficialMessageRepository, **kernel: object) -> None:
+    def __init__(self, officialRepository: OfficialMessageRepository, **kernel: Any) -> None:
         super().__init__(**kernel)
         self.officialRepository = officialRepository
 
@@ -526,8 +545,13 @@ class CreateOfficialMessageUseCase(
         )
         self.officialRepository.save(message)
         self.collectEventsFrom(message)
-        self.audit("CREATE", "OfficialMessage", str(message.id), tenantId,
-                  after={"kind": command.kind, "subject": command.subject})
+        self.audit(
+            "CREATE",
+            "OfficialMessage",
+            str(message.id),
+            tenantId,
+            after={"kind": command.kind, "subject": command.subject},
+        )
         return message
 
 
@@ -536,7 +560,7 @@ class TransitionOfficialMessageUseCase(
 ):
     requiredAction = "letter.approve"
 
-    def __init__(self, officialRepository: OfficialMessageRepository, **kernel: object) -> None:
+    def __init__(self, officialRepository: OfficialMessageRepository, **kernel: Any) -> None:
         super().__init__(**kernel)
         self.officialRepository = officialRepository
 
@@ -563,8 +587,7 @@ class TransitionOfficialMessageUseCase(
         else:
             from apps.sharedKernel.domain.errors import ValidationFailedError
 
-            raise ValidationFailedError("unknown official action",
-                                        fieldErrors={"action": action})
+            raise ValidationFailedError("unknown official action", fieldErrors={"action": action})
         self.officialRepository.save(message)
         self.collectEventsFrom(message)
         return message
@@ -575,7 +598,7 @@ class AcknowledgeOfficialMessageUseCase(
 ):
     requiredAction = ""
 
-    def __init__(self, officialRepository: OfficialMessageRepository, **kernel: object) -> None:
+    def __init__(self, officialRepository: OfficialMessageRepository, **kernel: Any) -> None:
         super().__init__(**kernel)
         self.officialRepository = officialRepository
 
@@ -602,7 +625,7 @@ class ReportMessageUseCase(CommunicationUseCase[ReportMessageCommand, records.Me
         self,
         reportRepository: MessageReportRepository,
         messageRepository: MessageRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.reportRepository = reportRepository
@@ -627,7 +650,7 @@ class ReviewMessageReportUseCase(
 ):
     requiredAction = "conversation.moderate"
 
-    def __init__(self, reportRepository: MessageReportRepository, **kernel: object) -> None:
+    def __init__(self, reportRepository: MessageReportRepository, **kernel: Any) -> None:
         super().__init__(**kernel)
         self.reportRepository = reportRepository
 
@@ -644,12 +667,18 @@ class ReviewMessageReportUseCase(
         else:
             from apps.sharedKernel.domain.errors import ValidationFailedError
 
-            raise ValidationFailedError("decision must be RESOLVE or DISMISS",
-                                        fieldErrors={"decision": command.decision})
+            raise ValidationFailedError(
+                "decision must be RESOLVE or DISMISS", fieldErrors={"decision": command.decision}
+            )
         self.reportRepository.save(report)
         self.collectEventsFrom(report)
-        self.audit("UPDATE", "MessageReport", str(report.id), tenantId,
-                  after={"decision": command.decision})
+        self.audit(
+            "UPDATE",
+            "MessageReport",
+            str(report.id),
+            tenantId,
+            after={"decision": command.decision},
+        )
         return report
 
 
@@ -661,7 +690,7 @@ class ReviewMessageReportUseCase(
 class PlaceLegalHoldUseCase(CommunicationUseCase[PlaceLegalHoldCommand, records.LegalHold]):
     requiredAction = "conversation.moderate"
 
-    def __init__(self, legalHoldRepository: LegalHoldRepository, **kernel: object) -> None:
+    def __init__(self, legalHoldRepository: LegalHoldRepository, **kernel: Any) -> None:
         super().__init__(**kernel)
         self.legalHoldRepository = legalHoldRepository
 
@@ -672,22 +701,29 @@ class PlaceLegalHoldUseCase(CommunicationUseCase[PlaceLegalHoldCommand, records.
         if existing is not None:
             return existing  # idempotent
         hold = records.LegalHold.place(
-            tenantId, command.scope, targetId, self.clock.nowUtc(),
-            reason=command.reason, createdById=actorId,
+            tenantId,
+            command.scope,
+            targetId,
+            self.clock.nowUtc(),
+            reason=command.reason,
+            createdById=actorId,
         )
         self.legalHoldRepository.save(hold)
         self.collectEventsFrom(hold)
-        self.audit("CREATE", "LegalHold", str(hold.id), tenantId,
-                  after={"scope": command.scope, "targetId": command.targetId})
+        self.audit(
+            "CREATE",
+            "LegalHold",
+            str(hold.id),
+            tenantId,
+            after={"scope": command.scope, "targetId": command.targetId},
+        )
         return hold
 
 
-class ReleaseLegalHoldUseCase(
-    CommunicationUseCase[ReleaseLegalHoldCommand, records.LegalHold]
-):
+class ReleaseLegalHoldUseCase(CommunicationUseCase[ReleaseLegalHoldCommand, records.LegalHold]):
     requiredAction = "conversation.moderate"
 
-    def __init__(self, legalHoldRepository: LegalHoldRepository, **kernel: object) -> None:
+    def __init__(self, legalHoldRepository: LegalHoldRepository, **kernel: Any) -> None:
         super().__init__(**kernel)
         self.legalHoldRepository = legalHoldRepository
 
@@ -695,9 +731,7 @@ class ReleaseLegalHoldUseCase(
         _actorId, tenantId = _actor()
         from apps.communication.infrastructure.models import LegalHoldModel
 
-        model = LegalHoldModel.objects.filter(
-            tenantId=tenantId, id=asUuid(command.holdId)
-        ).first()
+        model = LegalHoldModel.objects.filter(tenantId=tenantId, id=asUuid(command.holdId)).first()
         if model is None:
             raise EntityNotFoundError("LegalHold", command.holdId)
         hold = records.LegalHold(

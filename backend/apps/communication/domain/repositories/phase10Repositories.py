@@ -34,9 +34,7 @@ from apps.communication.domain.entities.phase10Records import (
 class MessageRevisionRepository(Protocol):
     def add(self, revision: MessageRevision) -> None: ...
 
-    def nextRevisionNumber(
-        self, tenantId: uuid.UUID, messageId: uuid.UUID
-    ) -> int: ...
+    def nextRevisionNumber(self, tenantId: uuid.UUID, messageId: uuid.UUID) -> int: ...
 
     def listForMessage(
         self, tenantId: uuid.UUID, messageId: uuid.UUID
@@ -91,9 +89,7 @@ class UserBlockRepository(Protocol):
         self, tenantId: uuid.UUID, blockerId: uuid.UUID, *, scope: str = ""
     ) -> list[uuid.UUID]: ...
 
-    def listForBlocker(
-        self, tenantId: uuid.UUID, blockerId: uuid.UUID
-    ) -> list[UserBlock]: ...
+    def listForBlocker(self, tenantId: uuid.UUID, blockerId: uuid.UUID) -> list[UserBlock]: ...
 
 
 # ---------------------------------------------------------------------------
@@ -114,9 +110,7 @@ class CapabilityOverride:
 class MeetingCapabilityRepository(Protocol):
     def setOverride(self, override: CapabilityOverride) -> None: ...
 
-    def overridesForMeeting(
-        self, meetingId: uuid.UUID
-    ) -> list[CapabilityOverride]: ...
+    def overridesForMeeting(self, meetingId: uuid.UUID) -> list[CapabilityOverride]: ...
 
     def find(
         self,
@@ -175,9 +169,7 @@ class CallProvider(Protocol):
         self, *, callId: uuid.UUID, mediaType: str, tenantId: uuid.UUID
     ) -> dict[str, Any]: ...
 
-    def joinSession(
-        self, *, sessionRef: str, userId: uuid.UUID
-    ) -> dict[str, Any]: ...
+    def joinSession(self, *, sessionRef: str, userId: uuid.UUID) -> dict[str, Any]: ...
 
     def leaveSession(self, *, sessionRef: str, userId: uuid.UUID) -> None: ...
 

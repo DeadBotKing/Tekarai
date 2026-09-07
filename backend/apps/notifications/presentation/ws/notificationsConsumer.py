@@ -27,13 +27,14 @@ class NotificationsConsumer(AsyncJsonWebsocketConsumer):
         self.tenantId = principal.tenantId
         await self.accept()
         await self.channel_layer.group_add(f"user.{self.userId}", self.channel_name)
+        import asyncio
+
         from apps.notifications.infrastructure.metrics.notificationMetrics import (
             notificationMetrics,
         )
         from apps.notifications.infrastructure.realtime.notificationRealtime import (
             ChannelsNotificationBroadcaster,
         )
-        import asyncio
 
         broadcasterSingleton = notificationRealtimeSingleton()
         if isinstance(broadcasterSingleton, ChannelsNotificationBroadcaster):
@@ -48,9 +49,7 @@ class NotificationsConsumer(AsyncJsonWebsocketConsumer):
 
     async def disconnect(self, code: int) -> None:
         try:
-            await self.channel_layer.group_discard(
-                f"user.{self.userId}", self.channel_name
-            )
+            await self.channel_layer.group_discard(f"user.{self.userId}", self.channel_name)
         except AttributeError:
             pass  # connect() never completed
         from apps.notifications.infrastructure.metrics.notificationMetrics import (
@@ -80,9 +79,7 @@ class NotificationsConsumer(AsyncJsonWebsocketConsumer):
     # -- group_send handler (matches the broadcaster envelope) ----------------
 
     async def notification_event(self, message: dict) -> None:
-        await self.send_json(
-            {"type": "notification.event", "event": message.get("event", {})}
-        )
+        await self.send_json({"type": "notification.event", "event": message.get("event", {})})
 
     async def receive_json(self, content: dict, **kwargs) -> None:
         """Minimal client→server surface: heartbeat + reconcile hint."""
@@ -93,8 +90,10 @@ class NotificationsConsumer(AsyncJsonWebsocketConsumer):
         if action == "reconcile":
             unread = await self._unreadCount()
             await self.send_json(
-                {"type": "reconcile.hint", "event": {"unreadCount": unread,
-                                                     "source": "rest:/api/v1/notifications"}}
+                {
+                    "type": "reconcile.hint",
+                    "event": {"unreadCount": unread, "source": "rest:/api/v1/notifications"},
+                }
             )
             return
         await self.send_json(
@@ -110,17 +109,12 @@ class NotificationsConsumer(AsyncJsonWebsocketConsumer):
 
         @database_sync_to_async
         def _count() -> int:
-            return container.notificationRepository().unreadCount(
-                self.tenantId, self.userId
-            )
+            return container.notificationRepository().unreadCount(self.tenantId, self.userId)
 
         return await _count()
 
 
 def notificationRealtimeSingleton():
-    from apps.notifications.infrastructure.realtime.notificationRealtime import (
-        ChannelsNotificationBroadcaster,
-    )
 
     return _singleton()
 

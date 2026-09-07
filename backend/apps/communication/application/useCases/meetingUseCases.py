@@ -3,21 +3,18 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import Any
 
 from apps.communication.application.commands.communicationCommands import (
-    ApproveLetterCommand,
     CancelMeetingCommand,
     CreateLetterCommand,
     CreateMeetingCommand,
-    DispatchLetterCommand,
     EndMeetingCommand,
     JoinMeetingCommand,
     LeaveMeetingCommand,
     PublishRecordingCommand,
-    ReceiveLetterCommand,
     RsvpMeetingCommand,
-    SignLetterCommand,
     StartMeetingCommand,
     StartRecordingCommand,
     StopRecordingCommand,
@@ -63,7 +60,7 @@ def parseWhen(value: str) -> datetime | None:
         return None
     parsed = datetime.fromisoformat(value)
     if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
+        parsed = parsed.replace(tzinfo=UTC)
     return parsed
 
 
@@ -80,7 +77,7 @@ class CreateMeetingUseCase(CommunicationUseCase[CreateMeetingCommand, MeetingDto
         meetingParticipantRepository: MeetingParticipantRepository,
         userDirectory: UserDirectory,
         blockRepository: object = None,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.conversationRepository = conversationRepository
@@ -100,9 +97,7 @@ class CreateMeetingUseCase(CommunicationUseCase[CreateMeetingCommand, MeetingDto
             )
             if existing is not None:
                 return meetingDto(existing, [])
-        conversation = self.conversationRepository.getById(
-            asUuid(command.conversationId), tenantId
-        )
+        conversation = self.conversationRepository.getById(asUuid(command.conversationId), tenantId)
         if conversation is None or not conversation.isActive:
             raise EntityNotFoundError("Conversation", command.conversationId)
         organizer = self.participantRepository.get(conversation.id, actorId)
@@ -123,9 +118,7 @@ class CreateMeetingUseCase(CommunicationUseCase[CreateMeetingCommand, MeetingDto
         meeting.clientRequestId = command.clientRequestId
         self.meetingRepository.create(meeting)
         self.meetingParticipantRepository.add(
-            MeetingParticipant.invite(
-                tenantId, meeting.id, actorId, now, role="HOST"
-            )
+            MeetingParticipant.invite(tenantId, meeting.id, actorId, now, role="HOST")
         )
         for invitee in command.inviteeIds:
             inviteeId = asUuid(invitee)
@@ -146,9 +139,7 @@ class CreateMeetingUseCase(CommunicationUseCase[CreateMeetingCommand, MeetingDto
                     p10.BLOCK_MEETING_INVITATION,
                 )
             self.meetingParticipantRepository.add(
-                MeetingParticipant.invite(
-                    tenantId, meeting.id, inviteeId, now, role="PARTICIPANT"
-                )
+                MeetingParticipant.invite(tenantId, meeting.id, inviteeId, now, role="PARTICIPANT")
             )
         self.collectEventsFrom(meeting)
         self.emitIntegrationEvent(
@@ -174,7 +165,7 @@ class StartMeetingUseCase(CommunicationUseCase[StartMeetingCommand, MeetingDto])
     def __init__(
         self,
         meetingRepository: MeetingRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.meetingRepository = meetingRepository
@@ -219,7 +210,7 @@ class JoinMeetingUseCase(CommunicationUseCase[JoinMeetingCommand, MeetingDto]):
         meetingParticipantRepository: MeetingParticipantRepository,
         conversationRepository: ConversationRepository,
         participantRepository: ParticipantRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.meetingRepository = meetingRepository
@@ -235,12 +226,8 @@ class JoinMeetingUseCase(CommunicationUseCase[JoinMeetingCommand, MeetingDto]):
         if not meeting.isJoinable():
             from apps.sharedKernel.domain.errors import ConflictError
 
-            raise ConflictError(
-                f"Meeting is {meeting.meetingStatus} and cannot be joined."
-            )
-        conversationMember = self.participantRepository.get(
-            meeting.conversationId, actorId
-        )
+            raise ConflictError(f"Meeting is {meeting.meetingStatus} and cannot be joined.")
+        conversationMember = self.participantRepository.get(meeting.conversationId, actorId)
         if conversationMember is None or not conversationMember.isActive():
             raise PermissionDeniedError(action="meeting.join")
         now = self.clock.nowUtc()
@@ -277,7 +264,7 @@ class LeaveMeetingUseCase(CommunicationUseCase[LeaveMeetingCommand, object]):
         self,
         meetingRepository: MeetingRepository,
         meetingParticipantRepository: MeetingParticipantRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.meetingRepository = meetingRepository
@@ -312,7 +299,7 @@ class RsvpMeetingUseCase(CommunicationUseCase[RsvpMeetingCommand, object]):
         self,
         meetingRepository: MeetingRepository,
         meetingParticipantRepository: MeetingParticipantRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.meetingRepository = meetingRepository
@@ -349,7 +336,7 @@ class EndMeetingUseCase(CommunicationUseCase[EndMeetingCommand, MeetingDto]):
         meetingRepository: MeetingRepository,
         recordingRepository: RecordingRepository,
         meetingParticipantRepository: MeetingParticipantRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.meetingRepository = meetingRepository
@@ -364,9 +351,7 @@ class EndMeetingUseCase(CommunicationUseCase[EndMeetingCommand, MeetingDto]):
         if meeting.organizerId != actorId:
             raise PermissionDeniedError(action="meeting.end")
         now = self.clock.nowUtc()
-        activeRecording = self.recordingRepository.findActiveForMeeting(
-            tenantId, meeting.id
-        )
+        activeRecording = self.recordingRepository.findActiveForMeeting(tenantId, meeting.id)
         if activeRecording is not None:
             activeRecording.transitionTo("STOPPED", now)
             self.recordingRepository.update(activeRecording)
@@ -392,7 +377,7 @@ class CancelMeetingUseCase(CommunicationUseCase[CancelMeetingCommand, object]):
     def __init__(
         self,
         meetingRepository: MeetingRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.meetingRepository = meetingRepository
@@ -407,15 +392,11 @@ class CancelMeetingUseCase(CommunicationUseCase[CancelMeetingCommand, object]):
         meeting.transitionTo("CANCELLED", self.clock.nowUtc())
         self.meetingRepository.update(meeting)
         self.collectEventsFrom(meeting)
-        self.emitIntegrationEvent(
-            tenantId, "MeetingCancelled", {"meetingId": str(meeting.id)}
-        )
+        self.emitIntegrationEvent(tenantId, "MeetingCancelled", {"meetingId": str(meeting.id)})
         return {"cancelled": True}
 
 
-class ListMeetingsUseCase(
-    CommunicationUseCase[ListMeetingsQuery, list[MeetingDto]]
-):
+class ListMeetingsUseCase(CommunicationUseCase[ListMeetingsQuery, list[MeetingDto]]):
     requiredAction = ""
 
     def __init__(
@@ -424,7 +405,7 @@ class ListMeetingsUseCase(
         participantRepository: ParticipantRepository,
         meetingRepository: MeetingRepository,
         meetingParticipantRepository: MeetingParticipantRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.conversationRepository = conversationRepository
@@ -441,17 +422,13 @@ class ListMeetingsUseCase(
             conversations = self.participantRepository.activeConversationIdsOf(actorId)
         meetings: list[MeetingDto] = []
         for conversationId in conversations:
-            for meeting in self.meetingRepository.listByConversation(
-                tenantId, conversationId
-            ):
+            for meeting in self.meetingRepository.listByConversation(tenantId, conversationId):
                 meetings.append(
                     meetingDto(
                         meeting,
                         [
                             {"userId": str(p.userId), "status": p.status}
-                            for p in self.meetingParticipantRepository.listForMeeting(
-                                meeting.id
-                            )
+                            for p in self.meetingParticipantRepository.listForMeeting(meeting.id)
                         ],
                     )
                 )
@@ -467,7 +444,7 @@ class GetMeetingUseCase(CommunicationUseCase[GetMeetingQuery, MeetingDto]):
         meetingParticipantRepository: MeetingParticipantRepository,
         conversationRepository: ConversationRepository,
         participantRepository: ParticipantRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.meetingRepository = meetingRepository
@@ -504,7 +481,7 @@ class StartRecordingUseCase(CommunicationUseCase[StartRecordingCommand, Recordin
         self,
         meetingRepository: MeetingRepository,
         recordingRepository: RecordingRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.meetingRepository = meetingRepository
@@ -550,24 +527,20 @@ class StopRecordingUseCase(CommunicationUseCase[StopRecordingCommand, RecordingD
     def __init__(
         self,
         recordingRepository: RecordingRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.recordingRepository = recordingRepository
 
     def perform(self, command: StopRecordingCommand) -> RecordingDto:
         actorId, tenantId = actorOf()
-        recording = self.recordingRepository.getById(
-            asUuid(command.recordingId), tenantId
-        )
+        recording = self.recordingRepository.getById(asUuid(command.recordingId), tenantId)
         if recording is None:
             raise EntityNotFoundError("Recording", command.recordingId)
         recording.transitionTo("STOPPED", self.clock.nowUtc())
         self.recordingRepository.update(recording)
         self.collectEventsFrom(recording)
-        self.emitIntegrationEvent(
-            tenantId, "RecordingStopped", {"recordingId": str(recording.id)}
-        )
+        self.emitIntegrationEvent(tenantId, "RecordingStopped", {"recordingId": str(recording.id)})
         self.broadcastMeeting(recording.meetingId, {"type": "recording.stopped"})
         self.audit(
             "UPDATE",
@@ -578,9 +551,7 @@ class StopRecordingUseCase(CommunicationUseCase[StopRecordingCommand, RecordingD
         return recordingDto(recording)
 
 
-class PublishRecordingUseCase(
-    CommunicationUseCase[PublishRecordingCommand, RecordingDto]
-):
+class PublishRecordingUseCase(CommunicationUseCase[PublishRecordingCommand, RecordingDto]):
     """PROCESSING → AVAILABLE/FAILED — called by the media pipeline with the
     Documents-subsystem storage reference (§15)."""
 
@@ -589,16 +560,14 @@ class PublishRecordingUseCase(
     def __init__(
         self,
         recordingRepository: RecordingRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.recordingRepository = recordingRepository
 
     def perform(self, command: PublishRecordingCommand) -> RecordingDto:
         _, tenantId = actorOf()
-        recording = self.recordingRepository.getById(
-            asUuid(command.recordingId), tenantId
-        )
+        recording = self.recordingRepository.getById(asUuid(command.recordingId), tenantId)
         if recording is None:
             raise EntityNotFoundError("Recording", command.recordingId)
         if recording.recordingStatus not in ("STOPPED", "PROCESSING"):
@@ -617,16 +586,14 @@ class PublishRecordingUseCase(
         return recordingDto(recording)
 
 
-class ListRecordingsUseCase(
-    CommunicationUseCase[ListRecordingsQuery, list[RecordingDto]]
-):
+class ListRecordingsUseCase(CommunicationUseCase[ListRecordingsQuery, list[RecordingDto]]):
     requiredAction = ""
 
     def __init__(
         self,
         meetingRepository: MeetingRepository,
         recordingRepository: RecordingRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.meetingRepository = meetingRepository
@@ -636,9 +603,7 @@ class ListRecordingsUseCase(
         _, tenantId = actorOf()
         return [
             recordingDto(r)
-            for r in self.recordingRepository.listForMeeting(
-                tenantId, asUuid(query.meetingId)
-            )
+            for r in self.recordingRepository.listForMeeting(tenantId, asUuid(query.meetingId))
         ]
 
 
@@ -654,7 +619,7 @@ class CreateLetterUseCase(CommunicationUseCase[CreateLetterCommand, LetterDto]):
         self,
         letterRepository: LetterRepository,
         userDirectory: UserDirectory,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.letterRepository = letterRepository
@@ -697,9 +662,7 @@ class CreateLetterUseCase(CommunicationUseCase[CreateLetterCommand, LetterDto]):
         return letterDto(letter)
 
 
-class LetterTransitionUseCase(
-    CommunicationUseCase[SubmitLetterCommand, LetterDto]
-):
+class LetterTransitionUseCase(CommunicationUseCase[SubmitLetterCommand, LetterDto]):
     """Shared workflow engine for submit/approve/sign/dispatch/receive (§16).
 
     Authorization: submit = sender; approve = letter.approve; sign =
@@ -710,7 +673,7 @@ class LetterTransitionUseCase(
     def __init__(
         self,
         letterRepository: LetterRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.letterRepository = letterRepository
@@ -773,7 +736,7 @@ class ListLettersUseCase(CommunicationUseCase[ListLettersQuery, list[LetterDto]]
     def __init__(
         self,
         letterRepository: LetterRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.letterRepository = letterRepository

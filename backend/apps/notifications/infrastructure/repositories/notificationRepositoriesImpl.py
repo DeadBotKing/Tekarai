@@ -204,13 +204,9 @@ class NotificationRepositoryDjango:
             return None
         return notificationFromRow(row)
 
-    def findByIdempotencyKey(
-        self, tenantId: uuid.UUID, idempotencyKey: str
-    ) -> Notification | None:
+    def findByIdempotencyKey(self, tenantId: uuid.UUID, idempotencyKey: str) -> Notification | None:
         row = (
-            NotificationRecordModel.objects.filter(
-                tenantId=tenantId, idempotencyKey=idempotencyKey
-            )
+            NotificationRecordModel.objects.filter(tenantId=tenantId, idempotencyKey=idempotencyKey)
             .order_by("createdAt")
             .first()
         )
@@ -256,9 +252,7 @@ class NotificationRepositoryDjango:
         limit: int = 50,
         includeArchived: bool = False,
     ) -> tuple[list[Notification], int, bool]:
-        query = NotificationRecordModel.objects.filter(
-            tenantId=tenantId, recipientId=recipientId
-        )
+        query = NotificationRecordModel.objects.filter(tenantId=tenantId, recipientId=recipientId)
         if not includeArchived:
             query = query.filter(deletedAt__isnull=True)
         if unreadOnly:
@@ -329,9 +323,7 @@ class NotificationRepositoryDjango:
             readAt__isnull=True,
         ).count()
 
-    def readAndAckCounts(
-        self, tenantId: uuid.UUID, recipientId: uuid.UUID
-    ) -> tuple[int, int, int]:
+    def readAndAckCounts(self, tenantId: uuid.UUID, recipientId: uuid.UUID) -> tuple[int, int, int]:
         base = NotificationRecordModel.objects.filter(
             tenantId=tenantId, recipientId=recipientId, deletedAt__isnull=True
         )
@@ -366,12 +358,10 @@ class NotificationDeliveryRepositoryDjango:
         applyDeliveryToRow(delivery, row)
         row.save()
 
-    def getForNotification(
-        self, notificationId: uuid.UUID
-    ) -> list[NotificationDelivery]:
-        rows = NotificationDeliveryModel.objects.filter(
-            notificationId=notificationId
-        ).order_by("channel")
+    def getForNotification(self, notificationId: uuid.UUID) -> list[NotificationDelivery]:
+        rows = NotificationDeliveryModel.objects.filter(notificationId=notificationId).order_by(
+            "channel"
+        )
         return [deliveryFromRow(row) for row in rows]
 
     def listPendingRetry(self, now: datetime, *, limit: int = 100) -> list[NotificationDelivery]:
@@ -387,9 +377,11 @@ class NotificationDeliveryRepositoryDjango:
     def channelUsageCounts(self, tenantId: uuid.UUID) -> dict[str, int]:
         from django.db.models import Count
 
-        rows = NotificationDeliveryModel.objects.filter(tenantId=tenantId).values(
-            "channel"
-        ).annotate(total=Count("id"))
+        rows = (
+            NotificationDeliveryModel.objects.filter(tenantId=tenantId)
+            .values("channel")
+            .annotate(total=Count("id"))
+        )
         return {str(row["channel"]): int(row["total"]) for row in rows}
 
 
@@ -425,12 +417,8 @@ class NotificationPreferenceRepositoryDjango:
                 quietHoursEnd=preference.quietHoursEnd,
             )
 
-    def listForUser(
-        self, tenantId: uuid.UUID, userId: uuid.UUID
-    ) -> list[NotificationPreference]:
-        rows = NotificationPreferenceModel.objects.filter(
-            tenantId=tenantId, userId=userId
-        )
+    def listForUser(self, tenantId: uuid.UUID, userId: uuid.UUID) -> list[NotificationPreference]:
+        rows = NotificationPreferenceModel.objects.filter(tenantId=tenantId, userId=userId)
         return [
             NotificationPreference(
                 id=row.id,
@@ -527,9 +515,7 @@ class NotificationTemplateRepositoryDjango:
     def deactivate(self, templateId: uuid.UUID) -> None:
         NotificationTemplateModel.objects.filter(id=templateId).update(isActive=False)
 
-    def _activeQuery(
-        self, tenantId: uuid.UUID, templateKey: str, language: str, channel: str
-    ):
+    def _activeQuery(self, tenantId: uuid.UUID, templateKey: str, language: str, channel: str):
         return NotificationTemplateModel.objects.filter(
             tenantId=tenantId,
             templateKey=templateKey,
@@ -547,15 +533,13 @@ class NotificationTemplateRepositoryDjango:
     def listVersions(
         self, tenantId: uuid.UUID, templateKey: str, language: str, channel: str
     ) -> list[NotificationTemplate]:
-        rows = self._activeQuery(tenantId, templateKey, language, channel).order_by(
-            "-version"
-        )
+        rows = self._activeQuery(tenantId, templateKey, language, channel).order_by("-version")
         return [self._templateFromRow(row) for row in rows]
 
     def listAll(self, tenantId: uuid.UUID) -> list[NotificationTemplate]:
-        rows = NotificationTemplateModel.objects.filter(
-            tenantId=tenantId, isActive=True
-        ).order_by("templateKey", "language", "channel")
+        rows = NotificationTemplateModel.objects.filter(tenantId=tenantId, isActive=True).order_by(
+            "templateKey", "language", "channel"
+        )
         return [self._templateFromRow(row) for row in rows]
 
     @staticmethod
@@ -630,32 +614,26 @@ class NotificationPolicyRepositoryDjango:
         return self._policyFromRow(row) if row else None
 
     def findByKey(self, tenantId: uuid.UUID, policyKey: str) -> NotificationPolicy | None:
-        row = NotificationPolicyModel.objects.filter(
-            tenantId=tenantId, policyKey=policyKey
-        ).first()
+        row = NotificationPolicyModel.objects.filter(tenantId=tenantId, policyKey=policyKey).first()
         return self._policyFromRow(row) if row else None
 
     def findApplicable(
         self, tenantId: uuid.UUID, notificationType: str, category: str
     ) -> NotificationPolicy | None:
         """§8 — type match beats category match (most specific wins)."""
-        rows = NotificationPolicyModel.objects.filter(
-            tenantId=tenantId, enabled=True
-        ).order_by("policyKey")
+        rows = NotificationPolicyModel.objects.filter(tenantId=tenantId, enabled=True).order_by(
+            "policyKey"
+        )
         typeRow = rows.filter(notificationType=notificationType).first()
         if typeRow is not None:
             return self._policyFromRow(typeRow)
-        categoryRow = rows.filter(
-            notificationType="", category=category
-        ).first()
+        categoryRow = rows.filter(notificationType="", category=category).first()
         if categoryRow is not None:
             return self._policyFromRow(categoryRow)
         return None
 
     def listAll(self, tenantId: uuid.UUID) -> list[NotificationPolicy]:
-        rows = NotificationPolicyModel.objects.filter(tenantId=tenantId).order_by(
-            "policyKey"
-        )
+        rows = NotificationPolicyModel.objects.filter(tenantId=tenantId).order_by("policyKey")
         return [self._policyFromRow(row) for row in rows]
 
     def delete(self, policyId: uuid.UUID) -> bool:
@@ -833,9 +811,7 @@ def dueOpenDigests(kind: str, now: datetime) -> list[NotificationDigest]:
         DIGEST_STATUS_OPEN,
     )
 
-    query = NotificationDigestModel.objects.filter(
-        status=DIGEST_STATUS_OPEN, periodEnd__lte=now
-    )
+    query = NotificationDigestModel.objects.filter(status=DIGEST_STATUS_OPEN, periodEnd__lte=now)
     if kind:
         query = query.filter(kind=kind)
     rows = query.order_by("periodEnd")[:200]
@@ -887,7 +863,7 @@ class NotificationScheduleRepositoryDjango:
         return [scheduleFromRow(row) for row in rows]
 
     def listAll(self, tenantId: uuid.UUID) -> list[NotificationSchedule]:
-        rows = NotificationScheduleModel.objects.filter(tenantId=tenantId).order_by(
-            "-createdAt"
-        )[:200]
+        rows = NotificationScheduleModel.objects.filter(tenantId=tenantId).order_by("-createdAt")[
+            :200
+        ]
         return [scheduleFromRow(row) for row in rows]

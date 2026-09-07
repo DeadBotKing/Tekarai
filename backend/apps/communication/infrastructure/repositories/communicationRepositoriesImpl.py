@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
-from django.db.models import F, Q
+from django.db.models import F
 
 from apps.communication.domain.entities.call import Call, CallParticipant
 from apps.communication.domain.entities.conversation import Conversation
@@ -90,7 +90,7 @@ class ConversationRepositoryDjango:
             description=conversation.description,
             isActive=conversation.isActive,
             archivedAt=conversation.archivedAt,
-            updatedAt=datetime.now(tz=timezone.utc),
+            updatedAt=datetime.now(tz=UTC),
         )
 
     def updateChannelProfile(
@@ -109,7 +109,7 @@ class ConversationRepositoryDjango:
             updates["visibility"] = visibility
         if updates:
             ChannelProfileModel.objects.filter(conversationId=conversationId).update(
-                **updates, updatedAt=datetime.now(tz=timezone.utc)
+                **updates, updatedAt=datetime.now(tz=UTC)
             )
         if description is not None or name is not None:
             self.update(
@@ -117,7 +117,7 @@ class ConversationRepositoryDjango:
                     id=conversationId,
                     tenantId=uuid.UUID(int=0),
                     conversationType="GROUP",
-                    createdAt=datetime.now(tz=timezone.utc),
+                    createdAt=datetime.now(tz=UTC),
                     name=name or "",
                     description=description or "",
                 )
@@ -142,9 +142,7 @@ class ConversationRepositoryDjango:
         return ChannelProfileModel.objects.filter(tenantId=tenantId, code=code).exists()
 
     def channelProfileOf(self, conversationId: uuid.UUID) -> tuple[str, str]:
-        profile = ChannelProfileModel.objects.filter(
-            conversationId=conversationId
-        ).first()
+        profile = ChannelProfileModel.objects.filter(conversationId=conversationId).first()
         return (profile.topic, profile.visibility) if profile else ("", "")
 
     def listForUser(
@@ -156,37 +154,31 @@ class ConversationRepositoryDjango:
             ).values_list("conversationId", flat=True)
         )
         channelIds = list(
-            ChannelProfileModel.objects.filter(
-                tenantId=tenantId, visibility="PUBLIC"
-            ).values_list("conversationId", flat=True)
+            ChannelProfileModel.objects.filter(tenantId=tenantId, visibility="PUBLIC").values_list(
+                "conversationId", flat=True
+            )
         )
         allIds = list(dict.fromkeys([*ids, *channelIds]))
         if not allIds:
             return []
-        queryset = ConversationModel.objects.filter(
-            tenantId=tenantId, id__in=allIds
-        ).order_by("-updatedAt")
+        queryset = ConversationModel.objects.filter(tenantId=tenantId, id__in=allIds).order_by(
+            "-updatedAt"
+        )
         if not includeArchived:
             queryset = queryset.filter(archivedAt__isnull=True)
         summaries: list[ConversationSummary] = []
         for model in queryset:
             lastMessage = (
-                MessageModel.objects.filter(
-                    conversationId=model.id, deletedAt__isnull=True
-                )
+                MessageModel.objects.filter(conversationId=model.id, deletedAt__isnull=True)
                 .order_by("-createdAt")
                 .first()
             )
             lastRead = (
-                ConversationParticipantModel.objects.filter(
-                    conversationId=model.id, userId=userId
-                )
+                ConversationParticipantModel.objects.filter(conversationId=model.id, userId=userId)
                 .values_list("lastReadMessageId", flat=True)
                 .first()
             )
-            unread = MessageModel.objects.filter(
-                conversationId=model.id, deletedAt__isnull=True
-            )
+            unread = MessageModel.objects.filter(conversationId=model.id, deletedAt__isnull=True)
             if lastRead:
                 readCreatedAt = (
                     MessageModel.objects.filter(id=lastRead)
@@ -242,15 +234,11 @@ class ChannelProfileReader:
         return self.visibilityOfOr(conversationId, "PUBLIC")
 
     def profileOf(self, conversationId: uuid.UUID) -> tuple[str, str]:
-        profile = ChannelProfileModel.objects.filter(
-            conversationId=conversationId
-        ).first()
+        profile = ChannelProfileModel.objects.filter(conversationId=conversationId).first()
         return (profile.topic, profile.visibility) if profile else ("", "")
 
     def visibilityOfOr(self, conversationId: uuid.UUID, default: str) -> str:
-        profile = ChannelProfileModel.objects.filter(
-            conversationId=conversationId
-        ).first()
+        profile = ChannelProfileModel.objects.filter(conversationId=conversationId).first()
         return profile.visibility if profile else default
 
 
@@ -283,20 +271,16 @@ class ParticipantRepositoryDjango:
             isMuted=participant.isMuted,
             notificationLevel=participant.notificationLevel,
             lastReadMessageId=participant.lastReadMessageId,
-            updatedAt=datetime.now(tz=timezone.utc),
+            updatedAt=datetime.now(tz=UTC),
         )
 
-    def get(
-        self, conversationId: uuid.UUID, userId: uuid.UUID
-    ) -> ConversationParticipant | None:
+    def get(self, conversationId: uuid.UUID, userId: uuid.UUID) -> ConversationParticipant | None:
         model = ConversationParticipantModel.objects.filter(
             conversationId=conversationId, userId=userId
         ).first()
         return self.toDomain(model) if model else None
 
-    def listForConversation(
-        self, conversationId: uuid.UUID
-    ) -> list[ConversationParticipant]:
+    def listForConversation(self, conversationId: uuid.UUID) -> list[ConversationParticipant]:
         models = ConversationParticipantModel.objects.filter(
             conversationId=conversationId
         ).order_by("joinedAt")
@@ -372,12 +356,10 @@ class MessageRepositoryDjango:
             body=message.body,
             editedAt=message.editedAt,
             deletedAt=message.deletedAt,
-            updatedAt=datetime.now(tz=timezone.utc),
+            updatedAt=datetime.now(tz=UTC),
         )
 
-    def getById(
-        self, messageId: uuid.UUID, tenantId: uuid.UUID | None = None
-    ) -> Message | None:
+    def getById(self, messageId: uuid.UUID, tenantId: uuid.UUID | None = None) -> Message | None:
         queryset = MessageModel.objects.filter(id=messageId)
         if tenantId is not None:
             queryset = queryset.filter(tenantId=tenantId)
@@ -408,17 +390,13 @@ class MessageRepositoryDjango:
         limit: int = 50,
         threadRootId: uuid.UUID | None = None,
     ) -> MessagePage:
-        queryset = MessageModel.objects.filter(
-            tenantId=tenantId, conversationId=conversationId
-        )
+        queryset = MessageModel.objects.filter(tenantId=tenantId, conversationId=conversationId)
         if threadRootId is not None:
             # §14 — group every reply under the same root (deep replies too).
             queryset = queryset.filter(threadRootId=threadRootId)
         if beforeId is not None:
             anchor = (
-                MessageModel.objects.filter(id=beforeId)
-                .values_list("createdAt", flat=True)
-                .first()
+                MessageModel.objects.filter(id=beforeId).values_list("createdAt", flat=True).first()
             )
             if anchor is not None:
                 queryset = queryset.filter(createdAt__lt=anchor)
@@ -427,9 +405,11 @@ class MessageRepositoryDjango:
         hasNext = len(models) > limit
         models = list(reversed(models[:limit]))
         mentionMap: dict[uuid.UUID, list[str]] = {model.id: [] for model in models}
-        for messageId, mentionedUserId in MessageMentionModel.objects.filter(
-            messageId__in=mentionMap
-        ).order_by("id").values_list("messageId", "mentionedUserId"):
+        for messageId, mentionedUserId in (
+            MessageMentionModel.objects.filter(messageId__in=mentionMap)
+            .order_by("id")
+            .values_list("messageId", "mentionedUserId")
+        ):
             mentionMap[messageId].append(str(mentionedUserId))
         return MessagePage(
             items=[self.toDomain(model, tuple(mentionMap[model.id])) for model in models],
@@ -448,15 +428,12 @@ class MessageRepositoryDjango:
         )
         if not conversationIds:
             return []
-        models = (
-            MessageModel.objects.filter(
-                tenantId=tenantId,
-                conversationId__in=conversationIds,
-                deletedAt__isnull=True,
-                body__icontains=query,
-            )
-            .order_by("-createdAt")[:limit]
-        )
+        models = MessageModel.objects.filter(
+            tenantId=tenantId,
+            conversationId__in=conversationIds,
+            deletedAt__isnull=True,
+            body__icontains=query,
+        ).order_by("-createdAt")[:limit]
         return [self.toDomain(model) for model in models]
 
     def latestIdAtOrBefore(
@@ -465,9 +442,7 @@ class MessageRepositoryDjango:
         return messageId
 
     @staticmethod
-    def toDomain(
-        model: MessageModel, mentions: tuple[str, ...] | None = None
-    ) -> Message:
+    def toDomain(model: MessageModel, mentions: tuple[str, ...] | None = None) -> Message:
         if mentions is None:
             mentions = tuple(
                 str(value)
@@ -655,9 +630,11 @@ class ReadStateRepositoryDjango:
         ]
         if rows:
             MessageReadStateModel.objects.bulk_create(rows, ignore_conflicts=True)
-        updated = MessageReadStateModel.objects.filter(
-            messageId__in=messageIds, userId=userId
-        ).exclude(state="READ").update(state="READ", updatedAt=now)
+        updated = (
+            MessageReadStateModel.objects.filter(messageId__in=messageIds, userId=userId)
+            .exclude(state="READ")
+            .update(state="READ", updatedAt=now)
+        )
         return len(rows) + updated
 
     def markDelivered(
@@ -723,9 +700,9 @@ class PinRepositoryDjango:
         return deleted > 0
 
     def listForConversation(self, conversationId: uuid.UUID) -> list[PinnedMessage]:
-        models = PinnedMessageModel.objects.filter(
-            conversationId=conversationId
-        ).order_by("-pinnedAt")
+        models = PinnedMessageModel.objects.filter(conversationId=conversationId).order_by(
+            "-pinnedAt"
+        )
         return [
             PinnedMessage(
                 id=model.id,
@@ -773,29 +750,23 @@ class MeetingRepositoryDjango:
             actualEnd=meeting.actualEnd,
             scheduledStart=meeting.scheduledStart,
             scheduledEnd=meeting.scheduledEnd,
-            updatedAt=datetime.now(tz=timezone.utc),
+            updatedAt=datetime.now(tz=UTC),
         )
 
-    def getById(
-        self, meetingId: uuid.UUID, tenantId: uuid.UUID | None = None
-    ) -> Meeting | None:
+    def getById(self, meetingId: uuid.UUID, tenantId: uuid.UUID | None = None) -> Meeting | None:
         queryset = MeetingModel.objects.filter(id=meetingId)
         if tenantId is not None:
             queryset = queryset.filter(tenantId=tenantId)
         model = queryset.first()
         return self.toDomain(model) if model else None
 
-    def listByConversation(
-        self, tenantId: uuid.UUID, conversationId: uuid.UUID
-    ) -> list[Meeting]:
+    def listByConversation(self, tenantId: uuid.UUID, conversationId: uuid.UUID) -> list[Meeting]:
         models = MeetingModel.objects.filter(
             tenantId=tenantId, conversationId=conversationId
         ).order_by("-createdAt")
         return [self.toDomain(model) for model in models]
 
-    def findActiveForOrganizer(
-        self, tenantId: uuid.UUID, organizerId: uuid.UUID
-    ) -> list[Meeting]:
+    def findActiveForOrganizer(self, tenantId: uuid.UUID, organizerId: uuid.UUID) -> list[Meeting]:
         models = MeetingModel.objects.filter(
             tenantId=tenantId,
             organizerId=organizerId,
@@ -852,15 +823,11 @@ class MeetingParticipantRepositoryDjango:
             respondedAt=participant.respondedAt,
             joinedAt=participant.joinedAt,
             leftAt=participant.leftAt,
-            updatedAt=datetime.now(tz=timezone.utc),
+            updatedAt=datetime.now(tz=UTC),
         )
 
-    def get(
-        self, meetingId: uuid.UUID, userId: uuid.UUID
-    ) -> MeetingParticipant | None:
-        model = MeetingParticipantModel.objects.filter(
-            meetingId=meetingId, userId=userId
-        ).first()
+    def get(self, meetingId: uuid.UUID, userId: uuid.UUID) -> MeetingParticipant | None:
+        model = MeetingParticipantModel.objects.filter(meetingId=meetingId, userId=userId).first()
         return self.toDomain(model) if model else None
 
     def listForMeeting(self, meetingId: uuid.UUID) -> list[MeetingParticipant]:
@@ -916,12 +883,10 @@ class CallRepositoryDjango:
             startedAt=call.startedAt,
             endedAt=call.endedAt,
             mediaSessionRef=getattr(call, "mediaSessionRef", ""),
-            updatedAt=datetime.now(tz=timezone.utc),
+            updatedAt=datetime.now(tz=UTC),
         )
 
-    def getById(
-        self, callId: uuid.UUID, tenantId: uuid.UUID | None = None
-    ) -> Call | None:
+    def getById(self, callId: uuid.UUID, tenantId: uuid.UUID | None = None) -> Call | None:
         queryset = CallModel.objects.filter(id=callId)
         if tenantId is not None:
             queryset = queryset.filter(tenantId=tenantId)
@@ -983,9 +948,7 @@ class CallParticipantRepositoryDjango:
         )
 
     def get(self, callId: uuid.UUID, userId: uuid.UUID) -> CallParticipant | None:
-        model = CallParticipantModel.objects.filter(
-            callId=callId, userId=userId
-        ).first()
+        model = CallParticipantModel.objects.filter(callId=callId, userId=userId).first()
         return self.toDomain(model) if model else None
 
     def listForCall(self, callId: uuid.UUID) -> list[CallParticipant]:
@@ -1037,7 +1000,7 @@ class RecordingRepositoryDjango:
             checksum=recording.checksum,
             durationSeconds=recording.durationSeconds,
             failureReason=recording.failureReason,
-            updatedAt=datetime.now(tz=timezone.utc),
+            updatedAt=datetime.now(tz=UTC),
         )
 
     def getById(
@@ -1049,9 +1012,7 @@ class RecordingRepositoryDjango:
         model = queryset.first()
         return self.toDomain(model) if model else None
 
-    def findActiveForMeeting(
-        self, tenantId: uuid.UUID, meetingId: uuid.UUID
-    ) -> Recording | None:
+    def findActiveForMeeting(self, tenantId: uuid.UUID, meetingId: uuid.UUID) -> Recording | None:
         model = RecordingModel.objects.filter(
             tenantId=tenantId,
             meetingId=meetingId,
@@ -1059,12 +1020,10 @@ class RecordingRepositoryDjango:
         ).first()
         return self.toDomain(model) if model else None
 
-    def listForMeeting(
-        self, tenantId: uuid.UUID, meetingId: uuid.UUID
-    ) -> list[Recording]:
-        models = RecordingModel.objects.filter(
-            tenantId=tenantId, meetingId=meetingId
-        ).order_by("-createdAt")
+    def listForMeeting(self, tenantId: uuid.UUID, meetingId: uuid.UUID) -> list[Recording]:
+        models = RecordingModel.objects.filter(tenantId=tenantId, meetingId=meetingId).order_by(
+            "-createdAt"
+        )
         return [self.toDomain(model) for model in models]
 
     @staticmethod
@@ -1116,7 +1075,7 @@ class LetterRepositoryDjango:
             signedBy=letter.signedBy,
             dispatchedAt=letter.dispatchedAt,
             receivedAt=letter.receivedAt,
-            updatedAt=datetime.now(tz=timezone.utc),
+            updatedAt=datetime.now(tz=UTC),
         )
 
     def getById(
@@ -1128,9 +1087,7 @@ class LetterRepositoryDjango:
         model = queryset.first()
         return self.toDomain(model) if model else None
 
-    def getByReference(
-        self, tenantId: uuid.UUID, referenceNumber: str
-    ) -> OfficialLetter | None:
+    def getByReference(self, tenantId: uuid.UUID, referenceNumber: str) -> OfficialLetter | None:
         model = OfficialLetterModel.objects.filter(
             tenantId=tenantId, referenceNumber=referenceNumber
         ).first()
@@ -1138,7 +1095,7 @@ class LetterRepositoryDjango:
 
     def nextReferenceNumber(self, tenantId: uuid.UUID) -> str:
         """Sequential per-tenant reference: YYYY-NNNNNN (§16)."""
-        year = datetime.now(tz=timezone.utc).year
+        year = datetime.now(tz=UTC).year
         last = (
             OfficialLetterModel.objects.filter(
                 tenantId=tenantId, referenceNumber__startswith=f"{year}-"
@@ -1212,10 +1169,7 @@ class OutboxRepositoryDjango:
         return row.id
 
     def pending(self, *, limit: int = 100) -> list[OutboxRow]:
-        rows = (
-            OutboxModel.objects.filter(publishedAt__isnull=True)
-            .order_by("occurredAt")[:limit]
-        )
+        rows = OutboxModel.objects.filter(publishedAt__isnull=True).order_by("occurredAt")[:limit]
         return [
             OutboxRow(
                 id=row.id,
@@ -1228,6 +1182,4 @@ class OutboxRepositoryDjango:
         ]
 
     def markPublished(self, outboxId: uuid.UUID, now: datetime) -> None:
-        OutboxModel.objects.filter(id=outboxId).update(
-            publishedAt=now, attempts=F("attempts") + 1
-        )
+        OutboxModel.objects.filter(id=outboxId).update(publishedAt=now, attempts=F("attempts") + 1)

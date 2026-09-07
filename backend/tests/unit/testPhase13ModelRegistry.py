@@ -17,7 +17,7 @@ from apps.ai.domain.exceptions import (
     AIRoutingNoMatch,
     AIRoutingPolicyInvalid,
 )
-from apps.ai.domain.ports import DeterministicAIProvider, MODEL_FEATURES, ProviderCapabilities
+from apps.ai.domain.ports import MODEL_FEATURES, DeterministicAIProvider, ProviderCapabilities
 from apps.ai.domain.registries.modelRegistry import (
     AIModelRegistry,
     ModelDescriptor,
@@ -119,7 +119,7 @@ class Phase13EModelRegistryTests(unittest.TestCase):
         with self.assertRaises(FrozenInstanceError):
             descriptor.code = "OTHER"
         self.assertEqual(self.registry.listModels(self.otherTenantId), ())
-        with self.assertRaises(Exception):
+        with self.assertRaises(Exception):  # noqa: B017
             self.registry.resolveModel(self.otherTenantId, "RICH", "PRIMARY")
 
     def testDuplicateIsScopedToTenantProviderAndModelCodeWithExplicitReplace(self) -> None:
@@ -131,7 +131,9 @@ class Phase13EModelRegistryTests(unittest.TestCase):
         self.registry.registerModel(replacement, "RICH", replace=True)
         self.assertIs(self.registry.resolveModel(self.tenantId, "RICH", "DUPLICATE"), replacement)
         # The same code is valid for another provider and another tenant.
-        self.registry.registerModel(self._model("DUPLICATE", providerId=self.limitedDefinition.id), "LIMITED")
+        self.registry.registerModel(
+            self._model("DUPLICATE", providerId=self.limitedDefinition.id), "LIMITED"
+        )
         otherProvider = self._provider(self.otherTenantId, "RICH")
         self.providerRegistry.register(otherProvider, RichProvider())
         self.registry.registerModel(
@@ -177,7 +179,9 @@ class Phase13EModelRegistryTests(unittest.TestCase):
         )
         with self.assertRaises(AIModelAmbiguous):
             self.registry.resolveModelByCode(self.tenantId, "SHARED")
-        self.assertEqual(self.registry.resolveModelByCode(self.tenantId, "SHARED", "RICH").code, "SHARED")
+        self.assertEqual(
+            self.registry.resolveModelByCode(self.tenantId, "SHARED", "RICH").code, "SHARED"
+        )
 
     def testRoutingIsDeterministicAndReturnsTraceableNonSensitiveDecision(self) -> None:
         # Provider ordering is lexical and model ordering is lexical within a provider.
@@ -231,7 +235,9 @@ class Phase13EModelRegistryTests(unittest.TestCase):
             "EMBED",
         )
         with self.assertRaises(AIRoutingNoMatch):
-            self.registry.route(ModelRoutingRequest(self.tenantId, modelType="LLM", minimumContextWindow=64_000))
+            self.registry.route(
+                ModelRoutingRequest(self.tenantId, modelType="LLM", minimumContextWindow=64_000)
+            )
 
     def testRoutingProviderFeatureMismatchIsRejectedEvenWhenModelFlagIsTrue(self) -> None:
         limitedModel = self._model(
@@ -263,13 +269,17 @@ class Phase13EModelRegistryTests(unittest.TestCase):
             fallbackTargets=(ModelRouteTarget(providerCode="RICH", modelCode="SECONDARY"),),
             allowFallback=True,
         )
-        decision = self.registry.route(ModelRoutingRequest(self.tenantId, modelType="LLM"), fallback)
+        decision = self.registry.route(
+            ModelRoutingRequest(self.tenantId, modelType="LLM"), fallback
+        )
         self.assertEqual(decision.modelCode, "SECONDARY")
         self.assertEqual(decision.reason, "fallback")
         self.assertTrue(decision.usedFallback)
         default = ModelRoutingPolicy(defaultProviderCode="RICH", defaultModelCode="PRIMARY")
         self.assertEqual(
-            self.registry.route(ModelRoutingRequest(self.tenantId, modelType="LLM"), default).modelCode,
+            self.registry.route(
+                ModelRoutingRequest(self.tenantId, modelType="LLM"), default
+            ).modelCode,
             "PRIMARY",
         )
 
@@ -297,9 +307,9 @@ class Phase13EModelRegistryTests(unittest.TestCase):
 
     def testAliasesAndDomainPurityAreStable(self) -> None:
         self.assertIs(AIModelRegistry, ModelRegistry)
-        source = (Path(__file__).resolve().parents[2] / "apps/ai/domain/registries/modelRegistry.py").read_text(
-            encoding="utf-8"
-        )
+        source = (
+            Path(__file__).resolve().parents[2] / "apps/ai/domain/registries/modelRegistry.py"
+        ).read_text(encoding="utf-8")
         for forbidden in (
             "django",
             "rest_framework",

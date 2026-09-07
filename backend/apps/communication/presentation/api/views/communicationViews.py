@@ -40,6 +40,7 @@ from apps.communication.application.commands.communicationCommands import (
     RejectCallCommand,
     RelaySignalCommand,
     RemoveParticipantCommand,
+    RemoveReactionCommand,
     RsvpMeetingCommand,
     SendMessageCommand,
     SignLetterCommand,
@@ -67,7 +68,6 @@ from apps.communication.application.queries.communicationQueries import (
     PresenceQuery,
     SearchMessagesQuery,
 )
-from apps.communication.application.services.communicationSupport import UserDirectory
 from apps.communication.infrastructure import container
 from apps.communication.presentation.api.serializers.communicationSerializers import (
     AddParticipantSerializer,
@@ -225,9 +225,7 @@ class ParticipantListView(APIView):
 class ParticipantDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def delete(
-        self, request: Request, conversationId: str, userId: str
-    ) -> Response:
+    def delete(self, request: Request, conversationId: str, userId: str) -> Response:
         dto = container.removeParticipantUseCase().execute(
             RemoveParticipantCommand(conversationId=conversationId, userId=userId)
         )
@@ -336,9 +334,7 @@ class MessageDetailView(APIView):
         return Response(successEnvelope(_dto(dto)))
 
     def delete(self, request: Request, messageId: str) -> Response:
-        result = container.deleteMessageUseCase().execute(
-            DeleteMessageCommand(messageId=messageId)
-        )
+        result = container.deleteMessageUseCase().execute(DeleteMessageCommand(messageId=messageId))
         return Response(successEnvelope(result))
 
 
@@ -358,7 +354,7 @@ class MessageReactionsView(APIView):
     def delete(self, request: Request, messageId: str) -> Response:
         reaction = str(request.query_params.get("reaction", "") or "")
         result = container.removeReactionUseCase().execute(
-            RemoveReactionCommand(messageId=messageId, reaction=reaction)  # type: ignore[arg-type]
+            RemoveReactionCommand(messageId=messageId, reaction=reaction)
         )
         return Response(successEnvelope(result))
 
@@ -382,9 +378,7 @@ class PinListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request: Request, conversationId: str) -> Response:
-        pins = container.listPinsUseCase().execute(
-            ListPinsQuery(conversationId=conversationId)
-        )
+        pins = container.listPinsUseCase().execute(ListPinsQuery(conversationId=conversationId))
         return Response(successEnvelope([_dto(pin) for pin in pins]))
 
     def post(self, request: Request, conversationId: str) -> Response:
@@ -460,9 +454,7 @@ class MeetingLifecycleView(APIView):
 
     def post(self, request: Request, meetingId: str, action: str) -> Response:
         if action == "start":
-            dto = container.startMeetingUseCase().execute(
-                StartMeetingCommand(meetingId=meetingId)
-            )
+            dto = container.startMeetingUseCase().execute(StartMeetingCommand(meetingId=meetingId))
         elif action == "end":
             dto = container.endMeetingUseCase().execute(EndMeetingCommand(meetingId=meetingId))
         elif action == "cancel":
@@ -470,13 +462,9 @@ class MeetingLifecycleView(APIView):
                 CancelMeetingCommand(meetingId=meetingId)
             )
         elif action == "join":
-            dto = container.joinMeetingUseCase().execute(
-                JoinMeetingCommand(meetingId=meetingId)
-            )
+            dto = container.joinMeetingUseCase().execute(JoinMeetingCommand(meetingId=meetingId))
         elif action == "leave":
-            dto = container.leaveMeetingUseCase().execute(
-                LeaveMeetingCommand(meetingId=meetingId)
-            )
+            dto = container.leaveMeetingUseCase().execute(LeaveMeetingCommand(meetingId=meetingId))
         else:
             from rest_framework.exceptions import ValidationError
 
@@ -491,9 +479,7 @@ class MeetingRsvpView(APIView):
         serializer = RsvpSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         result = container.rsvpMeetingUseCase().execute(
-            RsvpMeetingCommand(
-                meetingId=meetingId, accepted=serializer.validated_data["accepted"]
-            )
+            RsvpMeetingCommand(meetingId=meetingId, accepted=serializer.validated_data["accepted"])
         )
         return Response(successEnvelope(result))
 
@@ -506,7 +492,7 @@ class MeetingSummaryView(APIView):
             GenerateMeetingSummaryQuery,
         )
 
-        dto = container.generateMeetingSummaryUseCase().execute(
+        dto = container.generateLegacyMeetingSummaryUseCase().execute(
             GenerateMeetingSummaryQuery(meetingId=meetingId)
         )
         return Response(successEnvelope(_dto(dto)))
@@ -525,9 +511,7 @@ class RecordingListView(APIView):
         return Response(successEnvelope([_dto(item) for item in recordings]))
 
     def post(self, request: Request, meetingId: str) -> Response:
-        dto = container.startRecordingUseCase().execute(
-            StartRecordingCommand(meetingId=meetingId)
-        )
+        dto = container.startRecordingUseCase().execute(StartRecordingCommand(meetingId=meetingId))
         return Response(successEnvelope(_dto(dto)), status=201)
 
 

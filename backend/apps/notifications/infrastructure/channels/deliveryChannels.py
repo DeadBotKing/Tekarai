@@ -73,7 +73,8 @@ class EmailDeliveryChannel(NotificationChannelPort):
         address = self._addressOf(tenantId, notification)
         if not address:
             return DeliveryResult(
-                ok=False, errorCode="INVALID_ADDRESS",
+                ok=False,
+                errorCode="INVALID_ADDRESS",
                 errorMessage="recipient has no email address",
             )
         result, providerUsed = self.pool.sendWithFailover(
@@ -127,7 +128,8 @@ class SmsDeliveryChannel(NotificationChannelPort):
             address = self.contactSource.phoneOf(tenantId, notification.recipientId)
         if not address:
             return DeliveryResult(
-                ok=False, errorCode="INVALID_ADDRESS",
+                ok=False,
+                errorCode="INVALID_ADDRESS",
                 errorMessage="recipient has no phone number",
             )
         result, providerUsed = self.pool.sendWithFailover(
@@ -170,13 +172,15 @@ class PushDeliveryChannel(NotificationChannelPort):
     ) -> DeliveryResult:
         if self.deviceSource is None:
             return DeliveryResult(
-                ok=False, errorCode="PROVIDER_UNCONFIGURED",
+                ok=False,
+                errorCode="PROVIDER_UNCONFIGURED",
                 errorMessage="device registry unavailable",
             )
         devices = self.deviceSource.activeForUser(tenantId, notification.recipientId)
         if not devices:
             return DeliveryResult(
-                ok=False, errorCode="NO_ACTIVE_DEVICE",
+                ok=False,
+                errorCode="NO_ACTIVE_DEVICE",
                 errorMessage="recipient has no active device",
             )
         failures = 0
@@ -203,7 +207,8 @@ class PushDeliveryChannel(NotificationChannelPort):
         self.providerName = providerUsed or self.providerName
         if failures == len(devices):
             return DeliveryResult(
-                ok=False, errorCode="PROVIDER_ERROR",
+                ok=False,
+                errorCode="PROVIDER_ERROR",
                 errorMessage=lastError or "all device pushes failed",
             )
         return DeliveryResult(ok=True)
@@ -228,11 +233,7 @@ class ChannelRegistry:
             SmsDeliveryChannel(contactSource=contactSource),
         ]
         for pushLike in PUSH_LIKE_CHANNELS:
-            adapters.append(
-                PushDeliveryChannel(
-                    deviceSource=deviceSource, channel=pushLike
-                )
-            )
+            adapters.append(PushDeliveryChannel(deviceSource=deviceSource, channel=pushLike))
         self._adapters = {adapter.channelName: adapter for adapter in adapters}
 
     def channelFor(self, channel: str) -> NotificationChannelPort | None:

@@ -9,10 +9,9 @@ from pathlib import Path
 
 from apps.ai.domain.entities.aiRecords import AICapability
 from apps.ai.domain.exceptions import (
-    AICapabilityInactive,
+    AIIdempotencyConflict,
     AIOperationLifecycleInvalid,
     AIOperationNotFound,
-    AIIdempotencyConflict,
     AIRequestCapabilityInvalid,
     AIRequestLifecycleInvalid,
     AIRequestNotFound,
@@ -214,7 +213,9 @@ class Phase13GRequestLifecycleTests(unittest.TestCase):
         operationB = self._operation()
         parent = self._request(operationId=operationA.id)
         child = self._request(operationId=operationA.id, parentRequestId=parent.id)
-        self.assertEqual(self.lifecycle.describeRequest(self.tenantId, child.id).parentRequestId, parent.id)
+        self.assertEqual(
+            self.lifecycle.describeRequest(self.tenantId, child.id).parentRequestId, parent.id
+        )
         with self.assertRaises(AIRequestLifecycleInvalid):
             self._request(operationId=operationB.id, parentRequestId=parent.id)
         with self.assertRaises(AIRequestNotFound):
@@ -230,16 +231,33 @@ class Phase13GRequestLifecycleTests(unittest.TestCase):
         first = self._request(operationId=operation.id)
         second = self._request()
         self.lifecycle.queueRequest(self.tenantId, first.id)
-        self.assertEqual(tuple(item.requestId for item in self.lifecycle.listRequests(self.tenantId, status="QUEUED")), (first.id,))
-        self.assertEqual(tuple(item.requestId for item in self.lifecycle.listRequests(self.tenantId, status="PENDING")), (second.id,))
-        self.assertEqual(tuple(item.operationId for item in self.lifecycle.listOperations(self.tenantId)), (operation.id,))
+        self.assertEqual(
+            tuple(
+                item.requestId
+                for item in self.lifecycle.listRequests(self.tenantId, status="QUEUED")
+            ),
+            (first.id,),
+        )
+        self.assertEqual(
+            tuple(
+                item.requestId
+                for item in self.lifecycle.listRequests(self.tenantId, status="PENDING")
+            ),
+            (second.id,),
+        )
+        self.assertEqual(
+            tuple(item.operationId for item in self.lifecycle.listOperations(self.tenantId)),
+            (operation.id,),
+        )
         self.assertEqual(self.lifecycle.operationForRequest(self.tenantId, second.id), None)
-        self.assertEqual(self.lifecycle.operationForRequest(self.tenantId, first.id).operationId, operation.id)
+        self.assertEqual(
+            self.lifecycle.operationForRequest(self.tenantId, first.id).operationId, operation.id
+        )
 
     def testPureDomainBoundaryAndNoSecretOrProviderImports(self) -> None:
-        source = (Path(__file__).resolve().parents[2] / "apps/ai/domain/services/requestLifecycle.py").read_text(
-            encoding="utf-8"
-        )
+        source = (
+            Path(__file__).resolve().parents[2] / "apps/ai/domain/services/requestLifecycle.py"
+        ).read_text(encoding="utf-8")
         for forbidden in (
             "django",
             "rest_framework",

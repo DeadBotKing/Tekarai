@@ -87,10 +87,15 @@ class CommunicationPolicy(AggregateRoot):
 
     def update(self, changes: dict, now: datetime) -> None:
         positive = {
-            "messageRetentionDays", "recordingRetentionDays",
-            "transcriptRetentionDays", "presenceRetentionDays",
-            "auditRetentionDays", "maxAttachmentSize", "maxMessageLength",
-            "maxGroupMembers", "maxMeetingParticipants",
+            "messageRetentionDays",
+            "recordingRetentionDays",
+            "transcriptRetentionDays",
+            "presenceRetentionDays",
+            "auditRetentionDays",
+            "maxAttachmentSize",
+            "maxMessageLength",
+            "maxGroupMembers",
+            "maxMeetingParticipants",
         }
         for key, value in changes.items():
             if value is None or not hasattr(self, key):
@@ -160,9 +165,7 @@ class MessageDelivery(AggregateRoot):
         self.updatedAt = updatedAt
 
     @staticmethod
-    def mark(
-        tenantId: uuid.UUID, messageId: uuid.UUID, recipientId: uuid.UUID
-    ) -> MessageDelivery:
+    def mark(tenantId: uuid.UUID, messageId: uuid.UUID, recipientId: uuid.UUID) -> MessageDelivery:
         return MessageDelivery(
             id=newId(), tenantId=tenantId, messageId=messageId, recipientId=recipientId
         )
@@ -176,7 +179,9 @@ class MessageDelivery(AggregateRoot):
             self.deliveredAt = now
         self.recordEvent(
             DomainEvent(
-                name="messageDelivered" if target == t.DELIVERY_DELIVERED else "messageDeliveryFailed",
+                name="messageDelivered"
+                if target == t.DELIVERY_DELIVERED
+                else "messageDeliveryFailed",
                 occurredAt=now,
                 tenantId=self.tenantId,
                 actorId=self.recipientId,
@@ -537,10 +542,13 @@ class ActionItemCandidate(AggregateRoot):
     ) -> None:
         super().__init__(id)
         if not title.strip():
-            raise ValidationFailedError("Action item title is required.", fieldErrors={"title": "empty"})
+            raise ValidationFailedError(
+                "Action item title is required.", fieldErrors={"title": "empty"}
+            )
         if not (0.0 <= confidence <= 1.0):
-            raise ValidationFailedError("confidence must be within [0,1].",
-                                        fieldErrors={"confidence": str(confidence)})
+            raise ValidationFailedError(
+                "confidence must be within [0,1].", fieldErrors={"confidence": str(confidence)}
+            )
         t.validateOneOf(state, t.ACTION_STATES, field="actionState")
         self.tenantId = tenantId
         self.meetingId = meetingId

@@ -103,11 +103,7 @@ class RetryPolicy:
             ("initialBackoffSeconds", self.initialBackoffSeconds),
             ("maxBackoffSeconds", self.maxBackoffSeconds),
         ):
-            if (
-                not isinstance(value, (int, float))
-                or isinstance(value, bool)
-                or value < 0
-            ):
+            if not isinstance(value, (int, float)) or isinstance(value, bool) or value < 0:
                 raise ValidationFailedError(f"Retry {name} must be a non-negative number.")
         if (
             not isinstance(self.backoffMultiplier, (int, float))

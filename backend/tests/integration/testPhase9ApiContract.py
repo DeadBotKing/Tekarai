@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-import uuid
-
 from django.test import TestCase
 
 from apps.notifications.infrastructure.container import container
-from apps.sharedKernel.application.requestContext import RequestContext, requestScope
 from apps.tenancy.infrastructure.models import TenantModel
 from tests.support.phase6Helpers import seedPlatform
-from tests.support.phase8Helpers import ensureTenant, ensureUser
+from tests.support.phase8Helpers import ensureUser
 from tests.support.phase9Helpers import (
     apiClientWithToken,
     asUser,
@@ -30,9 +27,7 @@ class NotificationApiBase(TestCase):
         self.alice = ensureUser(self.tenant, "api-ntf-alice")
         self.bob = ensureUser(self.tenant, "api-ntf-bob")
         grantNotificationAdmin(self.tenant, self.alice)
-        self.adminClient = apiClientWithToken(
-            sessionTokenFor(self.alice.id, self.tenant.id)
-        )
+        self.adminClient = apiClientWithToken(sessionTokenFor(self.alice.id, self.tenant.id))
         self.bobClient = apiClientWithToken(sessionTokenFor(self.bob.id, self.tenant.id))
 
     def createFor(self, user, **overrides):
@@ -63,38 +58,30 @@ class OwnNotificationApiTests(NotificationApiBase):
 
     def testMarkReadThenUnreadThenAcknowledge(self) -> None:
         notificationId = self.createFor(self.bob).notifications[0].id
-        self.assertEqual(
-            self.bobClient.post(f"{BASE}/{notificationId}/read").status_code, 200
-        )
+        self.assertEqual(self.bobClient.post(f"{BASE}/{notificationId}/read").status_code, 200)
         self.assertEqual(
             self.bobClient.get(f"{BASE}/unread-count").json()["data"]["unreadCount"], 0
         )
-        self.assertEqual(
-            self.bobClient.delete(f"{BASE}/{notificationId}/read").status_code, 200
-        )
+        self.assertEqual(self.bobClient.delete(f"{BASE}/{notificationId}/read").status_code, 200)
         # §26 — acknowledge without requirement is refused
         ack = self.bobClient.post(f"{BASE}/{notificationId}/acknowledge")
         self.assertEqual(ack.status_code, 403)
 
     def testAcknowledgeRequiredFlow(self) -> None:
-        notificationId = self.createFor(
-            self.bob, eventId="ack-1", ackRequired=True
-        ).notifications[0].id
+        notificationId = (
+            self.createFor(self.bob, eventId="ack-1", ackRequired=True).notifications[0].id
+        )
         acknowledged = self.bobClient.post(f"{BASE}/{notificationId}/acknowledge")
         self.assertEqual(acknowledged.status_code, 200)
         detail = self.bobClient.get(f"{BASE}/{notificationId}").json()["data"]
         self.assertIsNotNone(detail["acknowledgedAt"])
         self.assertIsNotNone(detail["readAt"])  # ack implies read
         # unread blocked after acknowledgement (§26)
-        self.assertEqual(
-            self.bobClient.delete(f"{BASE}/{notificationId}/read").status_code, 409
-        )
+        self.assertEqual(self.bobClient.delete(f"{BASE}/{notificationId}/read").status_code, 409)
 
     def testArchiveHidesFromList(self) -> None:
         notificationId = self.createFor(self.bob, eventId="arch-1").notifications[0].id
-        self.assertEqual(
-            self.bobClient.post(f"{BASE}/{notificationId}/archive").status_code, 200
-        )
+        self.assertEqual(self.bobClient.post(f"{BASE}/{notificationId}/archive").status_code, 200)
         self.assertEqual(self.bobClient.get(f"{BASE}/").json()["data"], [])
         archived = self.bobClient.get(f"{BASE}/?archived=true").json()["data"]
         self.assertEqual(len(archived), 1)
@@ -114,9 +101,7 @@ class OwnNotificationApiTests(NotificationApiBase):
     def testCrossRecipientAccessIs404(self) -> None:
         notificationId = self.createFor(self.bob, eventId="iso-404").notifications[0].id
         self.assertEqual(self.adminClient.get(f"{BASE}/{notificationId}").status_code, 404)
-        self.assertEqual(
-            self.adminClient.post(f"{BASE}/{notificationId}/read").status_code, 404
-        )
+        self.assertEqual(self.adminClient.post(f"{BASE}/{notificationId}/read").status_code, 404)
 
 
 class PreferenceApiTests(NotificationApiBase):
@@ -130,8 +115,12 @@ class PreferenceApiTests(NotificationApiBase):
             {
                 "preferences": [
                     {"level": "GLOBAL", "channel": "EMAIL", "enabled": False},
-                    {"level": "CATEGORY", "channel": "SMS",
-                     "category": "SECURITY", "enabled": True},
+                    {
+                        "level": "CATEGORY",
+                        "channel": "SMS",
+                        "category": "SECURITY",
+                        "enabled": True,
+                    },
                 ]
             },
             format="json",

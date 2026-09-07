@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any, Generic, Protocol, TypeVar, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from apps.sharedKernel.application.ports import (
     AuditRecorder,
@@ -21,9 +21,6 @@ from apps.sharedKernel.application.ports import (
 )
 from apps.sharedKernel.application.useCase import UseCase
 from apps.sharedKernel.domain.events import DomainEvent
-
-TCommand = TypeVar("TCommand", bound=Any)
-TResult = TypeVar("TResult")
 
 
 @runtime_checkable
@@ -37,7 +34,7 @@ class UserDirectory(Protocol):
     def idOfUsername(self, tenantId: uuid.UUID, username: str) -> uuid.UUID | None: ...
 
 
-class CommunicationUseCase(UseCase[TCommand, TResult], Generic[TCommand, TResult]):
+class CommunicationUseCase[TCommand, TResult](UseCase[TCommand, TResult]):
     """Kernel template + outbox (§29) + realtime broadcasts (§8).
 
     Integration events (``Communication…V1`` §25) are enqueued inside the

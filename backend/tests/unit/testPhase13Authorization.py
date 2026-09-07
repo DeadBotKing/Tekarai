@@ -19,8 +19,8 @@ from apps.ai.domain.exceptions import (
 )
 from apps.ai.domain.policies.aiPolicies import ContextPolicy
 from apps.ai.domain.services.authorizationService import (
-    AIContextAuthorizationEngine,
     AIAuthorizationService,
+    AIContextAuthorizationEngine,
     AuthorizationDecision,
     AuthorizationPolicy,
     AuthorizationPrincipal,
@@ -261,7 +261,9 @@ class Phase13KAuthorizationTests(unittest.TestCase):
         self.assertEqual(result.requestedCount, 3)
         self.assertEqual(result.allowedCount, 1)
         self.assertEqual(result.deniedCount, 2)
-        self.assertEqual(tuple(item.sourceEntityId for item in result.authorizedSources), ("allowed",))
+        self.assertEqual(
+            tuple(item.sourceEntityId for item in result.authorizedSources), ("allowed",)
+        )
         reasons = {item.sourceEntityId: item.reason for item in result.decisions}
         self.assertEqual(reasons["denied"], "DEFAULT_DENY")
         self.assertEqual(reasons["not-authorized"], "SOURCE_NOT_AUTHORIZED")
@@ -302,7 +304,9 @@ class Phase13KAuthorizationTests(unittest.TestCase):
     def testExternalContextRequiresSeparateExportPermissionAndPolicy(self) -> None:
         contextEngine = ContextEngine(now=lambda: self.clock)
         self.service.registerGrant(self.grant("AI_CONTEXT_BUILD", resourceType="AI_REQUEST"))
-        self.service.registerGrant(self.grant("AI_CONTEXT_SOURCE_READ", resourceType="CONTEXT_SOURCE"))
+        self.service.registerGrant(
+            self.grant("AI_CONTEXT_SOURCE_READ", resourceType="CONTEXT_SOURCE")
+        )
         with self.assertRaises(AIAuthorizationDenied):
             self.service.buildAuthorizedContext(
                 self.principal,
@@ -329,12 +333,18 @@ class Phase13KAuthorizationTests(unittest.TestCase):
     def testPermissionAwareContextEngineProtectsBuildReadListAndTenantScope(self) -> None:
         contextEngine = ContextEngine(now=lambda: self.clock)
         self.service.registerGrant(self.grant("AI_CONTEXT_BUILD", resourceType="AI_REQUEST"))
-        self.service.registerGrant(self.grant("AI_CONTEXT_SOURCE_READ", resourceType="CONTEXT_SOURCE"))
+        self.service.registerGrant(
+            self.grant("AI_CONTEXT_SOURCE_READ", resourceType="CONTEXT_SOURCE")
+        )
         self.service.registerGrant(self.grant("AI_CONTEXT_READ", resourceType="AI_CONTEXT"))
         facade = AuthorizedContextEngine(self.service, contextEngine)
-        result = facade.buildContext(self.principal, self.requestId, [self.source("doc", "payload")])
+        result = facade.buildContext(
+            self.principal, self.requestId, [self.source("doc", "payload")]
+        )
         self.assertEqual(facade.getContext(self.principal, result.context.id).content, "payload")
-        self.assertEqual(facade.describeContext(self.principal, result.context.id).contextId, result.context.id)
+        self.assertEqual(
+            facade.describeContext(self.principal, result.context.id).contextId, result.context.id
+        )
         self.assertEqual(len(facade.listContexts(self.principal)), 1)
         other = AuthorizationPrincipal(self.otherTenantId, self.otherSubjectId)
         with self.assertRaises(AIAuthorizationDenied):
@@ -366,9 +376,9 @@ class Phase13KAuthorizationTests(unittest.TestCase):
         self.assertIs(AIAuthorizationService, AuthorizationService)
         self.assertIs(PermissionAwareContextEngine, AuthorizedContextEngine)
         self.assertIs(AIContextAuthorizationEngine, AuthorizedContextEngine)
-        source = (Path(__file__).resolve().parents[2] / "apps/ai/domain/services/authorizationService.py").read_text(
-            encoding="utf-8"
-        )
+        source = (
+            Path(__file__).resolve().parents[2] / "apps/ai/domain/services/authorizationService.py"
+        ).read_text(encoding="utf-8")
         for forbidden in (
             "django",
             "rest_framework",

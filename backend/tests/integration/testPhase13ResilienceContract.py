@@ -183,9 +183,7 @@ class Phase13ResilienceContractTests(unittest.TestCase):
         self.assertFalse(outcome.report.fallbackUsed)
 
     def testRateLimit429IsRetriedOverRealTransport(self) -> None:
-        self._register(
-            PrimaryAdapter(baseUrl=self.baseUrl, invocationPath="/flaky/rate-limited")
-        )
+        self._register(PrimaryAdapter(baseUrl=self.baseUrl, invocationPath="/flaky/rate-limited"))
         outcome = self._executor(maxAttempts=3).execute(
             TENANT_ID, "PRIMARY", lambda adapter: adapter.generateRequest(self._request())
         )

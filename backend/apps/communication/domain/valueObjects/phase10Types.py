@@ -63,9 +63,7 @@ MEETING_CAPABILITIES = (
 #: a speaking/chatting attendee; GUEST is a restricted observer.
 DEFAULT_MEETING_CAPABILITIES: dict[str, frozenset[str]] = {
     MEETING_ROLE_HOST: frozenset(MEETING_CAPABILITIES),
-    MEETING_ROLE_CO_HOST: frozenset(
-        cap for cap in MEETING_CAPABILITIES if cap != CAP_END_MEETING
-    ),
+    MEETING_ROLE_CO_HOST: frozenset(cap for cap in MEETING_CAPABILITIES if cap != CAP_END_MEETING),
     MEETING_ROLE_PARTICIPANT: frozenset(
         {
             CAP_JOIN,
@@ -149,7 +147,7 @@ COMMUNICATION_RATE_LIMIT_SCOPES = (
 #: settings.COMMUNICATION_RATE_LIMITS. Presence is intentionally generous —
 #: heartbeats are frequent (§68).
 DEFAULT_RATE_LIMITS: dict[str, tuple[int, int]] = {
-    RL_SEND_MESSAGE: (30, 60),         # 30 messages / 60 s
+    RL_SEND_MESSAGE: (30, 60),  # 30 messages / 60 s
     RL_CREATE_CONVERSATION: (20, 300),  # 20 conversations / 5 min
     RL_CALL_START: (10, 60),
     RL_MEETING_CREATE: (20, 300),
@@ -237,9 +235,7 @@ class BlockScope(ValueObject):
 
     def __init__(self, value: str) -> None:
         if value not in BLOCK_SCOPES:
-            raise ValidationFailedError(
-                "Unknown block scope.", fieldErrors={"scope": value}
-            )
+            raise ValidationFailedError("Unknown block scope.", fieldErrors={"scope": value})
         self.value = value
 
     def __str__(self) -> str:

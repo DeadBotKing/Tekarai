@@ -25,7 +25,6 @@ from apps.notifications.domain.entities.notificationPreference import (
 )
 from apps.notifications.domain.entities.notificationTemplate import NotificationTemplate
 
-
 # ---------------------------------------------------------------------------
 # §39 repositories
 # ---------------------------------------------------------------------------
@@ -78,10 +77,10 @@ class NotificationRepository(Protocol):
 class NotificationDeliveryRepository(Protocol):
     def create(self, delivery: NotificationDelivery) -> None: ...
     def update(self, delivery: NotificationDelivery) -> None: ...
-    def getForNotification(
-        self, notificationId: uuid.UUID
+    def getForNotification(self, notificationId: uuid.UUID) -> list[NotificationDelivery]: ...
+    def listPendingRetry(
+        self, now: datetime, *, limit: int = 100
     ) -> list[NotificationDelivery]: ...
-    def listPendingRetry(self, now: datetime, *, limit: int = 100) -> list[NotificationDelivery]: ...
     def channelUsageCounts(self, tenantId: uuid.UUID) -> dict[str, int]: ...
 
 
@@ -170,7 +169,7 @@ class NotificationChannelPort(Protocol):
         renderedTitle: str,
         renderedSubject: str,
         renderedBody: str,
-    ) -> "DeliveryResult": ...
+    ) -> DeliveryResult: ...
 
 
 class DeliveryResult:
@@ -197,7 +196,7 @@ class NotificationProviderPort(Protocol):
         subject: str,
         body: str,
         meta: dict[str, Any],
-    ) -> "DeliveryResult": ...
+    ) -> DeliveryResult: ...
 
 
 # ---------------------------------------------------------------------------

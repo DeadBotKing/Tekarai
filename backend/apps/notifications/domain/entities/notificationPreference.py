@@ -6,10 +6,10 @@ import uuid
 
 from apps.notifications.domain.valueObjects.notificationTypes import (
     DELIVERY_CHANNELS,
-    PREFERENCE_LEVELS,
     PREF_LEVEL_CATEGORY,
     PREF_LEVEL_GLOBAL,
     PREF_LEVEL_TYPE,
+    PREFERENCE_LEVELS,
 )
 from apps.sharedKernel.domain.entities import AggregateRoot
 from apps.sharedKernel.domain.errors import ValidationFailedError
@@ -35,13 +35,9 @@ class NotificationPreference(AggregateRoot):
     ) -> None:
         super().__init__(id)
         if level not in PREFERENCE_LEVELS:
-            raise ValidationFailedError(
-                "Unknown preference level.", fieldErrors={"level": level}
-            )
+            raise ValidationFailedError("Unknown preference level.", fieldErrors={"level": level})
         if channel not in DELIVERY_CHANNELS:
-            raise ValidationFailedError(
-                "Unknown channel.", fieldErrors={"channel": channel}
-            )
+            raise ValidationFailedError("Unknown channel.", fieldErrors={"channel": channel})
         if level == PREF_LEVEL_TYPE and not notificationType:
             raise ValidationFailedError(
                 "TYPE-level preference requires notificationType.",
@@ -100,9 +96,7 @@ class NotificationPreferenceRule(AggregateRoot):
     ) -> None:
         super().__init__(id)
         if action not in self.ACTIONS:
-            raise ValidationFailedError(
-                "Unknown rule action.", fieldErrors={"action": action}
-            )
+            raise ValidationFailedError("Unknown rule action.", fieldErrors={"action": action})
         self.tenantId = tenantId
         self.category = category
         self.notificationType = notificationType

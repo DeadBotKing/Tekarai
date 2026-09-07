@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Iterable
 
-from apps.ai.domain.exceptions import AIToolDenied, AIQuotaExceeded
+from apps.ai.domain.exceptions import AIQuotaExceeded, AIToolDenied
 from apps.ai.domain.valueObjects.aiTypes import DATA_CLASSIFICATIONS, DataClassification
 
 
@@ -42,8 +42,14 @@ class ProviderPolicy:
     externalAllowed: bool = False
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "allowedProviderCodes", tuple(value.upper() for value in self.allowedProviderCodes))
-        object.__setattr__(self, "allowedModelCodes", tuple(value.upper() for value in self.allowedModelCodes))
+        object.__setattr__(
+            self,
+            "allowedProviderCodes",
+            tuple(value.upper() for value in self.allowedProviderCodes),
+        )
+        object.__setattr__(
+            self, "allowedModelCodes", tuple(value.upper() for value in self.allowedModelCodes)
+        )
         object.__setattr__(
             self,
             "allowedDataClassifications",
@@ -56,7 +62,9 @@ class ProviderPolicy:
             return False
         if self.allowedModelCodes and modelCode.upper() not in self.allowedModelCodes:
             return False
-        if not self.externalAllowed and any(value in {"CONFIDENTIAL", "RESTRICTED"} for value in classifications):
+        if not self.externalAllowed and any(
+            value in {"CONFIDENTIAL", "RESTRICTED"} for value in classifications
+        ):
             return False
         return all(value in self.allowedDataClassifications for value in classifications)
 

@@ -107,9 +107,7 @@ class OfficialLetter(AggregateRoot):
     def transitionTo(self, target: str, now: datetime) -> None:
         allowed = LETTER_TRANSITIONS.get(self.letterStatus, ())
         if target not in allowed:
-            raise InvalidStateTransitionError(
-                f"Letter cannot move {self.letterStatus} → {target}."
-            )
+            raise InvalidStateTransitionError(f"Letter cannot move {self.letterStatus} → {target}.")
         self.letterStatus = target
         self.recordEvent(
             DomainEvent(

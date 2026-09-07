@@ -40,15 +40,11 @@ def callParticipantIds(callIds: list[uuid.UUID]) -> list[uuid.UUID]:
 
     if not callIds:
         return []
-    rows = CallParticipantModel.objects.filter(callId__in=callIds).values_list(
-        "userId", flat=True
-    )
+    rows = CallParticipantModel.objects.filter(callId__in=callIds).values_list("userId", flat=True)
     return list(dict.fromkeys(rows))
 
 
-def channelMemberIds(
-    tenantId: uuid.UUID, conversationIds: list[uuid.UUID]
-) -> list[uuid.UUID]:
+def channelMemberIds(tenantId: uuid.UUID, conversationIds: list[uuid.UUID]) -> list[uuid.UUID]:
     from apps.communication.infrastructure.models import ChannelMembershipModel
 
     if not conversationIds:

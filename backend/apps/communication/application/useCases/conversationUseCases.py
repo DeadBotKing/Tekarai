@@ -9,6 +9,7 @@ admin-level operations (channel creation, moderation).
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from apps.communication.application.commands.communicationCommands import (
     AddParticipantCommand,
@@ -46,7 +47,6 @@ from apps.communication.domain.valueObjects.communicationTypes import (
     CHANNEL_PUBLIC,
     CONVERSATION_CHANNEL,
     CONVERSATION_DIRECT,
-    PARTICIPANT_ADMIN,
     PARTICIPANT_MEMBER,
     PARTICIPANT_OWNER,
 )
@@ -81,7 +81,7 @@ class CreateDirectConversationUseCase(
         conversationRepository: ConversationRepository,
         participantRepository: ParticipantRepository,
         userDirectory: UserDirectory,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.conversationRepository = conversationRepository
@@ -106,9 +106,7 @@ class CreateDirectConversationUseCase(
         self.conversationRepository.create(conversation)
         for userId, role in ((actorId, PARTICIPANT_OWNER), (peerId, PARTICIPANT_MEMBER)):
             self.participantRepository.add(
-                ConversationParticipant.establish(
-                    conversation.id, tenantId, userId, role, now
-                )
+                ConversationParticipant.establish(conversation.id, tenantId, userId, role, now)
             )
         self.collectEventsFrom(conversation)
         self.emitIntegrationEvent(
@@ -138,7 +136,7 @@ class CreateGroupConversationUseCase(
         conversationRepository: ConversationRepository,
         participantRepository: ParticipantRepository,
         userDirectory: UserDirectory,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.conversationRepository = conversationRepository
@@ -147,9 +145,7 @@ class CreateGroupConversationUseCase(
 
     def validateCommand(self, command: CreateGroupConversationCommand) -> None:
         if not command.name.strip():
-            raise ValidationFailedError(
-                "Group name is required.", fieldErrors={"name": "empty"}
-            )
+            raise ValidationFailedError("Group name is required.", fieldErrors={"name": "empty"})
 
     def perform(self, command: CreateGroupConversationCommand) -> ConversationDto:
         actorId, tenantId = actorOf()
@@ -171,7 +167,11 @@ class CreateGroupConversationUseCase(
                 raise EntityNotFoundError("User", member)
             self.participantRepository.add(
                 ConversationParticipant.establish(
-                    conversation.id, tenantId, memberId, PARTICIPANT_MEMBER, now,
+                    conversation.id,
+                    tenantId,
+                    memberId,
+                    PARTICIPANT_MEMBER,
+                    now,
                     invitedBy=actorId,
                 )
             )
@@ -200,7 +200,7 @@ class CreateChannelUseCase(CommunicationUseCase[CreateChannelCommand, Conversati
         self,
         conversationRepository: ConversationRepository,
         participantRepository: ParticipantRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.conversationRepository = conversationRepository
@@ -208,9 +208,7 @@ class CreateChannelUseCase(CommunicationUseCase[CreateChannelCommand, Conversati
 
     def validateCommand(self, command: CreateChannelCommand) -> None:
         if not command.name.strip():
-            raise ValidationFailedError(
-                "Channel name is required.", fieldErrors={"name": "empty"}
-            )
+            raise ValidationFailedError("Channel name is required.", fieldErrors={"name": "empty"})
         from apps.communication.domain.valueObjects.communicationTypes import (
             ChannelVisibility,
         )
@@ -229,12 +227,18 @@ class CreateChannelUseCase(CommunicationUseCase[CreateChannelCommand, Conversati
             )
         now = self.clock.nowUtc()
         conversation = Conversation.createChannel(
-            tenantId, actorId, command.name, now,
-            description=command.description, code=code,
+            tenantId,
+            actorId,
+            command.name,
+            now,
+            description=command.description,
+            code=code,
         )
         self.conversationRepository.create(
             conversation,
-            code=code, topic=command.topic, visibility=command.visibility,
+            code=code,
+            topic=command.topic,
+            visibility=command.visibility,
         )
         self.participantRepository.add(
             ConversationParticipant.establish(
@@ -260,9 +264,7 @@ class CreateChannelUseCase(CommunicationUseCase[CreateChannelCommand, Conversati
         )
 
 
-class UpdateConversationUseCase(
-    CommunicationUseCase[UpdateConversationCommand, ConversationDto]
-):
+class UpdateConversationUseCase(CommunicationUseCase[UpdateConversationCommand, ConversationDto]):
     """Name/description (groups) + topic/description (channels) — admins."""
 
     requiredAction = ""
@@ -271,7 +273,7 @@ class UpdateConversationUseCase(
         self,
         conversationRepository: ConversationRepository,
         participantRepository: ParticipantRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.conversationRepository = conversationRepository
@@ -306,9 +308,7 @@ class UpdateConversationUseCase(
     # -- helpers --------------------------------------------------------------
 
     def loadConversation(self, conversationId: str, tenantId: uuid.UUID) -> Conversation:
-        conversation = self.conversationRepository.getById(
-            asUuid(conversationId), tenantId
-        )
+        conversation = self.conversationRepository.getById(asUuid(conversationId), tenantId)
         if conversation is None:
             raise EntityNotFoundError("Conversation", conversationId)
         return conversation
@@ -319,16 +319,14 @@ class UpdateConversationUseCase(
             raise PermissionDeniedError(action="conversation.update")
 
 
-class ArchiveConversationUseCase(
-    CommunicationUseCase[ArchiveConversationCommand, object]
-):
+class ArchiveConversationUseCase(CommunicationUseCase[ArchiveConversationCommand, object]):
     requiredAction = "conversation.moderate"
 
     def __init__(
         self,
         conversationRepository: ConversationRepository,
         participantRepository: ParticipantRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.conversationRepository = conversationRepository
@@ -336,9 +334,7 @@ class ArchiveConversationUseCase(
 
     def perform(self, command: ArchiveConversationCommand) -> object:
         actorId, tenantId = actorOf()
-        conversation = self.conversationRepository.getById(
-            asUuid(command.conversationId), tenantId
-        )
+        conversation = self.conversationRepository.getById(asUuid(command.conversationId), tenantId)
         if conversation is None:
             raise EntityNotFoundError("Conversation", command.conversationId)
         participant = self.participantRepository.get(conversation.id, actorId)
@@ -372,7 +368,7 @@ class AddParticipantUseCase(CommunicationUseCase[AddParticipantCommand, Particip
         conversationRepository: ConversationRepository,
         participantRepository: ParticipantRepository,
         userDirectory: UserDirectory,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.conversationRepository = conversationRepository
@@ -381,9 +377,7 @@ class AddParticipantUseCase(CommunicationUseCase[AddParticipantCommand, Particip
 
     def perform(self, command: AddParticipantCommand) -> ParticipantDto:
         actorId, tenantId = actorOf()
-        conversation = self.conversationRepository.getById(
-            asUuid(command.conversationId), tenantId
-        )
+        conversation = self.conversationRepository.getById(asUuid(command.conversationId), tenantId)
         if conversation is None:
             raise EntityNotFoundError("Conversation", command.conversationId)
         moderator = self.participantRepository.get(conversation.id, actorId)
@@ -434,16 +428,14 @@ class AddParticipantUseCase(CommunicationUseCase[AddParticipantCommand, Particip
         return participantDto(participant)
 
 
-class RemoveParticipantUseCase(
-    CommunicationUseCase[RemoveParticipantCommand, object]
-):
+class RemoveParticipantUseCase(CommunicationUseCase[RemoveParticipantCommand, object]):
     requiredAction = "conversation.moderate"
 
     def __init__(
         self,
         conversationRepository: ConversationRepository,
         participantRepository: ParticipantRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.conversationRepository = conversationRepository
@@ -451,9 +443,7 @@ class RemoveParticipantUseCase(
 
     def perform(self, command: RemoveParticipantCommand) -> object:
         actorId, tenantId = actorOf()
-        conversation = self.conversationRepository.getById(
-            asUuid(command.conversationId), tenantId
-        )
+        conversation = self.conversationRepository.getById(asUuid(command.conversationId), tenantId)
         if conversation is None:
             raise EntityNotFoundError("Conversation", command.conversationId)
         moderator = self.participantRepository.get(conversation.id, actorId)
@@ -495,19 +485,15 @@ class UpdateParticipantPreferencesUseCase(
         self,
         conversationRepository: ConversationRepository,
         participantRepository: ParticipantRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.conversationRepository = conversationRepository
         self.participantRepository = participantRepository
 
-    def perform(
-        self, command: UpdateParticipantPreferencesCommand
-    ) -> ParticipantDto:
+    def perform(self, command: UpdateParticipantPreferencesCommand) -> ParticipantDto:
         actorId, tenantId = actorOf()
-        conversation = self.conversationRepository.getById(
-            asUuid(command.conversationId), tenantId
-        )
+        conversation = self.conversationRepository.getById(asUuid(command.conversationId), tenantId)
         if conversation is None:
             raise EntityNotFoundError("Conversation", command.conversationId)
         participant = self.participantRepository.get(conversation.id, actorId)
@@ -531,7 +517,7 @@ class JoinChannelUseCase(CommunicationUseCase[JoinChannelCommand, ParticipantDto
         conversationRepository: ConversationRepository,
         participantRepository: ParticipantRepository,
         channelProfileReader: object,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.conversationRepository = conversationRepository
@@ -540,16 +526,12 @@ class JoinChannelUseCase(CommunicationUseCase[JoinChannelCommand, ParticipantDto
 
     def perform(self, command: JoinChannelCommand) -> ParticipantDto:
         actorId, tenantId = actorOf()
-        conversation = self.conversationRepository.getById(
-            asUuid(command.conversationId), tenantId
-        )
+        conversation = self.conversationRepository.getById(asUuid(command.conversationId), tenantId)
         if conversation is None or conversation.conversationType != CONVERSATION_CHANNEL:
             raise EntityNotFoundError("Conversation", command.conversationId)
         visibility = self.channelProfileReader.visibilityOf(conversation.id)
         if visibility != CHANNEL_PUBLIC:
-            raise PermissionDeniedError(
-                "Channel is not public.", action="channel.join"
-            )
+            raise PermissionDeniedError("Channel is not public.", action="channel.join")
         existing = self.participantRepository.get(conversation.id, actorId)
         now = self.clock.nowUtc()
         if existing is not None and existing.isActive():
@@ -571,16 +553,14 @@ class JoinChannelUseCase(CommunicationUseCase[JoinChannelCommand, ParticipantDto
         return participantDto(participant)
 
 
-class ListConversationsUseCase(
-    CommunicationUseCase[ListConversationsQuery, list[ConversationDto]]
-):
+class ListConversationsUseCase(CommunicationUseCase[ListConversationsQuery, list[ConversationDto]]):
     requiredAction = ""
 
     def __init__(
         self,
         conversationRepository: ConversationRepository,
         participantRepository: ParticipantRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.conversationRepository = conversationRepository
@@ -611,9 +591,7 @@ class ListConversationsUseCase(
         ]
 
 
-class GetConversationUseCase(
-    CommunicationUseCase[GetConversationQuery, ConversationDto]
-):
+class GetConversationUseCase(CommunicationUseCase[GetConversationQuery, ConversationDto]):
     requiredAction = ""
 
     def __init__(
@@ -621,7 +599,7 @@ class GetConversationUseCase(
         conversationRepository: ConversationRepository,
         participantRepository: ParticipantRepository,
         channelProfileReader: object = None,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.conversationRepository = conversationRepository
@@ -630,9 +608,7 @@ class GetConversationUseCase(
 
     def perform(self, query: GetConversationQuery) -> ConversationDto:
         actorId, tenantId = actorOf()
-        conversation = self.conversationRepository.getById(
-            asUuid(query.conversationId), tenantId
-        )
+        conversation = self.conversationRepository.getById(asUuid(query.conversationId), tenantId)
         if conversation is None:
             raise EntityNotFoundError("Conversation", query.conversationId)
         if conversation.conversationType != CONVERSATION_CHANNEL:
@@ -646,16 +622,14 @@ class GetConversationUseCase(
         return dto
 
 
-class ListParticipantsUseCase(
-    CommunicationUseCase[ListParticipantsQuery, list[ParticipantDto]]
-):
+class ListParticipantsUseCase(CommunicationUseCase[ListParticipantsQuery, list[ParticipantDto]]):
     requiredAction = ""
 
     def __init__(
         self,
         conversationRepository: ConversationRepository,
         participantRepository: ParticipantRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.conversationRepository = conversationRepository
@@ -663,9 +637,7 @@ class ListParticipantsUseCase(
 
     def perform(self, query: ListParticipantsQuery) -> list[ParticipantDto]:
         actorId, tenantId = actorOf()
-        conversation = self.conversationRepository.getById(
-            asUuid(query.conversationId), tenantId
-        )
+        conversation = self.conversationRepository.getById(asUuid(query.conversationId), tenantId)
         if conversation is None:
             raise EntityNotFoundError("Conversation", query.conversationId)
         if conversation.conversationType != CONVERSATION_CHANNEL:
@@ -705,9 +677,7 @@ def participantDto(participant: ConversationParticipant) -> ParticipantDto:
     )
 
 
-class LeaveConversationUseCase(
-    CommunicationUseCase[LeaveConversationCommand, object]
-):
+class LeaveConversationUseCase(CommunicationUseCase[LeaveConversationCommand, object]):
     """§6 — members may leave; the owner must transfer ownership first."""
 
     requiredAction = ""
@@ -716,7 +686,7 @@ class LeaveConversationUseCase(
         self,
         conversationRepository: ConversationRepository,
         participantRepository: ParticipantRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.conversationRepository = conversationRepository
@@ -724,9 +694,7 @@ class LeaveConversationUseCase(
 
     def perform(self, command: LeaveConversationCommand) -> object:
         actorId, tenantId = actorOf()
-        conversation = self.conversationRepository.getById(
-            asUuid(command.conversationId), tenantId
-        )
+        conversation = self.conversationRepository.getById(asUuid(command.conversationId), tenantId)
         if conversation is None:
             raise EntityNotFoundError("Conversation", command.conversationId)
         me = self.participantRepository.get(conversation.id, actorId)
@@ -764,7 +732,7 @@ class ChangeParticipantRoleUseCase(
         self,
         conversationRepository: ConversationRepository,
         participantRepository: ParticipantRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.conversationRepository = conversationRepository
@@ -772,21 +740,13 @@ class ChangeParticipantRoleUseCase(
 
     def perform(self, command: ChangeParticipantRoleCommand) -> ParticipantDto:
         actorId, tenantId = actorOf()
-        conversation = self.conversationRepository.getById(
-            asUuid(command.conversationId), tenantId
-        )
+        conversation = self.conversationRepository.getById(asUuid(command.conversationId), tenantId)
         if conversation is None:
             raise EntityNotFoundError("Conversation", command.conversationId)
         actor = self.participantRepository.get(conversation.id, actorId)
-        if (
-            actor is None
-            or not actor.isActive()
-            or not actor.isModerator()
-        ):
+        if actor is None or not actor.isActive() or not actor.isModerator():
             raise PermissionDeniedError(action="participant.changeRole")
-        target = self.participantRepository.get(
-            conversation.id, asUuid(command.userId)
-        )
+        target = self.participantRepository.get(conversation.id, asUuid(command.userId))
         if target is None:
             raise EntityNotFoundError("Participant", command.userId)
         target.changeRole(command.role, self.clock.nowUtc())

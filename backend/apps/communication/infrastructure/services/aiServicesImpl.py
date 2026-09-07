@@ -18,9 +18,7 @@ class TranscriptReaderDjango:
         from apps.communication.infrastructure.models import MessageModel
 
         rows = (
-            MessageModel.objects.filter(
-                conversationId=conversationId, deletedAt__isnull=True
-            )
+            MessageModel.objects.filter(conversationId=conversationId, deletedAt__isnull=True)
             .exclude(body="")
             .order_by("createdAt")
             .values_list("senderId", "body")

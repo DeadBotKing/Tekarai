@@ -82,9 +82,7 @@ class BroadcastNotificationRepositoryDjango:
     def getById(
         self, tenantId: uuid.UUID, notificationId: uuid.UUID
     ) -> d.BroadcastNotification | None:
-        model = NotificationModel.objects.filter(
-            tenantId=tenantId, id=notificationId
-        ).first()
+        model = NotificationModel.objects.filter(tenantId=tenantId, id=notificationId).first()
         if model is None:
             return None
         return self._toDomain(model)
@@ -107,9 +105,7 @@ class BroadcastNotificationRepositoryDjango:
         unreadOnly: bool = False,
         limit: int = 50,
     ) -> list[d.BroadcastNotification]:
-        rows = NotificationRecipientModel.objects.filter(
-            tenantId=tenantId, userId=recipientId
-        )
+        rows = NotificationRecipientModel.objects.filter(tenantId=tenantId, userId=recipientId)
         if unreadOnly:
             rows = rows.filter(recipientState="UNREAD")
         recipientRows = list(rows.order_by("-createdAt")[: limit * 2])
@@ -120,8 +116,7 @@ class BroadcastNotificationRepositoryDjango:
             ).order_by("-createdAt")[:limit]
         )
         return [
-            self._toDomain(n, recipients=(recipientByNotification[n.id],))
-            for n in notifications
+            self._toDomain(n, recipients=(recipientByNotification[n.id],)) for n in notifications
         ]
 
     def unreadCount(self, tenantId: uuid.UUID, recipientId: uuid.UUID) -> int:
@@ -286,9 +281,7 @@ class RecipientDeliveryRepositoryDjango:
             },
         )
 
-    def getById(
-        self, tenantId: uuid.UUID, deliveryId: uuid.UUID
-    ) -> d.RecipientDelivery | None:
+    def getById(self, tenantId: uuid.UUID, deliveryId: uuid.UUID) -> d.RecipientDelivery | None:
         model = NotificationRecipientDeliveryModel.objects.filter(
             tenantId=tenantId, id=deliveryId
         ).first()
@@ -323,9 +316,7 @@ class RecipientDeliveryRepositoryDjango:
             ).order_by("nextAttemptAt")[:limit]
         ]
 
-    def listDeadLetter(
-        self, tenantId: uuid.UUID, *, limit: int = 100
-    ) -> list[d.RecipientDelivery]:
+    def listDeadLetter(self, tenantId: uuid.UUID, *, limit: int = 100) -> list[d.RecipientDelivery]:
         return [
             self._toDomain(m)
             for m in NotificationRecipientDeliveryModel.objects.filter(
@@ -333,9 +324,7 @@ class RecipientDeliveryRepositoryDjango:
             ).order_by("-lastAttemptAt")[:limit]
         ]
 
-    def listAttempts(
-        self, tenantId: uuid.UUID, deliveryId: uuid.UUID
-    ) -> list[d.DeliveryAttempt]:
+    def listAttempts(self, tenantId: uuid.UUID, deliveryId: uuid.UUID) -> list[d.DeliveryAttempt]:
         return [
             d.DeliveryAttempt(
                 id=m.id,
@@ -418,9 +407,7 @@ class NotificationRuleRepositoryDjango:
     def listActive(self, tenantId: uuid.UUID) -> list[d.NotificationRule]:
         return [
             self._toDomain(m)
-            for m in NotificationRuleModel.objects.filter(
-                tenantId=tenantId, isActive=True
-            )
+            for m in NotificationRuleModel.objects.filter(tenantId=tenantId, isActive=True)
         ]
 
     @staticmethod
@@ -459,9 +446,7 @@ class InboundEventRepositoryDjango:
             },
         )
 
-    def findProcessed(
-        self, tenantId: uuid.UUID, eventId: str
-    ) -> d.InboundNotificationEvent | None:
+    def findProcessed(self, tenantId: uuid.UUID, eventId: str) -> d.InboundNotificationEvent | None:
         model = NotificationEventModel.objects.filter(
             tenantId=tenantId, eventId=eventId, processed=True
         ).first()

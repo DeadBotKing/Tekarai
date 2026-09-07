@@ -14,15 +14,15 @@ from apps.notifications.application.services.notificationSupport import (
     NotificationUseCase,
 )
 from apps.notifications.domain.entities.notificationPolicy import NotificationPolicy
+from apps.notifications.domain.repositories.notificationRepositories import (
+    NotificationPolicyRepository,
+    NotificationPreferenceRepository,
+)
 from apps.notifications.domain.services import notificationRules
 from apps.notifications.domain.valueObjects.notificationTypes import (
     CATEGORY_SECURITY,
     CHANNEL_IN_APP,
     PRIORITY_NORMAL,
-)
-from apps.notifications.domain.repositories.notificationRepositories import (
-    NotificationPolicyRepository,
-    NotificationPreferenceRepository,
 )
 
 
@@ -41,7 +41,9 @@ class PolicyResolution:
         return traceLines
 
 
-def defaultPolicyFor(tenantId: uuid.UUID, notificationType: str, category: str) -> NotificationPolicy:
+def defaultPolicyFor(
+    tenantId: uuid.UUID, notificationType: str, category: str
+) -> NotificationPolicy:
     """Safe fallback when no configured policy matches (§8): in-app only."""
     return NotificationPolicy(
         id=uuid.uuid5(uuid.NAMESPACE_URL, f"tekarai:defaultPolicy:{tenantId}:{notificationType}"),
@@ -86,20 +88,18 @@ class ResolveNotificationPolicyService(NotificationUseCase):
         denied: list[str] = []
         for rule in self.preferenceRepository.listRules(tenantId):
             applies = (
-                not rule.notificationType
-                and not rule.category
-            ) or (
-                rule.notificationType
-                and rule.notificationType == notificationType
-            ) or (
-                not rule.notificationType
-                and rule.category
-                and rule.category == category
+                (not rule.notificationType and not rule.category)
+                or (rule.notificationType and rule.notificationType == notificationType)
+                or (not rule.notificationType and rule.category and rule.category == category)
             )
             if not applies:
                 continue
             # §11 — a tenant may never weaken platform security delivery
-            if rule.action == rule.DENIED and rule.channel == CHANNEL_IN_APP and category == CATEGORY_SECURITY:
+            if (
+                rule.action == rule.DENIED
+                and rule.channel == CHANNEL_IN_APP
+                and category == CATEGORY_SECURITY
+            ):
                 continue
             if rule.action == rule.FORCED:
                 forced.append(rule.channel)
@@ -135,8 +135,13 @@ class ResolveNotificationPreferencesService(NotificationUseCase):
         self, tenantId: uuid.UUID, userId: uuid.UUID
     ) -> list[tuple[str, str, str, str, bool]]:
         return [
-            (preference.level, preference.category, preference.notificationType,
-             preference.channel, preference.enabled)
+            (
+                preference.level,
+                preference.category,
+                preference.notificationType,
+                preference.channel,
+                preference.enabled,
+            )
             for preference in self.preferenceRepository.listForUser(tenantId, userId)
         ]
 

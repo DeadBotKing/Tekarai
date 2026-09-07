@@ -104,9 +104,7 @@ class SignalingProtocol:
         if kind not in SIGNAL_KINDS:
             from apps.sharedKernel.domain.errors import ValidationFailedError
 
-            raise ValidationFailedError(
-                "Unknown signaling kind.", fieldErrors={"kind": kind}
-            )
+            raise ValidationFailedError("Unknown signaling kind.", fieldErrors={"kind": kind})
         return {
             "version": SignalingProtocol.VERSION,
             "kind": kind,
@@ -130,9 +128,7 @@ class SignalingProtocol:
         if kind not in SIGNAL_KINDS:
             from apps.sharedKernel.domain.errors import ValidationFailedError
 
-            raise ValidationFailedError(
-                "Unknown signaling kind.", fieldErrors={"kind": kind}
-            )
+            raise ValidationFailedError("Unknown signaling kind.", fieldErrors={"kind": kind})
         callId = str(envelope.get("callId", ""))
         if not callId:
             from apps.sharedKernel.domain.errors import ValidationFailedError

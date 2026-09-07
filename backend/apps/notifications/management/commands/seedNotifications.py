@@ -192,9 +192,7 @@ class Command(BaseCommand):
             tenantId = tenant.id
             for templateKey, channel, english, persian in TEMPLATES:
                 for language, content in (("en-US", english), ("fa-IR", persian)):
-                    outcome = self._saveTemplate(
-                        tenantId, templateKey, language, channel, content
-                    )
+                    outcome = self._saveTemplate(tenantId, templateKey, language, channel, content)
                     if outcome == "created":
                         createdTemplates += 1
                     elif outcome == "updated":
@@ -231,11 +229,11 @@ class Command(BaseCommand):
 
     @staticmethod
     def _saveTemplate(tenantId, templateKey, language, channel, content) -> str:
-        from apps.notifications.infrastructure.repositories.notificationRepositoriesImpl import (
-            NotificationTemplateRepositoryDjango,
-        )
         from apps.notifications.domain.entities.notificationTemplate import (
             NotificationTemplate,
+        )
+        from apps.notifications.infrastructure.repositories.notificationRepositoriesImpl import (
+            NotificationTemplateRepositoryDjango,
         )
 
         repository = NotificationTemplateRepositoryDjango()
@@ -243,9 +241,7 @@ class Command(BaseCommand):
         title, subject, body = content
         if existing is not None:
             sameContent = (
-                existing.title == title
-                and existing.subject == subject
-                and existing.body == body
+                existing.title == title and existing.subject == subject and existing.body == body
             )
             if sameContent:
                 return "unchanged"
@@ -278,11 +274,11 @@ class Command(BaseCommand):
         bypass,
         cooldown,
     ) -> bool:
-        from apps.notifications.infrastructure.repositories.notificationRepositoriesImpl import (
-            NotificationPolicyRepositoryDjango,
-        )
         from apps.notifications.domain.entities.notificationPolicy import (
             NotificationPolicy,
+        )
+        from apps.notifications.infrastructure.repositories.notificationRepositoriesImpl import (
+            NotificationPolicyRepositoryDjango,
         )
 
         repository = NotificationPolicyRepositoryDjango()

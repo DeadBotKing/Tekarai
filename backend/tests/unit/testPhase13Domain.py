@@ -24,15 +24,20 @@ from apps.ai.domain.entities.aiRecords import (
     AIPrompt,
     AIPromptVersion,
     AIProvider,
-    AIRetrieval,
     AIRequest,
     AIResponse,
+    AIRetrieval,
     AITool,
     AIToolExecution,
     AIUsage,
 )
 from apps.ai.domain.exceptions import AIContextTooLarge, AIToolDenied
-from apps.ai.domain.policies.aiPolicies import ContextPolicy, ProviderPolicy, QuotaPolicy, ToolPolicy
+from apps.ai.domain.policies.aiPolicies import (
+    ContextPolicy,
+    ProviderPolicy,
+    QuotaPolicy,
+    ToolPolicy,
+)
 from apps.ai.domain.services.aiRules import (
     buildContext,
     calculateCost,
@@ -50,7 +55,6 @@ from apps.ai.domain.valueObjects.aiTypes import (
     MemoryScope,
     ModelType,
     OutputClassification,
-    RequestStatus,
     RetryPolicy,
     TokenUsage,
 )
@@ -72,8 +76,11 @@ class Phase13BDomainTests(unittest.TestCase):
         self.assertEqual(str(OutputClassification("ADVISORY")), "ADVISORY")
         self.assertEqual(str(MemoryScope("AGENT")), "AGENT")
         self.assertEqual(TokenUsage(2, 3).totalTokens, 5)
-        self.assertEqual(CostRate(Decimal("1"), Decimal("2")).calculate(TokenUsage(1000, 500)).amount, Decimal("2.00000000"))
-        with self.assertRaises(Exception):
+        self.assertEqual(
+            CostRate(Decimal("1"), Decimal("2")).calculate(TokenUsage(1000, 500)).amount,
+            Decimal("2.00000000"),
+        )
+        with self.assertRaises(Exception):  # noqa: B017
             ModelType("UNKNOWN")
 
     def testProviderModelCapabilityAreTenantScopedAndProviderIndependent(self) -> None:
@@ -82,7 +89,7 @@ class Phase13BDomainTests(unittest.TestCase):
         self.assertTrue(self.capability.accepts("GENERATE"))
         otherTenant = uuid.uuid4()
         self.assertNotEqual(self.provider.tenantId, otherTenant)
-        with self.assertRaises(Exception):
+        with self.assertRaises(Exception):  # noqa: B017
             AIModel(self.tenantId, self.provider.id, "bad code", "Invalid")
 
     def testOperationAndRequestStateMachinesAreExplicit(self) -> None:
@@ -145,7 +152,9 @@ class Phase13BDomainTests(unittest.TestCase):
         item.transitionTo("INDEXING")
         item.transitionTo("READY")
         chunk = AIKnowledgeChunk(self.tenantId, item.id, 0, "content", tokenCount=2)
-        embedding = AIEmbedding(self.tenantId, "KnowledgeChunk", str(chunk.id), self.model.id, (0.1, 0.2), chunk.id)
+        embedding = AIEmbedding(
+            self.tenantId, "KnowledgeChunk", str(chunk.id), self.model.id, (0.1, 0.2), chunk.id
+        )
         retrieval = AIRetrieval(self.tenantId, uuid.uuid4(), "query", (chunk,))
         retrieval.authorize((chunk,))
         retrieval.select(1)
@@ -154,18 +163,32 @@ class Phase13BDomainTests(unittest.TestCase):
 
     def testUsageCostFeedbackEvaluationAndAuditRespectContracts(self) -> None:
         request = AIRequest(self.tenantId, self.capability.id, "GENERATE")
-        usage = AIUsage(self.tenantId, request.id, self.provider.id, self.model.id, TokenUsage(1000, 500))
-        cost = AICost(self.tenantId, request.id, usage.id, usage.cost(CostRate(Decimal("1"), Decimal("2"))))
-        feedback = AIFeedback(self.tenantId, request.id, uuid.uuid4(), rating=5, sentiment="POSITIVE")
+        usage = AIUsage(
+            self.tenantId, request.id, self.provider.id, self.model.id, TokenUsage(1000, 500)
+        )
+        cost = AICost(
+            self.tenantId, request.id, usage.id, usage.cost(CostRate(Decimal("1"), Decimal("2")))
+        )
+        feedback = AIFeedback(
+            self.tenantId, request.id, uuid.uuid4(), rating=5, sentiment="POSITIVE"
+        )
         evaluation = AIEvaluation(self.tenantId, request.id, "MANUAL", metrics={"accuracy": 1.0})
-        audit = AIAuditRecord(self.tenantId, request.id, "GENERATE", self.userId, resultClassification="ADVISORY")
+        audit = AIAuditRecord(
+            self.tenantId, request.id, "GENERATE", self.userId, resultClassification="ADVISORY"
+        )
         self.assertEqual(cost.currency, "USD")
         self.assertEqual(feedback.rating, 5)
         self.assertEqual(evaluation.metrics["accuracy"], 1.0)
         self.assertTrue(audit.redacted)
 
     def testToolAndAgentExecutionRequireValidLifecycle(self) -> None:
-        tool = AITool(self.tenantId, "SEARCH_PROJECT", "Search project", "Searches authorized projects", requiredPermission="project.view")
+        tool = AITool(
+            self.tenantId,
+            "SEARCH_PROJECT",
+            "Search project",
+            "Searches authorized projects",
+            requiredPermission="project.view",
+        )
         execution = AIToolExecution(self.tenantId, uuid.uuid4(), tool.id, {"q": "x"})
         execution.transitionTo("RUNNING")
         execution.transitionTo("SUCCEEDED")
@@ -177,18 +200,30 @@ class Phase13BDomainTests(unittest.TestCase):
         self.assertEqual(agentExecution.status, "COMPLETED")
 
     def testPureRulesCoverSchemaRetryQuotaPolicyAndSecrets(self) -> None:
-        schema = {"type": "object", "required": ["summary"], "properties": {"summary": {"type": "string"}}}
+        schema = {
+            "type": "object",
+            "required": ["summary"],
+            "properties": {"summary": {"type": "string"}},
+        }
         self.assertEqual(ensureStructuredOutput({"summary": "ok"}, schema), {"summary": "ok"})
-        with self.assertRaises(Exception):
+        with self.assertRaises(Exception):  # noqa: B017
             ensureStructuredOutput({"summary": 1}, schema)
-        policy = RetryPolicy(maxAttempts=3, initialDelaySeconds=30, multiplier=2, maxDelaySeconds=60)
+        policy = RetryPolicy(
+            maxAttempts=3, initialDelaySeconds=30, multiplier=2, maxDelaySeconds=60
+        )
         self.assertEqual(retryDelay(policy, 1), 30)
         self.assertEqual(retryDelay(policy, 3), 60)
         self.assertGreater(nextRetryAt(policy, 1).timestamp(), 0)
-        self.assertEqual(calculateCost(TokenUsage(1000, 1000), CostRate(Decimal("1"), Decimal("3"))), Decimal("4.00000000"))
+        self.assertEqual(
+            calculateCost(TokenUsage(1000, 1000), CostRate(Decimal("1"), Decimal("3"))),
+            Decimal("4.00000000"),
+        )
         self.assertEqual(estimateTokens("1234"), 1)
         self.assertNotIn("do-not-log", str(redact({"secret": "do-not-log"})))
-        self.assertNotEqual(idempotencyFingerprint(str(self.tenantId), "GENERATE", "a"), idempotencyFingerprint(str(uuid.uuid4()), "GENERATE", "a"))
+        self.assertNotEqual(
+            idempotencyFingerprint(str(self.tenantId), "GENERATE", "a"),
+            idempotencyFingerprint(str(uuid.uuid4()), "GENERATE", "a"),
+        )
         self.assertTrue(ProviderPolicy(externalAllowed=False).permits("LOCAL", "TEST", ["PUBLIC"]))
         QuotaPolicy(dailyTokenLimit=10).checkTokens(5, 5)
         with self.assertRaises(AIToolDenied):

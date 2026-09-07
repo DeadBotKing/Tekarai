@@ -19,12 +19,12 @@ class CreateNotificationSerializer(serializers.Serializer):
     body = serializers.CharField(required=False, default="", allow_blank=True)
     sourceType = serializers.CharField(max_length=64, required=False, allow_blank=True, default="")
     sourceId = serializers.CharField(max_length=120, required=False, allow_blank=True, default="")
-    templateKey = serializers.CharField(max_length=120, required=False, allow_blank=True, default="")
+    templateKey = serializers.CharField(
+        max_length=120, required=False, allow_blank=True, default=""
+    )
     actionUrl = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
     ackRequired = serializers.BooleanField(default=False)
-    channels = serializers.ListField(
-        child=serializers.CharField(), required=False, default=list
-    )
+    channels = serializers.ListField(child=serializers.CharField(), required=False, default=list)
     data = serializers.DictField(required=False, default=dict)
     eventId = serializers.CharField(max_length=120, required=False, allow_blank=True, default="")
     expiresAt = serializers.DateTimeField(required=False, allow_null=True, default=None)
@@ -93,7 +93,9 @@ class SavePolicySerializer(serializers.Serializer):
     priority = serializers.ChoiceField(
         choices=["LOW", "NORMAL", "HIGH", "URGENT", "CRITICAL"], default="NORMAL"
     )
-    templateKey = serializers.CharField(max_length=120, required=False, allow_blank=True, default="")
+    templateKey = serializers.CharField(
+        max_length=120, required=False, allow_blank=True, default=""
+    )
     maxRetries = serializers.IntegerField(default=3, min_value=1, max_value=10)
     cooldownSeconds = serializers.IntegerField(default=60, min_value=0)
     digestKind = serializers.ChoiceField(

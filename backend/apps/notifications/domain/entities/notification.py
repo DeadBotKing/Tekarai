@@ -18,7 +18,7 @@ from apps.notifications.domain.valueObjects.notificationTypes import (
     NOTIFICATION_STATUSES,
     NOTIFICATION_TERMINAL,
 )
-from apps.sharedKernel.domain.entities import AggregateRoot, DomainEvent, newId
+from apps.sharedKernel.domain.entities import AggregateRoot, DomainEvent
 from apps.sharedKernel.domain.errors import (
     ConflictError,
     InvalidStateTransitionError,
@@ -189,9 +189,7 @@ class Notification(AggregateRoot):
         if self.readAt is None:
             return
         if self.acknowledgedAt is not None:
-            raise ConflictError(
-                "Acknowledged notifications cannot return to unread."
-            )
+            raise ConflictError("Acknowledged notifications cannot return to unread.")
         self.readAt = None
 
     def acknowledge(self, now: datetime, actorId: uuid.UUID) -> None:

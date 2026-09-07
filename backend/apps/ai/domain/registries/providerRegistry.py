@@ -8,9 +8,9 @@ Secret. Those responsibilities belong to later phases or infrastructure.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Iterable
 
 from apps.ai.domain.entities.aiRecords import AIProvider, requireUuid
 from apps.ai.domain.exceptions import (
@@ -86,7 +86,9 @@ class ProviderRegistry:
     def __init__(self, registrations: Iterable[ProviderRegistration] = ()) -> None:
         self._registrations: dict[tuple[uuid.UUID, str], ProviderRegistration] = {}
         for registration in registrations:
-            self.registerProvider(registration.provider, registration.adapter, registeredAt=registration.registeredAt)
+            self.registerProvider(
+                registration.provider, registration.adapter, registeredAt=registration.registeredAt
+            )
 
     def registerProvider(
         self,
@@ -175,7 +177,9 @@ class ProviderRegistry:
         registration.provider.isActive = True
         return registration.descriptor()
 
-    def deactivateProvider(self, tenantId: uuid.UUID | str, providerCode: str) -> ProviderDescriptor:
+    def deactivateProvider(
+        self, tenantId: uuid.UUID | str, providerCode: str
+    ) -> ProviderDescriptor:
         registration = self.getRegistration(tenantId, providerCode)
         registration.provider.isActive = False
         return registration.descriptor()

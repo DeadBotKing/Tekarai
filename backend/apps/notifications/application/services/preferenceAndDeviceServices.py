@@ -72,9 +72,7 @@ class UpdatePreferencesService(NotificationUseCase):
             channel = str(row.get("channel", "") or "")
             level = str(row.get("level", "") or "").upper()
             if channel not in DELIVERY_CHANNELS:
-                raise ValidationFailedError(
-                    "Unknown channel.", fieldErrors={"channel": channel}
-                )
+                raise ValidationFailedError("Unknown channel.", fieldErrors={"channel": channel})
             key = (
                 level,
                 str(row.get("category", "") or ""),
@@ -136,9 +134,7 @@ class GetPreferencesService(NotificationUseCase):
     def perform(self, query: GetPreferencesQuery) -> dict:
         rows = [
             preferenceDtoFromDomain(preference)
-            for preference in self.preferenceRepository.listForUser(
-                query.tenantId, query.userId
-            )
+            for preference in self.preferenceRepository.listForUser(query.tenantId, query.userId)
         ]
         return {
             "preferences": rows,

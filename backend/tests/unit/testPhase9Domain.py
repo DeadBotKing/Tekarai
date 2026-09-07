@@ -8,7 +8,7 @@ delivery classification with §24 backoff, §10 preference resolution,
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from django.test import SimpleTestCase
 
@@ -37,10 +37,10 @@ from apps.notifications.domain.valueObjects.notificationTypes import (
     DELIVERY_PERMANENTLY_FAILED,
     DELIVERY_RETRY_SCHEDULED,
     PERMANENT_ERROR_CODES,
-    PRIORITY_CRITICAL,
     PREF_LEVEL_CATEGORY,
     PREF_LEVEL_GLOBAL,
     PREF_LEVEL_TYPE,
+    PRIORITY_CRITICAL,
     idempotencyKeyOf,
 )
 from apps.sharedKernel.domain.errors import (
@@ -48,7 +48,7 @@ from apps.sharedKernel.domain.errors import (
     ValidationFailedError,
 )
 
-NOW = datetime(2026, 8, 30, 12, 0, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 30, 12, 0, 0, tzinfo=UTC)
 
 
 def makeNotification(**overrides) -> Notification:
@@ -144,10 +144,10 @@ class NotificationAggregateTests(SimpleTestCase):
 
 class DeliveryEntityTests(SimpleTestCase):
     def testBackoffScheduleIsExponentialAndCapped(self) -> None:
-        self.assertEqual(backoffDelay(1), 30)    # 30s
-        self.assertEqual(backoffDelay(2), 120)   # 2m
-        self.assertEqual(backoffDelay(3), 480)   # 8m
-        self.assertEqual(backoffDelay(4), 600)   # capped §24
+        self.assertEqual(backoffDelay(1), 30)  # 30s
+        self.assertEqual(backoffDelay(2), 120)  # 2m
+        self.assertEqual(backoffDelay(3), 480)  # 8m
+        self.assertEqual(backoffDelay(4), 600)  # capped §24
         self.assertEqual(backoffDelay(9), 600)
 
     def testRetryableFailureSchedulesRetry(self) -> None:
@@ -156,17 +156,13 @@ class DeliveryEntityTests(SimpleTestCase):
         retried = delivery.markFailed(NOW, errorCode="PROVIDER_ERROR", errorMessage="x")
         self.assertTrue(retried)
         self.assertEqual(delivery.status, DELIVERY_RETRY_SCHEDULED)
-        self.assertEqual(
-            delivery.nextAttemptAt, NOW + timedelta(seconds=backoffDelay(2))
-        )
+        self.assertEqual(delivery.nextAttemptAt, NOW + timedelta(seconds=backoffDelay(2)))
         self.assertTrue(delivery.isPendingRetry())
 
     def testPermanentErrorIsNeverRetried(self) -> None:
         delivery = makeDelivery()
         delivery.attemptCount = 1
-        retried = delivery.markFailed(
-            NOW, errorCode=PERMANENT_ERROR_CODES[0], errorMessage="x"
-        )
+        retried = delivery.markFailed(NOW, errorCode=PERMANENT_ERROR_CODES[0], errorMessage="x")
         self.assertFalse(retried)
         self.assertEqual(delivery.status, DELIVERY_PERMANENTLY_FAILED)
 
@@ -192,7 +188,7 @@ class DeliveryEntityTests(SimpleTestCase):
 class PreferenceResolutionTests(SimpleTestCase):
     def testMostSpecificPreferenceWins(self) -> None:
         rows = [
-            (PREF_LEVEL_GLOBAL, "", "", "EMAIL", False),     # email off globally
+            (PREF_LEVEL_GLOBAL, "", "", "EMAIL", False),  # email off globally
             (PREF_LEVEL_CATEGORY, "SYSTEM", "", "EMAIL", True),  # but on for SYSTEM
         ]
         channels, _trace = resolveChannels(
@@ -414,16 +410,25 @@ class DigestAndScheduleTests(SimpleTestCase):
 class ValueObjectTests(SimpleTestCase):
     def testIdempotencyKeyIsStableHash(self) -> None:
         first = idempotencyKeyOf(
-            tenantId="T", eventType="E", eventId="1",
-            recipientId="R", notificationType="N",
+            tenantId="T",
+            eventType="E",
+            eventId="1",
+            recipientId="R",
+            notificationType="N",
         )
         second = idempotencyKeyOf(
-            tenantId="T", eventType="E", eventId="1",
-            recipientId="R", notificationType="N",
+            tenantId="T",
+            eventType="E",
+            eventId="1",
+            recipientId="R",
+            notificationType="N",
         )
         different = idempotencyKeyOf(
-            tenantId="T", eventType="E", eventId="2",
-            recipientId="R", notificationType="N",
+            tenantId="T",
+            eventType="E",
+            eventId="2",
+            recipientId="R",
+            notificationType="N",
         )
         self.assertEqual(first, second)
         self.assertNotEqual(first, different)
@@ -431,9 +436,7 @@ class ValueObjectTests(SimpleTestCase):
 
     def testLanguageResolutionOrder(self) -> None:
         self.assertEqual(resolveLanguage(userLanguage="", tenantDefault="fa-IR"), "fa-IR")
-        self.assertEqual(
-            resolveLanguage(userLanguage="de-DE", tenantDefault="fa-IR"), "de-DE"
-        )
+        self.assertEqual(resolveLanguage(userLanguage="de-DE", tenantDefault="fa-IR"), "de-DE")
         self.assertEqual(
             resolveLanguage(userLanguage="", tenantDefault="", platformDefault="en-US"),
             "en-US",

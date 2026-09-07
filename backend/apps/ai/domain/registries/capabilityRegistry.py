@@ -12,9 +12,9 @@ resolution, provider SDK, retry, or failover execution is allowed here.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Iterable
 
 from apps.ai.domain.entities.aiRecords import AICapability, AIModel, requireUuid
 from apps.ai.domain.exceptions import (
@@ -34,7 +34,12 @@ from apps.ai.domain.registries.modelRegistry import (
     ModelRoutingRequest,
     RoutingDecision,
 )
-from apps.ai.domain.valueObjects.aiTypes import CAPABILITY_CODES, REQUEST_TYPES, ensureEnum, validateCode
+from apps.ai.domain.valueObjects.aiTypes import (
+    CAPABILITY_CODES,
+    REQUEST_TYPES,
+    ensureEnum,
+    validateCode,
+)
 
 
 def utcNow() -> datetime:
@@ -184,7 +189,9 @@ class CapabilityRegistry:
         self._registrations: dict[tuple[uuid.UUID, str], CapabilityRegistration] = {}
         for registration in registrations:
             if not isinstance(registration, CapabilityRegistration):
-                raise AICapabilityRegistrationInvalid("Initial capability registrations are invalid.")
+                raise AICapabilityRegistrationInvalid(
+                    "Initial capability registrations are invalid."
+                )
             self.registerCapability(
                 registration.capability,
                 registeredAt=registration.registeredAt,
@@ -280,7 +287,10 @@ class CapabilityRegistry:
     ) -> bool:
         registration = self.getRegistration(tenantId, capabilityCode)
         normalizedRequestType = _normalizeRequestType(requestType)
-        return registration.capability.isActive and normalizedRequestType in registration.supportedRequestTypes
+        return (
+            registration.capability.isActive
+            and normalizedRequestType in registration.supportedRequestTypes
+        )
 
     def acceptsRequestType(
         self,
@@ -313,7 +323,8 @@ class CapabilityRegistry:
         descriptors = [
             registration.descriptor()
             for registration in self._registrations.values()
-            if registration.tenantId == tenant and (not activeOnly or registration.capability.isActive)
+            if registration.tenantId == tenant
+            and (not activeOnly or registration.capability.isActive)
         ]
         return tuple(sorted(descriptors, key=lambda descriptor: descriptor.code))
 
@@ -364,7 +375,9 @@ class CapabilityRegistry:
         if isinstance(model, ModelDescriptor):
             if model.tenantId != tenant or not model.isActive or not model.providerIsActive:
                 return False
-            return self._descriptorSupportsCapability(model, _normalizeCapabilityCode(capabilityCode))
+            return self._descriptorSupportsCapability(
+                model, _normalizeCapabilityCode(capabilityCode)
+            )
         raise AICapabilityModelNotSupported("Model must be an AIModel or ModelDescriptor.")
 
     def supportsModel(
@@ -456,13 +469,16 @@ class CapabilityRegistry:
     def _requireModelRegistry(self, modelRegistry: ModelRegistry | None) -> ModelRegistry:
         registry = modelRegistry or self.modelRegistry
         if not isinstance(registry, ModelRegistry):
-            raise AICapabilityRegistrationInvalid("A ModelRegistry is required for model integration.")
+            raise AICapabilityRegistrationInvalid(
+                "A ModelRegistry is required for model integration."
+            )
         return registry
 
     @staticmethod
     def _descriptorSupportsCapability(descriptor: ModelDescriptor, capabilityCode: str) -> bool:
         return not descriptor.inputCapability or (
-            capabilityCode in descriptor.inputCapability or capabilityCode in descriptor.outputCapability
+            capabilityCode in descriptor.inputCapability
+            or capabilityCode in descriptor.outputCapability
         )
 
     @staticmethod

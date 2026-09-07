@@ -91,8 +91,12 @@ class Phase13HResponseLifecycleTests(unittest.TestCase):
         schema = self._schema()
         issues = schema.validate({"summary": "", "risks": ["a", "b", "c", "d"]})
         self.assertTrue(all(isinstance(issue, ValidationIssue) for issue in issues))
-        self.assertTrue(any(issue.path == "$.summary" and issue.keyword == "minLength" for issue in issues))
-        self.assertTrue(any(issue.path == "$.risks" and issue.keyword == "maxItems" for issue in issues))
+        self.assertTrue(
+            any(issue.path == "$.summary" and issue.keyword == "minLength" for issue in issues)
+        )
+        self.assertTrue(
+            any(issue.path == "$.risks" and issue.keyword == "maxItems" for issue in issues)
+        )
         with self.assertRaises(AIStructuredOutputInvalid) as raised:
             self.responses.validateStructuredOutput(
                 {"summary": "ok", "risks": [], "internalSecret": "not returned"},
@@ -120,7 +124,9 @@ class Phase13HResponseLifecycleTests(unittest.TestCase):
             }
         )
         self.assertEqual(schema.validate({"items": ["x", 2]}), ())
-        self.assertTrue(any(issue.path == "$.items[0]" for issue in schema.validate({"items": [False]})))
+        self.assertTrue(
+            any(issue.path == "$.items[0]" for issue in schema.validate({"items": [False]}))
+        )
         with self.assertRaises(AIStructuredSchemaInvalid):
             StructuredOutputSchema({"type": "not-a-json-type"})
         with self.assertRaises(AIStructuredSchemaInvalid):
@@ -279,7 +285,7 @@ class Phase13HResponseLifecycleTests(unittest.TestCase):
                 content="two",
                 responseId=first.id,
             )
-        second = self.responses.createResponse(
+        self.responses.createResponse(
             self.tenantId,
             self.request.id,
             self.modelId,
@@ -309,9 +315,9 @@ class Phase13HResponseLifecycleTests(unittest.TestCase):
             self.responses.registerResponse(object())  # type: ignore[arg-type]
 
     def testPureDomainBoundaryAndNoSecretOrProviderImports(self) -> None:
-        source = (Path(__file__).resolve().parents[2] / "apps/ai/domain/services/responseLifecycle.py").read_text(
-            encoding="utf-8"
-        )
+        source = (
+            Path(__file__).resolve().parents[2] / "apps/ai/domain/services/responseLifecycle.py"
+        ).read_text(encoding="utf-8")
         for forbidden in (
             "django",
             "rest_framework",

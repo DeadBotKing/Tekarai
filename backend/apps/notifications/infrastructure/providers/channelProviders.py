@@ -18,7 +18,6 @@ from apps.notifications.domain.repositories.notificationRepositories import (
     DeliveryResult,
     NotificationProviderPort,
 )
-from apps.sharedKernel.infrastructure.wiring import sharedKernelProvider
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +74,8 @@ class SmtpEmailProvider:
 
         if not self.host or not self.sender:
             return DeliveryResult(
-                ok=False, errorCode="PROVIDER_UNCONFIGURED",
+                ok=False,
+                errorCode="PROVIDER_UNCONFIGURED",
                 errorMessage="SMTP host/sender not configured",
             )
         try:
@@ -88,9 +88,7 @@ class SmtpEmailProvider:
                 server.send_message(message)
             return DeliveryResult(ok=True)
         except Exception as exc:  # noqa: BLE001 — provider boundary
-            return DeliveryResult(
-                ok=False, errorCode="PROVIDER_ERROR", errorMessage=str(exc)[:200]
-            )
+            return DeliveryResult(ok=False, errorCode="PROVIDER_ERROR", errorMessage=str(exc)[:200])
 
 
 class LoggingSmsProvider:
@@ -162,12 +160,17 @@ class ProviderPool:
 
     @property
     def primaryName(self) -> str:
-        return getattr(self.providers[0], "providerName", "unconfigured") if self.providers else "unconfigured"
+        return (
+            getattr(self.providers[0], "providerName", "unconfigured")
+            if self.providers
+            else "unconfigured"
+        )
 
     def sendWithFailover(self, **kwargs: Any) -> tuple[DeliveryResult, str]:
         """Tries providers in order; returns (result, providerUsed)."""
         lastResult = DeliveryResult(
-            ok=False, errorCode="PROVIDER_UNCONFIGURED",
+            ok=False,
+            errorCode="PROVIDER_UNCONFIGURED",
             errorMessage="no provider configured",
         )
         for provider in self.providers:
@@ -190,7 +193,6 @@ def emailProviderPool() -> ProviderPool:
     chain: list[NotificationProviderPort] = []
     configured = getattr(settings, "NOTIFICATION_EMAIL_PROVIDERS", [])
     for dottedPath in configured:
-        factory = sharedKernelProvider  # settings carry dotted paths
         try:
             from apps.sharedKernel.infrastructure.wiring import importFromDottedPath
 

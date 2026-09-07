@@ -11,16 +11,14 @@ from datetime import datetime
 from apps.notifications.domain.valueObjects.notificationTypes import (
     BYPASS_ALLOWED_CATEGORIES,
     DELIVERY_CHANNELS,
-    PRIORITY_CRITICAL,
-    PRIORITY_RANK,
     PREF_LEVEL_CATEGORY,
     PREF_LEVEL_GLOBAL,
     PREF_LEVEL_TYPE,
+    PRIORITY_CRITICAL,
+    PRIORITY_RANK,
     RATE_MAX_PER_WINDOW,
-    RATE_WINDOW_SECONDS,
 )
 from apps.sharedKernel.domain.errors import ValidationFailedError
-
 
 # ---------------------------------------------------------------------------
 # §10/§11 channel selection: policy ∩ tenant rules − user preferences
@@ -32,7 +30,9 @@ def resolveChannels(
     policyChannels: tuple[str, ...],
     forcedChannels: tuple[str, ...],
     deniedChannels: tuple[str, ...],
-    preferenceRows: list[tuple[str, str, str, str, bool]],  # (level, category, type, channel, enabled)
+    preferenceRows: list[
+        tuple[str, str, str, str, bool]
+    ],  # (level, category, type, channel, enabled)
     notificationType: str,
     category: str,
     priority: str,

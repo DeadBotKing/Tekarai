@@ -8,10 +8,11 @@ them to persistence and external systems.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Any, Iterable
+from typing import Any
 
 from apps.ai.domain.exceptions import AIContextTooLarge, AIOutputValidationFailed
 from apps.ai.domain.valueObjects.aiTypes import (
@@ -114,8 +115,12 @@ class AIModel:
         if normalizedModelType not in MODEL_TYPES and not normalizedModelType.startswith("CUSTOM_"):
             raise ValueError(f"Unsupported model type: {normalizedModelType}")
         self.modelType = normalizedModelType
-        self.inputCapability = tuple(validateCode(value, "inputCapability") for value in self.inputCapability)
-        self.outputCapability = tuple(validateCode(value, "outputCapability") for value in self.outputCapability)
+        self.inputCapability = tuple(
+            validateCode(value, "inputCapability") for value in self.inputCapability
+        )
+        self.outputCapability = tuple(
+            validateCode(value, "outputCapability") for value in self.outputCapability
+        )
         self.inputCostPer1k = Decimal(str(self.inputCostPer1k))
         self.outputCostPer1k = Decimal(str(self.outputCostPer1k))
         if self.contextWindow < 1:
@@ -124,7 +129,11 @@ class AIModel:
             raise ValueError("Model token rates cannot be negative.")
 
     def supportsCapability(self, capabilityCode: str) -> bool:
-        return not self.inputCapability or capabilityCode in self.inputCapability or capabilityCode in self.outputCapability
+        return (
+            not self.inputCapability
+            or capabilityCode in self.inputCapability
+            or capabilityCode in self.outputCapability
+        )
 
     def costRate(self) -> CostRate:
         return CostRate(self.inputCostPer1k, self.outputCostPer1k)
@@ -250,7 +259,9 @@ class AIRequest:
         if self.contextTokenCount < 0 or self.retryCount < 0:
             raise ValueError("Request counters cannot be negative.")
 
-    def transitionTo(self, status: str, now: datetime | None = None, *, errorCode: str = "") -> None:
+    def transitionTo(
+        self, status: str, now: datetime | None = None, *, errorCode: str = ""
+    ) -> None:
         status = ensureEnum(status, REQUEST_STATUSES, "requestStatus")
         allowed = {
             "PENDING": {"QUEUED", "RUNNING", "CANCELLED"},
@@ -462,9 +473,16 @@ class AIKnowledgeItem:
     def __post_init__(self) -> None:
         self.tenantId = requireUuid(self.tenantId, "tenantId")
         self.id = requireUuid(self.id, "id")
-        self.classification = ensureEnum(self.classification, DATA_CLASSIFICATIONS, "classification")
+        self.classification = ensureEnum(
+            self.classification, DATA_CLASSIFICATIONS, "classification"
+        )
         self.status = ensureEnum(self.status, KNOWLEDGE_STATUSES, "knowledgeStatus")
-        if not self.sourceDomain or not self.sourceEntityType or not self.sourceEntityId or not self.content:
+        if (
+            not self.sourceDomain
+            or not self.sourceEntityType
+            or not self.sourceEntityId
+            or not self.content
+        ):
             raise ValueError("Knowledge source and content are required.")
 
     def transitionTo(self, status: str) -> None:
@@ -519,7 +537,12 @@ class AIEmbedding:
         if self.chunkId is not None:
             self.chunkId = requireUuid(self.chunkId, "chunkId")
         self.dimensions = self.dimensions or len(self.vector)
-        if not self.sourceType or not self.sourceId or self.dimensions != len(self.vector) or not self.vector:
+        if (
+            not self.sourceType
+            or not self.sourceId
+            or self.dimensions != len(self.vector)
+            or not self.vector
+        ):
             raise ValueError("Embedding source and dimensions are required.")
 
 
@@ -571,7 +594,16 @@ class AIUsage:
         self.providerId = requireUuid(self.providerId, "providerId")
         self.modelId = requireUuid(self.modelId, "modelId")
         self.id = requireUuid(self.id, "id")
-        if min(self.latencyMs, self.queueTimeMs, self.contextBuildTimeMs, self.providerTimeMs, self.validationTimeMs) < 0:
+        if (
+            min(
+                self.latencyMs,
+                self.queueTimeMs,
+                self.contextBuildTimeMs,
+                self.providerTimeMs,
+                self.validationTimeMs,
+            )
+            < 0
+        ):
             raise ValueError("AI timings cannot be negative.")
 
     def cost(self, rate: CostRate) -> Decimal:

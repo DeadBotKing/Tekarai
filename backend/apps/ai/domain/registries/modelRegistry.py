@@ -14,9 +14,9 @@ same tenant/provider binding.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Iterable
 
 from apps.ai.domain.entities.aiRecords import AIModel, requireUuid
 from apps.ai.domain.exceptions import (
@@ -51,14 +51,18 @@ def _normalizeCode(
         raise errorType(f"Invalid {fieldName}.") from exc
 
 
-def _normalizeModelType(value: str, *, errorType: type[Exception] = AIModelRegistrationInvalid) -> str:
+def _normalizeModelType(
+    value: str, *, errorType: type[Exception] = AIModelRegistrationInvalid
+) -> str:
     normalized = str(value or "").strip().upper()
     if normalized not in MODEL_TYPES and not normalized.startswith("CUSTOM_"):
         raise errorType(f"Unsupported model type: {normalized}.")
     return normalized
 
 
-def _normalizeCapability(value: str, *, errorType: type[Exception] = AIModelRegistrationInvalid) -> str:
+def _normalizeCapability(
+    value: str, *, errorType: type[Exception] = AIModelRegistrationInvalid
+) -> str:
     normalized = _normalizeCode(value, "capabilityCode", errorType=errorType)
     if normalized not in CAPABILITY_CODES and not normalized.startswith("CUSTOM_"):
         raise errorType(f"Unsupported AI capability: {normalized}.")
@@ -176,7 +180,9 @@ class ModelRouteTarget:
         object.__setattr__(
             self,
             "providerCode",
-            _normalizeOptionalCode(self.providerCode, "providerCode", errorType=AIRoutingPolicyInvalid),
+            _normalizeOptionalCode(
+                self.providerCode, "providerCode", errorType=AIRoutingPolicyInvalid
+            ),
         )
         object.__setattr__(
             self,
@@ -184,7 +190,9 @@ class ModelRouteTarget:
             _normalizeOptionalCode(self.modelCode, "modelCode", errorType=AIRoutingPolicyInvalid),
         )
         if not self.providerCode and not self.modelCode:
-            raise AIRoutingPolicyInvalid("A routing target must identify a provider, a model, or both.")
+            raise AIRoutingPolicyInvalid(
+                "A routing target must identify a provider, a model, or both."
+            )
 
 
 @dataclass(frozen=True)
@@ -323,9 +331,13 @@ class ModelRoutingPolicy:
             if isinstance(target, ModelRouteTarget):
                 normalizedTargets.append(target)
             elif isinstance(target, (tuple, list)) and len(target) == 2:
-                normalizedTargets.append(ModelRouteTarget(providerCode=target[0], modelCode=target[1]))
+                normalizedTargets.append(
+                    ModelRouteTarget(providerCode=target[0], modelCode=target[1])
+                )
             else:
-                raise AIRoutingPolicyInvalid("fallbackTargets must contain ModelRouteTarget values.")
+                raise AIRoutingPolicyInvalid(
+                    "fallbackTargets must contain ModelRouteTarget values."
+                )
         object.__setattr__(self, "fallbackTargets", tuple(normalizedTargets))
         if not isinstance(self.allowFallback, bool):
             raise AIRoutingPolicyInvalid("allowFallback must be boolean.")
@@ -351,7 +363,7 @@ class ModelRoutingPolicy:
         models = self.fallbackModelCodes
         if providers and models:
             if len(providers) == len(models):
-                pairs = zip(providers, models)
+                pairs = zip(providers, models, strict=True)
             elif len(providers) == 1:
                 pairs = ((providers[0], model) for model in models)
             elif len(models) == 1:
@@ -360,7 +372,10 @@ class ModelRoutingPolicy:
                 raise AIRoutingPolicyInvalid(
                     "fallbackProviderCodes and fallbackModelCodes must have equal lengths or one side must contain one value."
                 )
-            targets.extend(ModelRouteTarget(providerCode=provider, modelCode=model) for provider, model in pairs)
+            targets.extend(
+                ModelRouteTarget(providerCode=provider, modelCode=model)
+                for provider, model in pairs
+            )
         elif providers:
             targets.extend(ModelRouteTarget(providerCode=provider) for provider in providers)
         else:
@@ -423,7 +438,9 @@ class ModelRegistry:
     ) -> ModelRegistration:
         if not isinstance(model, AIModel):
             raise AIModelRegistrationInvalid("Model definition is invalid.")
-        normalizedProviderCode, providerRegistration = self._resolveOwnedProvider(model, providerCode)
+        normalizedProviderCode, providerRegistration = self._resolveOwnedProvider(
+            model, providerCode
+        )
         key = self._key(model.tenantId, model.providerId, model.code)
         if key in self._registrations and not replace:
             raise AIModelAlreadyRegistered(normalizedProviderCode, model.code)
@@ -435,7 +452,9 @@ class ModelRegistry:
         # Keep the local variable explicit: registration is only valid because
         # the provider binding was validated against the model's owner.
         if providerRegistration.provider.id != model.providerId:
-            raise AIModelProviderOwnershipInvalid("Model provider ownership changed during registration.")
+            raise AIModelProviderOwnershipInvalid(
+                "Model provider ownership changed during registration."
+            )
         self._registrations[key] = registration
         return registration
 
@@ -588,7 +607,9 @@ class ModelRegistry:
             if activeOnly and (not registration.model.isActive or not providerIsActive):
                 continue
             descriptors.append(registration.descriptor(providerIsActive=providerIsActive))
-        return tuple(sorted(descriptors, key=lambda descriptor: (descriptor.providerCode, descriptor.code)))
+        return tuple(
+            sorted(descriptors, key=lambda descriptor: (descriptor.providerCode, descriptor.code))
+        )
 
     def activateModel(
         self,
@@ -614,7 +635,9 @@ class ModelRegistry:
 
     def unregisterModel(self, tenantId: uuid.UUID | str, providerCode: str, modelCode: str) -> None:
         registration = self.getRegistration(tenantId, providerCode, modelCode)
-        self._registrations.pop(self._key(registration.tenantId, registration.providerId, registration.modelCode), None)
+        self._registrations.pop(
+            self._key(registration.tenantId, registration.providerId, registration.modelCode), None
+        )
 
     def unregister(self, tenantId: uuid.UUID | str, providerCode: str, modelCode: str) -> None:
         self.unregisterModel(tenantId, providerCode, modelCode)
@@ -641,11 +664,16 @@ class ModelRegistry:
         candidates = tuple(sorted(candidates, key=self._sortCandidate))
 
         if policy.hasPreferredTarget:
-            selected = self._firstMatching(candidates, ModelRouteTarget(policy.preferredProviderCode, policy.preferredModelCode))
+            selected = self._firstMatching(
+                candidates,
+                ModelRouteTarget(policy.preferredProviderCode, policy.preferredModelCode),
+            )
             if selected is not None:
                 return self._decision(selected, reason="preferred", usedFallback=False, rank=1)
             if not policy.allowFallback:
-                raise AIRoutingNoMatch("The preferred model/provider is not eligible and fallback is disabled.")
+                raise AIRoutingNoMatch(
+                    "The preferred model/provider is not eligible and fallback is disabled."
+                )
 
         if policy.allowFallback:
             for rank, target in enumerate(policy.orderedFallbackTargets(), start=1):
@@ -659,9 +687,13 @@ class ModelRegistry:
                 ModelRouteTarget(policy.defaultProviderCode, policy.defaultModelCode),
             )
             if selected is not None:
-                return self._decision(selected, reason="default", usedFallback=bool(policy.hasPreferredTarget), rank=1)
+                return self._decision(
+                    selected, reason="default", usedFallback=bool(policy.hasPreferredTarget), rank=1
+                )
             if not policy.allowFallback:
-                raise AIRoutingNoMatch("The default model/provider is not eligible and fallback is disabled.")
+                raise AIRoutingNoMatch(
+                    "The default model/provider is not eligible and fallback is disabled."
+                )
 
         # With no explicit target, registry order is the documented stable
         # default. When fallback is enabled this is the final policy fallback;
@@ -669,7 +701,9 @@ class ModelRegistry:
         return self._decision(
             candidates[0],
             reason="fallback-deterministic" if policy.allowFallback else "deterministic-default",
-            usedFallback=bool(policy.allowFallback and (policy.hasPreferredTarget or policy.hasDefaultTarget)),
+            usedFallback=bool(
+                policy.allowFallback and (policy.hasPreferredTarget or policy.hasDefaultTarget)
+            ),
             rank=1,
         )
 
@@ -696,7 +730,11 @@ class ModelRegistry:
             if registration.tenantId != request.tenantId:
                 continue
             providerRegistration, providerIsActive = self._providerState(registration)
-            if providerRegistration is None or not providerIsActive or not registration.model.isActive:
+            if (
+                providerRegistration is None
+                or not providerIsActive
+                or not registration.model.isActive
+            ):
                 continue
             if self._matches(registration.model, providerRegistration.capabilities, request):
                 eligible.append((registration, providerRegistration))
@@ -712,12 +750,18 @@ class ModelRegistry:
             return False
         if request.capabilityCode and not model.supportsCapability(request.capabilityCode):
             return False
-        if capabilities.maxContextWindow is not None and model.contextWindow > capabilities.maxContextWindow:
+        if (
+            capabilities.maxContextWindow is not None
+            and model.contextWindow > capabilities.maxContextWindow
+        ):
             return False
         if request.minimumContextWindow is not None:
             if model.contextWindow < request.minimumContextWindow:
                 return False
-            if capabilities.maxContextWindow is not None and capabilities.maxContextWindow < request.minimumContextWindow:
+            if (
+                capabilities.maxContextWindow is not None
+                and capabilities.maxContextWindow < request.minimumContextWindow
+            ):
                 return False
 
         requiredFeatures = list(request.requiredFeatures)
@@ -738,7 +782,15 @@ class ModelRegistry:
             if not model.supportsTools:
                 return False
 
-        if request.modelType in {"LLM", "VISION", "MULTIMODAL", "CLASSIFICATION", "SPEECH_TO_TEXT", "TEXT_TO_SPEECH", "CUSTOM"}:
+        if request.modelType in {
+            "LLM",
+            "VISION",
+            "MULTIMODAL",
+            "CLASSIFICATION",
+            "SPEECH_TO_TEXT",
+            "TEXT_TO_SPEECH",
+            "CUSTOM",
+        }:
             requiredFeatures.append("GENERATION")
         if request.modelType == "EMBEDDING" and not model.supportsEmbeddings:
             return False
@@ -757,7 +809,9 @@ class ModelRegistry:
         return True
 
     @staticmethod
-    def _sortCandidate(candidate: tuple[ModelRegistration, ProviderRegistration]) -> tuple[str, str, str, str]:
+    def _sortCandidate(
+        candidate: tuple[ModelRegistration, ProviderRegistration],
+    ) -> tuple[str, str, str, str]:
         registration, _ = candidate
         return (
             registration.providerCode,
@@ -788,7 +842,9 @@ class ModelRegistry:
         rank: int,
     ) -> RoutingDecision:
         registration, providerRegistration = selected
-        descriptor = registration.descriptor(providerIsActive=providerRegistration.provider.isActive)
+        descriptor = registration.descriptor(
+            providerIsActive=providerRegistration.provider.isActive
+        )
         return RoutingDecision(
             tenantId=registration.tenantId,
             providerId=registration.providerId,
@@ -834,7 +890,9 @@ class ModelRegistry:
             raise AIModelProviderOwnershipInvalid(
                 "Model providerId cannot be resolved to exactly one provider owned by the model tenant."
             )
-        return matches[0].code, self.providerRegistry.getRegistration(model.tenantId, matches[0].code)
+        return matches[0].code, self.providerRegistry.getRegistration(
+            model.tenantId, matches[0].code
+        )
 
     def _providerState(
         self,
@@ -856,15 +914,25 @@ class ModelRegistry:
             raise AIModelInactive(registration.model.code)
         providerRegistration, providerIsActive = self._providerState(registration)
         if providerRegistration is None:
-            raise AIModelProviderOwnershipInvalid("Model provider is no longer registered for its tenant.")
+            raise AIModelProviderOwnershipInvalid(
+                "Model provider is no longer registered for its tenant."
+            )
         if providerRegistration.provider.id != registration.providerId:
-            raise AIModelProviderOwnershipInvalid("Model provider ownership does not match its tenant binding.")
+            raise AIModelProviderOwnershipInvalid(
+                "Model provider ownership does not match its tenant binding."
+            )
         if not providerIsActive:
             raise AIProviderInactive(registration.providerCode)
 
     @staticmethod
-    def _key(tenantId: uuid.UUID | str, providerId: uuid.UUID | str, modelCode: str) -> tuple[uuid.UUID, uuid.UUID, str]:
-        return requireUuid(tenantId, "tenantId"), requireUuid(providerId, "providerId"), _normalizeCode(modelCode, "modelCode")
+    def _key(
+        tenantId: uuid.UUID | str, providerId: uuid.UUID | str, modelCode: str
+    ) -> tuple[uuid.UUID, uuid.UUID, str]:
+        return (
+            requireUuid(tenantId, "tenantId"),
+            requireUuid(providerId, "providerId"),
+            _normalizeCode(modelCode, "modelCode"),
+        )
 
 
 AIModelRegistry = ModelRegistry

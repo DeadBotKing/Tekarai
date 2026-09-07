@@ -15,18 +15,16 @@ cannot turn a variable into an arbitrary object traversal expression.
 from __future__ import annotations
 
 import copy
-import hashlib
-import json
 import re
 import string
 import uuid
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any, Mapping
+from typing import Any
 
 from apps.ai.domain.entities.aiRecords import AIPrompt, AIPromptVersion, requireUuid
 from apps.ai.domain.exceptions import (
-    AIError,
     AIPromptAlreadyRegistered,
     AIPromptLifecycleInvalid,
     AIPromptNotFound,
@@ -39,7 +37,6 @@ from apps.ai.domain.exceptions import (
 )
 from apps.ai.domain.services.responseLifecycle import StructuredOutputSchema
 from apps.ai.domain.valueObjects.aiTypes import validateCode
-
 
 IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 SENSITIVE_METADATA_KEYS = frozenset(
@@ -70,7 +67,9 @@ def _normalizePromptCode(value: str) -> str:
 
 def _normalizeVariables(variables: tuple[str, ...] | list[str] | None) -> tuple[str, ...]:
     values = tuple(variables or ())
-    if any(not isinstance(value, str) or not IDENTIFIER_PATTERN.fullmatch(value) for value in values):
+    if any(
+        not isinstance(value, str) or not IDENTIFIER_PATTERN.fullmatch(value) for value in values
+    ):
         raise AIPromptTemplateInvalid("Prompt variables must be simple identifiers.")
     if len(set(values)) != len(values):
         raise AIPromptTemplateInvalid("Prompt variables cannot be duplicated.")
@@ -308,7 +307,9 @@ class PromptPlatformService:
             registered = self._getVersionEntity(tenant, registered.id)
         return _copy(registered)
 
-    def registerVersion(self, promptVersion: AIPromptVersion, *, replace: bool = False) -> AIPromptVersion:
+    def registerVersion(
+        self, promptVersion: AIPromptVersion, *, replace: bool = False
+    ) -> AIPromptVersion:
         if not isinstance(promptVersion, AIPromptVersion):
             raise AIPromptLifecycleInvalid("Prompt version definition must be an AIPromptVersion.")
         prompt = self._getPromptByIdEntity(promptVersion.tenantId, promptVersion.promptId)
@@ -328,11 +329,18 @@ class PromptPlatformService:
         if promptVersion.version < 1:
             raise AIPromptLifecycleInvalid("Prompt version must be positive.")
         latestVersion = max(
-            (version.version for version in self._versionsForPrompt(promptVersion.tenantId, promptVersion.promptId)),
+            (
+                version.version
+                for version in self._versionsForPrompt(
+                    promptVersion.tenantId, promptVersion.promptId
+                )
+            ),
             default=0,
         )
         if promptVersion.version <= latestVersion:
-            raise AIPromptLifecycleInvalid("A new Prompt Version must be higher than the latest version.")
+            raise AIPromptLifecycleInvalid(
+                "A new Prompt Version must be higher than the latest version."
+            )
         if promptVersion.isActive:
             # Registration never silently activates a version; activation is a
             # separate command so only one active pointer can be changed.
@@ -422,14 +430,18 @@ class PromptPlatformService:
         version = self._getVersionEntity(tenant, versionId)
         prompt = self._getPromptByIdEntity(tenant, version.promptId)
         if not prompt.isActive or not version.isActive or prompt.activeVersionId != version.id:
-            raise AIPromptLifecycleInvalid("Only the active version of an active Prompt can be rendered.")
+            raise AIPromptLifecycleInvalid(
+                "Only the active version of an active Prompt can be rendered."
+            )
         return self._renderVersion(tenant, prompt, version, values)
 
     def describePrompt(self, tenantId: uuid.UUID | str, promptCode: str) -> PromptDescriptor:
         tenant = requireUuid(tenantId, "tenantId")
         prompt = self._getPromptEntity(tenant, promptCode)
         versions = self._versionsForPrompt(tenant, prompt.id)
-        active = next((version for version in versions if version.id == prompt.activeVersionId), None)
+        active = next(
+            (version for version in versions if version.id == prompt.activeVersionId), None
+        )
         return PromptDescriptor(
             tenantId=prompt.tenantId,
             promptId=prompt.id,
@@ -522,11 +534,15 @@ class PromptPlatformService:
         provided = dict(values)
         declared = set(version.variables)
         if set(provided) != declared:
-            raise AIPromptTemplateInvalid("Prompt render values must exactly match declared variables.")
+            raise AIPromptTemplateInvalid(
+                "Prompt render values must exactly match declared variables."
+            )
         try:
             rendered = version.template.format(**provided)
         except (KeyError, IndexError, ValueError, TypeError) as exc:
-            raise AIPromptTemplateInvalid("Prompt could not be rendered with the declared variables.") from exc
+            raise AIPromptTemplateInvalid(
+                "Prompt could not be rendered with the declared variables."
+            ) from exc
         schema = self._schemaObject(version.outputSchema)
         return RenderedPrompt(
             tenantId=tenant,

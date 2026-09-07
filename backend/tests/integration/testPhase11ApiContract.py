@@ -45,9 +45,7 @@ class Phase11ApiBase(TestCase):
             UserModel.objects.get(username=PLATFORM_ADMIN_USERNAME),
         )
         self.token = self.login(PLATFORM_ADMIN_USERNAME)
-        self.adminId = str(
-            UserModel.objects.get(username=PLATFORM_ADMIN_USERNAME).id
-        )
+        self.adminId = str(UserModel.objects.get(username=PLATFORM_ADMIN_USERNAME).id)
 
     def login(self, username: str, password: str = PLATFORM_ADMIN_PASSWORD) -> str:
         response = self.client.post(
@@ -85,7 +83,8 @@ class PolicyApiTests(Phase11ApiBase):
 
     def testUpdatePolicyPersists(self) -> None:
         res = self.client.put(
-            f"{V1}/policy", {"maxGroupMembers": 1234, "allowRecording": False},
+            f"{V1}/policy",
+            {"maxGroupMembers": 1234, "allowRecording": False},
             **self.auth(),
         )
         self.assertEqual(res.status_code, 200, res.content)
@@ -111,9 +110,7 @@ class RoomSessionApiTests(Phase11ApiBase):
         s2 = self.client.post(f"{V1}/meetings/{meetingId}/sessions", {}, **self.auth())
         self.assertEqual(s2.json()["data"]["sequence"], 2)
 
-        end = self.client.post(
-            f"{V1}/sessions/{s1.json()['data']['id']}/end", {}, **self.auth()
-        )
+        end = self.client.post(f"{V1}/sessions/{s1.json()['data']['id']}/end", {}, **self.auth())
         self.assertEqual(end.status_code, 200, end.content)
         self.assertEqual(end.json()["data"]["status"], "ENDED")
 
@@ -122,7 +119,8 @@ class ScreenShareApiTests(Phase11ApiBase):
     def testStartStopScreenShare(self) -> None:
         meetingId = self.makeMeeting(live=True)
         start = self.client.post(
-            f"{V1}/meetings/{meetingId}/screen-share", {"shareKind": "WINDOW"},
+            f"{V1}/meetings/{meetingId}/screen-share",
+            {"shareKind": "WINDOW"},
             **self.auth(),
         )
         self.assertEqual(start.status_code, 201, start.content)
@@ -136,7 +134,8 @@ class ScreenShareApiTests(Phase11ApiBase):
     def testScreenShareRejectsInvalidKind(self) -> None:
         meetingId = self.makeMeeting(live=True)
         res = self.client.post(
-            f"{V1}/meetings/{meetingId}/screen-share", {"shareKind": "HOLOGRAM"},
+            f"{V1}/meetings/{meetingId}/screen-share",
+            {"shareKind": "HOLOGRAM"},
             **self.auth(),
         )
         self.assertEqual(res.status_code, 400)
@@ -154,7 +153,8 @@ class SummaryActionItemApiTests(Phase11ApiBase):
         self.assertEqual(gen.json()["data"]["humanReviewStatus"], "PENDING")
         review = self.client.post(
             f"{V1}/summaries/{gen.json()['data']['id']}/review",
-            {"decision": "APPROVE"}, **self.auth(),
+            {"decision": "APPROVE"},
+            **self.auth(),
         )
         self.assertEqual(review.status_code, 200, review.content)
         self.assertEqual(review.json()["data"]["humanReviewStatus"], "APPROVED")
@@ -166,18 +166,24 @@ class SummaryActionItemApiTests(Phase11ApiBase):
         from apps.communication.domain.entities import phase11Records as records
 
         item = records.ActionItemCandidate.propose(
-            uuid.UUID(self.tenantId), uuid.UUID(meetingId), "Send report",
-            datetime.now(tz=UTC), confidence=0.8,
+            uuid.UUID(self.tenantId),
+            uuid.UUID(meetingId),
+            "Send report",
+            datetime.now(tz=UTC),
+            confidence=0.8,
         )
         from apps.communication.infrastructure import container
+
         container.actionItemRepository().save(item)
         approve = self.client.post(
-            f"{V1}/action-items/{item.id}/review", {"decision": "APPROVE"},
+            f"{V1}/action-items/{item.id}/review",
+            {"decision": "APPROVE"},
             **self.auth(),
         )
         self.assertEqual(approve.status_code, 200, approve.content)
         dispatch = self.client.post(
-            f"{V1}/action-items/{item.id}/dispatch", {"taskRef": "task-9"},
+            f"{V1}/action-items/{item.id}/dispatch",
+            {"taskRef": "task-9"},
             **self.auth(),
         )
         self.assertEqual(dispatch.status_code, 200, dispatch.content)
@@ -197,7 +203,8 @@ class OfficialMessageApiTests(Phase11ApiBase):
         for action in ("review", "approve", "publish", "deliver"):
             res = self.client.post(
                 f"{V1}/official-messages/{officialId}/transition",
-                {"action": action}, **self.auth(),
+                {"action": action},
+                **self.auth(),
             )
             self.assertEqual(res.status_code, 200, (action, res.content))
         ack = self.client.post(
@@ -209,12 +216,14 @@ class OfficialMessageApiTests(Phase11ApiBase):
     def testPublishFromDraftIsConflict(self) -> None:
         create = self.client.post(
             f"{V1}/official-messages",
-            {"kind": "NOTICE", "subject": "Hi"}, **self.auth(),
+            {"kind": "NOTICE", "subject": "Hi"},
+            **self.auth(),
         )
         officialId = create.json()["data"]["id"]
         res = self.client.post(
             f"{V1}/official-messages/{officialId}/transition",
-            {"action": "publish"}, **self.auth(),
+            {"action": "publish"},
+            **self.auth(),
         )
         self.assertEqual(res.status_code, 409)
 
@@ -233,12 +242,14 @@ class MessageReportApiTests(Phase11ApiBase):
         )
         report = self.client.post(
             f"{V1}/messages/{message.id}/report",
-            {"reason": "SPAM", "description": "ads"}, **self.auth(),
+            {"reason": "SPAM", "description": "ads"},
+            **self.auth(),
         )
         self.assertEqual(report.status_code, 201, report.content)
         resolve = self.client.post(
             f"{V1}/reports/{report.json()['data']['id']}/review",
-            {"decision": "RESOLVE", "note": "removed"}, **self.auth(),
+            {"decision": "RESOLVE", "note": "removed"},
+            **self.auth(),
         )
         self.assertEqual(resolve.status_code, 200, resolve.content)
         self.assertEqual(resolve.json()["data"]["status"], "RESOLVED")
@@ -257,11 +268,13 @@ class LegalHoldApiTests(Phase11ApiBase):
         # idempotent re-place
         again = self.client.post(
             f"{V1}/legal-holds",
-            {"scope": "CONVERSATION", "targetId": str(target)}, **self.auth(),
+            {"scope": "CONVERSATION", "targetId": str(target)},
+            **self.auth(),
         )
         self.assertEqual(again.json()["data"]["id"], place.json()["data"]["id"])
         release = self.client.post(
-            f"{V1}/legal-holds/{place.json()['data']['id']}/release", {},
+            f"{V1}/legal-holds/{place.json()['data']['id']}/release",
+            {},
             **self.auth(),
         )
         self.assertEqual(release.status_code, 200, release.content)
@@ -282,7 +295,8 @@ class DeliveryApiTests(Phase11ApiBase):
         )
         res = self.client.post(
             f"{V1}/messages/{message.id}/delivery",
-            {"recipientId": self.adminId, "state": "DELIVERED"}, **self.auth(),
+            {"recipientId": self.adminId, "state": "DELIVERED"},
+            **self.auth(),
         )
         self.assertEqual(res.status_code, 201, res.content)
         self.assertEqual(res.json()["data"]["state"], "DELIVERED")

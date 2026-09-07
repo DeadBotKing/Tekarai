@@ -15,6 +15,7 @@ small domain policy reused by the send/invite flows.
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from apps.communication.application.commands.phase10Commands import (
     BlockUserCommand,
@@ -88,7 +89,7 @@ class ListMessageRevisionsUseCase(
         messageRepository: MessageRepository,
         participantRepository: ParticipantRepository,
         revisionRepository: MessageRevisionRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.messageRepository = messageRepository
@@ -126,7 +127,7 @@ class RequestTranscriptUseCase(CommunicationUseCase[RequestTranscriptCommand, Tr
         self,
         meetingRepository: MeetingRepository,
         transcriptRepository: TranscriptRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.meetingRepository = meetingRepository
@@ -167,9 +168,7 @@ class RequestTranscriptUseCase(CommunicationUseCase[RequestTranscriptCommand, Tr
         return transcriptDtoFromDomain(transcript)
 
 
-class CompleteTranscriptUseCase(
-    CommunicationUseCase[CompleteTranscriptCommand, TranscriptDto]
-):
+class CompleteTranscriptUseCase(CommunicationUseCase[CompleteTranscriptCommand, TranscriptDto]):
     """Mark a transcript READY with its content reference and segments.
 
     The transcription engine (external/AI) supplies segments; this use case
@@ -179,7 +178,7 @@ class CompleteTranscriptUseCase(
 
     requiredAction = "meeting.manage"
 
-    def __init__(self, transcriptRepository: TranscriptRepository, **kernel: object) -> None:
+    def __init__(self, transcriptRepository: TranscriptRepository, **kernel: Any) -> None:
         super().__init__(**kernel)
         self.transcriptRepository = transcriptRepository
 
@@ -264,7 +263,7 @@ class GetTranscriptUseCase(CommunicationUseCase[GetTranscriptQuery, TranscriptDt
         meetingRepository: MeetingRepository,
         participantRepository: ParticipantRepository,
         transcriptRepository: TranscriptRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.meetingRepository = meetingRepository
@@ -309,7 +308,7 @@ class SetMeetingCapabilityUseCase(
         meetingRepository: MeetingRepository,
         meetingParticipantRepository: MeetingParticipantRepository,
         capabilityRepository: MeetingCapabilityRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.meetingRepository = meetingRepository
@@ -340,9 +339,7 @@ class SetMeetingCapabilityUseCase(
         actorPart = self.meetingParticipantRepository.get(meetingId, actorId)
         actorRole = actorPart.role if actorPart is not None else ""
         # only HOST / CO_HOST (or organizer) may override capabilities
-        if actorId != meeting.organizerId and not meetingPermissions.isPrivilegedRole(
-            actorRole
-        ):
+        if actorId != meeting.organizerId and not meetingPermissions.isPrivilegedRole(actorRole):
             raise PermissionDeniedError(action="meeting.capability.set")
 
         override = CapabilityOverride(
@@ -386,7 +383,7 @@ class CheckMeetingCapabilityUseCase(
         meetingRepository: MeetingRepository,
         meetingParticipantRepository: MeetingParticipantRepository,
         capabilityRepository: MeetingCapabilityRepository,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.meetingRepository = meetingRepository
@@ -409,18 +406,21 @@ class CheckMeetingCapabilityUseCase(
         role = participant.role if participant is not None else ""
         invited = participant is not None
 
-        override = self.capabilityRepository.find(
-            tenantId, meetingId, actorId, query.capability
-        )
+        override = self.capabilityRepository.find(tenantId, meetingId, actorId, query.capability)
         if override is not None:
-            granted = override.granted and meetingPermissions.can(
-                query.capability,
-                userId=actorId,
-                organizerId=meeting.organizerId,
-                participantRole=role,
-                isInvited=invited,
-                meetingIsLive=meeting.isLive(),
-            ) if override.granted else False
+            granted = (
+                override.granted
+                and meetingPermissions.can(
+                    query.capability,
+                    userId=actorId,
+                    organizerId=meeting.organizerId,
+                    participantRole=role,
+                    isInvited=invited,
+                    meetingIsLive=meeting.isLive(),
+                )
+                if override.granted
+                else False
+            )
             return MeetingCapabilityDto(
                 meetingId=str(meetingId),
                 userId=str(actorId),
@@ -452,7 +452,7 @@ class CheckMeetingCapabilityUseCase(
 
 
 class BlockUserUseCase(CommunicationUseCase[BlockUserCommand, UserBlockDto]):
-    def __init__(self, blockRepository: UserBlockRepository, **kernel: object) -> None:
+    def __init__(self, blockRepository: UserBlockRepository, **kernel: Any) -> None:
         super().__init__(**kernel)
         self.blockRepository = blockRepository
 
@@ -494,7 +494,7 @@ class BlockUserUseCase(CommunicationUseCase[BlockUserCommand, UserBlockDto]):
 class UnblockUserUseCase(CommunicationUseCase[UnblockUserCommand, UserBlockDto]):
     requiredAction = ""
 
-    def __init__(self, blockRepository: UserBlockRepository, **kernel: object) -> None:
+    def __init__(self, blockRepository: UserBlockRepository, **kernel: Any) -> None:
         super().__init__(**kernel)
         self.blockRepository = blockRepository
 
@@ -518,7 +518,7 @@ class UnblockUserUseCase(CommunicationUseCase[UnblockUserCommand, UserBlockDto])
 class ListBlocksUseCase(CommunicationUseCase[ListBlocksQuery, list[UserBlockDto]]):
     requiredAction = ""
 
-    def __init__(self, blockRepository: UserBlockRepository, **kernel: object) -> None:
+    def __init__(self, blockRepository: UserBlockRepository, **kernel: Any) -> None:
         super().__init__(**kernel)
         self.blockRepository = blockRepository
 
@@ -559,16 +559,14 @@ def assertNotBlocked(
 # ---------------------------------------------------------------------------
 
 
-class CreateCallSessionUseCase(
-    CommunicationUseCase[CreateCallSessionCommand, CallSessionDto]
-):
+class CreateCallSessionUseCase(CommunicationUseCase[CreateCallSessionCommand, CallSessionDto]):
     requiredAction = ""
 
     def __init__(
         self,
         callRepository: CallRepository,
         callProvider: CallProvider,
-        **kernel: object,
+        **kernel: Any,
     ) -> None:
         super().__init__(**kernel)
         self.callRepository = callRepository
@@ -601,7 +599,7 @@ class CreateCallSessionUseCase(
 class JoinCallSessionUseCase(CommunicationUseCase[JoinCallSessionCommand, dict]):
     requiredAction = ""
 
-    def __init__(self, callProvider: CallProvider, **kernel: object) -> None:
+    def __init__(self, callProvider: CallProvider, **kernel: Any) -> None:
         super().__init__(**kernel)
         self.callProvider = callProvider
 

@@ -100,7 +100,9 @@ class CapabilityCode:
     def __post_init__(self) -> None:
         normalized = validateCode(self.value, "capabilityCode")
         if normalized not in CAPABILITY_CODES and not normalized.startswith("CUSTOM_"):
-            raise ValidationFailedError("Unknown AI capability.", fieldErrors={"capabilityCode": normalized})
+            raise ValidationFailedError(
+                "Unknown AI capability.", fieldErrors={"capabilityCode": normalized}
+            )
         object.__setattr__(self, "value", normalized)
 
     def __str__(self) -> str:
@@ -134,7 +136,9 @@ class OutputClassification:
     value: str
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "value", ensureEnum(self.value, OUTPUT_CLASSIFICATIONS, "outputClassification"))
+        object.__setattr__(
+            self, "value", ensureEnum(self.value, OUTPUT_CLASSIFICATIONS, "outputClassification")
+        )
 
     def __str__(self) -> str:
         return self.value
@@ -145,7 +149,9 @@ class DataClassification:
     value: str
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "value", ensureEnum(self.value, DATA_CLASSIFICATIONS, "classification"))
+        object.__setattr__(
+            self, "value", ensureEnum(self.value, DATA_CLASSIFICATIONS, "classification")
+        )
 
     def __str__(self) -> str:
         return self.value
@@ -184,10 +190,14 @@ class Money:
     def __post_init__(self) -> None:
         amount = Decimal(str(self.amount))
         if amount < Decimal("0"):
-            raise ValidationFailedError("AI cost cannot be negative.", fieldErrors={"amount": str(amount)})
+            raise ValidationFailedError(
+                "AI cost cannot be negative.", fieldErrors={"amount": str(amount)}
+            )
         currency = str(self.currency or "").upper()
         if len(currency) != 3 or not currency.isalpha():
-            raise ValidationFailedError("Currency must be an ISO-4217 code.", fieldErrors={"currency": currency})
+            raise ValidationFailedError(
+                "Currency must be an ISO-4217 code.", fieldErrors={"currency": currency}
+            )
         object.__setattr__(self, "amount", amount)
         object.__setattr__(self, "currency", currency)
 

@@ -79,8 +79,10 @@ class BroadcastCreationTests(Phase12Base):
     def testIdempotencyKeyReturnsExisting(self) -> None:
         with self.context(self.tenant, self.admin):
             cmd = CreateBroadcastCommand(
-                notificationType="X", title="t",
-                recipientIds=(self.u1.id,), idempotencyKey="dup-1",
+                notificationType="X",
+                title="t",
+                recipientIds=(self.u1.id,),
+                idempotencyKey="dup-1",
             )
             n1 = c.createBroadcastService().execute(cmd)
             n2 = c.createBroadcastService().execute(cmd)
@@ -90,8 +92,10 @@ class BroadcastCreationTests(Phase12Base):
         with self.context(self.tenant, self.admin):
             n = c.createBroadcastService().execute(
                 CreateBroadcastCommand(
-                    notificationType="ALERT", title="crit",
-                    recipientIds=(self.u1.id,), priority="CRITICAL",
+                    notificationType="ALERT",
+                    title="crit",
+                    recipientIds=(self.u1.id,),
+                    priority="CRITICAL",
                 )
             )
             deliveries = c.deliveryDispatchService().fanOut(n)
@@ -101,9 +105,7 @@ class BroadcastCreationTests(Phase12Base):
         self.assertIn("WEBHOOK", channels)
         self.assertIn("IN_APP", channels)
         self.assertEqual(
-            NotificationRecipientDeliveryModel.objects.filter(
-                notificationId=n.id
-            ).count(),
+            NotificationRecipientDeliveryModel.objects.filter(notificationId=n.id).count(),
             len(channels),
         )
 
@@ -113,7 +115,8 @@ class RecipientStateTests(Phase12Base):
         with self.context(self.tenant, self.admin):
             return c.createBroadcastService().execute(
                 CreateBroadcastCommand(
-                    notificationType="X", title="hi",
+                    notificationType="X",
+                    title="hi",
                     recipientIds=(self.u1.id, self.u2.id),
                 )
             )
@@ -167,8 +170,10 @@ class RetryDeadLetterTests(Phase12Base):
         with self.context(self.tenant, self.admin):
             n = c.createBroadcastService().execute(
                 CreateBroadcastCommand(
-                    notificationType="X", title="t",
-                    recipientIds=(self.u1.id,), priority="LOW",
+                    notificationType="X",
+                    title="t",
+                    recipientIds=(self.u1.id,),
+                    priority="LOW",
                 )
             )
             deliveries = c.deliveryDispatchService().fanOut(n)
@@ -178,8 +183,10 @@ class RetryDeadLetterTests(Phase12Base):
         with self.context(self.tenant, self.admin):
             n = c.createBroadcastService().execute(
                 CreateBroadcastCommand(
-                    notificationType="X", title="t",
-                    recipientIds=(self.u1.id,), priority="LOW",
+                    notificationType="X",
+                    title="t",
+                    recipientIds=(self.u1.id,),
+                    priority="LOW",
                 )
             )
             c.deliveryDispatchService().fanOut(n)
@@ -193,17 +200,17 @@ class RetryDeadLetterTests(Phase12Base):
         with self.context(self.tenant, self.admin):
             n = c.createBroadcastService().execute(
                 CreateBroadcastCommand(
-                    notificationType="X", title="t",
-                    recipientIds=(self.u1.id,), priority="LOW",
+                    notificationType="X",
+                    title="t",
+                    recipientIds=(self.u1.id,),
+                    priority="LOW",
                 )
             )
             c.deliveryDispatchService().fanOut(n)
             svc = c.deliveryRetryService()
             svc.channelSender = alwaysFail
             delivery = NotificationRecipientDeliveryModel.objects.get(notificationId=n.id)
-            domain_delivery = c.recipientDeliveryRepository().getById(
-                self.tenant.id, delivery.id
-            )
+            domain_delivery = c.recipientDeliveryRepository().getById(self.tenant.id, delivery.id)
             # attempt up to the cap; backoff delays are ignored by calling the
             # per-delivery attempt directly (worker would otherwise wait).
             for _ in range(6):
@@ -221,8 +228,10 @@ class RetryDeadLetterTests(Phase12Base):
         with self.context(self.tenant, self.admin):
             n = c.createBroadcastService().execute(
                 CreateBroadcastCommand(
-                    notificationType="X", title="t",
-                    recipientIds=(self.u1.id,), priority="LOW",
+                    notificationType="X",
+                    title="t",
+                    recipientIds=(self.u1.id,),
+                    priority="LOW",
                 )
             )
             c.deliveryDispatchService().fanOut(n)
@@ -248,9 +257,7 @@ class RuleAndEventTests(Phase12Base):
                     priority="HIGH",
                 )
             )
-            found = c.notificationRuleRepository().listForEvent(
-                self.tenant.id, "TASK_OVERDUE"
-            )
+            found = c.notificationRuleRepository().listForEvent(self.tenant.id, "TASK_OVERDUE")
         self.assertEqual(len(found), 1)
         self.assertTrue(found[0].matches("TASK_OVERDUE", {"priority": "HIGH"}))
 
@@ -264,10 +271,8 @@ class RuleAndEventTests(Phase12Base):
                     channels=("IN_APP",),
                 )
             )
-            payload = {"title": "New task", "body": "assigned",
-                       "recipientIds": [str(self.u1.id)]}
-            cmd = IngestEventCommand(eventId="evt-100", eventType="TASK_ASSIGNED",
-                                     payload=payload)
+            payload = {"title": "New task", "body": "assigned", "recipientIds": [str(self.u1.id)]}
+            cmd = IngestEventCommand(eventId="evt-100", eventType="TASK_ASSIGNED", payload=payload)
             first = c.eventIntakeService().execute(cmd)
             second = c.eventIntakeService().execute(cmd)  # redelivered
         self.assertEqual(len(first), 1)
@@ -289,19 +294,23 @@ class RuleAndEventTests(Phase12Base):
         with self.context(self.tenant, self.admin):
             c.ruleDefinitionService().execute(
                 DefineRuleCommand(
-                    name="only high", eventType="TASK_OVERDUE",
-                    condition={"priority": "HIGH"}, recipientStrategy="TARGET",
+                    name="only high",
+                    eventType="TASK_OVERDUE",
+                    condition={"priority": "HIGH"},
+                    recipientStrategy="TARGET",
                 )
             )
             low = c.eventIntakeService().execute(
                 IngestEventCommand(
-                    eventId="e-low", eventType="TASK_OVERDUE",
+                    eventId="e-low",
+                    eventType="TASK_OVERDUE",
                     payload={"priority": "LOW", "recipientIds": [str(self.u1.id)]},
                 )
             )
             high = c.eventIntakeService().execute(
                 IngestEventCommand(
-                    eventId="e-high", eventType="TASK_OVERDUE",
+                    eventId="e-high",
+                    eventType="TASK_OVERDUE",
                     payload={"priority": "HIGH", "recipientIds": [str(self.u1.id)]},
                 )
             )
@@ -313,8 +322,12 @@ class WebhookChannelTests(Phase12Base):
     def testWebhookMissingUrlFails(self) -> None:
         ch = WebhookDeliveryChannel()
         result = ch.send(
-            tenantId=str(self.tenant.id), notificationId="n1",
-            recipientId=str(self.u1.id), title="t", body="b", metadata={},
+            tenantId=str(self.tenant.id),
+            notificationId="n1",
+            recipientId=str(self.u1.id),
+            title="t",
+            body="b",
+            metadata={},
         )
         self.assertFalse(result["ok"])
         self.assertEqual(result["errorCode"], "WEBHOOK_URL_MISSING")
@@ -322,8 +335,11 @@ class WebhookChannelTests(Phase12Base):
     def testWebhookLoggingProviderSucceeds(self) -> None:
         ch = WebhookDeliveryChannel()
         result = ch.send(
-            tenantId=str(self.tenant.id), notificationId="n1",
-            recipientId=str(self.u1.id), title="t", body="b",
+            tenantId=str(self.tenant.id),
+            notificationId="n1",
+            recipientId=str(self.u1.id),
+            title="t",
+            body="b",
             metadata={"webhookUrl": "https://example.com/hook"},
         )
         self.assertTrue(result["ok"])

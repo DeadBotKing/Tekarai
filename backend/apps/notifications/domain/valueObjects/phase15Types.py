@@ -61,12 +61,15 @@ def verifyWebhookSignature(
 
 def sanitizedMetadata(value: dict[str, Any], *, maxBytes: int = 16_384) -> dict[str, Any]:
     """Remove secret-like keys recursively and enforce a bounded JSON payload."""
+
     def clean(item: Any, depth: int = 0) -> Any:
         if depth > 8:
             return "[MAX_DEPTH]"
         if isinstance(item, dict):
             return {
-                str(key)[:100]: "[REDACTED]" if _SECRET_KEY_PATTERN.search(str(key)) else clean(val, depth + 1)
+                str(key)[:100]: "[REDACTED]"
+                if _SECRET_KEY_PATTERN.search(str(key))
+                else clean(val, depth + 1)
                 for key, val in item.items()
             }
         if isinstance(item, list):

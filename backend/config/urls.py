@@ -33,6 +33,9 @@ urlpatterns = [
                     "learning/",
                     include("apps.learning.presentation.api.urls.learningRoutes"),
                 ),
+                path(
+                    "", include("apps.projectIntelligence.presentation.api.urls.intelligenceRoutes")
+                ),
             ]
         ),
     ),

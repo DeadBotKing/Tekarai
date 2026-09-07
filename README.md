@@ -79,13 +79,14 @@ tekarai/
 └── .github/workflows/  backend CI (Linux + Windows quality gate)
 ```
 
-**Current state: Phase 16 — Self-Learning Platform: executed (Tekarai 0.16.0).**
-The cumulative backend includes all capabilities delivered through Phases 1–16,
-including durable communication/notification platforms and a governed,
-versioned, auditable, validated and rollback-capable learning lifecycle.
-Phase 16 evidence and operations guidance:
-[`docs/Phases/Phase16Report.md`](docs/Phases/Phase16Report.md) ·
-[`docs/operations/selfLearningPlatform.md`](docs/operations/selfLearningPlatform.md).
+**Current state: Phase 17 — Project Intelligence Platform: executed (Tekarai 0.17.0).**
+The cumulative backend includes all capabilities delivered through Phases 1–17,
+including the governed learning lifecycle and a secure, deterministic,
+incremental project-observation pipeline that produces versioned knowledge,
+insights, recommendations, decisions, agent context and resumable project state.
+Phase 17 evidence and operations guidance:
+[`docs/Phases/Phase17Report.md`](docs/Phases/Phase17Report.md) ·
+[`docs/operations/projectIntelligencePlatform.md`](docs/operations/projectIntelligencePlatform.md).
 
 ---
 

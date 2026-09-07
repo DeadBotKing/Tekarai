@@ -12,6 +12,8 @@ Per-environment modules: ``development.py`` · ``testing.py`` · ``production.py
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import environ
 from django.core.exceptions import ImproperlyConfigured
 
@@ -101,6 +103,7 @@ INSTALLED_APPS = [
     "apps.notifications",
     "apps.ai",
     "apps.learning",
+    "apps.projectIntelligence",
 ]
 
 # --------------------------------------------------------------------------- #
@@ -237,6 +240,9 @@ API_RATE_LIMIT_POLICIES: dict[str, tuple[int, int]] = {
     "learning:action": (20, 60),
     "learning:feedback": (120, 60),
     "learning:monitor": (300, 60),
+    "project-intelligence:snapshot": (10, 60),
+    "project-intelligence:analyze": (10, 60),
+    "project-intelligence:context": (30, 60),
 }
 
 # Session lifetime (ADR-019 opaque tokens; refresh rotates within this TTL).
@@ -614,6 +620,7 @@ CELERY_TASK_ROUTES = {
     "notifications.workerTick": {"queue": "notifications.maintenance"},
     "learning.processJob": {"queue": "learning.training"},
     "learning.monitorDeployments": {"queue": "learning.monitoring"},
+    "projectIntelligence.processJob": {"queue": "project-intelligence.analysis"},
 }
 CELERY_BEAT_SCHEDULE = {
     "notification-worker-tick": {
@@ -636,6 +643,18 @@ LEARNING_EVALUATION_IMPL = (
 )
 LEARNING_QUEUE_IMPL = "apps.learning.infrastructure.queue.learningQueue.CeleryLearningJobQueue"
 
+PROJECT_INTELLIGENCE_WORKSPACE_ROOT = Path(
+    env("projectIntelligenceWorkspaceRoot", default=str(BASE_DIR.parent))
+).resolve()
+PROJECT_INTELLIGENCE_ARTIFACT_ROOT = BASE_DIR / "var" / "projectIntelligenceArtifacts"
+PROJECT_INTELLIGENCE_MAX_FILES = int(env("projectIntelligenceMaxFiles", default="50000") or 50000)
+PROJECT_INTELLIGENCE_MAX_FILE_BYTES = int(
+    env("projectIntelligenceMaxFileBytes", default="2000000") or 2000000
+)
+PROJECT_INTELLIGENCE_CACHE_TTL_SECONDS = int(
+    env("projectIntelligenceCacheTtlSeconds", default="86400") or 86400
+)
+
 # ---------------------------------------------------------------------------
 # GUARDS
 # ---------------------------------------------------------------------------
@@ -654,6 +673,7 @@ MIGRATION_MODULES = {
     "notifications": "apps.notifications.infrastructure.migrations",
     "ai": "apps.ai.infrastructure.migrations",
     "learning": "apps.learning.infrastructure.migrations",
+    "projectIntelligence": "apps.projectIntelligence.infrastructure.migrations",
 }
 
 # Phase 07 §7/§8 — JWT configuration (ADR-022: in-house HS256, stdlib only).

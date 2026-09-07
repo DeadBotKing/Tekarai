@@ -125,7 +125,9 @@ class ContextOpeningRegisterTests(SimpleTestCase):
         for sourceFile in sourceFiles:
             content = sourceFile.read_text(encoding="utf-8")
             for word in businessWords:
-                if word == "Notification" and "notifications" in sourceFile.parts:
+                if word == "Notification" and (
+                    "notifications" in sourceFile.parts or "config" in sourceFile.parts
+                ):
                     continue
                 self.assertNotIn(
                     word,

@@ -21,9 +21,9 @@ from apps.notifications.application.commands.notificationCommands import (
     CancelNotificationCommand,
     CancelScheduleCommand,
     CreateNotificationCommand,
-    DeleteTenantRuleCommand,
     DeactivateTemplateCommand,
     DeletePolicyCommand,
+    DeleteTenantRuleCommand,
     MarkNotificationReadCommand,
     MarkNotificationsReadCommand,
     MarkNotificationUnreadCommand,
@@ -43,8 +43,8 @@ from apps.notifications.application.queries.notificationQueries import (
     ListNotificationsQuery,
     ListPoliciesQuery,
     ListSchedulesQuery,
-    ListTemplateVersionsQuery,
     ListTemplatesQuery,
+    ListTemplateVersionsQuery,
     ListTenantRulesQuery,
     UnreadCountQuery,
 )
@@ -60,6 +60,7 @@ from apps.sharedKernel.presentation.api.permissions import (
     IsAuthenticated,
     actionPermission,
 )
+from apps.sharedKernel.presentation.api.rateLimiting import enforceRateLimit
 from apps.sharedKernel.presentation.api.response import successEnvelope
 
 NOTIFICATION_ERRORS = [
@@ -347,6 +348,7 @@ class AdminSendView(APIView):
     authentication_classes = [BearerSessionAuthentication]
     permission_classes = [actionPermission("notification.send")]
 
+    @enforceRateLimit("notification:create")
     def post(self, request: Request) -> Response:
         from apps.notifications.presentation.api.serializers import (
             notificationSerializers,

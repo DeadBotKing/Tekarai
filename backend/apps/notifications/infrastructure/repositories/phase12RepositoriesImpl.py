@@ -36,7 +36,10 @@ class BroadcastNotificationRepositoryDjango:
             id=notification.id,
             defaults={
                 "tenantId": notification.tenantId,
+                "actorId": notification.actorId,
                 "notificationType": notification.notificationType,
+                "payloadVersion": notification.payloadVersion,
+                "status": notification.status,
                 "severity": notification.severity,
                 "priority": notification.priority,
                 "title": notification.title,
@@ -48,23 +51,33 @@ class BroadcastNotificationRepositoryDjango:
                 "metadata": notification.metadata,
                 "idempotencyKey": notification.idempotencyKey,
                 "correlationId": notification.correlationId,
+                "scheduledAt": notification.scheduledAt,
+                "expiresAt": notification.expiresAt,
+                "sentAt": notification.sentAt,
+                "deliveredAt": notification.deliveredAt,
+                "failedAt": notification.failedAt,
+                "cancelledAt": notification.cancelledAt,
                 "createdAt": notification.createdAt or _now(),
             },
         )
-        for recipient in notification.recipients:
-            NotificationRecipientModel.objects.get_or_create(
-                id=recipient.id,
-                defaults={
-                    "tenantId": recipient.tenantId,
-                    "notificationId": recipient.notificationId,
-                    "userId": recipient.userId,
-                    "recipientState": recipient.state,
-                    "readAt": recipient.readAt,
-                    "archivedAt": recipient.archivedAt,
-                    "dismissedAt": recipient.dismissedAt,
-                    "createdAt": recipient.createdAt or _now(),
-                },
-            )
+        NotificationRecipientModel.objects.bulk_create(
+            [
+                NotificationRecipientModel(
+                    id=recipient.id,
+                    tenantId=recipient.tenantId,
+                    notificationId=recipient.notificationId,
+                    userId=recipient.userId,
+                    recipientState=recipient.state,
+                    readAt=recipient.readAt,
+                    archivedAt=recipient.archivedAt,
+                    dismissedAt=recipient.dismissedAt,
+                    createdAt=recipient.createdAt or _now(),
+                )
+                for recipient in notification.recipients
+            ],
+            batch_size=1000,
+            ignore_conflicts=True,
+        )
 
     def getById(
         self, tenantId: uuid.UUID, notificationId: uuid.UUID
@@ -99,13 +112,17 @@ class BroadcastNotificationRepositoryDjango:
         )
         if unreadOnly:
             rows = rows.filter(recipientState="UNREAD")
-        ids = list(rows.values_list("notificationId", flat=True))[: limit * 2]
+        recipientRows = list(rows.order_by("-createdAt")[: limit * 2])
+        recipientByNotification = {row.notificationId: row for row in recipientRows}
         notifications = list(
             NotificationModel.objects.filter(
-                tenantId=tenantId, id__in=ids
+                tenantId=tenantId, id__in=recipientByNotification
             ).order_by("-createdAt")[:limit]
         )
-        return [self._toDomain(n) for n in notifications]
+        return [
+            self._toDomain(n, recipients=(recipientByNotification[n.id],))
+            for n in notifications
+        ]
 
     def unreadCount(self, tenantId: uuid.UUID, recipientId: uuid.UUID) -> int:
         return NotificationRecipientModel.objects.filter(
@@ -150,7 +167,12 @@ class BroadcastNotificationRepositoryDjango:
             createdAt=model.createdAt,
         )
 
-    def _toDomain(self, model: NotificationModel) -> d.BroadcastNotification:
+    def _toDomain(
+        self,
+        model: NotificationModel,
+        *,
+        recipients: tuple[NotificationRecipientModel, ...] | None = None,
+    ) -> d.BroadcastNotification:
         notification = d.BroadcastNotification(
             id=model.id,
             tenantId=model.tenantId,
@@ -166,14 +188,25 @@ class BroadcastNotificationRepositoryDjango:
             language=model.language,
             idempotencyKey=model.idempotencyKey,
             correlationId=model.correlationId,
+            actorId=model.actorId,
+            payloadVersion=model.payloadVersion,
+            status=model.status,
+            scheduledAt=model.scheduledAt,
+            expiresAt=model.expiresAt,
+            sentAt=model.sentAt,
+            deliveredAt=model.deliveredAt,
+            failedAt=model.failedAt,
+            cancelledAt=model.cancelledAt,
             createdAt=model.createdAt,
         )
-        notification.recipients = [
-            self._recipientToDomain(r)
-            for r in NotificationRecipientModel.objects.filter(
-                tenantId=model.tenantId, notificationId=model.id
+        recipientRows = recipients
+        if recipientRows is None:
+            recipientRows = tuple(
+                NotificationRecipientModel.objects.filter(
+                    tenantId=model.tenantId, notificationId=model.id
+                )
             )
-        ]
+        notification.recipients = [self._recipientToDomain(row) for row in recipientRows]
         return notification
 
 
@@ -192,6 +225,7 @@ class RecipientDeliveryRepositoryDjango:
                 "recipientId": delivery.recipientId,
                 "channel": delivery.channel,
                 "provider": delivery.provider,
+                "providerMessageId": delivery.providerMessageId,
                 "deliveryStatus": delivery.status,
                 "attemptCount": delivery.attemptCount,
                 "maxAttempts": delivery.maxAttempts,
@@ -199,8 +233,39 @@ class RecipientDeliveryRepositoryDjango:
                 "errorMessage": delivery.errorMessage,
                 "lastAttemptAt": delivery.lastAttemptAt,
                 "nextAttemptAt": delivery.nextAttemptAt,
+                "sentAt": delivery.sentAt,
                 "deliveredAt": delivery.deliveredAt,
+                "failedAt": delivery.failedAt,
             },
+        )
+
+    def saveMany(self, deliveries: list[d.RecipientDelivery]) -> None:
+        """Persist a large fan-out in bounded SQL batches, never N requests."""
+        NotificationRecipientDeliveryModel.objects.bulk_create(
+            [
+                NotificationRecipientDeliveryModel(
+                    id=item.id,
+                    tenantId=item.tenantId,
+                    notificationId=item.notificationId,
+                    recipientId=item.recipientId,
+                    channel=item.channel,
+                    provider=item.provider,
+                    providerMessageId=item.providerMessageId,
+                    deliveryStatus=item.status,
+                    attemptCount=item.attemptCount,
+                    maxAttempts=item.maxAttempts,
+                    errorCode=item.errorCode,
+                    errorMessage=item.errorMessage,
+                    lastAttemptAt=item.lastAttemptAt,
+                    nextAttemptAt=item.nextAttemptAt,
+                    sentAt=item.sentAt,
+                    deliveredAt=item.deliveredAt,
+                    failedAt=item.failedAt,
+                )
+                for item in deliveries
+            ],
+            batch_size=1000,
+            ignore_conflicts=True,
         )
 
     def saveAttempt(self, attempt: d.DeliveryAttempt) -> None:
@@ -238,6 +303,16 @@ class RecipientDeliveryRepositoryDjango:
                 tenantId=tenantId, notificationId=notificationId
             )
         ]
+
+    def findByProviderMessageId(
+        self, tenantId: uuid.UUID, provider: str, providerMessageId: str
+    ) -> d.RecipientDelivery | None:
+        model = NotificationRecipientDeliveryModel.objects.filter(
+            tenantId=tenantId,
+            provider__iexact=provider,
+            providerMessageId=providerMessageId,
+        ).first()
+        return self._toDomain(model) if model else None
 
     def listRetryDue(self, now: datetime, *, limit: int = 100) -> list[d.RecipientDelivery]:
         return [
@@ -290,6 +365,7 @@ class RecipientDeliveryRepositoryDjango:
             recipientId=model.recipientId,
             channel=model.channel,
             provider=model.provider,
+            providerMessageId=model.providerMessageId,
             status=model.deliveryStatus,
             attemptCount=model.attemptCount,
             maxAttempts=model.maxAttempts,
@@ -297,7 +373,9 @@ class RecipientDeliveryRepositoryDjango:
             errorMessage=model.errorMessage,
             lastAttemptAt=model.lastAttemptAt,
             nextAttemptAt=model.nextAttemptAt,
+            sentAt=model.sentAt,
             deliveredAt=model.deliveredAt,
+            failedAt=model.failedAt,
             createdAt=model.createdAt,
         )
 

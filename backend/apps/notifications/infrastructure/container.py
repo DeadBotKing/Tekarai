@@ -623,7 +623,9 @@ def deliveryRetryService():
     )
 
     return DeliveryRetryService(
-        deliveryRepository=recipientDeliveryRepository(), **notificationPorts()
+        deliveryRepository=recipientDeliveryRepository(),
+        broadcastRepository=broadcastRepository(),
+        **notificationPorts(),
     )
 
 
@@ -657,5 +659,74 @@ def eventIntakeService():
         ruleRepository=notificationRuleRepository(),
         broadcastRepository=broadcastRepository(),
         dispatchService=deliveryDispatchService(),
+        **notificationPorts(),
+    )
+
+
+# -- Phase 15 completion ------------------------------------------------------
+
+
+def phase15Store():
+    from apps.notifications.infrastructure.repositories.phase15RepositoriesImpl import (
+        NotificationPlatformStoreDjango,
+    )
+
+    return NotificationPlatformStoreDjango()
+
+
+def phase15SearchService():
+    from apps.notifications.application.services.phase15Services import (
+        SearchNotificationsService,
+    )
+
+    return SearchNotificationsService(store=phase15Store(), **notificationPorts())
+
+
+def phase15PushSubscriptionService():
+    from apps.notifications.application.services.phase15Services import (
+        PushSubscriptionService,
+    )
+
+    return PushSubscriptionService(store=phase15Store(), **notificationPorts())
+
+
+def phase15ProviderWebhookService():
+    from django.conf import settings
+
+    from apps.notifications.application.services.phase15Services import ProviderWebhookService
+    from apps.notifications.infrastructure.repositories.phase15RepositoriesImpl import (
+        SettingsWebhookSecretProvider,
+    )
+
+    return ProviderWebhookService(
+        phase15Store(),
+        SettingsWebhookSecretProvider(),
+        sharedKernelProvider("clock")(),
+        toleranceSeconds=int(
+            getattr(settings, "NOTIFICATION_WEBHOOK_TOLERANCE_SECONDS", 300)
+        ),
+    )
+
+
+def phase15ProviderConfigurationService():
+    from apps.notifications.application.services.phase15Services import (
+        ProviderConfigurationService,
+    )
+
+    return ProviderConfigurationService(store=phase15Store(), **notificationPorts())
+
+
+def phase15CleanupService():
+    from django.conf import settings
+
+    from apps.notifications.application.services.phase15Services import (
+        NotificationCleanupService,
+    )
+
+    return NotificationCleanupService(
+        store=phase15Store(),
+        defaultRetentionDays=int(
+            getattr(settings, "NOTIFICATION_RETENTION_DAYS", 365)
+        ),
         **notificationPorts(),
     )

@@ -15,6 +15,21 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
+class CeleryNotificationQueue:
+    """Production adapter; publish after commit while DB remains source of truth."""
+
+    def submit(self, job: dict[str, Any]) -> None:
+        if job.get("kind") != "DISPATCH" or not job.get("notificationId"):
+            logger.warning("Unknown job kind ignored", extra={"kind": job.get("kind")})
+            return
+        from django.db import transaction
+
+        from apps.notifications.tasks import dispatchNotificationJob
+
+        notificationId = str(job["notificationId"])
+        transaction.on_commit(lambda: dispatchNotificationJob.delay(notificationId))
+
+
 class InlineNotificationQueue:
     """Default queue: dispatch immediately, never lose the job."""
 

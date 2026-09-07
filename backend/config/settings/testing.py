@@ -52,3 +52,9 @@ DATABASES = {
         dbPort=env("dbPort", default=""),
     )
 }
+
+# Phase 15 — Celery contract tests stay hermetic and execute without Redis.
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_EAGER_PROPAGATES = True
+CELERY_BROKER_URL = "memory://"
+CELERY_RESULT_BACKEND = "cache+memory://"

@@ -8,6 +8,7 @@ read-state (§12.7/§12.8), delivery retry/dead-letter (§12.17/§12.18), rules
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime
 
 from apps.sharedKernel.application.messaging import Command
 
@@ -29,6 +30,10 @@ class CreateBroadcastCommand(Command):
     metadata: dict = field(default_factory=dict)
     idempotencyKey: str = ""
     correlationId: str = ""
+    actorId: str = ""
+    payloadVersion: int = 1
+    scheduledAt: datetime | None = None
+    expiresAt: datetime | None = None
 
 
 @dataclass(frozen=True)

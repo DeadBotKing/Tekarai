@@ -288,7 +288,7 @@ class NotificationDeviceModel(models.Model):
     userId = models.UUIDField(db_index=True)
     platform = models.CharField(max_length=12)
     deviceIdentifier = models.CharField(max_length=190)
-    pushToken = models.CharField(max_length=512)  # §33 — server-side only
+    pushToken = models.CharField(max_length=2048)  # authenticated envelope + key rotation headroom  # §33 — server-side only
     provider = models.CharField(max_length=48, default="FCM")
     isActive = models.BooleanField(default=True, db_index=True)
     createdAt = models.DateTimeField(auto_now_add=True)
@@ -414,7 +414,10 @@ class NotificationModel(models.Model):
 
     id = uuidPk()
     tenantId = models.UUIDField(db_index=True)
+    actorId = models.UUIDField(null=True, blank=True, db_index=True)
     notificationType = models.CharField(max_length=120, db_index=True)
+    payloadVersion = models.PositiveIntegerField(default=1)
+    status = models.CharField(max_length=32, default="CREATED", db_index=True)
     severity = models.CharField(max_length=16, default="INFO")
     priority = models.CharField(max_length=16, db_index=True, default="NORMAL")
     title = models.CharField(max_length=300)
@@ -426,6 +429,12 @@ class NotificationModel(models.Model):
     metadata = models.JSONField(default=dict, blank=True)
     idempotencyKey = models.CharField(max_length=80, blank=True, default="", db_index=True)
     correlationId = models.CharField(max_length=64, blank=True, default="", db_index=True)
+    scheduledAt = models.DateTimeField(null=True, blank=True, db_index=True)
+    expiresAt = models.DateTimeField(null=True, blank=True, db_index=True)
+    sentAt = models.DateTimeField(null=True, blank=True)
+    deliveredAt = models.DateTimeField(null=True, blank=True)
+    failedAt = models.DateTimeField(null=True, blank=True)
+    cancelledAt = models.DateTimeField(null=True, blank=True)
     createdAt = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
@@ -487,6 +496,7 @@ class NotificationRecipientDeliveryModel(models.Model):
     recipientId = models.UUIDField(db_index=True)
     channel = models.CharField(max_length=16, db_index=True)
     provider = models.CharField(max_length=48, blank=True, default="")
+    providerMessageId = models.CharField(max_length=120, blank=True, default="", db_index=True)
     deliveryStatus = models.CharField(max_length=16, default="PENDING", db_index=True)
     attemptCount = models.IntegerField(default=0)
     maxAttempts = models.IntegerField(default=5)
@@ -494,7 +504,9 @@ class NotificationRecipientDeliveryModel(models.Model):
     errorMessage = models.CharField(max_length=500, blank=True, default="")
     lastAttemptAt = models.DateTimeField(null=True, blank=True)
     nextAttemptAt = models.DateTimeField(null=True, blank=True, db_index=True)
+    sentAt = models.DateTimeField(null=True, blank=True)
     deliveredAt = models.DateTimeField(null=True, blank=True)
+    failedAt = models.DateTimeField(null=True, blank=True)
     createdAt = models.DateTimeField(auto_now_add=True)
     updatedAt = models.DateTimeField(auto_now=True)
 
@@ -583,4 +595,114 @@ class NotificationEventModel(models.Model):
             models.UniqueConstraint(
                 fields=["tenantId", "eventId"], name="UQ_Event_tenant_evt"
             ),
+        ]
+
+
+# ---------------------------------------------------------------------------
+# Phase 15 completion — secure web push, provider governance, callback inbox,
+# immutable notification audit and operational cleanup records.
+# ---------------------------------------------------------------------------
+
+
+class NotificationPushSubscriptionModel(models.Model):
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    userId = models.UUIDField(db_index=True)
+    endpointHash = models.CharField(max_length=64)
+    encryptedSubscription = models.TextField()
+    isActive = models.BooleanField(default=True, db_index=True)
+    createdAt = models.DateTimeField(auto_now_add=True)
+    updatedAt = models.DateTimeField(auto_now=True)
+    expiresAt = models.DateTimeField(null=True, blank=True)
+    revokedAt = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "notificationPushSubscriptions"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenantId", "userId", "endpointHash"],
+                name="UQ_NtfPush_t_user_endpoint",
+            )
+        ]
+        indexes = [
+            models.Index(
+                fields=["tenantId", "userId", "isActive"], name="IX_NtfPush_t_user"
+            )
+        ]
+
+
+class NotificationProviderConfigurationModel(models.Model):
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    channel = models.CharField(max_length=16)
+    provider = models.CharField(max_length=48)
+    credentialRef = models.CharField(max_length=255, blank=True, default="")
+    configuration = models.JSONField(default=dict, blank=True)
+    isActive = models.BooleanField(default=True, db_index=True)
+    createdById = models.UUIDField(null=True, blank=True)
+    createdAt = models.DateTimeField(auto_now_add=True)
+    updatedAt = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "notificationProviderConfigurations"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenantId", "channel", "provider"],
+                name="UQ_NtfProvider_t_channel_name",
+            )
+        ]
+
+
+class NotificationWebhookReceiptModel(models.Model):
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    provider = models.CharField(max_length=48)
+    providerEventId = models.CharField(max_length=120)
+    payloadHash = models.CharField(max_length=64)
+    outcome = models.CharField(max_length=16)
+    receivedAt = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "notificationWebhookReceipts"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenantId", "provider", "providerEventId"],
+                name="UQ_NtfHook_t_provider_event",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["tenantId", "receivedAt"], name="IX_NtfHook_t_received")
+        ]
+
+
+class NotificationAuditModel(models.Model):
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    eventType = models.CharField(max_length=64, db_index=True)
+    resourceType = models.CharField(max_length=48)
+    resourceId = models.CharField(max_length=120, blank=True, default="")
+    actorId = models.UUIDField(null=True, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    occurredAt = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "notificationAudit"
+        indexes = [
+            models.Index(fields=["tenantId", "occurredAt"], name="IX_NtfAudit_t_time")
+        ]
+
+
+class NotificationCleanupRunModel(models.Model):
+    id = uuidPk()
+    tenantId = models.UUIDField(db_index=True)
+    requestedById = models.UUIDField(null=True, blank=True)
+    dryRun = models.BooleanField(default=True)
+    cutoff = models.DateTimeField()
+    counts = models.JSONField(default=dict)
+    createdAt = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "notificationCleanupRuns"
+        indexes = [
+            models.Index(fields=["tenantId", "createdAt"], name="IX_NtfClean_t_time")
         ]

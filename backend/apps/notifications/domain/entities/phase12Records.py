@@ -111,6 +111,7 @@ class RecipientDelivery(AggregateRoot):
         channel: str,
         *,
         provider: str = "",
+        providerMessageId: str = "",
         status: str = t.DLV_PENDING,
         attemptCount: int = 0,
         maxAttempts: int = t.DEFAULT_MAX_ATTEMPTS,
@@ -118,7 +119,9 @@ class RecipientDelivery(AggregateRoot):
         errorMessage: str = "",
         lastAttemptAt: datetime | None = None,
         nextAttemptAt: datetime | None = None,
+        sentAt: datetime | None = None,
         deliveredAt: datetime | None = None,
+        failedAt: datetime | None = None,
         createdAt: datetime | None = None,
     ) -> None:
         super().__init__(id)
@@ -128,6 +131,7 @@ class RecipientDelivery(AggregateRoot):
         self.recipientId = recipientId
         self.channel = channel
         self.provider = provider
+        self.providerMessageId = providerMessageId
         self.status = status
         self.attemptCount = attemptCount
         self.maxAttempts = maxAttempts
@@ -135,7 +139,9 @@ class RecipientDelivery(AggregateRoot):
         self.errorMessage = errorMessage
         self.lastAttemptAt = lastAttemptAt
         self.nextAttemptAt = nextAttemptAt
+        self.sentAt = sentAt
         self.deliveredAt = deliveredAt
+        self.failedAt = failedAt
         self.createdAt = createdAt
 
     @staticmethod
@@ -192,6 +198,8 @@ class RecipientDelivery(AggregateRoot):
         dead-letter (§12.16/§12.17/§12.18)."""
         self.attemptCount += 1
         self.lastAttemptAt = now
+        self.provider = provider
+        self.providerMessageId = providerMessageId
         attempt = DeliveryAttempt.record(
             self.tenantId,
             self.id,
@@ -206,16 +214,19 @@ class RecipientDelivery(AggregateRoot):
         )
         if delivered:
             self._transition(t.DLV_DELIVERED, now)
+            self.sentAt = self.sentAt or now
             self.deliveredAt = now
             self.nextAttemptAt = None
             self.errorCode = ""
             self.errorMessage = ""
         elif succeeded:
             self._transition(t.DLV_SENT, now)
+            self.sentAt = now
             self.nextAttemptAt = None
         else:
             self.errorCode = errorCode
             self.errorMessage = errorMessage
+            self.failedAt = now
             if retryPolicy.isExhausted(self.attemptCount):
                 # all retries spent -> dead letter (§12.18)
                 self.status = t.DLV_FAILED
@@ -252,6 +263,30 @@ class RecipientDelivery(AggregateRoot):
                     )
                 )
         return attempt
+
+    def applyProviderCallback(self, status: str, now: datetime, *, errorCode: str = "") -> None:
+        """Monotonic provider callback; duplicate/out-of-order terminal updates are harmless."""
+        if self.status in (t.DLV_DELIVERED, t.DLV_CANCELLED, t.DLV_EXPIRED):
+            return
+        if status == "DELIVERED":
+            self.status = t.DLV_DELIVERED
+            self.sentAt = self.sentAt or now
+            self.deliveredAt = now
+            self.nextAttemptAt = None
+        elif status == "SENT":
+            self.status = t.DLV_SENT
+            self.sentAt = now
+            self.nextAttemptAt = None
+        elif status == "FAILED":
+            self.status = t.DLV_FAILED
+            self.failedAt = now
+            self.errorCode = errorCode
+            self.nextAttemptAt = None
+        elif status == "CANCELLED":
+            self.status = t.DLV_CANCELLED
+            self.nextAttemptAt = None
+        else:
+            raise ValidationFailedError("provider callback status is invalid.")
 
     def cancel(self, now: datetime) -> None:
         self._transition(t.DLV_CANCELLED, now)
@@ -355,6 +390,15 @@ class BroadcastNotification(AggregateRoot):
         language: str = "",
         idempotencyKey: str = "",
         correlationId: str = "",
+        actorId: uuid.UUID | None = None,
+        payloadVersion: int = 1,
+        status: str = "CREATED",
+        scheduledAt: datetime | None = None,
+        expiresAt: datetime | None = None,
+        sentAt: datetime | None = None,
+        deliveredAt: datetime | None = None,
+        failedAt: datetime | None = None,
+        cancelledAt: datetime | None = None,
         createdAt: datetime | None = None,
     ) -> None:
         super().__init__(id)
@@ -372,8 +416,23 @@ class BroadcastNotification(AggregateRoot):
         self.deepLink = deepLink
         self.metadata = metadata or {}
         self.language = language
+        from apps.notifications.domain.valueObjects.phase15Types import NOTIFICATION_STATUSES
+
+        if status not in NOTIFICATION_STATUSES:
+            raise ValidationFailedError("notification status is invalid.")
+        if payloadVersion < 1:
+            raise ValidationFailedError("payloadVersion must be positive.")
         self.idempotencyKey = idempotencyKey
         self.correlationId = correlationId
+        self.actorId = actorId
+        self.payloadVersion = payloadVersion
+        self.status = status
+        self.scheduledAt = scheduledAt
+        self.expiresAt = expiresAt
+        self.sentAt = sentAt
+        self.deliveredAt = deliveredAt
+        self.failedAt = failedAt
+        self.cancelledAt = cancelledAt
         self.createdAt = createdAt
         self.recipients: list[NotificationRecipient] = []
 
@@ -395,6 +454,10 @@ class BroadcastNotification(AggregateRoot):
         language: str = "",
         idempotencyKey: str = "",
         correlationId: str = "",
+        actorId: uuid.UUID | None = None,
+        payloadVersion: int = 1,
+        scheduledAt: datetime | None = None,
+        expiresAt: datetime | None = None,
     ) -> BroadcastNotification:
         if not recipientIds:
             raise ValidationFailedError(
@@ -416,6 +479,10 @@ class BroadcastNotification(AggregateRoot):
             language=language,
             idempotencyKey=idempotencyKey,
             correlationId=correlationId,
+            actorId=actorId,
+            payloadVersion=payloadVersion,
+            scheduledAt=scheduledAt,
+            expiresAt=expiresAt,
             createdAt=now,
         )
         seen: set[uuid.UUID] = set()
@@ -439,6 +506,64 @@ class BroadcastNotification(AggregateRoot):
             )
         )
         return notification
+
+    def queue(self, now: datetime) -> None:
+        if self.status == "QUEUED":
+            return
+        if self.status != "CREATED":
+            raise ConflictError("Only a created notification can be queued.")
+        if self.expiresAt is not None and self.expiresAt <= now:
+            self.status = "EXPIRED"
+            return
+        self.status = "QUEUED"
+
+    def applyDeliveryStates(self, states: tuple[str, ...], now: datetime) -> None:
+        """Map child delivery states into the aggregate lifecycle."""
+        if not states or self.status in ("CANCELLED", "EXPIRED", "READ"):
+            return
+        if all(state == t.DLV_DELIVERED for state in states):
+            self.status = "DELIVERED"
+            self.sentAt = self.sentAt or now
+            self.deliveredAt = now
+        elif all(
+            state in (t.DLV_DELIVERED, t.DLV_FAILED, t.DLV_DEAD_LETTER)
+            for state in states
+        ) and any(state == t.DLV_DELIVERED for state in states):
+            self.status = "PARTIALLY_DELIVERED"
+            self.sentAt = self.sentAt or now
+            self.deliveredAt = now
+        elif all(state in (t.DLV_FAILED, t.DLV_DEAD_LETTER) for state in states):
+            self.status = "FAILED"
+            self.failedAt = now
+        elif any(state in (t.DLV_SENT, t.DLV_DELIVERED) for state in states):
+            self.status = "SENT"
+            self.sentAt = self.sentAt or now
+        elif any(state == t.DLV_PROCESSING for state in states):
+            self.status = "PROCESSING"
+        else:
+            self.status = "QUEUED"
+
+    def cancel(self, now: datetime) -> None:
+        if self.status == "CANCELLED":
+            return
+        if self.status in ("DELIVERED", "READ", "EXPIRED"):
+            raise ConflictError("Terminal notification cannot be cancelled.")
+        self.status = "CANCELLED"
+        self.cancelledAt = now
+
+    def expire(self, now: datetime) -> None:
+        if self.status == "EXPIRED":
+            return
+        if self.status in ("DELIVERED", "READ", "CANCELLED"):
+            raise ConflictError("Terminal notification cannot expire.")
+        self.status = "EXPIRED"
+
+    def canSend(self, now: datetime) -> bool:
+        if self.status not in ("CREATED", "QUEUED"):
+            return False
+        if self.scheduledAt is not None and self.scheduledAt > now:
+            return False
+        return self.expiresAt is None or self.expiresAt > now
 
     def recipientFor(self, userId: uuid.UUID) -> NotificationRecipient | None:
         for recipient in self.recipients:

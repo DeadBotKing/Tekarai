@@ -40,7 +40,8 @@ from apps.notifications.domain.repositories.phase12Repositories import (
     RecipientDeliveryRepository,
 )
 from apps.notifications.domain.valueObjects import phase12Types as types
-from apps.sharedKernel.domain.errors import EntityNotFoundError
+from apps.notifications.domain.valueObjects.phase15Types import sanitizedMetadata
+from apps.sharedKernel.domain.errors import EntityNotFoundError, ValidationFailedError
 from apps.sharedKernel.domain.valueObjects import asUuid
 
 
@@ -78,6 +79,8 @@ class CreateBroadcastService(NotificationUseCase):
             if existing is not None:
                 return existing
         recipients = [asUuid(rid) for rid in command.recipientIds]
+        if len(recipients) > 10_000:
+            raise ValidationFailedError("A broadcast accepts at most 10000 recipients.")
         notification = records.BroadcastNotification.create(
             tenantId=tenantId,
             notificationType=command.notificationType,
@@ -91,9 +94,13 @@ class CreateBroadcastService(NotificationUseCase):
             sourceId=command.sourceId,
             deepLink=command.deepLink,
             language=command.language,
-            metadata=dict(command.metadata),
+            metadata=sanitizedMetadata(dict(command.metadata)),
             idempotencyKey=command.idempotencyKey,
             correlationId=command.correlationId,
+            actorId=asUuid(command.actorId) if command.actorId else _actorId,
+            payloadVersion=command.payloadVersion,
+            scheduledAt=command.scheduledAt,
+            expiresAt=command.expiresAt,
         )
         self.broadcastRepository.save(notification)
         self.collectEventsFrom(notification)
@@ -148,6 +155,19 @@ class RecipientStateService(NotificationUseCase):
             raise ValidationFailedError("unknown recipient action",
                                         fieldErrors={"action": action})
         self.broadcastRepository.saveRecipient(recipient)
+        notification = self.broadcastRepository.getById(
+            tenantId, asUuid(command.notificationId)
+        )
+        if notification is not None and notification.recipients:
+            states = tuple(item.state for item in notification.recipients)
+            if all(state == "READ" for state in states):
+                notification.status = "READ"
+                notification.readAt = now
+                self.broadcastRepository.save(notification)
+            elif action == "unread" and notification.status == "READ":
+                notification.status = "DELIVERED"
+                notification.readAt = None
+                self.broadcastRepository.save(notification)
         from apps.sharedKernel.domain.entities import DomainEvent
 
         self.eventDispatcher.dispatch(
@@ -238,21 +258,33 @@ class DeliveryDispatchService(NotificationUseCase):
         self.deliveryRepository = deliveryRepository
 
     def fanOut(self, notification: records.BroadcastNotification) -> list[records.RecipientDelivery]:
+        now = self.clock.nowUtc()
+        if not notification.canSend(now):
+            if notification.expiresAt is not None and notification.expiresAt <= now:
+                notification.expire(now)
+                self.broadcastRepository.save(notification)
+            return []
+        notification.queue(now)
+        self.broadcastRepository.save(notification)
         channels = types.PRIORITY_CHANNEL_ROUTING.get(
             notification.priority, ("IN_APP",)
         )
-        now = self.clock.nowUtc()
         created: list[records.RecipientDelivery] = []
         for recipient in notification.recipients:
             for channel in channels:
                 delivery = records.RecipientDelivery.queue(
                     notification.tenantId, notification.id, recipient.userId, channel, now
                 )
-                self.deliveryRepository.save(delivery)
                 self.collectEventsFrom(delivery)
                 created.append(delivery)
-        # realtime nudge for the in-app channel (§12.30)
-        for recipient in notification.recipients:
+        self.deliveryRepository.saveMany(created)
+        # Small fan-outs get an immediate realtime nudge. Large audiences are
+        # intentionally left to stateless workers/REST reconciliation so an
+        # HTTP request never performs thousands of transport calls (§19/§78).
+        realtimeRecipients = (
+            notification.recipients if len(notification.recipients) <= 100 else ()
+        )
+        for recipient in realtimeRecipients:
             self.pushToUser(
                 recipient.userId,
                 {"type": "notification.created",
@@ -270,12 +302,14 @@ class DeliveryRetryService(NotificationUseCase):
     def __init__(
         self,
         deliveryRepository: RecipientDeliveryRepository,
+        broadcastRepository: BroadcastNotificationRepository | None = None,
         channelSender: Any = None,
         *args: Any,
         **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
         self.deliveryRepository = deliveryRepository
+        self.broadcastRepository = broadcastRepository
         self.channelSender = channelSender
 
     def retryPolicy(self) -> types.RetryPolicy:
@@ -323,6 +357,19 @@ class DeliveryRetryService(NotificationUseCase):
         )
         self.deliveryRepository.saveAttempt(attempt)
         self.deliveryRepository.save(delivery)
+        if self.broadcastRepository is not None:
+            notification = self.broadcastRepository.getById(
+                delivery.tenantId, delivery.notificationId
+            )
+            if notification is not None:
+                states = tuple(
+                    item.status
+                    for item in self.deliveryRepository.listForNotification(
+                        delivery.tenantId, delivery.notificationId
+                    )
+                )
+                notification.applyDeliveryStates(states, now)
+                self.broadcastRepository.save(notification)
         self.collectEventsFrom(delivery)
         self.audit("ATTEMPT", "NotificationDelivery", str(delivery.id), delivery.tenantId,
                   after={"channel": delivery.channel, "status": delivery.status})

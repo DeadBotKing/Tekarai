@@ -101,3 +101,8 @@ CHANNEL_LAYERS = {
         "CONFIG": {"hosts": [REDIS_URL]},
     },
 }
+
+# Phase 15 — external delivery is brokered; persistent rows make tasks replay-safe.
+NOTIFICATION_QUEUE_IMPL = (
+    "apps.notifications.infrastructure.queue.notificationQueue.CeleryNotificationQueue"
+)

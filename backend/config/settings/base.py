@@ -222,6 +222,13 @@ API_RATE_LIMIT_POLICIES: dict[str, tuple[int, int]] = {
     "communication:meetingCreate": (20, 300),
     "communication:wsConnection": (30, 60),
     "communication:presenceUpdate": (120, 60),
+    # Phase 15 notification abuse/provider controls.
+    "notification:search": (120, 60),
+    "notification:create": (60, 60),
+    "notification:bulk": (10, 60),
+    "notification:device": (20, 60),
+    "notification:webhook": (300, 60),
+    "notification:admin": (30, 60),
 }
 
 # Session lifetime (ADR-019 opaque tokens; refresh rotates within this TTL).
@@ -590,6 +597,38 @@ COMMUNICATION_REQUIRE_CLEAN_SCAN = env.bool(
 COMMUNICATION_RETENTION_DAYS = int(
     env("communicationRetentionDays", default="2555") or 2555
 )
+
+# Phase 15 — durable notification jobs, callback replay protection and cleanup.
+NOTIFICATION_RETENTION_DAYS = int(
+    env("notificationRetentionDays", default="365") or 365
+)
+NOTIFICATION_WEBHOOK_TOLERANCE_SECONDS = int(
+    env("notificationWebhookToleranceSeconds", default="300") or 300
+)
+# Provider secrets are injected by deployment/secret-manager integrations.
+# Keys may be PROVIDER or "<tenant UUID>:PROVIDER"; values are never returned.
+NOTIFICATION_WEBHOOK_SECRETS: dict[str, str] = env.json(
+    "notificationWebhookSecrets", default={}
+)
+CELERY_BROKER_URL = env("notificationCeleryBrokerUrl", default="redis://127.0.0.1:6379/2")
+CELERY_RESULT_BACKEND = env("notificationCeleryResultBackend", default="redis://127.0.0.1:6379/3")
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_ACKS_LATE = True
+CELERY_TASK_REJECT_ON_WORKER_LOST = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_TASK_ROUTES = {
+    "notifications.dispatch": {"queue": "notifications.normal"},
+    "notifications.workerTick": {"queue": "notifications.maintenance"},
+}
+CELERY_BEAT_SCHEDULE = {
+    "notification-worker-tick": {
+        "task": "notifications.workerTick",
+        "schedule": 10.0,
+        "args": (200,),
+    }
+}
 
 # ---------------------------------------------------------------------------
 # GUARDS

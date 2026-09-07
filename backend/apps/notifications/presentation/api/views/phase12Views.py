@@ -31,7 +31,8 @@ from apps.notifications.application.commands.phase12Commands import (
     UnreadCountQuery,
 )
 from apps.notifications.infrastructure import container as c
-from apps.sharedKernel.presentation.api.permissions import IsAuthenticated
+from apps.sharedKernel.presentation.api.permissions import IsAuthenticated, actionPermission
+from apps.sharedKernel.presentation.api.rateLimiting import enforceRateLimit
 from apps.sharedKernel.presentation.api.response import successEnvelope
 
 
@@ -108,6 +109,12 @@ class IngestEventSerializer(drf_serializers.Serializer):
 class BroadcastListView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [actionPermission("notification.send")()]
+        return [IsAuthenticated()]
+
+    @enforceRateLimit("notification:bulk")
     def post(self, request: Request) -> Response:
         serializer = CreateBroadcastSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -168,7 +175,7 @@ class RecipientStateView(APIView):
 
 
 class DeliveryListView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [actionPermission("notification.manage")]
 
     def get(self, request: Request) -> Response:
         deadLetterOnly = str(
@@ -186,7 +193,7 @@ class DeliveryListView(APIView):
 
 
 class DeliveryRetryView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [actionPermission("notification.manage")]
 
     def post(self, request: Request, deliveryId: str) -> Response:
         delivery = c.deliveryRetryService().execute(
@@ -203,7 +210,7 @@ class DeliveryRetryView(APIView):
 
 
 class RuleListView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [actionPermission("notification.manage")]
 
     def post(self, request: Request) -> Response:
         serializer = DefineRuleSerializer(data=request.data)
@@ -239,7 +246,7 @@ class RuleListView(APIView):
 
 
 class EventIntakeView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [actionPermission("notification.send")]
 
     def post(self, request: Request) -> Response:
         serializer = IngestEventSerializer(data=request.data)

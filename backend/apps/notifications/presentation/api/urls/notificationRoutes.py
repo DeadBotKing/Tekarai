@@ -37,12 +37,47 @@ from apps.notifications.presentation.api.views.phase12Views import (  # noqa: E4
     RecipientStateView,
     RuleListView,
 )
+from apps.notifications.presentation.api.views.phase15Views import (
+    NotificationCleanupView,
+    NotificationSearchView,
+    ProviderConfigurationView,
+    ProviderWebhookView,
+    PushSubscriptionDetailView,
+    PushSubscriptionListView,
+)
 
 urlpatterns = [
     # literal segments MUST precede <str:notificationId> (Django matches in order)
     path("", NotificationListView.as_view(), name="ntfList"),
     path("read-bulk", NotificationReadBulkView.as_view(), name="ntfReadBulk"),
     path("unread-count", NotificationUnreadCountView.as_view(), name="ntfUnreadCount"),
+    # -- Phase 15 platform completion ---------------------------------------
+    path("search", NotificationSearchView.as_view(), name="ntfSearch"),
+    path(
+        "push-subscriptions",
+        PushSubscriptionListView.as_view(),
+        name="ntfPushSubscriptions",
+    ),
+    path(
+        "push-subscriptions/<str:subscriptionId>",
+        PushSubscriptionDetailView.as_view(),
+        name="ntfPushSubscriptionDetail",
+    ),
+    path(
+        "provider-webhooks/<str:tenantId>/<str:provider>",
+        ProviderWebhookView.as_view(),
+        name="ntfProviderWebhook",
+    ),
+    path(
+        "admin/providers",
+        ProviderConfigurationView.as_view(),
+        name="ntfAdminProviders",
+    ),
+    path(
+        "admin/cleanup-runs",
+        NotificationCleanupView.as_view(),
+        name="ntfAdminCleanup",
+    ),
     # -- Phase 12 multi-recipient broadcast model (docs/Phases/Phase12.md) --
     # distinct literal segments, registered before the <str:notificationId> catch-all
     path("broadcasts", BroadcastListView.as_view(), name="ntfBroadcasts"),

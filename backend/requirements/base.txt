@@ -17,3 +17,5 @@ channels==4.3.2
 daphne==4.2.3
 # Communication requirement — Redis channel layer for horizontal scale
 channels-redis==4.3.0
+# Phase 15 — durable async notification workers and scheduled sweeps
+celery==5.5.3

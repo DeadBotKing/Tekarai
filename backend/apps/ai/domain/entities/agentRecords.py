@@ -87,7 +87,7 @@ def _isPositiveInt(value: Any) -> bool:
     return isinstance(value, int) and not isinstance(value, bool) and value >= 1
 
 
-def _check_ceiling(policy: dict[str, Any], key: str, ceiling: int, label: str) -> None:
+def _checkCeiling(policy: dict[str, Any], key: str, ceiling: int, label: str) -> None:
     if key not in policy:
         return
     value = policy[key]
@@ -169,11 +169,11 @@ class AIAgentDefinition:
             raise ValidationFailedError("Agent metadata must be a mapping.")
 
     def _validateExecutionPolicy(self) -> None:
-        _check_ceiling(self.executionPolicy, "maxSteps", MAX_EFFECTIVE_STEPS, "executionPolicy")
-        _check_ceiling(
+        _checkCeiling(self.executionPolicy, "maxSteps", MAX_EFFECTIVE_STEPS, "executionPolicy")
+        _checkCeiling(
             self.executionPolicy, "maxToolCalls", MAX_EFFECTIVE_TOOL_CALLS, "executionPolicy"
         )
-        _check_ceiling(
+        _checkCeiling(
             self.executionPolicy,
             "maxDurationSeconds",
             MAX_EFFECTIVE_DURATION_SECONDS,
@@ -181,7 +181,7 @@ class AIAgentDefinition:
         )
 
     def _validateContextPolicy(self) -> None:
-        _check_ceiling(
+        _checkCeiling(
             self.contextPolicy, "maxContextTokens", MAX_AGENT_CONTEXT_TOKENS, "contextPolicy"
         )
 

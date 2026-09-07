@@ -94,9 +94,12 @@ class LayerPlacementTests(SimpleTestCase):
                 for path in contextDir.iterdir()
                 if path.is_file() and path.suffix == ".py"
             )
+            allowedTopFiles = ["__init__.py", "apps.py"]
+            if contextDir.name == "notifications":
+                allowedTopFiles.append("tasks.py")  # Celery autodiscovery convention
             self.assertEqual(
                 topFiles,
-                ["__init__.py", "apps.py"],
+                sorted(allowedTopFiles),
                 f"{contextDir.name}: unexpected top-level modules",
             )
             for layer in CONTEXT_LAYERS:
@@ -117,6 +120,7 @@ class LayerPlacementTests(SimpleTestCase):
             "urls.py",
             "wsgi.py",
             "asgi.py",
+            "celery.py",  # Phase 15 broker application configuration
             "base.py",
             "development.py",
             "testing.py",

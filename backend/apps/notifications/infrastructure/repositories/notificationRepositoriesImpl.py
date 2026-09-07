@@ -6,9 +6,9 @@ ORM detail stops here. Mapping helpers keep rows and entities separate.
 
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import datetime
-from typing import Any, Iterable
 
 from apps.notifications.domain.entities.notification import Notification
 from apps.notifications.domain.entities.notificationDelivery import NotificationDelivery
@@ -32,11 +32,13 @@ from apps.notifications.infrastructure.models import (
     NotificationPolicyModel,
     NotificationPreferenceModel,
     NotificationPreferenceRuleModel,
+    NotificationPushSubscriptionModel,
     NotificationRecordModel,
     NotificationScheduleModel,
     NotificationTemplateModel,
     NotificationTemplateVersionModel,
 )
+from apps.notifications.infrastructure.security.secretBox import openSecret, seal
 
 # --------------------------------------------------------------------------- #
 # mapping helpers
@@ -695,7 +697,7 @@ class NotificationDeviceRepositoryDjango:
             userId=device.userId,
             platform=device.platform,
             deviceIdentifier=device.deviceIdentifier,
-            pushToken=device.pushToken,
+            pushToken=seal(device.pushToken),
             provider=device.provider,
             isActive=device.isActive,
             createdAt=device.createdAt,
@@ -705,7 +707,7 @@ class NotificationDeviceRepositoryDjango:
 
     def update(self, device: NotificationDevice) -> None:
         NotificationDeviceModel.objects.filter(id=device.id).update(
-            pushToken=device.pushToken,
+            pushToken=seal(device.pushToken),
             provider=device.provider,
             isActive=device.isActive,
             lastSeenAt=device.lastSeenAt,
@@ -734,7 +736,28 @@ class NotificationDeviceRepositoryDjango:
         return [self._deviceFromRow(row) for row in rows]
 
     def activeForUser(self, tenantId: uuid.UUID, userId: uuid.UUID) -> list[NotificationDevice]:
-        return self.listForUser(tenantId, userId, activeOnly=True)
+        devices = self.listForUser(tenantId, userId, activeOnly=True)
+        now = datetime.now().astimezone()
+        for row in NotificationPushSubscriptionModel.objects.filter(
+            tenantId=tenantId, userId=userId, isActive=True, revokedAt__isnull=True
+        ):
+            if row.expiresAt is not None and row.expiresAt <= now:
+                continue
+            subscription = json.loads(openSecret(row.encryptedSubscription))
+            devices.append(
+                NotificationDevice(
+                    id=row.id,
+                    tenantId=row.tenantId,
+                    userId=row.userId,
+                    platform="WEB",
+                    deviceIdentifier=row.endpointHash,
+                    pushToken=str(subscription["endpoint"]),
+                    provider="WEB_PUSH",
+                    createdAt=row.createdAt,
+                    lastSeenAt=row.updatedAt,
+                )
+            )
+        return devices
 
     @staticmethod
     def _deviceFromRow(row: NotificationDeviceModel) -> NotificationDevice:
@@ -744,7 +767,7 @@ class NotificationDeviceRepositoryDjango:
             userId=row.userId,
             platform=row.platform,
             deviceIdentifier=row.deviceIdentifier,
-            pushToken=row.pushToken,
+            pushToken=openSecret(row.pushToken),
             provider=row.provider,
             createdAt=row.createdAt,
             lastSeenAt=row.lastSeenAt,

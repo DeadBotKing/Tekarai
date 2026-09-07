@@ -107,7 +107,14 @@ PRIORITY_CHANNEL_ROUTING: dict[str, tuple[str, ...]] = {
     "NORMAL": ("IN_APP", "EMAIL"),
     "HIGH": ("IN_APP", "EMAIL", "PUSH"),
     "URGENT": ("IN_APP", "EMAIL", "PUSH", "SMS"),
-    "CRITICAL": ("IN_APP", "EMAIL", "PUSH", "SMS", "WEBHOOK"),
+    "CRITICAL": (
+        "IN_APP",
+        "EMAIL",
+        "PUSH",
+        "WEB_PUSH",
+        "SMS",
+        "WEBHOOK",
+    ),
 }
 
 # priorities that bypass quiet hours (§12.21)

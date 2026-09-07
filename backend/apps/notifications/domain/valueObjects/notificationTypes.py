@@ -118,7 +118,9 @@ CHANNEL_PUSH = "PUSH"
 CHANNEL_EMAIL = "EMAIL"
 CHANNEL_SMS = "SMS"
 CHANNEL_DESKTOP = "DESKTOP"
-CHANNEL_BROWSER = "BROWSER"
+CHANNEL_BROWSER = "BROWSER"  # backwards-compatible Phase 9 alias
+CHANNEL_WEB_PUSH = "WEB_PUSH"
+CHANNEL_WEBSOCKET = "WEBSOCKET"
 
 DELIVERY_CHANNELS = (
     CHANNEL_IN_APP,
@@ -127,10 +129,17 @@ DELIVERY_CHANNELS = (
     CHANNEL_SMS,
     CHANNEL_DESKTOP,
     CHANNEL_BROWSER,
+    CHANNEL_WEB_PUSH,
+    CHANNEL_WEBSOCKET,
 )
 
 #: channels carried by the push/web infrastructure on this platform
-PUSH_LIKE_CHANNELS = (CHANNEL_PUSH, CHANNEL_DESKTOP, CHANNEL_BROWSER)
+PUSH_LIKE_CHANNELS = (
+    CHANNEL_PUSH,
+    CHANNEL_DESKTOP,
+    CHANNEL_BROWSER,
+    CHANNEL_WEB_PUSH,
+)
 
 # ---------------------------------------------------------------------------
 # §25 delivery statuses (per channel)

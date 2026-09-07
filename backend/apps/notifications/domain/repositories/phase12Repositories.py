@@ -58,6 +58,8 @@ class BroadcastNotificationRepository(Protocol):
 class RecipientDeliveryRepository(Protocol):
     def save(self, delivery: RecipientDelivery) -> None: ...
 
+    def saveMany(self, deliveries: list[RecipientDelivery]) -> None: ...
+
     def saveAttempt(self, attempt: DeliveryAttempt) -> None: ...
 
     def getById(
@@ -67,6 +69,10 @@ class RecipientDeliveryRepository(Protocol):
     def listForNotification(
         self, tenantId: uuid.UUID, notificationId: uuid.UUID
     ) -> list[RecipientDelivery]: ...
+
+    def findByProviderMessageId(
+        self, tenantId: uuid.UUID, provider: str, providerMessageId: str
+    ) -> RecipientDelivery | None: ...
 
     def listRetryDue(
         self, now: datetime, *, limit: int = 100

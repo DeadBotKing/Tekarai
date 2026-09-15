@@ -1,4 +1,4 @@
-﻿# =============================================================================
+# =============================================================================
 # Tekarai - Step 3: exercise the READY backend flows through the REAL HTTP API.
 #
 #   .\exercise_flows.ps1
@@ -47,7 +47,7 @@ function Call-Json {
   param(
     [string]$Method,
     [string]$Path,
-    [string]$Body = $null,
+    $Body = $null,
     [string]$Label = ""
   )
   try {
@@ -58,14 +58,20 @@ function Call-Json {
       Uri     = "$api$Path"
       Headers = $headers
     }
-    if ($null -ne $Body) {
-      $params["Body"] = $Body
-      # Only set ContentType when a body is sent: Windows PowerShell 5.1
-      # fails GET requests with "Cannot send a content-body with this verb-type"
-      # if ContentType is present without a body.
-      $params["ContentType"] = "application/json"
+    # NOTE: do NOT type $Body as [string] - PowerShell coerces a $null default
+    # into an empty string, which would make GET requests send an empty body
+    # and fail with "Cannot send a content-body with this verb-type".
+    # Keep GET/HEAD completely separate in Windows PowerShell 5.1. This avoids
+    # its Invoke-RestMethod binder ever treating an omitted body as a body.
+    if ($Method -eq "Get" -or $Method -eq "Head") {
+      $resp = Invoke-RestMethod -Method $Method -Uri "$api$Path" -Headers $headers
+    } else {
+      if ($null -ne $Body -and $Body -ne "") {
+        $params["Body"] = $Body
+        $params["ContentType"] = "application/json"
+      }
+      $resp = Invoke-RestMethod @params
     }
-    $resp = Invoke-RestMethod @params
     if ($Label) { Report $true $Label }
     return $resp
   } catch {

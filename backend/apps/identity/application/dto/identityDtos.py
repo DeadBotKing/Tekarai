@@ -73,6 +73,7 @@ class AuthTokenDto:
     expiresIn: int = 0
     expiresAt: str = ""
     user: UserDto | None = None
+    permissions: list[str] = field(default_factory=list)
     mfaRequired: bool = False
     mfaChallenge: str = ""
 

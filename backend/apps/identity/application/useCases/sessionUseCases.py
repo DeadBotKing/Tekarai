@@ -32,6 +32,7 @@ from apps.identity.application.queries.identityQueries import ListSessionsQuery
 from apps.identity.domain.entities.session import Session
 from apps.identity.domain.policies.resourcePolicies import POLICIES
 from apps.identity.domain.repositories.identityRepositories import (
+    AccessRepository,
     MfaRepository,
     SecurityEventRecorder,
     SessionRepository,
@@ -95,6 +96,7 @@ class AuthenticateUserUseCase(UseCase[AuthenticateUserCommand, AuthTokenDto]):
         tokenIssuer: TokenIssuer,
         secretVault: SecretVault,
         securityEvents: SecurityEventRecorder,
+        accessRepository: AccessRepository,
         unitOfWork: UnitOfWork,
         auditRecorder: AuditRecorder,
         eventDispatcher: EventDispatcher,
@@ -111,6 +113,7 @@ class AuthenticateUserUseCase(UseCase[AuthenticateUserCommand, AuthTokenDto]):
         self.tokenIssuer = tokenIssuer
         self.secretVault = secretVault
         self.securityEvents = securityEvents
+        self.accessRepository = accessRepository
         self._failure: tuple[str, str] | None = None
 
     def execute(self, command: AuthenticateUserCommand) -> AuthTokenDto:
@@ -219,6 +222,7 @@ class AuthenticateUserUseCase(UseCase[AuthenticateUserCommand, AuthTokenDto]):
             refreshToken="",
             expiresAt="",
             user=userDtoFromDomain(user),
+            permissions=self._effectivePermissions(user, tenantId),
             mfaRequired=True,
             mfaChallenge=challenge,
         )
@@ -256,7 +260,17 @@ class AuthenticateUserUseCase(UseCase[AuthenticateUserCommand, AuthTokenDto]):
             expiresIn=ttlSeconds,
             expiresAt=session.expiresAt.isoformat(),
             user=userDtoFromDomain(user),
+            permissions=self._effectivePermissions(user, tenantId),
         )
+
+    def _effectivePermissions(self, user, tenantId: uuid.UUID) -> list[str]:
+        """§42 — the same effective action codes served by ``/me``, embedded
+        in the login payload so the GUI can render permission-gated UI
+        without an extra round trip."""
+        from apps.identity.domain.services.permissionEvaluator import PermissionEvaluator
+
+        grants = self.accessRepository.grantsOfUser(user.id, tenantId)
+        return PermissionEvaluator().expandActionCodes(grants)
 
 
 class VerifyMfaChallengeUseCase(UseCase[VerifyMfaChallengeCommand, AuthTokenDto]):

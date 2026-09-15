@@ -20,7 +20,7 @@ export function NotificationProvider({ children }: { children: ReactNode }): JSX
   const api = useApiClient();
   const { isAuthenticated } = useAuth();
   const service = useMemo(() => createNotificationService(api), [api]);
-  const [notifications, setNotifications] = useState<AppNotification[]>(demoNotifications);
+  const [notifications, setNotifications] = useState<AppNotification[]>(runtimeConfig.demoMode ? demoNotifications : []);
   const refresh = useCallback(async (): Promise<void> => {
     if (!isAuthenticated) return;
     const next = await service.list();
@@ -33,8 +33,8 @@ export function NotificationProvider({ children }: { children: ReactNode }): JSX
   }, [service]);
   const markAllRead = useCallback((): void => {
     setNotifications((current) => current.map((item) => ({ ...item, read: true })));
-    void service.markAllRead().catch(() => undefined);
-  }, [service]);
+    void service.markAllRead(notifications).catch(() => undefined);
+  }, [notifications, service]);
   const value = useMemo(() => ({ notifications, unreadCount: notifications.filter((item) => !item.read).length, markRead, markAllRead, refresh }), [markAllRead, markRead, notifications, refresh]);
   return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;
 }

@@ -1,7 +1,10 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useApiClient } from "../core/api/apiContext";
 import { useLocalization } from "../core/localization/localizationContext";
 import { PERMISSIONS } from "../core/permissions/permissionContext";
 import { demoTasks } from "../features/demo/demoData";
+import { createTaskService } from "../features/tasks/taskService";
+import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import type { Task } from "../shared/types/domain";
 import { DataTable, type DataTableColumn } from "../shared/components/DataTable";
 import { Modal, Toast } from "../shared/components/overlays";
@@ -23,6 +26,8 @@ const columns: { key: Task["status"]; label: string }[] = [
 
 export function TasksPage(): JSX.Element {
   const { t } = useLocalization();
+  const api = useApiClient();
+  const service = useMemo(() => createTaskService(api), [api]);
   const [tasks, setTasks] = useState<Task[]>(demoTasks);
   const [view, setView] = useState<"list" | "board" | "timeline" | "calendar">("list");
   const [search, setSearch] = useState("");
@@ -30,14 +35,42 @@ export function TasksPage(): JSX.Element {
   const [createOpen, setCreateOpen] = useState(false);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [newTitle, setNewTitle] = useState("");
+  const [newPriority, setNewPriority] = useState("normal");
+  const [newDue, setNewDue] = useState("2026-09-30");
   const [toast, setToast] = useState("");
+
+  const refresh = useCallback(async (): Promise<void> => {
+    if (runtimeConfig.demoMode) return;
+    try { setTasks(await service.list()); } catch { /* keep last known state */ }
+  }, [service]);
+  useEffect(() => { void refresh(); }, [refresh]);
+
   const filtered = useMemo(() => tasks.filter((task) => (status === "all" || task.status === status) && `${task.title} ${task.project} ${task.assignee}`.toLowerCase().includes(search.toLowerCase())), [search, status, tasks]);
-  const createTask = (): void => { if (!newTitle.trim()) return; const task: Task = { id: `task-${Date.now()}`, title: newTitle.trim(), project: "Nova Plant Modernization", status: "backlog", priority: "normal", assignee: "Maya Chen", dueDate: "2026-09-30", estimate: "1d" }; setTasks((current) => [task, ...current]); setNewTitle(""); setCreateOpen(false); setToast("Task created successfully."); };
-  const moveTask = (task: Task, nextStatus: Task["status"]): void => setTasks((current) => current.map((item) => item.id === task.id ? { ...item, status: nextStatus } : item));
+  const createTask = async (): Promise<void> => {
+    if (!newTitle.trim()) return;
+    if (runtimeConfig.demoMode) {
+      const task: Task = { id: `task-${Date.now()}`, title: newTitle.trim(), project: "Nova Plant Modernization", status: "backlog", priority: "normal", assignee: "Maya Chen", dueDate: newDue, estimate: "1d" };
+      setTasks((current) => [task, ...current]);
+      setNewTitle(""); setCreateOpen(false); setToast(t("task.createSuccess"));
+      return;
+    }
+    try {
+      await service.create({ title: newTitle.trim(), priority: newPriority, dueDate: newDue });
+      setNewTitle(""); setNewPriority("normal"); setCreateOpen(false); setToast(t("task.createSuccess"));
+      await refresh();
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : t("task.saveFailed"));
+    }
+  };
+  const moveTask = (task: Task, nextStatus: Task["status"]): void => {
+    if (runtimeConfig.demoMode) { setTasks((current) => current.map((item) => item.id === task.id ? { ...item, status: nextStatus } : item)); return; }
+    setTasks((current) => current.map((item) => item.id === task.id ? { ...item, status: nextStatus } : item));
+    void service.changeStatus(task.id, nextStatus).then(() => refresh()).catch(() => refresh());
+  };
 
   return <div className="page"><SectionHeader eyebrow={t("nav.projects")} title={t("task.title")} subtitle={t("task.subtitle")} actions={<PermissionGuard permission={PERMISSIONS.taskCreate}><Button variant="primary" icon="plus" onClick={() => setCreateOpen(true)}>{t("task.new")}</Button></PermissionGuard>} />
     <Card className="content-card" padding="none"><div className="view-toolbar"><div className="segmented-control" role="tablist" aria-label="Task views">{(["list", "board", "timeline", "calendar"] as const).map((item) => <button key={item} role="tab" aria-selected={view === item} className={view === item ? "is-active" : ""} onClick={() => setView(item)}>{item === "list" ? t("task.list") : item === "board" ? t("task.board") : item === "timeline" ? t("task.timeline") : t("task.calendar")}</button>)}</div><div className="list-toolbar"><div className="search-box"><Icon name="search" size={16} /><input value={search} aria-label={t("task.search")} placeholder={t("task.search")} onChange={(event) => setSearch(event.target.value)} /></div><SelectInput aria-label={t("task.status")} value={status} onChange={(event) => setStatus(event.target.value)} options={[{ value: "all", label: t("task.status") }, ...columns.map((item) => ({ value: item.key, label: item.label }))]} /></div></div>{view === "list" && <DataTable columns={taskColumns(t, setActiveTask)} data={filtered} rowKey={(row) => row.id} search="" empty={{ title: t("task.empty") }} exportName="tekarai-tasks" />}{view === "board" && <TaskBoard tasks={filtered} onMove={moveTask} onOpen={setActiveTask} />}{view === "timeline" && <TaskTimeline tasks={filtered} />}{view === "calendar" && <TaskCalendar tasks={filtered} />}</Card>
-    <Modal open={createOpen} title={t("task.createTitle")} onClose={() => setCreateOpen(false)} footer={<><Button variant="secondary" onClick={() => setCreateOpen(false)}>{t("common.cancel")}</Button><Button variant="primary" icon="check" onClick={createTask}>{t("task.save")}</Button></>}><TextInput label={t("task.taskName")} required value={newTitle} onChange={(event) => setNewTitle(event.target.value)} autoFocus /><div className="form-grid form-grid--compact"><SelectInput label={t("task.priority")} options={[{ value: "normal", label: t("common.priority.normal") }, { value: "high", label: t("common.priority.high") }, { value: "critical", label: t("common.priority.critical") }]} defaultValue="normal" /><TextInput label={t("task.due")} type="date" defaultValue="2026-09-30" /></div></Modal>
+    <Modal open={createOpen} title={t("task.createTitle")} onClose={() => setCreateOpen(false)} footer={<><Button variant="secondary" onClick={() => setCreateOpen(false)}>{t("common.cancel")}</Button><Button variant="primary" icon="check" onClick={createTask}>{t("task.save")}</Button></>}><TextInput label={t("task.taskName")} required value={newTitle} onChange={(event) => setNewTitle(event.target.value)} autoFocus /><div className="form-grid form-grid--compact"><SelectInput label={t("task.priority")} value={newPriority} onChange={(event) => setNewPriority(event.target.value)} options={[{ value: "low", label: t("common.priority.low") }, { value: "normal", label: t("common.priority.normal") }, { value: "high", label: t("common.priority.high") }, { value: "critical", label: t("common.priority.critical") }]} /><TextInput label={t("task.due")} type="date" value={newDue} onChange={(event) => setNewDue(event.target.value)} /></div></Modal>
     <Modal open={Boolean(activeTask)} title={activeTask?.title ?? t("task.title")} onClose={() => setActiveTask(null)} footer={<Button variant="secondary" onClick={() => setActiveTask(null)}>{t("common.close")}</Button>}>{activeTask && <div className="detail-panel"><div className="detail-stats"><div><span>{t("task.project")}</span><strong>{activeTask.project}</strong></div><div><span>{t("task.assignee")}</span><strong>{activeTask.assignee}</strong></div><div><span>{t("task.status")}</span><strong>{activeTask.status}</strong></div><div><span>{t("task.due")}</span><strong>{activeTask.dueDate}</strong></div></div><p className="detail-panel__description">Estimate: {activeTask.estimate}</p></div>}</Modal>
     {toast && <Toast message={toast} onClose={() => setToast("")} />}
   </div>;

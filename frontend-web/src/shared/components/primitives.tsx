@@ -127,7 +127,7 @@ export function Badge({ children, tone = "neutral", dot = false, className = "" 
 export function StatusBadge({ status }: { status: string }): JSX.Element {
   const { t } = useLocalization();
   const statusKey: Record<string, TranslationKey> = {
-    active: "common.status.active", inProgress: "common.status.inProgress", completed: "common.status.completed", atRisk: "common.status.atRisk", pending: "common.status.pending", archived: "common.status.archived", queued: "common.status.queued", running: "common.status.running", failed: "common.status.failed",
+    active: "common.status.active", inProgress: "common.status.inProgress", completed: "common.status.completed", atRisk: "common.status.atRisk", onHold: "common.status.onHold", pending: "common.status.pending", archived: "common.status.archived", queued: "common.status.queued", running: "common.status.running", failed: "common.status.failed",
   };
   const tone = status === "atRisk" || status === "failed" ? "danger" : status === "pending" || status === "queued" ? "warning" : status === "completed" || status === "active" ? "success" : "info";
   return <Badge tone={tone} dot>{t(statusKey[status] ?? "common.status.pending")}</Badge>;

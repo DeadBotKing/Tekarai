@@ -18,13 +18,13 @@ from config.environment import (
 
 class ResolveDbEngineTests(SimpleTestCase):
     def testResolvesMssqlAlias(self) -> None:
-        self.assertEqual(resolveDbEngine("mssql"), "mssql_django")
+        self.assertEqual(resolveDbEngine("mssql"), "mssql")
 
     def testResolvesSqliteAlias(self) -> None:
         self.assertEqual(resolveDbEngine("sqlite"), "django.db.backends.sqlite3")
 
     def testIsCaseInsensitive(self) -> None:
-        self.assertEqual(resolveDbEngine("MSSQL"), "mssql_django")
+        self.assertEqual(resolveDbEngine("MSSQL"), "mssql")
 
     def testRejectsUnknownEngine(self) -> None:
         with self.assertRaises(ImproperlyConfigured):
@@ -45,7 +45,7 @@ class BuildDatabaseConfigMssqlTests(SimpleTestCase):
             dbHost="sql.example.com",
             dbPort="1433",
         )
-        self.assertEqual(config["ENGINE"], "mssql_django")
+        self.assertEqual(config["ENGINE"], "mssql")
         self.assertEqual(config["NAME"], "TekaraiCore")
         self.assertEqual(config["USER"], "tekarai")
         self.assertEqual(config["HOST"], "sql.example.com")
@@ -65,11 +65,27 @@ class BuildDatabaseConfigMssqlTests(SimpleTestCase):
         self.assertTrue(options["encrypt"])
         self.assertEqual(options["connection_timeout"], 30)
 
-    def testDefaultsPortToSqlServerPort(self) -> None:
+    def testLeavesPortEmptyForNamedInstances(self) -> None:
+        # Named instances (localhost\SQLEXPRESS) must not force port 1433 —
+        # mssql-django would otherwise build "SERVER=host\instance,1433".
         config = buildDatabaseConfig(
             dbEngine="mssql", dbName="db", dbUser="u", dbPassword="p", dbHost="h"
         )
-        self.assertEqual(config["PORT"], "1433")
+        self.assertEqual(config["PORT"], "")
+
+    def testAppendsExtraParamsToOptions(self) -> None:
+        config = buildDatabaseConfig(
+            dbEngine="mssql",
+            dbName="db",
+            dbUser="u",
+            dbPassword="p",
+            dbHost="h",
+            dbExtraParams="TrustServerCertificate=yes;Encrypt=no",
+        )
+        self.assertEqual(
+            config["OPTIONS"]["extra_params"],
+            "TrustServerCertificate=yes;Encrypt=no",
+        )
 
 
 class BuildDatabaseConfigSqliteTests(SimpleTestCase):

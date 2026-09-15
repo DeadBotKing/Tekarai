@@ -40,15 +40,16 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
       if (runtimeConfig.demoMode) {
         ({ tokens, user } = await demoLogin(credentials));
       } else {
-        const response = await api.post<TokenPair & { user?: UserSession }>("auth/login", credentials);
+        const response = await api.post<TokenPair & { user?: UserSession; permissions?: string[] }>("auth/login", credentials);
         tokens = response;
-        user = response.user ?? {
+        const fallback: UserSession = {
           id: "unknown",
           displayName: credentials.identifier,
           email: credentials.identifier,
           role: "Member",
           permissions: [],
         };
+        user = { ...fallback, ...(response.user ?? {}), permissions: response.permissions ?? response.user?.permissions ?? [] };
       }
       const nextSession: StoredSession = { ...tokens, user };
       sessionStore.set(nextSession);

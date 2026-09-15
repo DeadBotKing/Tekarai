@@ -4,6 +4,8 @@ export const apiEndpoints = {
   tenants: "tenants",
   users: "users",
   roles: "roles",
+  projects: { list: "projects/", create: "projects/", detail: (id: string) => `projects/${id}`, update: (id: string) => `projects/${id}`, status: (id: string) => `projects/${id}/status` },
+  tasks: { list: "tasks/", create: "tasks/", detail: (id: string) => `tasks/${id}`, status: (id: string) => `tasks/${id}/status` },
   audit: "platform/audit-events",
   notifications: { list: "notifications", unreadCount: "notifications/unread-count", read: (id: string) => `notifications/${id}/read`, readBulk: "notifications/read-bulk", search: "notifications/search" },
   intelligence: {

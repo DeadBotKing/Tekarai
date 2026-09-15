@@ -52,6 +52,21 @@ Tekarai Web uses:
 5. Telemetry redacts token, password, secret, authorization, cookie and email
    keys before emitting diagnostics.
 
+## Alternatives
+
+- **Next.js (React meta-framework)** — rejected: couples the application shell
+  to a specific server runtime and adds a heavier deployment story than the
+  approved client-side SPA; the backend already owns the HTTP/API surface.
+- **Vendor component library (MUI / Ant Design / Chakra)** — rejected: a
+  third-party component framework would dilute the tenant-branding, RTL/LTR
+  and accessibility control Tekarai needs in the platform core.
+- **Svelte / Vue** — rejected: React 19 + TypeScript matches the approved
+  ecosystem and keeps a single explicit contract style across the platform.
+- **Client-side state library (Redux / Zustand)** — rejected: the platform's
+  state needs are app-level context plus server cache; the owned
+  `TenantAwareCache` / `useAsyncResource` lifecycle covers them without adding
+  a new dependency.
+
 ## Consequences
 
 - The GUI is generic: Projects, Tasks, Documents, Reports, Intelligence and

@@ -26,7 +26,10 @@ export function SettingsPage(): JSX.Element {
   const [newRawKey, setNewRawKey] = useState("");
   const [mfaSetup, setMfaSetup] = useState<MfaSetup | null>(null);
   const [mfaCode, setMfaCode] = useState("");
+
   const [mfaBusy, setMfaBusy] = useState(false);
+
+
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -59,6 +62,7 @@ export function SettingsPage(): JSX.Element {
   };
 
   const confirmMfa = async (): Promise<void> => {
+<<<<<<< HEAD
     if (!mfaSetup || !/^\d{6}$/.test(mfaCode.trim()) || mfaBusy) {
       setMessage("Enter exactly 6 digits from the authenticator app.");
       return;
@@ -73,6 +77,11 @@ export function SettingsPage(): JSX.Element {
       const detail = error instanceof Error ? error.message : "The MFA code was rejected.";
       setMessage(detail || "The MFA code was rejected.");
     } finally { setMfaBusy(false); }
+=======
+    if (!mfaSetup || !mfaCode.trim()) return;
+    try { const result = await security.confirmMfa(mfaSetup.factorId, mfaCode.trim()); setMfaSetup(null); setMfaCode(""); setMessage(`MFA enabled. Save these recovery codes: ${result.recoveryCodes.join(", ")}`); }
+    catch { setMessage("The MFA code was rejected."); }
+>>>>>>> 7a1f54ea98431073f1a9f6f61ee4c0529c6d7126
   };
 
   const revokeAll = async (): Promise<void> => {
@@ -86,7 +95,11 @@ export function SettingsPage(): JSX.Element {
     <div className="settings-grid">
       <Card padding="md"><CardHeader title="Profile" subtitle="Identity is read from the authenticated backend session." /><div className="workspace-context"><span className="workspace-context__icon"><Icon name="users" size={22} /></span><div><strong>{session?.user.displayName ?? "—"}</strong><p>{session?.user.email ?? "—"}</p><p>{session?.user.role ?? "—"}</p></div><Badge tone="success" dot>Authenticated</Badge></div></Card>
       <Card padding="md"><CardHeader title="Appearance" subtitle="These preferences are local to this browser." /><div className="settings-form"><div className="setting-row"><div><strong>Theme</strong><span>Choose a light or dark workspace.</span></div><div className="theme-switcher"><button type="button" className={theme === "light" ? "is-active" : ""} onClick={() => setTheme("light")}><Icon name="sun" size={16} />Light</button><button type="button" className={theme === "dark" ? "is-active" : ""} onClick={() => setTheme("dark")}><Icon name="moon" size={16} />Dark</button></div></div><div className="setting-row"><div><strong>Language</strong><span>Layout direction follows the selected locale.</span></div><SelectInput aria-label={t("header.language")} value={locale} onChange={(event) => setLocale(event.target.value as "en" | "fa" | "de")} options={[{ value: "en", label: "English · LTR" }, { value: "fa", label: "فارسی · RTL" }, { value: "de", label: "Deutsch · LTR" }]} /></div></div></Card>
+<<<<<<< HEAD
       <Card padding="md"><CardHeader title="Multi-factor authentication" subtitle="TOTP setup is confirmed by the real identity API." action={<Badge tone="success">TOTP</Badge>} />{mfaSetup ? <div className="settings-form"><p>Secret: <code>{mfaSetup.secret}</code></p><p>Authenticator URL: <code>{mfaSetup.otpauthUrl}</code></p><TextInput label="6-digit authenticator code" inputMode="numeric" maxLength={6} value={mfaCode} onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, "").slice(0, 6))} /><Button type="button" variant="primary" loading={mfaBusy} disabled={mfaBusy || mfaCode.length !== 6} onClick={() => void confirmMfa()}>Confirm MFA</Button>{message && <p role="alert">{message}</p>}</div> : <Button type="button" variant="secondary" icon="shield" onClick={() => void beginMfa()}>Start MFA setup</Button>}</Card>
+=======
+      <Card padding="md"><CardHeader title="Multi-factor authentication" subtitle="TOTP setup is confirmed by the real identity API." action={<Badge tone="success">TOTP</Badge>} />{mfaSetup ? <div className="settings-form"><p>Secret: <code>{mfaSetup.secret}</code></p><p>Authenticator URL: <code>{mfaSetup.otpauthUrl}</code></p><TextInput label="6-digit authenticator code" value={mfaCode} onChange={(event) => setMfaCode(event.target.value)} /><Button variant="primary" onClick={() => void confirmMfa()}>Confirm MFA</Button></div> : <Button variant="secondary" icon="shield" onClick={() => void beginMfa()}>Start MFA setup</Button>}</Card>
+>>>>>>> 7a1f54ea98431073f1a9f6f61ee4c0529c6d7126
       <Card padding="md"><CardHeader title="API keys" subtitle="Raw secrets are returned once and are never stored in the browser." action={<Button variant="secondary" size="sm" onClick={() => void createKey()}>Create key</Button>} /><TextInput label="Key name" value={keyName} onChange={(event) => setKeyName(event.target.value)} /><div className="role-list">{newRawKey && <div className="context-security"><Icon name="lock" size={17} /><code>{newRawKey}</code></div>}{loading ? <p>Loading keys…</p> : keys.length === 0 ? <p>No API keys.</p> : keys.map((key) => <div className="role-row" key={key.id}><span className="role-row__icon"><Icon name="key" size={17} /></span><div><strong>{key.name}</strong><span>{key.prefix} · {key.revokedAt ? "revoked" : "active"}</span></div>{!key.revokedAt && <Button variant="ghost" size="sm" onClick={() => void revokeKey(key.id)}>Revoke</Button>}</div>)}</div></Card>
       <Card padding="md"><CardHeader title="Sessions" subtitle="Review and revoke active browser sessions." action={<Button variant="secondary" size="sm" onClick={() => void revokeAll()}>Revoke other sessions</Button>} />{sessions.length === 0 ? <p>No session data.</p> : sessions.map((item) => <div className="role-row" key={item.id}><span className="role-row__icon"><Icon name="lock" size={17} /></span><div><strong>{item.device || "Browser session"}</strong><span>{item.current ? "Current session" : item.status} · {item.lastActivityAt}</span></div></div>)}</Card>
       <Card padding="md"><CardHeader title="Workspace context" subtitle="Every request is scoped to this tenant." /><div className="workspace-context"><span className="workspace-context__icon"><Icon name="building" size={22} /></span><div><span className="eyebrow">{t("header.tenant")}</span><h2>{selectedTenant.name}</h2><p>{selectedTenant.industry} · {selectedTenant.plan}</p></div><Badge tone="success" dot>{t("common.status.active")}</Badge></div></Card>

@@ -60,24 +60,33 @@ class BroadcastNotificationRepositoryDjango:
                 "createdAt": notification.createdAt or _now(),
             },
         )
-        NotificationRecipientModel.objects.bulk_create(
-            [
-                NotificationRecipientModel(
-                    id=recipient.id,
-                    tenantId=recipient.tenantId,
-                    notificationId=recipient.notificationId,
-                    userId=recipient.userId,
-                    recipientState=recipient.state,
-                    readAt=recipient.readAt,
-                    archivedAt=recipient.archivedAt,
-                    dismissedAt=recipient.dismissedAt,
-                    createdAt=recipient.createdAt or _now(),
-                )
-                for recipient in notification.recipients
-            ],
-            batch_size=1000,
-            ignore_conflicts=True,
+        # Do not use bulk_create(ignore_conflicts=True) here: the SQL Server
+        # backend intentionally does not support Django's ignore-conflicts
+        # option. The service may save the same aggregate more than once (the
+        # initial save and then the QUEUED transition), so filter existing
+        # recipient rows explicitly and bulk-insert only the missing rows.
+        existingUserIds = set(
+            NotificationRecipientModel.objects.filter(
+                notificationId=notification.id
+            ).values_list("userId", flat=True)
         )
+        newRecipients = [
+            NotificationRecipientModel(
+                id=recipient.id,
+                tenantId=recipient.tenantId,
+                notificationId=recipient.notificationId,
+                userId=recipient.userId,
+                recipientState=recipient.state,
+                readAt=recipient.readAt,
+                archivedAt=recipient.archivedAt,
+                dismissedAt=recipient.dismissedAt,
+                createdAt=recipient.createdAt or _now(),
+            )
+            for recipient in notification.recipients
+            if recipient.userId not in existingUserIds
+        ]
+        if newRecipients:
+            NotificationRecipientModel.objects.bulk_create(newRecipients, batch_size=1000)
 
     def getById(
         self, tenantId: uuid.UUID, notificationId: uuid.UUID
@@ -236,32 +245,40 @@ class RecipientDeliveryRepositoryDjango:
 
     def saveMany(self, deliveries: list[d.RecipientDelivery]) -> None:
         """Persist a large fan-out in bounded SQL batches, never N requests."""
-        NotificationRecipientDeliveryModel.objects.bulk_create(
-            [
-                NotificationRecipientDeliveryModel(
-                    id=item.id,
-                    tenantId=item.tenantId,
-                    notificationId=item.notificationId,
-                    recipientId=item.recipientId,
-                    channel=item.channel,
-                    provider=item.provider,
-                    providerMessageId=item.providerMessageId,
-                    deliveryStatus=item.status,
-                    attemptCount=item.attemptCount,
-                    maxAttempts=item.maxAttempts,
-                    errorCode=item.errorCode,
-                    errorMessage=item.errorMessage,
-                    lastAttemptAt=item.lastAttemptAt,
-                    nextAttemptAt=item.nextAttemptAt,
-                    sentAt=item.sentAt,
-                    deliveredAt=item.deliveredAt,
-                    failedAt=item.failedAt,
-                )
-                for item in deliveries
-            ],
-            batch_size=1000,
-            ignore_conflicts=True,
+        # mssql-django does not support bulk_create(ignore_conflicts=True).
+        # Resolve existing unique (notification, recipient, channel) rows
+        # explicitly so retries remain idempotent on every supported backend.
+        notificationIds = {item.notificationId for item in deliveries}
+        existingKeys = set(
+            NotificationRecipientDeliveryModel.objects.filter(
+                notificationId__in=notificationIds
+            ).values_list("notificationId", "recipientId", "channel")
         )
+        newDeliveries = [
+            NotificationRecipientDeliveryModel(
+                id=item.id,
+                tenantId=item.tenantId,
+                notificationId=item.notificationId,
+                recipientId=item.recipientId,
+                channel=item.channel,
+                provider=item.provider,
+                providerMessageId=item.providerMessageId,
+                deliveryStatus=item.status,
+                attemptCount=item.attemptCount,
+                maxAttempts=item.maxAttempts,
+                errorCode=item.errorCode,
+                errorMessage=item.errorMessage,
+                lastAttemptAt=item.lastAttemptAt,
+                nextAttemptAt=item.nextAttemptAt,
+                sentAt=item.sentAt,
+                deliveredAt=item.deliveredAt,
+                failedAt=item.failedAt,
+            )
+            for item in deliveries
+            if (item.notificationId, item.recipientId, item.channel) not in existingKeys
+        ]
+        if newDeliveries:
+            NotificationRecipientDeliveryModel.objects.bulk_create(newDeliveries, batch_size=1000)
 
     def saveAttempt(self, attempt: d.DeliveryAttempt) -> None:
         NotificationAttemptModel.objects.get_or_create(

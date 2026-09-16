@@ -144,6 +144,7 @@ def authenticateUserUseCase() -> AuthenticateUserUseCase:
         tokenIssuer=_tokenIssuer(),
         secretVault=_secretVault(),
         securityEvents=_securityEvents(),
+        accessRepository=AccessRepositoryDjango(),
         **kernelPorts(),
     )
 

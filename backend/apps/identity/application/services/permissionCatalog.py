@@ -58,7 +58,17 @@ ACTIONS: list[tuple[str, str]] = [
     ("learning.deploy", "Deploy, advance canaries and roll back artifacts"),
     ("learning.feedback", "Record sourced human/system/business feedback"),
     ("learning.monitor", "Record metrics and detect production drift"),
+    # -- Phase 18b workspace delivery (projects & tasks) --------------------
+    ("project.create", "Create projects inside the tenant"),
+    ("project.view", "View project details"),
+    ("project.list", "List projects of the tenant"),
+    ("project.update", "Update projects and their status"),
+    ("task.create", "Create tasks inside the tenant"),
+    ("task.view", "View task details"),
+    ("task.list", "List tasks of the tenant"),
+    ("task.update", "Update tasks and their status"),
 ]
+
 
 PLATFORM_ADMIN_ROLE = "platformAdmin"
 TENANT_ADMIN_ROLE = "tenantAdmin"
@@ -102,6 +112,14 @@ ROLE_PRESETS: dict[str, list[str]] = {
         "learning.deploy",
         "learning.feedback",
         "learning.monitor",
+        "project.create",
+        "project.view",
+        "project.list",
+        "project.update",
+        "task.create",
+        "task.view",
+        "task.list",
+        "task.update",
     ],
     MEMBER_ROLE: [
         "user.view",
@@ -111,5 +129,11 @@ ROLE_PRESETS: dict[str, list[str]] = {
         "learning.view",
         "learning.observe",
         "learning.feedback",
+        "project.view",
+        "project.list",
+        "task.view",
+        "task.list",
+        "task.create",
+        "task.update",
     ],
 }

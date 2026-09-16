@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useApiClient } from "../core/api/apiContext";
+import { apiEndpoints } from "../core/api/endpoints";
 import { NavLink, useLocation } from "react-router-dom";
 import { useLocalization } from "../core/localization/localizationContext";
 import { PERMISSIONS } from "../core/permissions/permissionContext";
@@ -35,4 +37,23 @@ function Roles(): JSX.Element { const { t } = useLocalization(); const roles = [
 
 function Tenants(): JSX.Element { const { t } = useLocalization(); return <div className="admin-section"><Card padding="md"><CardHeader title={t("admin.tenants")} subtitle="Global platform operators can manage tenant lifecycle and isolation." /><div className="tenant-admin-list">{demoTenants.map((tenant) => <div className="tenant-admin-row" key={tenant.id}><span className="tenant-avatar tenant-avatar--large">{tenant.name.slice(0, 1)}</span><div><strong>{tenant.name}</strong><span>{tenant.code} · {tenant.industry}</span></div><Badge tone="success" dot>{tenant.status}</Badge><span>{tenant.members} members</span><Button variant="ghost" size="sm" icon="settings">{t("common.view")}</Button></div>)}</div></Card></div>; }
 
-function Audit(): JSX.Element { const { t } = useLocalization(); return <div className="admin-section"><Card padding="md"><CardHeader title={t("admin.audit")} subtitle="Immutable activity records with correlation and tenant context." action={<Button variant="secondary" size="sm" icon="download">{t("common.export")}</Button>} /><ActivityFeed items={demoActivity} /></Card><Card padding="md"><CardHeader title="Audit controls" /><div className="audit-controls"><div><Icon name="shield" size={20} /><strong>Append-only stream</strong><span>Audit records cannot be edited from the GUI.</span></div><div><Icon name="lock" size={20} /><strong>Tenant-scoped</strong><span>Queries require a valid tenant context and audit.view.</span></div><div><Icon name="clock" size={20} /><strong>Retention governed</strong><span>Retention follows platform and tenant policy.</span></div></div></Card></div>; }
+function Audit(): JSX.Element {
+  const { t } = useLocalization();
+  const api = useApiClient();
+  const [items, setItems] = useState<typeof demoActivity>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    void api.get<Array<Record<string, unknown>>>(apiEndpoints.audit, { query: { pageSize: 50 } })
+      .then((rows) => setItems(rows.map((row, index) => ({
+        id: String(row.id ?? row.eventId ?? index),
+        actor: String(row.actor ?? row.actorId ?? "System"),
+        action: String(row.action ?? row.eventName ?? row.operation ?? "activity"),
+        resource: String(row.resource ?? row.resourceType ?? "platform"),
+        timestamp: String(row.timestamp ?? row.occurredAt ?? row.createdAt ?? ""),
+        tone: index % 4 === 0 ? "blue" : index % 4 === 1 ? "green" : index % 4 === 2 ? "amber" : "purple",
+      }))))
+      .catch(() => setItems([]))
+      .finally(() => setLoading(false));
+  }, [api]);
+  return <div className="admin-section"><Card padding="md"><CardHeader title={t("admin.audit")} subtitle="Immutable activity records with correlation and tenant context." action={<Button variant="secondary" size="sm" icon="download">{t("common.export")}</Button>} />{loading ? <p>Loading audit events…</p> : <ActivityFeed items={items.length ? items : demoActivity} />}</Card><Card padding="md"><CardHeader title="Audit controls" /><div className="audit-controls"><div><Icon name="shield" size={20} /><strong>Append-only stream</strong><span>Audit records cannot be edited from the GUI.</span></div><div><Icon name="lock" size={20} /><strong>Tenant-scoped</strong><span>Queries require a valid tenant context and audit.view.</span></div><div><Icon name="clock" size={20} /><strong>Retention governed</strong><span>Retention follows platform and tenant policy.</span></div></div></Card></div>;
+}

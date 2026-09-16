@@ -45,7 +45,7 @@ EXCLUDED_DIR_PARTS = frozenset(
 )
 
 FORBIDDEN_DOMAIN_IMPORT_PATTERN = re.compile(
-    r"^\s*(from|import)\s+(django|rest_framework|mssql_django|pyodbc|redis|channels)",
+    r"^\s*(from|import)\s+(django|rest_framework|mssql|pyodbc|redis|channels)",
     re.MULTILINE,
 )
 

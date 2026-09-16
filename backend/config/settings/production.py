@@ -68,10 +68,11 @@ DATABASES = {
         dbUser=env("dbUser"),
         dbPassword=env("dbPassword"),
         dbHost=env("dbHost"),
-        dbPort=env("dbPort", default="1433"),
+        dbPort=env("dbPort", default=""),
         dbConnTimeout=env("dbConnTimeout", default="30"),
         dbEncrypt=env("dbEncrypt", default="true"),
         odbcDriver=env("odbcDriver", default="ODBC Driver 18 for SQL Server"),
+        dbExtraParams=env("dbExtraParams", default=""),
         connMaxAge=env("dbConnMaxAge", default="60"),
     )
 }

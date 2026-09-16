@@ -44,7 +44,7 @@ FRAMEWORK_MODULES = (
     "celery",
     "redis",
     "pyodbc",
-    "mssql_django",
+    "mssql",
 )
 #: RULE D — external provider SDKs forbidden in domain.
 VENDOR_MODULES = (

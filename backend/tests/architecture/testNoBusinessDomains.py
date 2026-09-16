@@ -27,6 +27,8 @@ OPENED_CONTEXTS = {
     "ai": "Phase 13 (AI Platform & Intelligence Foundation)",
     "learning": "Phase 16 (Self-Learning Platform)",
     "projectIntelligence": "Phase 17 (Project Intelligence Platform)",
+    "projects": "Phase 18b (Workspace Delivery — Projects)",
+    "tasks": "Phase 18b (Workspace Delivery — Tasks)",
 }
 
 #: Bounded contexts from the approved domain map — still not opened.
@@ -36,10 +38,6 @@ FORBIDDEN_APP_DIRECTORIES = {
     "hr",
     "people",
     "performance",
-    "projects",
-    "project",
-    "tasks",
-    "task",
     "assets",
     "asset",
     "devices",
@@ -132,7 +130,11 @@ class ContextOpeningRegisterTests(SimpleTestCase):
                     "notifications" in sourceFile.parts or "config" in sourceFile.parts
                 ):
                     continue
-                if word in {"Project", "Task"} and "projectIntelligence" in sourceFile.parts:
+                if word in {"Project", "Task"} and (
+                    "projectIntelligence" in sourceFile.parts
+                    or "projects" in sourceFile.parts
+                    or "tasks" in sourceFile.parts
+                ):
                     continue
                 self.assertNotIn(
                     word,
@@ -161,6 +163,9 @@ class ContextOpeningRegisterTests(SimpleTestCase):
             "apps.learning",
             # Phase 17: read-only Project Intelligence Platform context.
             "apps.projectIntelligence",
+            # Phase 18b: Workspace Delivery — Projects & Tasks contexts.
+            "apps.projects",
+            "apps.tasks",
         }
         unexpectedApps = sorted(set(settings.INSTALLED_APPS) - allowedApps)
         self.assertEqual(

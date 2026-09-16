@@ -36,6 +36,8 @@ urlpatterns = [
                 path(
                     "", include("apps.projectIntelligence.presentation.api.urls.intelligenceRoutes")
                 ),
+                path("projects/", include("apps.projects.presentation.api.urls.projectRoutes")),
+                path("tasks/", include("apps.tasks.presentation.api.urls.taskRoutes")),
             ]
         ),
     ),

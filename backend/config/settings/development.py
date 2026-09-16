@@ -54,10 +54,14 @@ DATABASES = {
         dbUser=env("dbUser", default=""),
         dbPassword=env("dbPassword", default=""),
         dbHost=env("dbHost", default="localhost"),
-        dbPort=env("dbPort", default="1433"),
+        # Empty by default: named instances (localhost\SQLEXPRESS) must connect
+        # WITHOUT a port (mssql-django appends ",port" only when dbPort is set).
+        # For a TCP default instance pass -DbPort 1433.
+        dbPort=env("dbPort", default=""),
         dbConnTimeout=env("dbConnTimeout", default="30"),
         dbEncrypt=env("dbEncrypt", default="true"),
         odbcDriver=env("odbcDriver", default="ODBC Driver 18 for SQL Server"),
+        dbExtraParams=env("dbExtraParams", default=""),
         connMaxAge=env("dbConnMaxAge", default="0"),
     )
 }

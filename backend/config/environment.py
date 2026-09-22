@@ -22,7 +22,7 @@ BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
 #: ``sqlite`` exists only for offline development and automated testing
 #: (see docs/adr/ADR-011.md).
 SUPPORTED_DB_ENGINES: dict[str, str] = {
-    "mssql": "mssql_django",
+    "mssql": "mssql",
     "sqlite": "django.db.backends.sqlite3",
 }
 
@@ -59,6 +59,7 @@ def buildDatabaseConfig(
     dbConnTimeout: str = "30",
     dbEncrypt: str = "true",
     odbcDriver: str = DEFAULT_ODBC_DRIVER,
+    dbExtraParams: str = "",
     connMaxAge: str = "60",
 ) -> dict[str, Any]:
     """Build the Django ``DATABASES["default"]`` mapping from environment values.
@@ -82,13 +83,17 @@ def buildDatabaseConfig(
         "USER": dbUser,
         "PASSWORD": dbPassword,
         "HOST": dbHost,
-        "PORT": dbPort or "1433",
-        "CONN_MAX_AGE": _parseIntOrDefault(connMaxAge, 60, "dbConnTimeout"),
+        # Named instances (e.g. localhost\\SQLEXPRESS) must connect WITHOUT a
+        # port; mssql-django appends ",port" only when PORT is truthy. An
+        # empty dbPort therefore stays empty instead of forcing 1433.
+        "PORT": dbPort,
+        "CONN_MAX_AGE": _parseIntOrDefault(connMaxAge, 60, "dbConnMaxAge"),
         "CONN_HEALTH_CHECKS": True,
         "OPTIONS": {
             "driver": odbcDriver or DEFAULT_ODBC_DRIVER,
             "encrypt": _parseBoolOrDefault(dbEncrypt, True, "dbEncrypt"),
             "connection_timeout": _parseIntOrDefault(dbConnTimeout, 30, "dbConnTimeout"),
+            **({"extra_params": dbExtraParams} if dbExtraParams else {}),
         },
     }
 

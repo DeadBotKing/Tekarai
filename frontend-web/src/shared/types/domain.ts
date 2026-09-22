@@ -1,4 +1,4 @@
-export type Status = "active" | "atRisk" | "completed" | "inProgress" | "pending" | "archived" | "queued" | "running" | "failed";
+export type Status = "active" | "atRisk" | "completed" | "inProgress" | "onHold" | "pending" | "archived" | "queued" | "running" | "failed";
 export type Priority = "low" | "normal" | "high" | "critical";
 
 export interface Project {

@@ -1,11 +1,14 @@
 /** Versioned application-interface paths. Feature code never assembles API versions or auth headers. */
 export const apiEndpoints = {
-  auth: { login: "auth/login", refresh: "auth/refresh", logout: "auth/logout", me: "me" },
+  auth: { login: "auth/login", refresh: "auth/refresh", logout: "auth/logout", me: "me", passwordChange: "auth/password/change" },
+  identity: { sessions: "me/sessions", revokeAllSessions: "me/sessions/revoke-all", mfaSetup: "me/mfa/setup", mfaConfirm: "me/mfa/confirm", mfaDisable: "me/mfa/disable", apiKeys: "api-keys", apiKey: (id: string) => `api-keys/${id}` },
   tenants: "tenants",
   users: "users",
   roles: "roles",
+  projects: { list: "projects/", create: "projects/", detail: (id: string) => `projects/${id}`, update: (id: string) => `projects/${id}`, status: (id: string) => `projects/${id}/status` },
+  tasks: { list: "tasks/", create: "tasks/", detail: (id: string) => `tasks/${id}`, status: (id: string) => `tasks/${id}/status` },
   audit: "platform/audit-events",
-  notifications: { list: "notifications", unreadCount: "notifications/unread-count", read: (id: string) => `notifications/${id}/read`, readBulk: "notifications/read-bulk", search: "notifications/search" },
+  notifications: { list: "notifications", broadcasts: "notifications/broadcasts", unreadCount: "notifications/broadcasts/unread-count", read: (id: string) => `notifications/${id}/read`, broadcastRead: (id: string) => `notifications/broadcasts/${id}/read`, readBulk: "notifications/read-bulk", search: "notifications/search" },
   intelligence: {
     overview: (projectId: string) => `projects/${projectId}/intelligence/`,
     state: (projectId: string) => `projects/${projectId}/intelligence/state/`,

@@ -83,7 +83,13 @@ class CreateTaskUseCase(UseCase[CreateTaskCommand, TaskDto]):
         )
         self.repository.create(task)
         self.collectEventsFrom(task)
-        self.audit(AUDIT_CREATE, resourceType="Task", resourceId=str(task.id), tenantId=tenantId, after=task.snapshot())
+        self.audit(
+            AUDIT_CREATE,
+            resourceType="Task",
+            resourceId=str(task.id),
+            tenantId=tenantId,
+            after=task.snapshot(),
+        )
         return taskDtoFromDomain(task)
 
 
@@ -120,7 +126,13 @@ class UpdateTaskUseCase(UseCase[UpdateTaskCommand, TaskDto]):
         )
         self.repository.update(task)
         self.collectEventsFrom(task)
-        self.audit(AUDIT_UPDATE, resourceType="Task", resourceId=str(task.id), tenantId=tenantId, after=task.snapshot())
+        self.audit(
+            AUDIT_UPDATE,
+            resourceType="Task",
+            resourceId=str(task.id),
+            tenantId=tenantId,
+            after=task.snapshot(),
+        )
         return taskDtoFromDomain(task)
 
 
@@ -147,7 +159,13 @@ class ChangeTaskStatusUseCase(UseCase[ChangeTaskStatusCommand, TaskDto]):
         task.changeStatus(command.target, self.clock.nowUtc())
         self.repository.update(task)
         self.collectEventsFrom(task)
-        self.audit(AUDIT_UPDATE, resourceType="Task", resourceId=str(task.id), tenantId=tenantId, after=task.snapshot())
+        self.audit(
+            AUDIT_UPDATE,
+            resourceType="Task",
+            resourceId=str(task.id),
+            tenantId=tenantId,
+            after=task.snapshot(),
+        )
         return taskDtoFromDomain(task)
 
 
@@ -179,7 +197,9 @@ class ListTasksUseCase(UseCase[ListTasksQuery, TaskListDto]):
                 pageSize=query.pageSize,
             )
         )
-        return TaskListDto(items=[taskDtoFromDomain(item) for item in page.items], totalCount=page.totalCount)
+        return TaskListDto(
+            items=[taskDtoFromDomain(item) for item in page.items], totalCount=page.totalCount
+        )
 
 
 class GetTaskUseCase(UseCase[GetTaskQuery, TaskDto]):

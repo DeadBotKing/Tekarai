@@ -3,22 +3,8 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime
+from datetime import date
 
-from apps.sharedKernel.application.ports import (
-    AuditRecorder,
-    Clock,
-    EventDispatcher,
-    PermissionGate,
-    UnitOfWork,
-)
-from apps.sharedKernel.application.requestContext import currentContext
-from apps.sharedKernel.application.useCase import AUDIT_CREATE, AUDIT_UPDATE, UseCase
-from apps.sharedKernel.domain.errors import (
-    DuplicateBusinessCodeError,
-    EntityNotFoundError,
-    TenantAccessDeniedError,
-)
 from apps.projects.application.commands.projectCommands import (
     ChangeProjectStatusCommand,
     CreateProjectCommand,
@@ -39,6 +25,20 @@ from apps.projects.domain.repositories.projectRepository import (
     ProjectRepository,
 )
 from apps.projects.domain.valueObjects.projectState import ProjectCode
+from apps.sharedKernel.application.ports import (
+    AuditRecorder,
+    Clock,
+    EventDispatcher,
+    PermissionGate,
+    UnitOfWork,
+)
+from apps.sharedKernel.application.requestContext import currentContext
+from apps.sharedKernel.application.useCase import AUDIT_CREATE, AUDIT_UPDATE, UseCase
+from apps.sharedKernel.domain.errors import (
+    DuplicateBusinessCodeError,
+    EntityNotFoundError,
+    TenantAccessDeniedError,
+)
 
 
 def parseDateOrNone(value: str) -> date | None:
@@ -100,7 +100,13 @@ class CreateProjectUseCase(UseCase[CreateProjectCommand, ProjectDto]):
         )
         self.repository.create(project)
         self.collectEventsFrom(project)
-        self.audit(AUDIT_CREATE, resourceType="Project", resourceId=str(project.id), tenantId=tenantId, after=project.snapshot())
+        self.audit(
+            AUDIT_CREATE,
+            resourceType="Project",
+            resourceId=str(project.id),
+            tenantId=tenantId,
+            after=project.snapshot(),
+        )
         return projectDtoFromDomain(project)
 
 
@@ -135,7 +141,13 @@ class UpdateProjectUseCase(UseCase[UpdateProjectCommand, ProjectDto]):
         )
         self.repository.update(project)
         self.collectEventsFrom(project)
-        self.audit(AUDIT_UPDATE, resourceType="Project", resourceId=str(project.id), tenantId=tenantId, after=project.snapshot())
+        self.audit(
+            AUDIT_UPDATE,
+            resourceType="Project",
+            resourceId=str(project.id),
+            tenantId=tenantId,
+            after=project.snapshot(),
+        )
         return projectDtoFromDomain(project)
 
 
@@ -162,7 +174,13 @@ class ChangeProjectStatusUseCase(UseCase[ChangeProjectStatusCommand, ProjectDto]
         project.changeStatus(command.target, self.clock.nowUtc())
         self.repository.update(project)
         self.collectEventsFrom(project)
-        self.audit(AUDIT_UPDATE, resourceType="Project", resourceId=str(project.id), tenantId=tenantId, after=project.snapshot())
+        self.audit(
+            AUDIT_UPDATE,
+            resourceType="Project",
+            resourceId=str(project.id),
+            tenantId=tenantId,
+            after=project.snapshot(),
+        )
         return projectDtoFromDomain(project)
 
 

@@ -19,7 +19,7 @@ def projectRepository() -> ProjectRepositoryDjango:
     return ProjectRepositoryDjango()
 
 
-def _deps() -> dict[str, object]:
+def _deps() -> dict:
     return {
         "repository": projectRepository(),
         "unitOfWork": sharedKernelProvider("unitOfWork")(),

@@ -17,7 +17,7 @@ def taskRepository() -> TaskRepositoryDjango:
     return TaskRepositoryDjango()
 
 
-def _deps() -> dict[str, object]:
+def _deps() -> dict:
     return {
         "repository": taskRepository(),
         "unitOfWork": sharedKernelProvider("unitOfWork")(),

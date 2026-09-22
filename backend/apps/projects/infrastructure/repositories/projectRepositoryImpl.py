@@ -9,7 +9,6 @@ from typing import Any
 from django.db import IntegrityError
 from django.db.models import Q
 
-from apps.sharedKernel.domain.errors import DuplicateBusinessCodeError, ValidationFailedError
 from apps.projects.domain.entities.project import Project
 from apps.projects.domain.repositories.projectRepository import (
     ProjectFilters,
@@ -17,6 +16,7 @@ from apps.projects.domain.repositories.projectRepository import (
 )
 from apps.projects.domain.valueObjects.projectState import ProjectCode, ProjectStatus
 from apps.projects.infrastructure.models import ProjectModel
+from apps.sharedKernel.domain.errors import DuplicateBusinessCodeError, ValidationFailedError
 
 SORTABLE_COLUMNS = {"createdAt": "createdAt", "name": "name", "code": "code", "status": "status"}
 
@@ -70,9 +70,7 @@ class ProjectRepositoryDjango:
         return ProjectModel.objects.filter(tenantId=tenantId, deletedAt__isnull=True).count()
 
     def list(self, filters: ProjectFilters) -> ProjectPage:
-        queryset = ProjectModel.objects.filter(
-            tenantId=filters.tenantId, deletedAt__isnull=True
-        )
+        queryset = ProjectModel.objects.filter(tenantId=filters.tenantId, deletedAt__isnull=True)
         if filters.status:
             queryset = queryset.filter(status=filters.status)
         if filters.search:
@@ -81,7 +79,9 @@ class ProjectRepositoryDjango:
             )
         requestedField = filters.ordering.lstrip("-").split(",")[0].strip()
         if requestedField and requestedField not in SORTABLE_COLUMNS:
-            raise ValidationFailedError("Field is not sortable.", fieldErrors={"ordering": requestedField})
+            raise ValidationFailedError(
+                "Field is not sortable.", fieldErrors={"ordering": requestedField}
+            )
         orderingColumn = SORTABLE_COLUMNS.get(requestedField, "createdAt")
         orderBy = f"-{orderingColumn}" if filters.ordering.startswith("-") else orderingColumn
         totalCount = queryset.count()
@@ -114,4 +114,9 @@ class ProjectRepositoryDjango:
 
     @staticmethod
     def toModelFields(project: Project) -> dict[str, Any]:  # pragma: no cover — helper
-        return {"id": project.id, "tenantId": project.tenantId, "code": str(project.code), "name": project.name}
+        return {
+            "id": project.id,
+            "tenantId": project.tenantId,
+            "code": str(project.code),
+            "name": project.name,
+        }

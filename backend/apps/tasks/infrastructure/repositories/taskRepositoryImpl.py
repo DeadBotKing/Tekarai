@@ -14,7 +14,12 @@ from apps.tasks.domain.repositories.taskRepository import TaskFilters, TaskPage
 from apps.tasks.domain.valueObjects.taskState import TaskPriority, TaskStatus
 from apps.tasks.infrastructure.models import TaskModel
 
-SORTABLE_COLUMNS = {"createdAt": "createdAt", "title": "title", "status": "status", "priority": "priority"}
+SORTABLE_COLUMNS = {
+    "createdAt": "createdAt",
+    "title": "title",
+    "status": "status",
+    "priority": "priority",
+}
 
 
 class TaskRepositoryDjango:
@@ -44,7 +49,9 @@ class TaskRepositoryDjango:
         )
 
     def getById(self, tenantId: uuid.UUID, taskId: uuid.UUID) -> Task | None:
-        model = TaskModel.objects.filter(id=taskId, tenantId=tenantId, deletedAt__isnull=True).first()
+        model = TaskModel.objects.filter(
+            id=taskId, tenantId=tenantId, deletedAt__isnull=True
+        ).first()
         return self.toDomain(model) if model else None
 
     def countByTenant(self, tenantId: uuid.UUID) -> int:
@@ -62,7 +69,9 @@ class TaskRepositoryDjango:
             )
         requestedField = filters.ordering.lstrip("-").split(",")[0].strip()
         if requestedField and requestedField not in SORTABLE_COLUMNS:
-            raise ValidationFailedError("Field is not sortable.", fieldErrors={"ordering": requestedField})
+            raise ValidationFailedError(
+                "Field is not sortable.", fieldErrors={"ordering": requestedField}
+            )
         orderingColumn = SORTABLE_COLUMNS.get(requestedField, "createdAt")
         orderBy = f"-{orderingColumn}" if filters.ordering.startswith("-") else orderingColumn
         totalCount = queryset.count()

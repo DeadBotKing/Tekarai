@@ -102,7 +102,9 @@ class ProjectStatusView(IdempotencyMixin, APIView):
         serializer = ChangeProjectStatusSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         dto = container.changeProjectStatusUseCase().execute(
-            ChangeProjectStatusCommand(projectId=str(projectId), target=str(serializer.validated_data["target"]))
+            ChangeProjectStatusCommand(
+                projectId=str(projectId), target=str(serializer.validated_data["target"])
+            )
         )
         return Response(successEnvelope(asDict(dto)))
 

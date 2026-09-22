@@ -66,9 +66,9 @@ class BroadcastNotificationRepositoryDjango:
         # initial save and then the QUEUED transition), so filter existing
         # recipient rows explicitly and bulk-insert only the missing rows.
         existingUserIds = set(
-            NotificationRecipientModel.objects.filter(
-                notificationId=notification.id
-            ).values_list("userId", flat=True)
+            NotificationRecipientModel.objects.filter(notificationId=notification.id).values_list(
+                "userId", flat=True
+            )
         )
         newRecipients = [
             NotificationRecipientModel(

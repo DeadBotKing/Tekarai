@@ -51,10 +51,34 @@ DEFAULT_PASSWORD = "Tekarai-Demo-2026!"
 
 #: (code, name, description, owner, dueDate) — codes follow BR-PRJ-001.
 SEED_PROJECTS: list[tuple[str, str, str, str, str]] = [
-    ("NOVA-24", "Nova Plant Modernization", "Modernize production planning and asset visibility across three sites.", "Maya Chen", "2026-10-18"),
-    ("ATLAS-11", "Atlas Quality System", "A governed quality workflow for engineering and validation teams.", "Jon Bell", "2026-11-02"),
-    ("ORBIT-07", "Orbit Energy Reporting", "Unify operational energy data and compliance reporting.", "Sara Novak", "2026-09-29"),
-    ("BRIDGE-18", "Bridge Supplier Portal", "Create a secure supplier collaboration experience.", "Owen Wright", "2026-12-15"),
+    (
+        "NOVA-24",
+        "Nova Plant Modernization",
+        "Modernize production planning and asset visibility across three sites.",
+        "Maya Chen",
+        "2026-10-18",
+    ),
+    (
+        "ATLAS-11",
+        "Atlas Quality System",
+        "A governed quality workflow for engineering and validation teams.",
+        "Jon Bell",
+        "2026-11-02",
+    ),
+    (
+        "ORBIT-07",
+        "Orbit Energy Reporting",
+        "Unify operational energy data and compliance reporting.",
+        "Sara Novak",
+        "2026-09-29",
+    ),
+    (
+        "BRIDGE-18",
+        "Bridge Supplier Portal",
+        "Create a secure supplier collaboration experience.",
+        "Owen Wright",
+        "2026-12-15",
+    ),
 ]
 
 #: (project code, title, priority, assignee, dueDate, estimate)
@@ -95,19 +119,27 @@ class Command(BaseCommand):
         platform = TenantRepositoryDjango().getByCode("platform")
         if platform is None:  # pragma: no cover — bootstrapPlatform guarantees it
             raise RuntimeError("bootstrapPlatform did not create the platform tenant.")
-        self.stdout.write(f"seeding workspace for tenant: platform")
+        self.stdout.write("seeding workspace for tenant: platform")
         self._seedProjects(platform.id)
         self._seedTasks(platform.id)
 
         # 2) Demo customer tenant + users + workspace.
         demo = self._ensureTenant(demoCode, "Acme Industries")
         self._ensureUser(
-            demo.id, f"{demoCode}-admin", f"{demoCode}-admin@tekarai.local",
-            "Acme Administrator", password, "tenantAdmin",
+            demo.id,
+            f"{demoCode}-admin",
+            f"{demoCode}-admin@tekarai.local",
+            "Acme Administrator",
+            password,
+            "tenantAdmin",
         )
         self._ensureUser(
-            demo.id, f"{demoCode}-member", f"{demoCode}-member@tekarai.local",
-            "Acme Member", password, "member",
+            demo.id,
+            f"{demoCode}-member",
+            f"{demoCode}-member@tekarai.local",
+            "Acme Member",
+            password,
+            "member",
         )
         self.stdout.write(f"seeding workspace for tenant: {demoCode}")
         self._seedProjects(demo.id)
@@ -177,7 +209,9 @@ class Command(BaseCommand):
     def _ensureMembership(self, userId: uuid.UUID, tenantId: uuid.UUID) -> None:
         membershipRepository = TenantMembershipRepositoryDjango()
         if membershipRepository.get(userId, tenantId) is None:
-            membership = TenantMembership.establish(userId=userId, tenantId=tenantId, now=self._now())
+            membership = TenantMembership.establish(
+                userId=userId, tenantId=tenantId, now=self._now()
+            )
             membershipRepository.create(membership)
 
     # -- workspace ----------------------------------------------------------

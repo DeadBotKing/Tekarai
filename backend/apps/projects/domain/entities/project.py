@@ -6,15 +6,15 @@ import uuid
 from datetime import date, datetime
 from typing import Any
 
-from apps.sharedKernel.domain.entities import AggregateRoot, newId
-from apps.sharedKernel.domain.errors import InvalidStateTransitionError
-from apps.sharedKernel.domain.events import DomainEvent
 from apps.projects.domain.valueObjects.projectState import (
     PROJECT_ACTIVE,
     ProjectCode,
     ProjectStatus,
     clampPercent,
 )
+from apps.sharedKernel.domain.entities import AggregateRoot, newId
+from apps.sharedKernel.domain.errors import InvalidStateTransitionError
+from apps.sharedKernel.domain.events import DomainEvent
 
 
 class Project(AggregateRoot):

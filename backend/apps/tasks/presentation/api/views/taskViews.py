@@ -27,7 +27,6 @@ from apps.tasks.presentation.api.serializers.taskSerializers import (
     UpdateTaskSerializer,
 )
 
-
 TASK_ERRORS = [
     "SYS_VALIDATION_FAILED",
     "SYS_RECORD_NOT_FOUND",
@@ -102,7 +101,9 @@ class TaskStatusView(IdempotencyMixin, APIView):
         serializer = ChangeTaskStatusSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         dto = container.changeTaskStatusUseCase().execute(
-            ChangeTaskStatusCommand(taskId=str(taskId), target=str(serializer.validated_data["target"]))
+            ChangeTaskStatusCommand(
+                taskId=str(taskId), target=str(serializer.validated_data["target"])
+            )
         )
         return Response(successEnvelope(asDict(dto)))
 

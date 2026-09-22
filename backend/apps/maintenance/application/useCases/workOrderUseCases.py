@@ -7,6 +7,8 @@ import uuid
 from apps.maintenance.application.commands.maintenanceCommands import (
     AssignWorkOrderCommand,
     ChangeWorkOrderStatusCommand,
+    GeneratePmWorkOrdersCommand,
+    RouteWorkOrderCommand,
     SubmitWorkOrderCommand,
     UpdateWorkOrderCommand,
 )
@@ -27,6 +29,9 @@ from apps.maintenance.domain.repositories.maintenanceRepositories import (
     WorkOrderRepository,
 )
 from apps.maintenance.domain.valueObjects.maintenanceState import (
+    PRIORITY_NORMAL,
+    WORK_ORDER_PREVENTIVE,
+    MaintenanceDepartment,
     WorkOrderPriority,
     WorkOrderStatus,
     WorkOrderType,
@@ -78,6 +83,8 @@ class SubmitWorkOrderUseCase(UseCase):
     def validateCommand(self, command: SubmitWorkOrderCommand) -> None:
         WorkOrderType(command.orderType)
         WorkOrderPriority(command.priority)
+        if command.department:
+            MaintenanceDepartment(command.department)
 
     def perform(self, command: SubmitWorkOrderCommand) -> WorkOrderDto:
         tenantId = resolveTenantId(command.tenantId)
@@ -85,6 +92,13 @@ class SubmitWorkOrderUseCase(UseCase):
         device = self.deviceRepository.getById(tenantId, deviceId)
         if device is None:
             raise EntityNotFoundError("Device not found.")
+        # A submitted order inherits the device's owning department unless the
+        # requester explicitly overrides it.
+        department = (
+            MaintenanceDepartment(command.department)
+            if command.department
+            else device.department
+        )
         order = WorkOrder.submit(
             tenantId=tenantId,
             deviceId=deviceId,
@@ -92,6 +106,7 @@ class SubmitWorkOrderUseCase(UseCase):
             description=command.description,
             orderType=WorkOrderType(command.orderType),
             priority=WorkOrderPriority(command.priority),
+            department=department,
             requestedByName=command.requestedByName,
             now=self.clock.nowUtc(),
         )
@@ -123,6 +138,34 @@ class UpdateWorkOrderUseCase(WorkOrderUseCaseBase):
             description=command.description,
             priority=WorkOrderPriority(command.priority),
             now=self.clock.nowUtc(),
+        )
+        self.repository.update(order)
+        self.collectEventsFrom(order)
+        self.audit(
+            AUDIT_UPDATE,
+            resourceType="WorkOrder",
+            resourceId=str(order.id),
+            tenantId=tenantId,
+            after=order.snapshot(),
+        )
+        return workOrderDtoFromDomain(order)
+
+
+class RouteWorkOrderUseCase(WorkOrderUseCaseBase):
+    """Step 1 of dispatch — a manager routes the order to a department."""
+
+    requiredAction = "maintenance.workorder.route"
+
+    def validateCommand(self, command: RouteWorkOrderCommand) -> None:
+        MaintenanceDepartment(command.department)
+
+    def perform(self, command: RouteWorkOrderCommand) -> WorkOrderDto:
+        tenantId = resolveTenantId("")
+        order = self.repository.getById(tenantId, uuid.UUID(command.workOrderId))
+        if order is None:
+            raise EntityNotFoundError("Work order not found.")
+        order.routeToDepartment(
+            MaintenanceDepartment(command.department), self.clock.nowUtc()
         )
         self.repository.update(order)
         self.collectEventsFrom(order)
@@ -193,6 +236,7 @@ class ListWorkOrdersUseCase(WorkOrderUseCaseBase):
                 status=query.status,
                 orderType=query.orderType,
                 priority=query.priority,
+                department=query.department,
                 search=query.search,
                 ordering=query.ordering,
                 page=query.page,
@@ -214,3 +258,72 @@ class GetWorkOrderUseCase(WorkOrderUseCaseBase):
         if order is None:
             raise EntityNotFoundError("Work order not found.")
         return workOrderDtoFromDomain(order)
+
+
+class GeneratePmWorkOrdersUseCase(UseCase):
+    """Auto-generate preventive work orders for devices whose PM is due.
+
+    For each device whose ``isPmDue`` is true and that has no open preventive
+    order yet, a ``preventive`` work order is created and routed to the device's
+    owning department. Idempotent: running it repeatedly will not pile up
+    duplicate orders for the same device.
+    """
+
+    requiredAction = "maintenance.workorder.create"
+
+    def __init__(
+        self,
+        repository: WorkOrderRepository,
+        deviceRepository: DeviceRepository,
+        unitOfWork: UnitOfWork,
+        auditRecorder: AuditRecorder,
+        eventDispatcher: EventDispatcher,
+        permissionGate: PermissionGate,
+        clock: Clock,
+    ) -> None:
+        super().__init__(unitOfWork, auditRecorder, eventDispatcher, permissionGate, clock)
+        self.repository = repository
+        self.deviceRepository = deviceRepository
+
+    def perform(self, command: GeneratePmWorkOrdersCommand) -> WorkOrderListDto:
+        tenantId = resolveTenantId(command.tenantId)
+        now = self.clock.nowUtc()
+        asOf = now.date()
+        created: list[WorkOrder] = []
+        for device in self.deviceRepository.listDueForPm(tenantId):
+            if not device.isPmDue(asOf):
+                continue
+            if self.repository.hasOpenPreventiveOrder(tenantId, device.id):
+                continue
+            due = device.nextDueDate()
+            dueLabel = due.isoformat() if due else asOf.isoformat()
+            order = WorkOrder.submit(
+                tenantId=tenantId,
+                deviceId=device.id,
+                title=f"نگهداری پیشگیرانه دوره‌ای — {device.name}",
+                description=(
+                    f"این درخواست به‌صورت خودکار برای دستگاه «{device.name}» "
+                    f"(کد {device.code}) ایجاد شد؛ سررسید نگهداری پیشگیرانه: {dueLabel}."
+                ),
+                orderType=WorkOrderType(WORK_ORDER_PREVENTIVE),
+                priority=WorkOrderPriority(PRIORITY_NORMAL),
+                department=device.department,
+                requestedByName="سامانه (خودکار)",
+                now=now,
+            )
+            # Immediately route the auto-order to the device's owning department.
+            order.routeToDepartment(device.department, now)
+            self.repository.create(order)
+            self.collectEventsFrom(order)
+            self.audit(
+                AUDIT_CREATE,
+                resourceType="WorkOrder",
+                resourceId=str(order.id),
+                tenantId=tenantId,
+                after=order.snapshot(),
+            )
+            created.append(order)
+        return WorkOrderListDto(
+            items=[workOrderDtoFromDomain(item) for item in created],
+            totalCount=len(created),
+        )

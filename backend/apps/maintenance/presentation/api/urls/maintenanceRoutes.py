@@ -15,7 +15,9 @@ from apps.maintenance.presentation.api.views.deviceViews import (
 from apps.maintenance.presentation.api.views.workOrderViews import (
     WorkOrderAssignView,
     WorkOrderDetailView,
+    WorkOrderGeneratePmView,
     WorkOrderListView,
+    WorkOrderRouteView,
     WorkOrderStatusView,
 )
 
@@ -26,12 +28,22 @@ urlpatterns = [
     path("devices/<uuid:deviceId>", DeviceDetailView.as_view(), name="deviceDetail"),
     path("devices/<uuid:deviceId>/status", DeviceStatusView.as_view(), name="deviceStatus"),
     path("devices/<uuid:deviceId>/pm", DevicePmView.as_view(), name="devicePm"),
-    # Work orders
+    # Work orders — static "generate-pm" path precedes the uuid capture.
     path("work-orders", WorkOrderListView.as_view(), name="workOrderList"),
+    path(
+        "work-orders/generate-pm",
+        WorkOrderGeneratePmView.as_view(),
+        name="workOrderGeneratePm",
+    ),
     path(
         "work-orders/<uuid:workOrderId>",
         WorkOrderDetailView.as_view(),
         name="workOrderDetail",
+    ),
+    path(
+        "work-orders/<uuid:workOrderId>/route",
+        WorkOrderRouteView.as_view(),
+        name="workOrderRoute",
     ),
     path(
         "work-orders/<uuid:workOrderId>/assign",

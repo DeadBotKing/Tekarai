@@ -27,6 +27,7 @@ class MaintenanceApiBase(TestCase):
         code: str = "PUMP-01",
         name: str = "پمپ خنک‌کننده",
         pmIntervalDays: int = 30,
+        department: str = "general",
     ) -> dict:
         response = self.client.post(
             "/api/v1/maintenance/devices",
@@ -34,6 +35,7 @@ class MaintenanceApiBase(TestCase):
                 "code": code,
                 "name": name,
                 "location": "سالن تولید A",
+                "department": department,
                 "pmIntervalDays": pmIntervalDays,
             },
             format="json",
@@ -260,6 +262,124 @@ class WorkOrderApiTests(MaintenanceApiBase):
         self.assertTrue(all(item["status"] == "submitted" for item in filtered.json()["data"]))
 
 
+class DepartmentRoutingTests(MaintenanceApiBase):
+    def testDeviceCarriesDepartmentAndWorkOrderInheritsIt(self) -> None:
+        device = self.createDevice(code="ELEC-01", department="electrical")
+        self.assertEqual(device["department"], "electrical")
+
+        # A submitted order with no explicit department inherits the device's.
+        order = self.submitWorkOrder(device["id"])
+        self.assertEqual(order["department"], "electrical")
+        self.assertEqual(order["status"], "submitted")
+
+    def testTwoStepRouteThenAssign(self) -> None:
+        device = self.createDevice(code="MECH-01", department="general")
+        order = self.submitWorkOrder(device["id"])
+
+        # Step 1 — a manager routes the request to the electrical department.
+        routed = self.client.post(
+            f"/api/v1/maintenance/work-orders/{order['id']}/route",
+            {"department": "electrical"},
+            format="json",
+            **self.auth,
+        )
+        self.assertEqual(routed.status_code, 200, routed.content)
+        self.assertEqual(routed.json()["data"]["status"], "routed")
+        self.assertEqual(routed.json()["data"]["department"], "electrical")
+
+        # Step 2 — a technician of that unit is assigned.
+        assigned = self.client.post(
+            f"/api/v1/maintenance/work-orders/{order['id']}/assign",
+            {"assignedToName": "حسین برقی"},
+            format="json",
+            **self.auth,
+        )
+        self.assertEqual(assigned.status_code, 200, assigned.content)
+        self.assertEqual(assigned.json()["data"]["status"], "assigned")
+        self.assertEqual(assigned.json()["data"]["department"], "electrical")
+        self.assertEqual(assigned.json()["data"]["assignedToName"], "حسین برقی")
+
+    def testInvalidDepartmentIsRejected(self) -> None:
+        device = self.createDevice(code="BAD-DEP-1")
+        order = self.submitWorkOrder(device["id"])
+        bad = self.client.post(
+            f"/api/v1/maintenance/work-orders/{order['id']}/route",
+            {"department": "teleportation"},
+            format="json",
+            **self.auth,
+        )
+        self.assertEqual(bad.status_code, 400, bad.content)
+
+    def testFilterWorkOrdersByDepartment(self) -> None:
+        elec = self.createDevice(code="F-ELEC", department="electrical")
+        mech = self.createDevice(code="F-MECH", department="mechanical")
+        self.submitWorkOrder(elec["id"], title="اتصالی برق")
+        self.submitWorkOrder(mech["id"], title="لرزش موتور")
+
+        filtered = self.client.get(
+            "/api/v1/maintenance/work-orders?department=electrical",
+            **self.auth,
+        )
+        self.assertEqual(filtered.status_code, 200, filtered.content)
+        data = filtered.json()["data"]
+        self.assertTrue(len(data) >= 1)
+        self.assertTrue(all(item["department"] == "electrical" for item in data))
+
+
+class PmAutoGenerationTests(MaintenanceApiBase):
+    def testGeneratePmCreatesRoutedPreventiveOrders(self) -> None:
+        overdue = self.createDevice(
+            code="PM-AUTO-1", department="mechanical", pmIntervalDays=10
+        )
+        self.client.post(
+            f"/api/v1/maintenance/devices/{overdue['id']}/pm",
+            {"performedOn": "2020-01-01"},
+            format="json",
+            **self.auth,
+        )
+
+        generated = self.client.post(
+            "/api/v1/maintenance/work-orders/generate-pm",
+            {},
+            format="json",
+            **self.auth,
+        )
+        self.assertEqual(generated.status_code, 201, generated.content)
+        items = generated.json()["data"]
+        matching = [i for i in items if i["deviceId"] == overdue["id"]]
+        self.assertEqual(len(matching), 1)
+        auto = matching[0]
+        self.assertEqual(auto["orderType"], "preventive")
+        self.assertEqual(auto["status"], "routed")
+        self.assertEqual(auto["department"], "mechanical")
+
+    def testGeneratePmIsIdempotentPerDevice(self) -> None:
+        overdue = self.createDevice(
+            code="PM-AUTO-2", department="electrical", pmIntervalDays=10
+        )
+        self.client.post(
+            f"/api/v1/maintenance/devices/{overdue['id']}/pm",
+            {"performedOn": "2020-01-01"},
+            format="json",
+            **self.auth,
+        )
+        first = self.client.post(
+            "/api/v1/maintenance/work-orders/generate-pm", {}, format="json", **self.auth
+        )
+        self.assertEqual(first.status_code, 201, first.content)
+        self.assertEqual(
+            len([i for i in first.json()["data"] if i["deviceId"] == overdue["id"]]), 1
+        )
+        # Second run must NOT create another order while the first is still open.
+        second = self.client.post(
+            "/api/v1/maintenance/work-orders/generate-pm", {}, format="json", **self.auth
+        )
+        self.assertEqual(second.status_code, 201, second.content)
+        self.assertEqual(
+            len([i for i in second.json()["data"] if i["deviceId"] == overdue["id"]]), 0
+        )
+
+
 class MaintenancePermissionCatalogTests(TestCase):
     def testLoginPayloadCarriesMaintenancePermissions(self) -> None:
         cache.clear()
@@ -272,6 +392,7 @@ class MaintenancePermissionCatalogTests(TestCase):
         permissions = response.json()["data"].get("permissions")
         self.assertIn("maintenance.device.manage", permissions)
         self.assertIn("maintenance.workorder.create", permissions)
+        self.assertIn("maintenance.workorder.route", permissions)
         self.assertIn("maintenance.workorder.assign", permissions)
 
     def testCmmsRolesAreSeeded(self) -> None:

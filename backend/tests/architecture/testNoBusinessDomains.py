@@ -136,6 +136,13 @@ class ContextOpeningRegisterTests(SimpleTestCase):
                     or "tasks" in sourceFile.parts
                 ):
                     continue
+                # EVOLUTION NOTE (Phase 21): the Maintenance / CMMS context owns
+                # a "Department" concept (a maintenance unit — electrical,
+                # mechanical, …) used for two-step work-order routing. This is
+                # distinct from the not-yet-opened org-chart Department and is
+                # allowed only inside the maintenance context.
+                if word == "Department" and "maintenance" in sourceFile.parts:
+                    continue
                 self.assertNotIn(
                     word,
                     content,

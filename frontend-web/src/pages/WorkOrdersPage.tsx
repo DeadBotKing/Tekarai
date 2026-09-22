@@ -6,6 +6,7 @@ import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { createMaintenanceService } from "../features/maintenance/maintenanceService";
 import { demoDevices, demoWorkOrders } from "../features/maintenance/maintenanceDemoData";
 import type {
+  MaintenanceDepartment,
   MaintenanceDevice,
   Priority,
   WorkOrder,
@@ -30,6 +31,7 @@ import { Icon } from "../shared/components/Icon";
 
 const WO_STATUSES: WorkOrderStatus[] = [
   "submitted",
+  "routed",
   "assigned",
   "inProgress",
   "onHold",
@@ -38,10 +40,18 @@ const WO_STATUSES: WorkOrderStatus[] = [
 ];
 const WO_TYPES: WorkOrderType[] = ["corrective", "preventive", "inspection"];
 const PRIORITIES: Priority[] = ["low", "normal", "high", "critical"];
+const DEPARTMENTS: MaintenanceDepartment[] = [
+  "general",
+  "electrical",
+  "mechanical",
+  "facilities",
+  "instrumentation",
+];
 
 // Allowed forward transitions mirror the backend WORK_ORDER_TRANSITIONS state machine.
 const NEXT_STATUSES: Record<WorkOrderStatus, WorkOrderStatus[]> = {
-  submitted: ["assigned", "cancelled"],
+  submitted: ["routed", "assigned", "cancelled"],
+  routed: ["assigned", "onHold", "cancelled"],
   assigned: ["inProgress", "onHold", "cancelled"],
   inProgress: ["onHold", "completed", "cancelled"],
   onHold: ["inProgress", "cancelled"],
@@ -62,7 +72,9 @@ const statusTone = (
           ? "danger"
           : status === "assigned"
             ? "purple"
-            : "neutral";
+            : status === "routed"
+              ? "info"
+              : "neutral";
 
 const priorityTone = (priority: Priority): "danger" | "warning" | "neutral" =>
   priority === "critical" ? "danger" : priority === "high" ? "warning" : "neutral";
@@ -78,19 +90,23 @@ export function WorkOrdersPage(): JSX.Element {
   const [view, setView] = useState<"list" | "board">("list");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [departmentFilter, setDepartmentFilter] = useState("all");
   const [toast, setToast] = useState("");
 
   const [createOpen, setCreateOpen] = useState(false);
   const [activeOrder, setActiveOrder] = useState<WorkOrder | null>(null);
   const [assignOrder, setAssignOrder] = useState<WorkOrder | null>(null);
+  const [routeOrder, setRouteOrder] = useState<WorkOrder | null>(null);
 
   const [formDevice, setFormDevice] = useState("");
   const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [formType, setFormType] = useState<WorkOrderType>("corrective");
   const [formPriority, setFormPriority] = useState<Priority>("normal");
+  const [formDepartment, setFormDepartment] = useState<MaintenanceDepartment | "">("");
   const [formRequestedBy, setFormRequestedBy] = useState("");
   const [technicianName, setTechnicianName] = useState("");
+  const [routeDepartment, setRouteDepartment] = useState<MaintenanceDepartment>("general");
 
   const deviceNames = useMemo(
     () => new Map(devices.map((device) => [device.id, `${device.code} — ${device.name}`])),
@@ -119,11 +135,12 @@ export function WorkOrdersPage(): JSX.Element {
       orders.filter(
         (order) =>
           (statusFilter === "all" || order.status === statusFilter) &&
+          (departmentFilter === "all" || order.department === departmentFilter) &&
           `${order.title} ${order.requestedByName} ${order.assignedToName}`
             .toLowerCase()
             .includes(search.toLowerCase()),
       ),
-    [orders, search, statusFilter],
+    [orders, search, statusFilter, departmentFilter],
   );
 
   const openCreate = (): void => {
@@ -132,12 +149,17 @@ export function WorkOrdersPage(): JSX.Element {
     setFormDescription("");
     setFormType("corrective");
     setFormPriority("normal");
+    setFormDepartment("");
     setFormRequestedBy("");
     setCreateOpen(true);
   };
 
   const submitOrder = async (): Promise<void> => {
     if (!formDevice || !formTitle.trim()) return;
+    // A work order inherits the device's department unless one is chosen.
+    const selectedDevice = devices.find((device) => device.id === formDevice);
+    const resolvedDepartment: MaintenanceDepartment =
+      formDepartment || selectedDevice?.department || "general";
     if (runtimeConfig.demoMode) {
       const order: WorkOrder = {
         id: `wo-${Date.now()}`,
@@ -147,6 +169,7 @@ export function WorkOrdersPage(): JSX.Element {
         orderType: formType,
         priority: formPriority,
         status: "submitted",
+        department: resolvedDepartment,
         requestedByName: formRequestedBy.trim(),
         assignedToName: "",
         resolutionNote: "",
@@ -165,6 +188,7 @@ export function WorkOrdersPage(): JSX.Element {
         description: formDescription.trim(),
         orderType: formType,
         priority: formPriority,
+        department: formDepartment,
         requestedByName: formRequestedBy.trim(),
       });
       setCreateOpen(false);
@@ -195,6 +219,48 @@ export function WorkOrdersPage(): JSX.Element {
       setAssignOrder(null);
       setTechnicianName("");
       setToast(t("cmms.wo.assignSuccess"));
+      await refresh();
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : t("cmms.wo.saveFailed"));
+    }
+  };
+
+  const route = async (): Promise<void> => {
+    if (!routeOrder) return;
+    if (runtimeConfig.demoMode) {
+      setOrders((current) =>
+        current.map((item) =>
+          item.id === routeOrder.id
+            ? { ...item, status: "routed", department: routeDepartment, assignedToName: "" }
+            : item,
+        ),
+      );
+      setRouteOrder(null);
+      setToast(t("cmms.wo.routeSuccess"));
+      return;
+    }
+    try {
+      await service.routeWorkOrder(routeOrder.id, routeDepartment);
+      setRouteOrder(null);
+      setToast(t("cmms.wo.routeSuccess"));
+      await refresh();
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : t("cmms.wo.saveFailed"));
+    }
+  };
+
+  const generatePm = async (): Promise<void> => {
+    if (runtimeConfig.demoMode) {
+      setToast(t("cmms.wo.generatePmDemo"));
+      return;
+    }
+    try {
+      const created = await service.generatePmWorkOrders();
+      setToast(
+        created.length > 0
+          ? t("cmms.wo.generatePmSuccess").replace("{count}", String(created.length))
+          : t("cmms.wo.generatePmNone"),
+      );
       await refresh();
     } catch (error) {
       setToast(error instanceof Error ? error.message : t("cmms.wo.saveFailed"));
@@ -253,6 +319,13 @@ export function WorkOrdersPage(): JSX.Element {
       render: (row) => <Badge tone="info">{t(`cmms.type.${row.orderType}`)}</Badge>,
     },
     {
+      key: "department",
+      label: t("cmms.wo.department"),
+      accessor: (row) => row.department,
+      sortable: true,
+      render: (row) => <Badge tone="neutral">{t(`cmms.department.${row.department}`)}</Badge>,
+    },
+    {
       key: "status",
       label: t("cmms.wo.status"),
       accessor: (row) => row.status,
@@ -294,9 +367,14 @@ export function WorkOrdersPage(): JSX.Element {
         subtitle={t("cmms.wo.subtitle")}
         actions={
           <PermissionGuard permission={PERMISSIONS.maintenanceWorkOrderCreate}>
-            <Button variant="primary" icon="plus" onClick={openCreate}>
-              {t("cmms.wo.new")}
-            </Button>
+            <div className="cmms-header-actions">
+              <Button variant="secondary" icon="refresh" onClick={generatePm}>
+                {t("cmms.wo.generatePm")}
+              </Button>
+              <Button variant="primary" icon="plus" onClick={openCreate}>
+                {t("cmms.wo.new")}
+              </Button>
+            </div>
           </PermissionGuard>
         }
       />
@@ -341,6 +419,18 @@ export function WorkOrdersPage(): JSX.Element {
                 ...WO_STATUSES.map((status) => ({
                   value: status,
                   label: t(`cmms.woStatus.${status}`),
+                })),
+              ]}
+            />
+            <SelectInput
+              aria-label={t("cmms.wo.department")}
+              value={departmentFilter}
+              onChange={(event) => setDepartmentFilter(event.target.value)}
+              options={[
+                { value: "all", label: t("cmms.department.allUnits") },
+                ...DEPARTMENTS.map((department) => ({
+                  value: department,
+                  label: t(`cmms.department.${department}`),
                 })),
               ]}
             />
@@ -413,6 +503,18 @@ export function WorkOrdersPage(): JSX.Element {
             }))}
           />
         </div>
+        <SelectInput
+          label={t("cmms.wo.department")}
+          value={formDepartment}
+          onChange={(event) => setFormDepartment(event.target.value as MaintenanceDepartment | "")}
+          options={[
+            { value: "", label: t("cmms.wo.departmentInherit") },
+            ...DEPARTMENTS.map((department) => ({
+              value: department,
+              label: t(`cmms.department.${department}`),
+            })),
+          ]}
+        />
         <TextInput
           label={t("cmms.wo.requestedBy")}
           value={formRequestedBy}
@@ -445,6 +547,33 @@ export function WorkOrdersPage(): JSX.Element {
       </Modal>
 
       <Modal
+        open={Boolean(routeOrder)}
+        title={t("cmms.wo.routeTitle")}
+        onClose={() => setRouteOrder(null)}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setRouteOrder(null)}>
+              {t("cmms.common.cancel")}
+            </Button>
+            <Button variant="primary" icon="check" onClick={route}>
+              {t("cmms.wo.route")}
+            </Button>
+          </>
+        }
+      >
+        <p className="detail-panel__description">{t("cmms.wo.routeHelp")}</p>
+        <SelectInput
+          label={t("cmms.wo.department")}
+          value={routeDepartment}
+          onChange={(event) => setRouteDepartment(event.target.value as MaintenanceDepartment)}
+          options={DEPARTMENTS.map((department) => ({
+            value: department,
+            label: t(`cmms.department.${department}`),
+          }))}
+        />
+      </Modal>
+
+      <Modal
         open={Boolean(activeOrder)}
         title={activeOrder?.title ?? t("cmms.wo.detailTitle")}
         onClose={() => setActiveOrder(null)}
@@ -470,6 +599,10 @@ export function WorkOrdersPage(): JSX.Element {
                 <strong>{t(`cmms.woStatus.${activeOrder.status}`)}</strong>
               </div>
               <div>
+                <span>{t("cmms.wo.department")}</span>
+                <strong>{t(`cmms.department.${activeOrder.department}`)}</strong>
+              </div>
+              <div>
                 <span>{t("cmms.wo.priority")}</span>
                 <strong>{t(`cmms.priority.${activeOrder.priority}`)}</strong>
               </div>
@@ -491,8 +624,24 @@ export function WorkOrdersPage(): JSX.Element {
               </p>
             )}
 
+            <PermissionGuard permission={PERMISSIONS.maintenanceWorkOrderRoute}>
+              {(activeOrder.status === "submitted" || activeOrder.status === "routed") && (
+                <Button
+                  variant="secondary"
+                  icon="send"
+                  onClick={() => {
+                    setRouteDepartment(activeOrder.department);
+                    setRouteOrder(activeOrder);
+                    setActiveOrder(null);
+                  }}
+                >
+                  {t("cmms.wo.route")}
+                </Button>
+              )}
+            </PermissionGuard>
+
             <PermissionGuard permission={PERMISSIONS.maintenanceWorkOrderAssign}>
-              {activeOrder.status === "submitted" && (
+              {(activeOrder.status === "submitted" || activeOrder.status === "routed") && (
                 <Button
                   variant="secondary"
                   icon="user"
@@ -547,6 +696,7 @@ function WorkOrderBoard({
   const { t } = useLocalization();
   const boardColumns: WorkOrderStatus[] = [
     "submitted",
+    "routed",
     "assigned",
     "inProgress",
     "onHold",

@@ -161,4 +161,5 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 /* Phase 21: Maintenance / CMMS helpers */
 .cmms-due { display: inline-flex; align-items: center; gap: 5px; color: var(--warning); font-weight: 700; }
 .cmms-row-actions { display: flex; align-items: center; gap: 4px; justify-content: flex-end; }
+.cmms-header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .cmms-transition-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }

@@ -18,6 +18,7 @@ from apps.maintenance.domain.entities.workOrder import WorkOrder
 class DeviceFilters:
     tenantId: uuid.UUID
     status: str = ""
+    department: str = ""
     search: str = ""
     ordering: str = "-createdAt"
     page: int = 1
@@ -37,6 +38,7 @@ class WorkOrderFilters:
     status: str = ""
     orderType: str = ""
     priority: str = ""
+    department: str = ""
     search: str = ""
     ordering: str = "-createdAt"
     page: int = 1
@@ -77,5 +79,7 @@ class WorkOrderRepository(Protocol):
     def countByTenant(self, tenantId: uuid.UUID) -> int: ...
 
     def countOpenByTenant(self, tenantId: uuid.UUID) -> int: ...
+
+    def hasOpenPreventiveOrder(self, tenantId: uuid.UUID, deviceId: uuid.UUID) -> bool: ...
 
     def list(self, filters: WorkOrderFilters) -> WorkOrderPage: ...

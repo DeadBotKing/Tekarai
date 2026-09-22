@@ -37,6 +37,7 @@ WORK_ORDER_TYPES = (
 
 # -- Work order status (lifecycle) ------------------------------------------------
 WO_SUBMITTED = "submitted"
+WO_ROUTED = "routed"
 WO_ASSIGNED = "assigned"
 WO_IN_PROGRESS = "inProgress"
 WO_ON_HOLD = "onHold"
@@ -45,6 +46,7 @@ WO_CANCELLED = "cancelled"
 
 WORK_ORDER_STATUSES = (
     WO_SUBMITTED,
+    WO_ROUTED,
     WO_ASSIGNED,
     WO_IN_PROGRESS,
     WO_ON_HOLD,
@@ -53,15 +55,35 @@ WORK_ORDER_STATUSES = (
 )
 
 #: Allowed lifecycle transitions (BR-WO-001). A closed set keeps the workflow
-#: predictable: e.g. a completed/cancelled order is terminal.
+#: predictable. Two-step dispatch: a work order is first *routed* to a
+#: department, then *assigned* to an individual technician. Both a completed
+#: and a cancelled order are terminal.
 WORK_ORDER_TRANSITIONS: dict[str, tuple[str, ...]] = {
-    WO_SUBMITTED: (WO_ASSIGNED, WO_CANCELLED),
+    WO_SUBMITTED: (WO_ROUTED, WO_ASSIGNED, WO_CANCELLED),
+    WO_ROUTED: (WO_ASSIGNED, WO_ON_HOLD, WO_CANCELLED),
     WO_ASSIGNED: (WO_IN_PROGRESS, WO_ON_HOLD, WO_CANCELLED),
     WO_IN_PROGRESS: (WO_ON_HOLD, WO_COMPLETED, WO_CANCELLED),
     WO_ON_HOLD: (WO_IN_PROGRESS, WO_CANCELLED),
     WO_COMPLETED: (),
     WO_CANCELLED: (),
 }
+
+# -- Maintenance department (closed set) ------------------------------------------
+# The unit that owns a device and handles its work orders. A fixed catalogue keeps
+# routing predictable; Persian labels live in the frontend localization layer.
+DEPARTMENT_GENERAL = "general"
+DEPARTMENT_ELECTRICAL = "electrical"
+DEPARTMENT_MECHANICAL = "mechanical"
+DEPARTMENT_FACILITIES = "facilities"
+DEPARTMENT_INSTRUMENTATION = "instrumentation"
+
+MAINTENANCE_DEPARTMENTS = (
+    DEPARTMENT_GENERAL,
+    DEPARTMENT_ELECTRICAL,
+    DEPARTMENT_MECHANICAL,
+    DEPARTMENT_FACILITIES,
+    DEPARTMENT_INSTRUMENTATION,
+)
 
 # -- Priority (shared vocabulary with tasks for consistency) -----------------------
 PRIORITY_LOW = "low"
@@ -130,6 +152,20 @@ class WorkOrderPriority(ValueObject):
         if self.value not in WORK_ORDER_PRIORITIES:
             raise ValidationFailedError(
                 "Invalid work order priority.", fieldErrors={"priority": self.value}
+            )
+
+    def __str__(self) -> str:
+        return self.value
+
+
+@dataclass(frozen=True)
+class MaintenanceDepartment(ValueObject):
+    value: str
+
+    def __post_init__(self) -> None:
+        if self.value not in MAINTENANCE_DEPARTMENTS:
+            raise ValidationFailedError(
+                "Invalid maintenance department.", fieldErrors={"department": self.value}
             )
 
     def __str__(self) -> str:

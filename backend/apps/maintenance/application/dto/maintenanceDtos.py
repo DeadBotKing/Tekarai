@@ -17,6 +17,7 @@ class DeviceDto:
     name: str
     location: str
     status: str
+    department: str
     pmIntervalDays: int
     lastPmDate: str
     nextDueDate: str
@@ -44,6 +45,7 @@ class WorkOrderDto:
     orderType: str
     priority: str
     status: str
+    department: str
     requestedByName: str
     assignedToName: str
     resolutionNote: str
@@ -70,6 +72,7 @@ def deviceDtoFromDomain(device: Device, asOf: date) -> DeviceDto:
         name=device.name,
         location=device.location,
         status=str(device.status),
+        department=str(device.department),
         pmIntervalDays=device.pmIntervalDays,
         lastPmDate=device.lastPmDate.isoformat() if device.lastPmDate else "",
         nextDueDate=nextDue.isoformat() if nextDue else "",
@@ -89,6 +92,7 @@ def workOrderDtoFromDomain(order: WorkOrder) -> WorkOrderDto:
         orderType=str(order.orderType),
         priority=str(order.priority),
         status=str(order.status),
+        department=str(order.department),
         requestedByName=order.requestedByName,
         assignedToName=order.assignedToName,
         resolutionNote=order.resolutionNote,

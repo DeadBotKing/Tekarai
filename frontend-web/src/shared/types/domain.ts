@@ -72,7 +72,20 @@ export interface ActivityItem {
 // -- Phase 21: Maintenance / CMMS ------------------------------------------------
 export type DeviceStatus = "operational" | "underMaintenance" | "outOfService" | "retired";
 export type WorkOrderType = "corrective" | "preventive" | "inspection";
-export type WorkOrderStatus = "submitted" | "assigned" | "inProgress" | "onHold" | "completed" | "cancelled";
+export type WorkOrderStatus =
+  | "submitted"
+  | "routed"
+  | "assigned"
+  | "inProgress"
+  | "onHold"
+  | "completed"
+  | "cancelled";
+export type MaintenanceDepartment =
+  | "general"
+  | "electrical"
+  | "mechanical"
+  | "facilities"
+  | "instrumentation";
 
 export interface MaintenanceDevice {
   id: string;
@@ -80,6 +93,7 @@ export interface MaintenanceDevice {
   name: string;
   location: string;
   status: DeviceStatus;
+  department: MaintenanceDepartment;
   pmIntervalDays: number;
   lastPmDate: string;
   nextDueDate: string;
@@ -95,6 +109,7 @@ export interface WorkOrder {
   orderType: WorkOrderType;
   priority: Priority;
   status: WorkOrderStatus;
+  department: MaintenanceDepartment;
   requestedByName: string;
   assignedToName: string;
   resolutionNote: string;

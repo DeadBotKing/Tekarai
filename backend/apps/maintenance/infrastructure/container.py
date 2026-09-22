@@ -14,8 +14,10 @@ from apps.maintenance.application.useCases.deviceUseCases import (
 from apps.maintenance.application.useCases.workOrderUseCases import (
     AssignWorkOrderUseCase,
     ChangeWorkOrderStatusUseCase,
+    GeneratePmWorkOrdersUseCase,
     GetWorkOrderUseCase,
     ListWorkOrdersUseCase,
+    RouteWorkOrderUseCase,
     SubmitWorkOrderUseCase,
     UpdateWorkOrderUseCase,
 )
@@ -94,6 +96,18 @@ def submitWorkOrderUseCase() -> SubmitWorkOrderUseCase:
 
 def updateWorkOrderUseCase() -> UpdateWorkOrderUseCase:
     return UpdateWorkOrderUseCase(**_workOrderDeps())
+
+
+def routeWorkOrderUseCase() -> RouteWorkOrderUseCase:
+    return RouteWorkOrderUseCase(**_workOrderDeps())
+
+
+def generatePmWorkOrdersUseCase() -> GeneratePmWorkOrdersUseCase:
+    return GeneratePmWorkOrdersUseCase(
+        repository=workOrderRepository(),
+        deviceRepository=deviceRepository(),
+        **_kernelPorts(),
+    )
 
 
 def assignWorkOrderUseCase() -> AssignWorkOrderUseCase:

@@ -27,6 +27,7 @@ export const PERMISSIONS = {
   maintenanceDeviceView: "maintenance.device.view",
   maintenanceWorkOrderCreate: "maintenance.workorder.create",
   maintenanceWorkOrderUpdate: "maintenance.workorder.update",
+  maintenanceWorkOrderRoute: "maintenance.workorder.route",
   maintenanceWorkOrderAssign: "maintenance.workorder.assign",
   maintenanceWorkOrderList: "maintenance.workorder.list",
   maintenanceWorkOrderView: "maintenance.workorder.view",

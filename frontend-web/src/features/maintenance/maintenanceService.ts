@@ -2,6 +2,7 @@ import { ApiClient } from "../../core/api/apiClient";
 import { apiEndpoints } from "../../core/api/endpoints";
 import type {
   DeviceStatus,
+  MaintenanceDepartment,
   MaintenanceDevice,
   Priority,
   WorkOrder,
@@ -16,6 +17,7 @@ interface DeviceDto {
   name: string;
   location: string;
   status: string;
+  department: string;
   pmIntervalDays: number;
   lastPmDate: string;
   nextDueDate: string;
@@ -32,6 +34,7 @@ interface WorkOrderDto {
   orderType: string;
   priority: string;
   status: string;
+  department: string;
   requestedByName: string;
   assignedToName: string;
   resolutionNote: string;
@@ -45,6 +48,7 @@ const toDevice = (dto: DeviceDto): MaintenanceDevice => ({
   name: dto.name,
   location: dto.location ?? "",
   status: (dto.status as DeviceStatus) ?? "operational",
+  department: (dto.department as MaintenanceDepartment) ?? "general",
   pmIntervalDays: dto.pmIntervalDays ?? 0,
   lastPmDate: dto.lastPmDate ?? "",
   nextDueDate: dto.nextDueDate ?? "",
@@ -60,6 +64,7 @@ const toWorkOrder = (dto: WorkOrderDto): WorkOrder => ({
   orderType: (dto.orderType as WorkOrderType) ?? "corrective",
   priority: (dto.priority as Priority) ?? "normal",
   status: (dto.status as WorkOrderStatus) ?? "submitted",
+  department: (dto.department as MaintenanceDepartment) ?? "general",
   requestedByName: dto.requestedByName ?? "",
   assignedToName: dto.assignedToName ?? "",
   resolutionNote: dto.resolutionNote ?? "",
@@ -71,12 +76,14 @@ export interface RegisterDeviceInput {
   code: string;
   name: string;
   location?: string;
+  department?: MaintenanceDepartment;
   pmIntervalDays?: number;
 }
 
 export interface UpdateDeviceInput {
   name: string;
   location?: string;
+  department?: MaintenanceDepartment;
   pmIntervalDays?: number;
 }
 
@@ -86,12 +93,13 @@ export interface SubmitWorkOrderInput {
   description?: string;
   orderType?: WorkOrderType;
   priority?: Priority;
+  department?: MaintenanceDepartment | "";
   requestedByName?: string;
 }
 
 export interface MaintenanceService {
   listDevices: (
-    filters?: { status?: string; search?: string },
+    filters?: { status?: string; department?: string; search?: string },
     signal?: AbortSignal,
   ) => Promise<MaintenanceDevice[]>;
   registerDevice: (input: RegisterDeviceInput, signal?: AbortSignal) => Promise<MaintenanceDevice>;
@@ -111,11 +119,17 @@ export interface MaintenanceService {
     signal?: AbortSignal,
   ) => Promise<MaintenanceDevice>;
   listDuePm: (signal?: AbortSignal) => Promise<MaintenanceDevice[]>;
+  generatePmWorkOrders: (signal?: AbortSignal) => Promise<WorkOrder[]>;
   listWorkOrders: (
-    filters?: { status?: string; deviceId?: string; search?: string },
+    filters?: { status?: string; deviceId?: string; department?: string; search?: string },
     signal?: AbortSignal,
   ) => Promise<WorkOrder[]>;
   submitWorkOrder: (input: SubmitWorkOrderInput, signal?: AbortSignal) => Promise<WorkOrder>;
+  routeWorkOrder: (
+    id: string,
+    department: MaintenanceDepartment,
+    signal?: AbortSignal,
+  ) => Promise<WorkOrder>;
   assignWorkOrder: (
     id: string,
     assignedToName: string,
@@ -144,6 +158,7 @@ export const createMaintenanceService = (api: ApiClient): MaintenanceService => 
         code: input.code,
         name: input.name,
         location: input.location ?? "",
+        department: input.department ?? "general",
         pmIntervalDays: input.pmIntervalDays ?? 0,
       },
       { signal, retry: 0 },
@@ -156,6 +171,7 @@ export const createMaintenanceService = (api: ApiClient): MaintenanceService => 
       {
         name: input.name,
         location: input.location ?? "",
+        department: input.department ?? "general",
         pmIntervalDays: input.pmIntervalDays ?? 0,
       },
       { signal, retry: 0 },
@@ -182,6 +198,14 @@ export const createMaintenanceService = (api: ApiClient): MaintenanceService => 
     const dtos = await api.get<DeviceDto[]>(apiEndpoints.maintenance.devicesDuePm, { signal });
     return dtos.map(toDevice);
   },
+  generatePmWorkOrders: async (signal) => {
+    const dtos = await api.post<WorkOrderDto[]>(
+      apiEndpoints.maintenance.workOrdersGeneratePm,
+      {},
+      { signal, retry: 0 },
+    );
+    return dtos.map(toWorkOrder);
+  },
   listWorkOrders: async (filters = {}, signal) => {
     const dtos = await api.get<WorkOrderDto[]>(apiEndpoints.maintenance.workOrders, {
       signal,
@@ -198,8 +222,17 @@ export const createMaintenanceService = (api: ApiClient): MaintenanceService => 
         description: input.description ?? "",
         orderType: input.orderType ?? "corrective",
         priority: input.priority ?? "normal",
+        department: input.department ?? "",
         requestedByName: input.requestedByName ?? "",
       },
+      { signal, retry: 0 },
+    );
+    return toWorkOrder(dto);
+  },
+  routeWorkOrder: async (id, department, signal) => {
+    const dto = await api.post<WorkOrderDto>(
+      apiEndpoints.maintenance.workOrderRoute(id),
+      { department },
       { signal, retry: 0 },
     );
     return toWorkOrder(dto);

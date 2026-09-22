@@ -3,7 +3,8 @@
 A Device carries its own preventive-maintenance (PM) schedule: an interval in
 days plus the date of the last completed PM. ``nextDueDate`` is derived so the
 application layer can flag machines that are due or overdue without duplicating
-the rule.
+the rule. Each device also names the maintenance *department* that owns it, so
+work orders (and auto-generated PM orders) are routed to the right unit.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from typing import Any
 from apps.maintenance.domain.valueObjects.maintenanceState import (
     DEVICE_OPERATIONAL,
     DeviceStatus,
+    MaintenanceDepartment,
 )
 from apps.sharedKernel.domain.entities import AggregateRoot, newId
 from apps.sharedKernel.domain.errors import ValidationFailedError
@@ -32,6 +34,7 @@ class Device(AggregateRoot):
         name: str,
         location: str,
         status: DeviceStatus,
+        department: MaintenanceDepartment,
         pmIntervalDays: int,
         lastPmDate: date | None,
         createdAt: datetime,
@@ -44,6 +47,7 @@ class Device(AggregateRoot):
         self.name = name
         self.location = location
         self.status = status
+        self.department = department
         self.pmIntervalDays = pmIntervalDays
         self.lastPmDate = lastPmDate
         self.createdAt = createdAt
@@ -56,6 +60,7 @@ class Device(AggregateRoot):
         code: str,
         name: str,
         location: str,
+        department: MaintenanceDepartment,
         pmIntervalDays: int,
         now: datetime,
     ) -> Device:
@@ -79,6 +84,7 @@ class Device(AggregateRoot):
             name=name.strip(),
             location=location.strip(),
             status=DeviceStatus(DEVICE_OPERATIONAL),
+            department=department,
             pmIntervalDays=pmIntervalDays,
             lastPmDate=None,
             createdAt=now,
@@ -88,7 +94,11 @@ class Device(AggregateRoot):
                 name="deviceRegistered",
                 occurredAt=now,
                 tenantId=tenantId,
-                payload={"deviceId": str(device.id), "code": device.code},
+                payload={
+                    "deviceId": str(device.id),
+                    "code": device.code,
+                    "department": str(device.department),
+                },
             )
         )
         return device
@@ -97,6 +107,7 @@ class Device(AggregateRoot):
         self,
         name: str,
         location: str,
+        department: MaintenanceDepartment,
         pmIntervalDays: int,
         now: datetime,
     ) -> None:
@@ -111,6 +122,7 @@ class Device(AggregateRoot):
             )
         self.name = name.strip()
         self.location = location.strip()
+        self.department = department
         self.pmIntervalDays = pmIntervalDays
         self.updatedAt = now
 
@@ -158,5 +170,6 @@ class Device(AggregateRoot):
             "code": self.code,
             "name": self.name,
             "status": str(self.status),
+            "department": str(self.department),
             "pmIntervalDays": self.pmIntervalDays,
         }

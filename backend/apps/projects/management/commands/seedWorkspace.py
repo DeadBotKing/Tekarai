@@ -103,11 +103,13 @@ SEED_TASKS: list[tuple[str, str, str, str, str, str]] = [
 ]
 
 #: (code, name, location, pmIntervalDays, lastPmDate) — Persian CMMS demo devices.
-SEED_DEVICES: list[tuple[str, str, str, int, str]] = [
-    ("PUMP-01", "پمپ خنک‌کننده اصلی", "سالن تولید A", 30, "2026-08-20"),
-    ("CNC-14", "دستگاه تراش CNC", "کارگاه ماشین‌کاری", 45, "2026-09-10"),
-    ("COMP-07", "کمپرسور هوا", "اتاق تأسیسات", 60, "2026-09-01"),
-    ("GEN-02", "ژنراتور اضطراری", "محوطه بیرونی", 90, "2026-04-01"),
+#: (code, name, location, department, pmIntervalDays, lastPmDate)
+SEED_DEVICES: list[tuple[str, str, str, str, int, str]] = [
+    ("PUMP-01", "پمپ خنک‌کننده اصلی", "سالن تولید A", "mechanical", 30, "2026-08-20"),
+    ("CNC-14", "دستگاه تراش CNC", "کارگاه ماشین‌کاری", "mechanical", 45, "2026-09-10"),
+    ("COMP-07", "کمپرسور هوا", "اتاق تأسیسات", "facilities", 60, "2026-09-01"),
+    ("GEN-02", "ژنراتور اضطراری", "محوطه بیرونی", "electrical", 90, "2026-04-01"),
+    ("PLC-03", "تابلو کنترل PLC خط ۲", "اتاق برق", "instrumentation", 120, "2026-05-15"),
 ]
 
 #: (device code, title, orderType, priority, requestedBy) — Persian demo work orders.
@@ -116,6 +118,7 @@ SEED_WORK_ORDERS: list[tuple[str, str, str, str, str]] = [
     ("CNC-14", "کالیبراسیون دوره‌ای محور Z", "preventive", "normal", "سیستم PM"),
     ("GEN-02", "تعویض باتری ژنراتور", "corrective", "critical", "حسین محمدی"),
     ("COMP-07", "بازرسی فشار مخزن هوا", "inspection", "low", "سیستم PM"),
+    ("PLC-03", "خطای خواندن سنسور دما", "corrective", "high", "مریم کریمی"),
 ]
 
 
@@ -300,7 +303,7 @@ class Command(BaseCommand):
     # -- maintenance (CMMS) -------------------------------------------------
 
     def _seedDevices(self, tenantId: uuid.UUID) -> None:
-        for code, name, location, interval, lastPm in SEED_DEVICES:
+        for code, name, location, department, interval, lastPm in SEED_DEVICES:
             if DeviceModel.objects.filter(
                 tenantId=tenantId, code=code, deletedAt__isnull=True
             ).exists():
@@ -315,6 +318,7 @@ class Command(BaseCommand):
                         code=code,
                         name=name,
                         location=location,
+                        department=department,
                         pmIntervalDays=interval,
                     )
                 )

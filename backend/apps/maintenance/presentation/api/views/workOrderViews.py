@@ -12,6 +12,8 @@ from rest_framework.views import APIView
 from apps.maintenance.application.commands.maintenanceCommands import (
     AssignWorkOrderCommand,
     ChangeWorkOrderStatusCommand,
+    GeneratePmWorkOrdersCommand,
+    RouteWorkOrderCommand,
     SubmitWorkOrderCommand,
     UpdateWorkOrderCommand,
 )
@@ -23,6 +25,7 @@ from apps.maintenance.infrastructure import container
 from apps.maintenance.presentation.api.serializers.maintenanceSerializers import (
     AssignWorkOrderSerializer,
     ChangeWorkOrderStatusSerializer,
+    RouteWorkOrderSerializer,
     SubmitWorkOrderSerializer,
     UpdateWorkOrderSerializer,
 )
@@ -46,6 +49,7 @@ class WorkOrderListView(IdempotencyMixin, APIView):
             status=str(request.query_params.get("status", "")).strip(),
             orderType=str(request.query_params.get("orderType", "")).strip(),
             priority=str(request.query_params.get("priority", "")).strip(),
+            department=str(request.query_params.get("department", "")).strip(),
             search=str(request.query_params.get("search", "")).strip(),
             ordering=str(request.query_params.get("ordering", "-createdAt")).strip(),
             page=int(request.query_params.get("page", 1) or 1),
@@ -65,6 +69,7 @@ class WorkOrderListView(IdempotencyMixin, APIView):
                 description=str(serializer.validated_data["description"]),
                 orderType=str(serializer.validated_data["orderType"]),
                 priority=str(serializer.validated_data["priority"]),
+                department=str(serializer.validated_data["department"]),
                 requestedByName=str(serializer.validated_data["requestedByName"]),
             )
         )
@@ -90,6 +95,38 @@ class WorkOrderDetailView(APIView):
                 title=str(serializer.validated_data["title"]),
                 description=str(serializer.validated_data["description"]),
                 priority=str(serializer.validated_data["priority"]),
+            )
+        )
+        return Response(successEnvelope(asDict(dto)))
+
+
+class WorkOrderGeneratePmView(IdempotencyMixin, APIView):
+    authentication_classes = [BearerSessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Request) -> Response:
+        dto = container.generatePmWorkOrdersUseCase().execute(
+            GeneratePmWorkOrdersCommand(
+                tenantId=str(request.data.get("tenantId", "")),
+            )
+        )
+        return Response(
+            successEnvelope([asDict(item) for item in dto.items], meta=dto.asMeta()),
+            status=201,
+        )
+
+
+class WorkOrderRouteView(IdempotencyMixin, APIView):
+    authentication_classes = [BearerSessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Request, workOrderId: str) -> Response:
+        serializer = RouteWorkOrderSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        dto = container.routeWorkOrderUseCase().execute(
+            RouteWorkOrderCommand(
+                workOrderId=str(workOrderId),
+                department=str(serializer.validated_data["department"]),
             )
         )
         return Response(successEnvelope(asDict(dto)))

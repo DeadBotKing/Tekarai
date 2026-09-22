@@ -5,7 +5,7 @@ import { PERMISSIONS } from "../core/permissions/permissionContext";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { createMaintenanceService } from "../features/maintenance/maintenanceService";
 import { demoDevices } from "../features/maintenance/maintenanceDemoData";
-import type { DeviceStatus, MaintenanceDevice } from "../shared/types/domain";
+import type { DeviceStatus, MaintenanceDepartment, MaintenanceDevice } from "../shared/types/domain";
 import { DataTable, type DataTableColumn } from "../shared/components/DataTable";
 import { Modal, Toast } from "../shared/components/overlays";
 import {
@@ -27,6 +27,14 @@ const DEVICE_STATUSES: DeviceStatus[] = [
   "retired",
 ];
 
+const DEPARTMENTS: MaintenanceDepartment[] = [
+  "general",
+  "electrical",
+  "mechanical",
+  "facilities",
+  "instrumentation",
+];
+
 const statusTone = (status: DeviceStatus): "success" | "info" | "danger" | "neutral" =>
   status === "operational"
     ? "success"
@@ -45,6 +53,7 @@ export function MaintenanceDevicesPage(): JSX.Element {
   );
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [departmentFilter, setDepartmentFilter] = useState("all");
   const [toast, setToast] = useState("");
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -54,6 +63,7 @@ export function MaintenanceDevicesPage(): JSX.Element {
   const [formCode, setFormCode] = useState("");
   const [formName, setFormName] = useState("");
   const [formLocation, setFormLocation] = useState("");
+  const [formDepartment, setFormDepartment] = useState<MaintenanceDepartment>("general");
   const [formInterval, setFormInterval] = useState("30");
   const [pmDate, setPmDate] = useState("2026-09-22");
 
@@ -74,17 +84,19 @@ export function MaintenanceDevicesPage(): JSX.Element {
       devices.filter(
         (device) =>
           (statusFilter === "all" || device.status === statusFilter) &&
+          (departmentFilter === "all" || device.department === departmentFilter) &&
           `${device.code} ${device.name} ${device.location}`
             .toLowerCase()
             .includes(search.toLowerCase()),
       ),
-    [devices, search, statusFilter],
+    [devices, search, statusFilter, departmentFilter],
   );
 
   const openCreate = (): void => {
     setFormCode("");
     setFormName("");
     setFormLocation("");
+    setFormDepartment("general");
     setFormInterval("30");
     setCreateOpen(true);
   };
@@ -92,6 +104,7 @@ export function MaintenanceDevicesPage(): JSX.Element {
   const openEdit = (device: MaintenanceDevice): void => {
     setFormName(device.name);
     setFormLocation(device.location);
+    setFormDepartment(device.department);
     setFormInterval(String(device.pmIntervalDays));
     setEditDevice(device);
   };
@@ -105,6 +118,7 @@ export function MaintenanceDevicesPage(): JSX.Element {
         name: formName.trim(),
         location: formLocation.trim(),
         status: "operational",
+        department: formDepartment,
         pmIntervalDays: Number(formInterval) || 0,
         lastPmDate: "",
         nextDueDate: "",
@@ -121,6 +135,7 @@ export function MaintenanceDevicesPage(): JSX.Element {
         code: formCode.trim(),
         name: formName.trim(),
         location: formLocation.trim(),
+        department: formDepartment,
         pmIntervalDays: Number(formInterval) || 0,
       });
       setCreateOpen(false);
@@ -141,6 +156,7 @@ export function MaintenanceDevicesPage(): JSX.Element {
                 ...item,
                 name: formName.trim(),
                 location: formLocation.trim(),
+                department: formDepartment,
                 pmIntervalDays: Number(formInterval) || 0,
               }
             : item,
@@ -154,6 +170,7 @@ export function MaintenanceDevicesPage(): JSX.Element {
       await service.updateDevice(editDevice.id, {
         name: formName.trim(),
         location: formLocation.trim(),
+        department: formDepartment,
         pmIntervalDays: Number(formInterval) || 0,
       });
       setEditDevice(null);
@@ -221,6 +238,13 @@ export function MaintenanceDevicesPage(): JSX.Element {
       label: t("cmms.device.location"),
       accessor: (row) => row.location,
       render: (row) => <span className="muted-cell">{row.location || t("cmms.common.none")}</span>,
+    },
+    {
+      key: "department",
+      label: t("cmms.device.department"),
+      accessor: (row) => row.department,
+      sortable: true,
+      render: (row) => <Badge tone="neutral">{t(`cmms.department.${row.department}`)}</Badge>,
     },
     {
       key: "status",
@@ -311,6 +335,18 @@ export function MaintenanceDevicesPage(): JSX.Element {
                 })),
               ]}
             />
+            <SelectInput
+              aria-label={t("cmms.device.department")}
+              value={departmentFilter}
+              onChange={(event) => setDepartmentFilter(event.target.value)}
+              options={[
+                { value: "all", label: t("cmms.department.allUnits") },
+                ...DEPARTMENTS.map((department) => ({
+                  value: department,
+                  label: t(`cmms.department.${department}`),
+                })),
+              ]}
+            />
           </div>
         </div>
         <DataTable
@@ -364,6 +400,15 @@ export function MaintenanceDevicesPage(): JSX.Element {
             onChange={(event) => setFormInterval(event.target.value)}
           />
         </div>
+        <SelectInput
+          label={t("cmms.device.department")}
+          value={formDepartment}
+          onChange={(event) => setFormDepartment(event.target.value as MaintenanceDepartment)}
+          options={DEPARTMENTS.map((department) => ({
+            value: department,
+            label: t(`cmms.department.${department}`),
+          }))}
+        />
       </Modal>
 
       <Modal
@@ -402,6 +447,15 @@ export function MaintenanceDevicesPage(): JSX.Element {
                 onChange={(event) => setFormInterval(event.target.value)}
               />
             </div>
+            <SelectInput
+              label={t("cmms.device.department")}
+              value={formDepartment}
+              onChange={(event) => setFormDepartment(event.target.value as MaintenanceDepartment)}
+              options={DEPARTMENTS.map((department) => ({
+                value: department,
+                label: t(`cmms.department.${department}`),
+              }))}
+            />
             <SelectInput
               label={t("cmms.device.changeStatus")}
               value={editDevice.status}

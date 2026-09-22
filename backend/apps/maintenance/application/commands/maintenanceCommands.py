@@ -14,6 +14,7 @@ class RegisterDeviceCommand(Command):
     code: str = ""
     name: str = ""
     location: str = ""
+    department: str = "general"
     pmIntervalDays: int = 0
 
 
@@ -22,6 +23,7 @@ class UpdateDeviceCommand(Command):
     deviceId: str
     name: str
     location: str = ""
+    department: str = "general"
     pmIntervalDays: int = 0
 
 
@@ -46,6 +48,7 @@ class SubmitWorkOrderCommand(Command):
     description: str = ""
     orderType: str = "corrective"
     priority: str = "normal"
+    department: str = ""
     requestedByName: str = ""
 
 
@@ -55,6 +58,19 @@ class UpdateWorkOrderCommand(Command):
     title: str
     description: str = ""
     priority: str = "normal"
+
+
+@dataclass(frozen=True)
+class RouteWorkOrderCommand(Command):
+    workOrderId: str
+    department: str
+
+
+@dataclass(frozen=True)
+class GeneratePmWorkOrdersCommand(Command):
+    """Trigger auto-creation of preventive work orders for due devices."""
+
+    tenantId: str = ""
 
 
 @dataclass(frozen=True)

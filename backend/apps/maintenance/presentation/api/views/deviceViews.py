@@ -52,6 +52,7 @@ class DeviceListView(IdempotencyMixin, APIView):
     def get(self, request: Request) -> Response:
         query = ListDevicesQuery(
             status=str(request.query_params.get("status", "")).strip(),
+            department=str(request.query_params.get("department", "")).strip(),
             search=str(request.query_params.get("search", "")).strip(),
             ordering=str(request.query_params.get("ordering", "-createdAt")).strip(),
             page=int(request.query_params.get("page", 1) or 1),
@@ -69,6 +70,7 @@ class DeviceListView(IdempotencyMixin, APIView):
                 code=str(serializer.validated_data["code"]),
                 name=str(serializer.validated_data["name"]),
                 location=str(serializer.validated_data["location"]),
+                department=str(serializer.validated_data["department"]),
                 pmIntervalDays=int(serializer.validated_data["pmIntervalDays"]),
             )
         )
@@ -91,6 +93,7 @@ class DeviceDetailView(APIView):
                 deviceId=str(deviceId),
                 name=str(serializer.validated_data["name"]),
                 location=str(serializer.validated_data["location"]),
+                department=str(serializer.validated_data["department"]),
                 pmIntervalDays=int(serializer.validated_data["pmIntervalDays"]),
             )
         )

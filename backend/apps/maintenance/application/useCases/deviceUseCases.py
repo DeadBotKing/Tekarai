@@ -29,7 +29,11 @@ from apps.maintenance.domain.repositories.maintenanceRepositories import (
     DeviceFilters,
     DeviceRepository,
 )
-from apps.maintenance.domain.valueObjects.maintenanceState import DeviceStatus
+from apps.maintenance.domain.valueObjects.maintenanceState import (
+    DEPARTMENT_GENERAL,
+    DeviceStatus,
+    MaintenanceDepartment,
+)
 from apps.sharedKernel.application.ports import (
     AuditRecorder,
     Clock,
@@ -73,6 +77,7 @@ class RegisterDeviceUseCase(DeviceUseCaseBase):
             code=command.code,
             name=command.name,
             location=command.location,
+            department=MaintenanceDepartment(command.department or DEPARTMENT_GENERAL),
             pmIntervalDays=int(command.pmIntervalDays),
             now=self.clock.nowUtc(),
         )
@@ -99,6 +104,7 @@ class UpdateDeviceUseCase(DeviceUseCaseBase):
         device.updateDetails(
             name=command.name,
             location=command.location,
+            department=MaintenanceDepartment(command.department or DEPARTMENT_GENERAL),
             pmIntervalDays=int(command.pmIntervalDays),
             now=self.clock.nowUtc(),
         )
@@ -171,6 +177,7 @@ class ListDevicesUseCase(DeviceUseCaseBase):
             DeviceFilters(
                 tenantId=tenantId,
                 status=query.status,
+                department=query.department,
                 search=query.search,
                 ordering=query.ordering,
                 page=query.page,

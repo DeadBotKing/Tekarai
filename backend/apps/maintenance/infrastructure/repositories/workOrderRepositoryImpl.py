@@ -15,6 +15,7 @@ from apps.maintenance.domain.repositories.maintenanceRepositories import (
 from apps.maintenance.domain.valueObjects.maintenanceState import (
     WO_CANCELLED,
     WO_COMPLETED,
+    MaintenanceDepartment,
     WorkOrderPriority,
     WorkOrderStatus,
     WorkOrderType,
@@ -43,6 +44,7 @@ class WorkOrderRepositoryDjango:
             orderType=str(order.orderType),
             priority=str(order.priority),
             status=str(order.status),
+            department=str(order.department),
             requestedByName=order.requestedByName,
             assignedToName=order.assignedToName,
             resolutionNote=order.resolutionNote,
@@ -55,6 +57,7 @@ class WorkOrderRepositoryDjango:
             description=order.description,
             priority=str(order.priority),
             status=str(order.status),
+            department=str(order.department),
             assignedToName=order.assignedToName,
             resolutionNote=order.resolutionNote,
             updatedAt=order.updatedAt or datetime.now(tz=None),
@@ -77,6 +80,22 @@ class WorkOrderRepositoryDjango:
             .count()
         )
 
+    def hasOpenPreventiveOrder(self, tenantId: uuid.UUID, deviceId: uuid.UUID) -> bool:
+        """True when the device already has an unfinished preventive work order.
+
+        Prevents the PM auto-generator from raising duplicate orders on every run.
+        """
+        return (
+            WorkOrderModel.objects.filter(
+                tenantId=tenantId,
+                deviceId=deviceId,
+                orderType="preventive",
+                deletedAt__isnull=True,
+            )
+            .exclude(status__in=CLOSED_STATUSES)
+            .exists()
+        )
+
     def list(self, filters: WorkOrderFilters) -> WorkOrderPage:
         queryset = WorkOrderModel.objects.filter(tenantId=filters.tenantId, deletedAt__isnull=True)
         if filters.deviceId:
@@ -87,6 +106,8 @@ class WorkOrderRepositoryDjango:
             queryset = queryset.filter(orderType=filters.orderType)
         if filters.priority:
             queryset = queryset.filter(priority=filters.priority)
+        if filters.department:
+            queryset = queryset.filter(department=filters.department)
         if filters.search:
             queryset = queryset.filter(
                 Q(title__icontains=filters.search)
@@ -121,6 +142,7 @@ class WorkOrderRepositoryDjango:
             orderType=WorkOrderType(model.orderType),
             priority=WorkOrderPriority(model.priority),
             status=WorkOrderStatus(model.status),
+            department=MaintenanceDepartment(model.department),
             requestedByName=model.requestedByName,
             assignedToName=model.assignedToName,
             resolutionNote=model.resolutionNote,

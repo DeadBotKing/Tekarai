@@ -10,6 +10,7 @@ from apps.sharedKernel.application.messaging import Query
 @dataclass(frozen=True)
 class ListDevicesQuery(Query):
     status: str = ""
+    department: str = ""
     search: str = ""
     ordering: str = "-createdAt"
     page: int = 1
@@ -32,6 +33,7 @@ class ListWorkOrdersQuery(Query):
     status: str = ""
     orderType: str = ""
     priority: str = ""
+    department: str = ""
     search: str = ""
     ordering: str = "-createdAt"
     page: int = 1

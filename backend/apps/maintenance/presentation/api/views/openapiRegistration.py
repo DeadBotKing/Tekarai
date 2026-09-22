@@ -103,6 +103,23 @@ def registerMaintenanceEndpoints() -> None:
         ),
         EndpointSpec(
             method="POST",
+            path="api/v1/maintenance/work-orders/generate-pm",
+            summary="Auto-generate preventive work orders for due devices (idempotent).",
+            permission="maintenance.workorder.create",
+            errorCodes=MAINTENANCE_ERRORS,
+            idempotent=True,
+        ),
+        EndpointSpec(
+            method="POST",
+            path="api/v1/maintenance/work-orders/{workOrderId}/route",
+            summary="Route a work order to a maintenance department (idempotent).",
+            permission="maintenance.workorder.route",
+            errorCodes=MAINTENANCE_ERRORS,
+            idempotent=True,
+            requestExample={"department": "electrical"},
+        ),
+        EndpointSpec(
+            method="POST",
             path="api/v1/maintenance/work-orders/{workOrderId}/assign",
             summary="Assign a technician (idempotent).",
             permission="maintenance.workorder.assign",

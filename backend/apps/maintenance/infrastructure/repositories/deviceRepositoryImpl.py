@@ -12,7 +12,10 @@ from apps.maintenance.domain.repositories.maintenanceRepositories import (
     DeviceFilters,
     DevicePage,
 )
-from apps.maintenance.domain.valueObjects.maintenanceState import DeviceStatus
+from apps.maintenance.domain.valueObjects.maintenanceState import (
+    DeviceStatus,
+    MaintenanceDepartment,
+)
 from apps.maintenance.infrastructure.models import DeviceModel
 from apps.sharedKernel.domain.errors import ValidationFailedError
 
@@ -33,6 +36,7 @@ class DeviceRepositoryDjango:
             name=device.name,
             location=device.location,
             status=str(device.status),
+            department=str(device.department),
             pmIntervalDays=device.pmIntervalDays,
             lastPmDate=device.lastPmDate,
             createdAt=device.createdAt,
@@ -43,6 +47,7 @@ class DeviceRepositoryDjango:
             name=device.name,
             location=device.location,
             status=str(device.status),
+            department=str(device.department),
             pmIntervalDays=device.pmIntervalDays,
             lastPmDate=device.lastPmDate,
             updatedAt=device.updatedAt or datetime.now(tz=None),
@@ -76,6 +81,8 @@ class DeviceRepositoryDjango:
         queryset = DeviceModel.objects.filter(tenantId=filters.tenantId, deletedAt__isnull=True)
         if filters.status:
             queryset = queryset.filter(status=filters.status)
+        if filters.department:
+            queryset = queryset.filter(department=filters.department)
         if filters.search:
             queryset = queryset.filter(
                 Q(name__icontains=filters.search)
@@ -108,6 +115,7 @@ class DeviceRepositoryDjango:
             name=model.name,
             location=model.location,
             status=DeviceStatus(model.status),
+            department=MaintenanceDepartment(model.department),
             pmIntervalDays=model.pmIntervalDays,
             lastPmDate=model.lastPmDate,
             createdAt=model.createdAt,

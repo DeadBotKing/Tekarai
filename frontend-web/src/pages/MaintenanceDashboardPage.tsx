@@ -78,7 +78,7 @@ interface Bucket {
   end: number;
 }
 
-// Split a [from, to] window into `count` contiguous buckets for the trend chart.
+// Split a [from, to] window into `count` contiguous buckets for the trend charts.
 const buildBuckets = (from: number, to: number, count: number, locale: string): Bucket[] => {
   const span = Math.max(to - from, DAY_MS);
   const step = span / count;
@@ -89,6 +89,10 @@ const buildBuckets = (from: number, to: number, count: number, locale: string): 
     return { label: formatter.format(new Date(start)), start, end };
   });
 };
+
+// Minimal, Excel-safe CSV: quote every field and escape embedded quotes.
+const toCsvValue = (value: string | number): string =>
+  `"${String(value).replace(/"/g, '""')}"`;
 
 export function MaintenanceDashboardPage(): JSX.Element {
   const { t, locale } = useLocalization();
@@ -173,9 +177,12 @@ export function MaintenanceDashboardPage(): JSX.Element {
     const byStatus = OPEN_STATUSES.map(
       (status) => openOrders.filter((order) => order.status === status).length,
     );
-    const byPriority = PRIORITIES.map(
-      (priority) => openOrders.filter((order) => order.priority === priority).length,
-    );
+    // Priority breakdown, sorted ascending by count (1 → 4) as requested.
+    const byPriorityRaw = PRIORITIES.map((priority) => ({
+      priority,
+      count: openOrders.filter((order) => order.priority === priority).length,
+    }));
+    const byPriority = [...byPriorityRaw].sort((a, b) => a.count - b.count);
     const byDepartment = DEPARTMENTS.map(
       (department) => openOrders.filter((order) => order.department === department).length,
     );
@@ -214,10 +221,77 @@ export function MaintenanceDashboardPage(): JSX.Element {
           return closed !== null && closed >= bucket.start && closed < bucket.end;
         }).length,
     );
-    return { labels: buckets.map((bucket) => bucket.label), submitted, completed };
+    // Average resolution time (days) for orders completed within each bucket.
+    const mttr = buckets.map((bucket) => {
+      const resolved = orders
+        .filter((order) => {
+          if (order.status !== "completed") return false;
+          const closed = parseDate(order.closedAt);
+          return closed !== null && closed >= bucket.start && closed < bucket.end;
+        })
+        .map((order) => daysBetween(order.createdAt, order.closedAt))
+        .filter((value): value is number => value !== null);
+      if (resolved.length === 0) return 0;
+      return (
+        Math.round(
+          (resolved.reduce((sum, value) => sum + value, 0) / resolved.length) * 10,
+        ) / 10
+      );
+    });
+    const hasMttr = mttr.some((value) => value > 0);
+    return { labels: buckets.map((bucket) => bucket.label), submitted, completed, mttr, hasMttr };
   }, [orders, windowBounds, range, locale]);
 
   const hasData = orders.length > 0 || devices.length > 0;
+
+  const goToOrders = useCallback(
+    (params: { status?: WorkOrderStatus; department?: MaintenanceDepartment }): void => {
+      const query = new URLSearchParams();
+      if (params.status) query.set("status", params.status);
+      if (params.department) query.set("department", params.department);
+      const suffix = query.toString();
+      navigate(`/app/maintenance/work-orders${suffix ? `?${suffix}` : ""}`);
+    },
+    [navigate],
+  );
+
+  const exportCsv = useCallback((): void => {
+    const header = [
+      t("cmms.wo.woTitle"),
+      t("cmms.wo.status"),
+      t("cmms.wo.priority"),
+      t("cmms.wo.department"),
+      t("cmms.wo.type"),
+      t("cmms.wo.requestedBy"),
+      t("cmms.wo.assignedTo"),
+      t("cmms.wo.createdAt"),
+      t("cmms.dash.csvClosedAt"),
+    ];
+    const rows = rangedOrders.map((order) => [
+      order.title,
+      t(`cmms.woStatus.${order.status}`),
+      t(`cmms.priority.${order.priority}`),
+      t(`cmms.department.${order.department}`),
+      t(`cmms.type.${order.orderType}`),
+      order.requestedByName,
+      order.assignedToName,
+      order.createdAt,
+      order.closedAt,
+    ]);
+    const csv = [header, ...rows]
+      .map((row) => row.map(toCsvValue).join(","))
+      .join("\r\n");
+    // Prepend a BOM so Excel opens the Persian text as UTF-8.
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `maintenance-report-${range}-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [rangedOrders, range, t]);
 
   return (
     <div className="page page--dashboard">
@@ -226,13 +300,20 @@ export function MaintenanceDashboardPage(): JSX.Element {
         title={t("cmms.dash.title")}
         subtitle={t("cmms.dash.subtitle")}
         actions={
-          <div className="section-actions">
+          <div className="section-actions dash-actions--noprint">
+            <Button variant="secondary" icon="refresh" onClick={() => void refresh()}>
+              {t("cmms.dash.refresh")}
+            </Button>
             <Button
               variant="secondary"
-              icon="refresh"
-              onClick={() => void refresh()}
+              icon="download"
+              onClick={exportCsv}
+              disabled={rangedOrders.length === 0}
             >
-              {t("cmms.dash.refresh")}
+              {t("cmms.dash.exportCsv")}
+            </Button>
+            <Button variant="secondary" icon="file" onClick={() => window.print()}>
+              {t("cmms.dash.print")}
             </Button>
             <Button
               variant="primary"
@@ -245,7 +326,7 @@ export function MaintenanceDashboardPage(): JSX.Element {
         }
       />
 
-      <div className="dash-range-bar">
+      <div className="dash-range-bar dash-actions--noprint">
         <span className="dash-range-bar__label">
           <Icon name="calendar" size={15} />
           {t("cmms.dash.rangeLabel")}
@@ -361,8 +442,31 @@ export function MaintenanceDashboardPage(): JSX.Element {
 
           <Card className="dashboard-widget dashboard-widget--wide" padding="md">
             <CardHeader
+              title={t("cmms.dash.mttrTrend")}
+              subtitle={t("cmms.dash.mttrTrendCaption")}
+              icon="clock"
+            />
+            {!trend.hasMttr ? (
+              <div className="dash-chart-empty">{t("cmms.dash.mttrTrendEmpty")}</div>
+            ) : (
+              <TrendChart
+                series={[
+                  {
+                    label: t("cmms.dash.mttr"),
+                    data: trend.mttr,
+                    color: "#8b5cf6",
+                  },
+                ]}
+                labels={trend.labels}
+                ariaLabel={t("cmms.dash.mttrTrend")}
+              />
+            )}
+          </Card>
+
+          <Card className="dashboard-widget dashboard-widget--wide" padding="md">
+            <CardHeader
               title={t("cmms.dash.byStatus")}
-              subtitle={t("cmms.dash.byStatusCaption")}
+              subtitle={t("cmms.dash.byStatusHint")}
               icon="layers"
             />
             <BarChart
@@ -370,6 +474,7 @@ export function MaintenanceDashboardPage(): JSX.Element {
               labels={OPEN_STATUSES.map((status) => t(`cmms.woStatus.${status}`))}
               color="#2878ff"
               ariaLabel={t("cmms.dash.byStatus")}
+              onBarClick={(index) => goToOrders({ status: OPEN_STATUSES[index] })}
             />
           </Card>
 
@@ -410,20 +515,20 @@ export function MaintenanceDashboardPage(): JSX.Element {
               icon="warning"
             />
             <BarChart
-              data={stats.byPriority}
-              labels={PRIORITIES.map((priority) => t(`cmms.priority.${priority}`))}
-              color="#e6a23c"
+              data={stats.byPriority.map((entry) => entry.count)}
+              labels={stats.byPriority.map((entry) => t(`cmms.priority.${entry.priority}`))}
+              barColors={stats.byPriority.map((entry) => PRIORITY_COLORS[entry.priority])}
               ariaLabel={t("cmms.dash.byPriority")}
             />
             <div className="dash-priority-legend">
-              {PRIORITIES.map((priority, index) => (
-                <span key={priority}>
+              {stats.byPriority.map((entry) => (
+                <span key={entry.priority}>
                   <i
                     className="legend-dot"
-                    style={{ background: PRIORITY_COLORS[priority] }}
+                    style={{ background: PRIORITY_COLORS[entry.priority] }}
                   />
-                  {t(`cmms.priority.${priority}`)}
-                  <strong>{stats.byPriority[index]}</strong>
+                  {t(`cmms.priority.${entry.priority}`)}
+                  <strong>{entry.count}</strong>
                 </span>
               ))}
             </div>
@@ -432,7 +537,7 @@ export function MaintenanceDashboardPage(): JSX.Element {
           <Card className="dashboard-widget dashboard-widget--wide" padding="md">
             <CardHeader
               title={t("cmms.dash.byDepartment")}
-              subtitle={t("cmms.dash.byDepartmentCaption")}
+              subtitle={t("cmms.dash.byDepartmentHint")}
               icon="building"
             />
             <div className="dash-department-list">
@@ -440,7 +545,19 @@ export function MaintenanceDashboardPage(): JSX.Element {
                 const count = stats.byDepartment[index];
                 const max = Math.max(...stats.byDepartment, 1);
                 return (
-                  <div className="dash-department-row" key={department}>
+                  <div
+                    className="dash-department-row dash-department-row--clickable"
+                    key={department}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => goToOrders({ department })}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        goToOrders({ department });
+                      }
+                    }}
+                  >
                     <span className="dash-department-row__name">
                       {t(`cmms.department.${department}`)}
                     </span>

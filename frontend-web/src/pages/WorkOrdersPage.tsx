@@ -87,10 +87,25 @@ export function WorkOrdersPage(): JSX.Element {
   const [devices, setDevices] = useState<MaintenanceDevice[]>(
     runtimeConfig.demoMode ? demoDevices : [],
   );
+  // Deep-link support: the maintenance dashboard links here with ?status= / ?department=
+  // so clicking a chart segment lands on the matching, pre-filtered list.
+  const initialFilters = useMemo(() => {
+    if (typeof window === "undefined") return { status: "all", department: "all" };
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get("status");
+    const department = params.get("department");
+    return {
+      status: status && WO_STATUSES.includes(status as WorkOrderStatus) ? status : "all",
+      department:
+        department && DEPARTMENTS.includes(department as MaintenanceDepartment)
+          ? department
+          : "all",
+    };
+  }, []);
   const [view, setView] = useState<"list" | "board">("list");
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [departmentFilter, setDepartmentFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState(initialFilters.status);
+  const [departmentFilter, setDepartmentFilter] = useState(initialFilters.department);
   const [toast, setToast] = useState("");
 
   const [createOpen, setCreateOpen] = useState(false);

@@ -389,6 +389,14 @@ const en = {
   "cmms.dash.trendCaption": "مقایسه‌ی تعداد درخواست‌های ثبت‌شده و تکمیل‌شده در بازه‌ی انتخابی.",
   "cmms.dash.trendSubmitted": "ثبت‌شده",
   "cmms.dash.trendCompleted": "تکمیل‌شده",
+  "cmms.dash.mttrTrend": "روند میانگین زمان رفع عیب",
+  "cmms.dash.mttrTrendCaption": "میانگین مدت رفع عیب کارهای تکمیل‌شده (روز) در هر بازه.",
+  "cmms.dash.mttrTrendEmpty": "در این بازه‌ی زمانی کار تکمیل‌شده‌ای برای محاسبه وجود ندارد.",
+  "cmms.dash.byStatusHint": "برای دیدن فهرست، روی هر ستون کلیک کنید.",
+  "cmms.dash.byDepartmentHint": "برای دیدن فهرست هر واحد، روی ردیف کلیک کنید.",
+  "cmms.dash.exportCsv": "خروجی CSV",
+  "cmms.dash.print": "چاپ / PDF",
+  "cmms.dash.csvClosedAt": "تاریخ بستن",
   "nav.maintenanceDashboard": "داشبورد نگهداری",
 } as const;
 

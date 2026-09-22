@@ -4,6 +4,7 @@ import { LoginPage } from "../../pages/LoginPage";
 import { DashboardPage } from "../../pages/DashboardPage";
 import { ProjectsPage } from "../../pages/ProjectsPage";
 import { TasksPage } from "../../pages/TasksPage";
+import { MaintenanceDashboardPage } from "../../pages/MaintenanceDashboardPage";
 import { MaintenanceDevicesPage } from "../../pages/MaintenanceDevicesPage";
 import { WorkOrdersPage } from "../../pages/WorkOrdersPage";
 import { DocumentsPage } from "../../pages/DocumentsPage";
@@ -24,6 +25,7 @@ export function AppRouter(): JSX.Element {
       <Route path="dashboard" element={<DashboardPage />} />
       <Route path="projects" element={<ProjectsPage />} />
       <Route path="tasks" element={<TasksPage />} />
+      <Route path="maintenance/dashboard" element={<MaintenanceDashboardPage />} />
       <Route path="maintenance/devices" element={<MaintenanceDevicesPage />} />
       <Route path="maintenance/work-orders" element={<WorkOrdersPage />} />
       <Route path="documents" element={<DocumentsPage />} />

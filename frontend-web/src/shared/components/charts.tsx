@@ -43,3 +43,40 @@ export function DonutChart({ value, label, color = "#2878ff", size = 132, ariaLa
 export function Sparkline({ data, color = "#2878ff", ariaLabel }: { data: number[]; color?: string; ariaLabel: string }): JSX.Element {
   return <div className="sparkline" role="img" aria-label={ariaLabel}><svg viewBox="0 0 120 34" preserveAspectRatio="none"><polyline points={pointsFor(data, 120, 34, 3)} fill="none" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" /></svg></div>;
 }
+
+export interface TrendSeries {
+  label: string;
+  data: number[];
+  color: string;
+}
+
+// Multi-series line chart on a shared vertical scale. Used by the maintenance
+// dashboard to overlay "submitted" vs "completed" work orders over time.
+export function TrendChart({ series, labels = [], height = 200, ariaLabel }: { series: TrendSeries[]; labels?: string[]; height?: number; ariaLabel: string }): JSX.Element {
+  const width = 560;
+  const padding = 14;
+  const allValues = series.flatMap((entry) => entry.data);
+  const max = Math.max(...allValues, 1);
+  const count = Math.max(...series.map((entry) => entry.data.length), 1);
+  const toPoints = (data: number[]): string =>
+    data
+      .map((value, index) => {
+        const x = padding + (index * (width - padding * 2)) / Math.max(count - 1, 1);
+        const y = height - padding - (value / max) * (height - padding * 2);
+        return `${x},${y}`;
+      })
+      .join(" ");
+  return <div className="chart" role="img" aria-label={ariaLabel}>
+    <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+      {[0, 1, 2, 3].map((line) => <line key={line} x1={padding} x2={width - padding} y1={padding + line * ((height - padding * 2) / 3)} y2={padding + line * ((height - padding * 2) / 3)} className="chart__grid" />)}
+      {series.map((entry) => <polyline key={entry.label} points={toPoints(entry.data)} fill="none" stroke={entry.color} strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />)}
+      {series.map((entry) => entry.data.map((_value, index) => {
+        const coordinate = toPoints(entry.data).split(" ")[index]?.split(",");
+        return coordinate ? <circle key={`${entry.label}-${index}`} cx={coordinate[0]} cy={coordinate[1]} fill="var(--surface-1)" r="3.5" stroke={entry.color} strokeWidth="2" /> : null;
+      }))}
+    </svg>
+    {labels.length > 0 && <div className="chart__labels">{labels.map((label, index) => <span key={`${label}-${index}`}>{label}</span>)}</div>}
+    <div className="trend-legend">{series.map((entry) => <span key={entry.label}><i className="legend-dot" style={{ background: entry.color }} />{entry.label}</span>)}</div>
+  </div>;
+}
+

@@ -1,7 +1,8 @@
-import { defineConfig, devices } from "@playwright/test";
+﻿import { defineConfig, devices } from "@playwright/test";
 
 const e2ePort = Number(process.env.PLAYWRIGHT_PORT ?? 4174);
 const e2eBaseUrl = `http://127.0.0.1:${e2ePort}`;
+const browserChannel = process.env.PLAYWRIGHT_CHANNEL ?? "chrome";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -15,13 +16,14 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   webServer: {
-    command: `VITE_DEMO_MODE=true npm run build && VITE_DEMO_MODE=true npm run preview -- --host 0.0.0.0 --port ${e2ePort}`,
+    command: `npm run build && npm run preview -- --host 0.0.0.0 --port ${e2ePort}`,
+    env: { VITE_DEMO_MODE: "true" },
     url: e2eBaseUrl,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "mobile", use: { ...devices["Pixel 5"] } },
+    { name: "chromium", use: { ...devices["Desktop Chrome"], channel: browserChannel } },
+    { name: "mobile", use: { ...devices["Pixel 5"], channel: browserChannel } },
   ],
 });

@@ -68,3 +68,36 @@ export interface ActivityItem {
   timestamp: string;
   tone: "blue" | "green" | "amber" | "purple";
 }
+
+// -- Phase 21: Maintenance / CMMS ------------------------------------------------
+export type DeviceStatus = "operational" | "underMaintenance" | "outOfService" | "retired";
+export type WorkOrderType = "corrective" | "preventive" | "inspection";
+export type WorkOrderStatus = "submitted" | "assigned" | "inProgress" | "onHold" | "completed" | "cancelled";
+
+export interface MaintenanceDevice {
+  id: string;
+  code: string;
+  name: string;
+  location: string;
+  status: DeviceStatus;
+  pmIntervalDays: number;
+  lastPmDate: string;
+  nextDueDate: string;
+  pmDue: boolean;
+  createdAt: string;
+}
+
+export interface WorkOrder {
+  id: string;
+  deviceId: string;
+  title: string;
+  description: string;
+  orderType: WorkOrderType;
+  priority: Priority;
+  status: WorkOrderStatus;
+  requestedByName: string;
+  assignedToName: string;
+  resolutionNote: string;
+  createdAt: string;
+  closedAt: string;
+}

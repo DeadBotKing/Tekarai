@@ -1,0 +1,70 @@
+"""Maintenance commands (Phase 21)."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from apps.sharedKernel.application.messaging import Command
+
+
+# -- Device commands --------------------------------------------------------------
+@dataclass(frozen=True)
+class RegisterDeviceCommand(Command):
+    tenantId: str = ""
+    code: str = ""
+    name: str = ""
+    location: str = ""
+    pmIntervalDays: int = 0
+
+
+@dataclass(frozen=True)
+class UpdateDeviceCommand(Command):
+    deviceId: str
+    name: str
+    location: str = ""
+    pmIntervalDays: int = 0
+
+
+@dataclass(frozen=True)
+class ChangeDeviceStatusCommand(Command):
+    deviceId: str
+    target: str
+
+
+@dataclass(frozen=True)
+class RecordDevicePmCommand(Command):
+    deviceId: str
+    performedOn: str = ""
+
+
+# -- Work order commands ----------------------------------------------------------
+@dataclass(frozen=True)
+class SubmitWorkOrderCommand(Command):
+    tenantId: str = ""
+    deviceId: str = ""
+    title: str = ""
+    description: str = ""
+    orderType: str = "corrective"
+    priority: str = "normal"
+    requestedByName: str = ""
+
+
+@dataclass(frozen=True)
+class UpdateWorkOrderCommand(Command):
+    workOrderId: str
+    title: str
+    description: str = ""
+    priority: str = "normal"
+
+
+@dataclass(frozen=True)
+class AssignWorkOrderCommand(Command):
+    workOrderId: str
+    assignedToName: str
+
+
+@dataclass(frozen=True)
+class ChangeWorkOrderStatusCommand(Command):
+    workOrderId: str
+    target: str
+    resolutionNote: str = ""

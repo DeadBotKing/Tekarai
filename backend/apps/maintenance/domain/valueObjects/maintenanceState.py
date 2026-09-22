@@ -1,0 +1,136 @@
+"""Maintenance value objects — closed sets for devices and work orders.
+
+Phase 21 (Maintenance / CMMS). All codes are stable reference data; the
+Persian UI labels live in the frontend localization layer, never here.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from apps.sharedKernel.domain.errors import ValidationFailedError
+from apps.sharedKernel.domain.valueObjects import ValueObject
+
+# -- Device status ----------------------------------------------------------------
+DEVICE_OPERATIONAL = "operational"
+DEVICE_UNDER_MAINTENANCE = "underMaintenance"
+DEVICE_OUT_OF_SERVICE = "outOfService"
+DEVICE_RETIRED = "retired"
+
+DEVICE_STATUSES = (
+    DEVICE_OPERATIONAL,
+    DEVICE_UNDER_MAINTENANCE,
+    DEVICE_OUT_OF_SERVICE,
+    DEVICE_RETIRED,
+)
+
+# -- Work order type --------------------------------------------------------------
+WORK_ORDER_CORRECTIVE = "corrective"
+WORK_ORDER_PREVENTIVE = "preventive"
+WORK_ORDER_INSPECTION = "inspection"
+
+WORK_ORDER_TYPES = (
+    WORK_ORDER_CORRECTIVE,
+    WORK_ORDER_PREVENTIVE,
+    WORK_ORDER_INSPECTION,
+)
+
+# -- Work order status (lifecycle) ------------------------------------------------
+WO_SUBMITTED = "submitted"
+WO_ASSIGNED = "assigned"
+WO_IN_PROGRESS = "inProgress"
+WO_ON_HOLD = "onHold"
+WO_COMPLETED = "completed"
+WO_CANCELLED = "cancelled"
+
+WORK_ORDER_STATUSES = (
+    WO_SUBMITTED,
+    WO_ASSIGNED,
+    WO_IN_PROGRESS,
+    WO_ON_HOLD,
+    WO_COMPLETED,
+    WO_CANCELLED,
+)
+
+#: Allowed lifecycle transitions (BR-WO-001). A closed set keeps the workflow
+#: predictable: e.g. a completed/cancelled order is terminal.
+WORK_ORDER_TRANSITIONS: dict[str, tuple[str, ...]] = {
+    WO_SUBMITTED: (WO_ASSIGNED, WO_CANCELLED),
+    WO_ASSIGNED: (WO_IN_PROGRESS, WO_ON_HOLD, WO_CANCELLED),
+    WO_IN_PROGRESS: (WO_ON_HOLD, WO_COMPLETED, WO_CANCELLED),
+    WO_ON_HOLD: (WO_IN_PROGRESS, WO_CANCELLED),
+    WO_COMPLETED: (),
+    WO_CANCELLED: (),
+}
+
+# -- Priority (shared vocabulary with tasks for consistency) -----------------------
+PRIORITY_LOW = "low"
+PRIORITY_NORMAL = "normal"
+PRIORITY_HIGH = "high"
+PRIORITY_CRITICAL = "critical"
+
+WORK_ORDER_PRIORITIES = (
+    PRIORITY_LOW,
+    PRIORITY_NORMAL,
+    PRIORITY_HIGH,
+    PRIORITY_CRITICAL,
+)
+
+
+@dataclass(frozen=True)
+class DeviceStatus(ValueObject):
+    value: str
+
+    def __post_init__(self) -> None:
+        if self.value not in DEVICE_STATUSES:
+            raise ValidationFailedError(
+                "Invalid device status.", fieldErrors={"status": self.value}
+            )
+
+    def __str__(self) -> str:
+        return self.value
+
+
+@dataclass(frozen=True)
+class WorkOrderType(ValueObject):
+    value: str
+
+    def __post_init__(self) -> None:
+        if self.value not in WORK_ORDER_TYPES:
+            raise ValidationFailedError(
+                "Invalid work order type.", fieldErrors={"orderType": self.value}
+            )
+
+    def __str__(self) -> str:
+        return self.value
+
+
+@dataclass(frozen=True)
+class WorkOrderStatus(ValueObject):
+    value: str
+
+    def __post_init__(self) -> None:
+        if self.value not in WORK_ORDER_STATUSES:
+            raise ValidationFailedError(
+                "Invalid work order status.", fieldErrors={"status": self.value}
+            )
+
+    def __str__(self) -> str:
+        return self.value
+
+    def canTransitionTo(self, target: str) -> bool:
+        return target in WORK_ORDER_TRANSITIONS.get(self.value, ())
+
+
+@dataclass(frozen=True)
+class WorkOrderPriority(ValueObject):
+    value: str
+
+    def __post_init__(self) -> None:
+        if self.value not in WORK_ORDER_PRIORITIES:
+            raise ValidationFailedError(
+                "Invalid work order priority.", fieldErrors={"priority": self.value}
+            )
+
+    def __str__(self) -> str:
+        return self.value

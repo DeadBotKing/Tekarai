@@ -30,6 +30,17 @@ from apps.identity.infrastructure.repositories.identityRepositoriesImpl import (
     TenantMembershipRepositoryDjango,
     UserRepositoryDjango,
 )
+from apps.maintenance.application.commands.maintenanceCommands import (
+    RecordDevicePmCommand,
+    RegisterDeviceCommand,
+    SubmitWorkOrderCommand,
+)
+from apps.maintenance.infrastructure.container import (
+    recordDevicePmUseCase,
+    registerDeviceUseCase,
+    submitWorkOrderUseCase,
+)
+from apps.maintenance.infrastructure.models import DeviceModel, WorkOrderModel
 from apps.projects.application.commands.projectCommands import CreateProjectCommand
 from apps.projects.infrastructure.container import createProjectUseCase
 from apps.projects.infrastructure.models import ProjectModel
@@ -91,6 +102,22 @@ SEED_TASKS: list[tuple[str, str, str, str, str, str]] = [
     ("BRIDGE-18", "Close acceptance evidence", "normal", "Owen Wright", "2026-09-22", "3h"),
 ]
 
+#: (code, name, location, pmIntervalDays, lastPmDate) — Persian CMMS demo devices.
+SEED_DEVICES: list[tuple[str, str, str, int, str]] = [
+    ("PUMP-01", "پمپ خنک‌کننده اصلی", "سالن تولید A", 30, "2026-08-20"),
+    ("CNC-14", "دستگاه تراش CNC", "کارگاه ماشین‌کاری", 45, "2026-09-10"),
+    ("COMP-07", "کمپرسور هوا", "اتاق تأسیسات", 60, "2026-09-01"),
+    ("GEN-02", "ژنراتور اضطراری", "محوطه بیرونی", 90, "2026-04-01"),
+]
+
+#: (device code, title, orderType, priority, requestedBy) — Persian demo work orders.
+SEED_WORK_ORDERS: list[tuple[str, str, str, str, str]] = [
+    ("PUMP-01", "صدای غیرعادی از یاتاقان پمپ", "corrective", "high", "علی رضایی"),
+    ("CNC-14", "کالیبراسیون دوره‌ای محور Z", "preventive", "normal", "سیستم PM"),
+    ("GEN-02", "تعویض باتری ژنراتور", "corrective", "critical", "حسین محمدی"),
+    ("COMP-07", "بازرسی فشار مخزن هوا", "inspection", "low", "سیستم PM"),
+]
+
 
 class Command(BaseCommand):
     help = "Seed demo tenants, users, projects and tasks (idempotent)."
@@ -122,6 +149,8 @@ class Command(BaseCommand):
         self.stdout.write("seeding workspace for tenant: platform")
         self._seedProjects(platform.id)
         self._seedTasks(platform.id)
+        self._seedDevices(platform.id)
+        self._seedWorkOrders(platform.id)
 
         # 2) Demo customer tenant + users + workspace.
         demo = self._ensureTenant(demoCode, "Acme Industries")
@@ -144,6 +173,8 @@ class Command(BaseCommand):
         self.stdout.write(f"seeding workspace for tenant: {demoCode}")
         self._seedProjects(demo.id)
         self._seedTasks(demo.id)
+        self._seedDevices(demo.id)
+        self._seedWorkOrders(demo.id)
 
         self.stdout.write(self.style.SUCCESS("seedWorkspace complete."))
 
@@ -265,6 +296,62 @@ class Command(BaseCommand):
                     )
                 )
             self.stdout.write(f"  task created: {title}")
+
+    # -- maintenance (CMMS) -------------------------------------------------
+
+    def _seedDevices(self, tenantId: uuid.UUID) -> None:
+        for code, name, location, interval, lastPm in SEED_DEVICES:
+            if DeviceModel.objects.filter(
+                tenantId=tenantId, code=code, deletedAt__isnull=True
+            ).exists():
+                self.stdout.write(f"  device exists: {code}")
+                continue
+            registerUseCase = registerDeviceUseCase()
+            registerUseCase.requiredAction = ""  # first-run seed has no actor yet
+            with requestScope(RequestContext(actorId="", tenantId=str(tenantId))):
+                dto = registerUseCase.execute(
+                    RegisterDeviceCommand(
+                        tenantId=str(tenantId),
+                        code=code,
+                        name=name,
+                        location=location,
+                        pmIntervalDays=interval,
+                    )
+                )
+                if lastPm:
+                    pmUseCase = recordDevicePmUseCase()
+                    pmUseCase.requiredAction = ""
+                    pmUseCase.execute(RecordDevicePmCommand(deviceId=dto.id, performedOn=lastPm))
+            self.stdout.write(f"  device created: {code}")
+
+    def _seedWorkOrders(self, tenantId: uuid.UUID) -> None:
+        deviceIds: dict[str, uuid.UUID] = {
+            model.code: model.id
+            for model in DeviceModel.objects.filter(tenantId=tenantId, deletedAt__isnull=True)
+        }
+        for deviceCode, title, orderType, priority, requestedBy in SEED_WORK_ORDERS:
+            deviceId = deviceIds.get(deviceCode)
+            if deviceId is None:
+                self.stderr.write(f"  skipping work order (no device {deviceCode}): {title}")
+                continue
+            if WorkOrderModel.objects.filter(
+                tenantId=tenantId, deviceId=deviceId, title=title, deletedAt__isnull=True
+            ).exists():
+                continue
+            useCase = submitWorkOrderUseCase()
+            useCase.requiredAction = ""  # first-run seed has no actor yet
+            with requestScope(RequestContext(actorId="", tenantId=str(tenantId))):
+                useCase.execute(
+                    SubmitWorkOrderCommand(
+                        tenantId=str(tenantId),
+                        deviceId=str(deviceId),
+                        title=title,
+                        orderType=orderType,
+                        priority=priority,
+                        requestedByName=requestedBy,
+                    )
+                )
+            self.stdout.write(f"  work order created: {title}")
 
     @staticmethod
     def _now() -> datetime:

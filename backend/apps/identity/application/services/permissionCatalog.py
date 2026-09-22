@@ -67,12 +67,54 @@ ACTIONS: list[tuple[str, str]] = [
     ("task.view", "View task details"),
     ("task.list", "List tasks of the tenant"),
     ("task.update", "Update tasks and their status"),
+    # -- Phase 21 CMMS (maintenance context) --------------------------------
+    ("maintenance.device.manage", "Register and update devices, status and PM records"),
+    ("maintenance.device.list", "List devices and due preventive maintenance"),
+    ("maintenance.device.view", "View device details and PM schedule"),
+    ("maintenance.workorder.create", "Submit maintenance work orders (requests)"),
+    ("maintenance.workorder.update", "Update work orders and transition their status"),
+    ("maintenance.workorder.assign", "Assign work orders to technicians"),
+    ("maintenance.workorder.list", "List maintenance work orders"),
+    ("maintenance.workorder.view", "View work order details"),
 ]
 
 
 PLATFORM_ADMIN_ROLE = "platformAdmin"
 TENANT_ADMIN_ROLE = "tenantAdmin"
 MEMBER_ROLE = "member"
+
+# Phase 21 CMMS role codes (three-role model: requester / technician / manager).
+MAINTENANCE_REQUESTER_ROLE = "maintenanceRequester"
+MAINTENANCE_TECHNICIAN_ROLE = "maintenanceTechnician"
+MAINTENANCE_MANAGER_ROLE = "maintenanceManager"
+
+# Reusable maintenance permission bundles.
+_MAINTENANCE_REQUESTER_ACTIONS = [
+    "maintenance.device.list",
+    "maintenance.device.view",
+    "maintenance.workorder.create",
+    "maintenance.workorder.list",
+    "maintenance.workorder.view",
+]
+_MAINTENANCE_TECHNICIAN_ACTIONS = [
+    "maintenance.device.list",
+    "maintenance.device.view",
+    "maintenance.device.manage",
+    "maintenance.workorder.create",
+    "maintenance.workorder.update",
+    "maintenance.workorder.list",
+    "maintenance.workorder.view",
+]
+_MAINTENANCE_MANAGER_ACTIONS = [
+    "maintenance.device.manage",
+    "maintenance.device.list",
+    "maintenance.device.view",
+    "maintenance.workorder.create",
+    "maintenance.workorder.update",
+    "maintenance.workorder.assign",
+    "maintenance.workorder.list",
+    "maintenance.workorder.view",
+]
 
 ROLE_PRESETS: dict[str, list[str]] = {
     PLATFORM_ADMIN_ROLE: [action for action, _ in ACTIONS],
@@ -120,6 +162,7 @@ ROLE_PRESETS: dict[str, list[str]] = {
         "task.view",
         "task.list",
         "task.update",
+        *_MAINTENANCE_MANAGER_ACTIONS,
     ],
     MEMBER_ROLE: [
         "user.view",
@@ -135,5 +178,9 @@ ROLE_PRESETS: dict[str, list[str]] = {
         "task.list",
         "task.create",
         "task.update",
+        *_MAINTENANCE_REQUESTER_ACTIONS,
     ],
+    MAINTENANCE_REQUESTER_ROLE: list(_MAINTENANCE_REQUESTER_ACTIONS),
+    MAINTENANCE_TECHNICIAN_ROLE: list(_MAINTENANCE_TECHNICIAN_ACTIONS),
+    MAINTENANCE_MANAGER_ROLE: list(_MAINTENANCE_MANAGER_ACTIONS),
 }

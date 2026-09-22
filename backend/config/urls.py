@@ -38,6 +38,10 @@ urlpatterns = [
                 ),
                 path("projects/", include("apps.projects.presentation.api.urls.projectRoutes")),
                 path("tasks/", include("apps.tasks.presentation.api.urls.taskRoutes")),
+                path(
+                    "maintenance/",
+                    include("apps.maintenance.presentation.api.urls.maintenanceRoutes"),
+                ),
             ]
         ),
     ),

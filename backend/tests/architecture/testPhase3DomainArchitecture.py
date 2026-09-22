@@ -261,6 +261,7 @@ class DomainPurityStillHoldsTests(SimpleTestCase):
             "projectIntelligence",
             "projects",
             "tasks",
+            "maintenance",
         }
         entries = {
             entry.name

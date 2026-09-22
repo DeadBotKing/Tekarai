@@ -7,6 +7,17 @@ export const apiEndpoints = {
   roles: "roles",
   projects: { list: "projects/", create: "projects/", detail: (id: string) => `projects/${id}`, update: (id: string) => `projects/${id}`, status: (id: string) => `projects/${id}/status` },
   tasks: { list: "tasks/", create: "tasks/", detail: (id: string) => `tasks/${id}`, status: (id: string) => `tasks/${id}/status` },
+  maintenance: {
+    devices: "maintenance/devices",
+    device: (id: string) => `maintenance/devices/${id}`,
+    deviceStatus: (id: string) => `maintenance/devices/${id}/status`,
+    devicePm: (id: string) => `maintenance/devices/${id}/pm`,
+    devicesDuePm: "maintenance/devices/due-pm",
+    workOrders: "maintenance/work-orders",
+    workOrder: (id: string) => `maintenance/work-orders/${id}`,
+    workOrderAssign: (id: string) => `maintenance/work-orders/${id}/assign`,
+    workOrderStatus: (id: string) => `maintenance/work-orders/${id}/status`,
+  },
   audit: "platform/audit-events",
   notifications: { list: "notifications", broadcasts: "notifications/broadcasts", unreadCount: "notifications/broadcasts/unread-count", read: (id: string) => `notifications/${id}/read`, broadcastRead: (id: string) => `notifications/broadcasts/${id}/read`, readBulk: "notifications/read-bulk", search: "notifications/search" },
   intelligence: {

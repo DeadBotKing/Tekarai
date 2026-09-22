@@ -22,6 +22,14 @@ export const PERMISSIONS = {
   tenantManage: "tenant.manage",
   auditView: "audit.view",
   settingsManage: "settings.manage",
+  maintenanceDeviceManage: "maintenance.device.manage",
+  maintenanceDeviceList: "maintenance.device.list",
+  maintenanceDeviceView: "maintenance.device.view",
+  maintenanceWorkOrderCreate: "maintenance.workorder.create",
+  maintenanceWorkOrderUpdate: "maintenance.workorder.update",
+  maintenanceWorkOrderAssign: "maintenance.workorder.assign",
+  maintenanceWorkOrderList: "maintenance.workorder.list",
+  maintenanceWorkOrderView: "maintenance.workorder.view",
 } as const;
 
 interface PermissionContextValue {

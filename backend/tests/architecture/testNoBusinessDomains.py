@@ -29,6 +29,7 @@ OPENED_CONTEXTS = {
     "projectIntelligence": "Phase 17 (Project Intelligence Platform)",
     "projects": "Phase 18b (Workspace Delivery — Projects)",
     "tasks": "Phase 18b (Workspace Delivery — Tasks)",
+    "maintenance": "Phase 21 (Maintenance / CMMS)",
 }
 
 #: Bounded contexts from the approved domain map — still not opened.
@@ -42,7 +43,6 @@ FORBIDDEN_APP_DIRECTORIES = {
     "asset",
     "devices",
     "device",
-    "maintenance",
     "documents",
     "document",
     "workflow",
@@ -166,6 +166,8 @@ class ContextOpeningRegisterTests(SimpleTestCase):
             # Phase 18b: Workspace Delivery — Projects & Tasks contexts.
             "apps.projects",
             "apps.tasks",
+            # Phase 21: Maintenance / CMMS context.
+            "apps.maintenance",
         }
         unexpectedApps = sorted(set(settings.INSTALLED_APPS) - allowedApps)
         self.assertEqual(

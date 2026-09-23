@@ -87,6 +87,51 @@ DEFAULT_EVENT_ROUTES: dict[str, dict[str, Any]] = {
         "recipientSpec": {"type": "MEETING", "value": "$payload.meetingId"},
         "sourceType": "COMMUNICATION",
     },
+    # -- Phase 5 (maintenance workflow) --------------------------------------
+    # Maintenance work-order payloads carry ``assignedToName`` (a display name),
+    # not a platform user id, so recipients are targeted by ROLE rather than by
+    # individual. Adding/adjusting a maintenance notification is CONFIGURATION —
+    # a new row here, no engine change (§8/§30).
+    "workOrderAssigned": {
+        "notificationType": "maintenance.workOrderAssigned",
+        "category": "MAINTENANCE",
+        "priority": "NORMAL",
+        "templateKey": "maintenance.workOrderAssigned",
+        "title": "درخواست کار جدید به شما ارجاع شد",
+        "body": "یک درخواست کار به تیم فنی سپرده شد و در انتظار انجام است.",
+        "recipientSpec": {"type": "ROLE", "value": ["maintenanceTechnician"]},
+        "sourceType": "MAINTENANCE",
+    },
+    "workOrderSubmittedForApproval": {
+        "notificationType": "maintenance.workOrderSubmittedForApproval",
+        "category": "MAINTENANCE",
+        "priority": "HIGH",
+        "templateKey": "maintenance.workOrderSubmittedForApproval",
+        "title": "درخواست کار در انتظار تأیید شماست",
+        "body": "یک درخواست کار توسط تکنسین تکمیل و برای تأیید مدیر ارسال شد.",
+        "recipientSpec": {"type": "ROLE", "value": ["maintenanceManager"]},
+        "sourceType": "MAINTENANCE",
+    },
+    "workOrderApproved": {
+        "notificationType": "maintenance.workOrderApproved",
+        "category": "MAINTENANCE",
+        "priority": "NORMAL",
+        "templateKey": "maintenance.workOrderApproved",
+        "title": "درخواست کار شما تأیید و تکمیل شد",
+        "body": "مدیر درخواست کار را تأیید کرد و وضعیت آن به «تکمیل‌شده» تغییر یافت.",
+        "recipientSpec": {"type": "ROLE", "value": ["maintenanceTechnician"]},
+        "sourceType": "MAINTENANCE",
+    },
+    "workOrderRejected": {
+        "notificationType": "maintenance.workOrderRejected",
+        "category": "MAINTENANCE",
+        "priority": "HIGH",
+        "templateKey": "maintenance.workOrderRejected",
+        "title": "درخواست کار برای اصلاح بازگردانده شد",
+        "body": "مدیر درخواست کار را رد کرد؛ لطفاً اصلاحات لازم را انجام دهید.",
+        "recipientSpec": {"type": "ROLE", "value": ["maintenanceTechnician"]},
+        "sourceType": "MAINTENANCE",
+    },
 }
 
 
@@ -128,7 +173,11 @@ def makeNotificationHandler(route: dict[str, Any]) -> Callable[[DomainEvent], No
                 or payload.get("callId")
                 or payload.get("letterId")
                 or payload.get("recordingId")
-                or f"{event.name}:{event.occurredAt.isoformat()}"
+                or (
+                    f"{event.name}:{payload.get('workOrderId')}:{event.occurredAt.isoformat()}"
+                    if payload.get("workOrderId")
+                    else f"{event.name}:{event.occurredAt.isoformat()}"
+                )
             ),
             notificationType=route["notificationType"],
             category=route["category"],
@@ -142,6 +191,7 @@ def makeNotificationHandler(route: dict[str, Any]) -> Callable[[DomainEvent], No
                 or payload.get("callId")
                 or payload.get("messageId")
                 or payload.get("letterId")
+                or payload.get("workOrderId")
                 or ""
             ),
             data={

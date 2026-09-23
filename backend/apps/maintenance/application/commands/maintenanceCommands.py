@@ -84,3 +84,15 @@ class ChangeWorkOrderStatusCommand(Command):
     workOrderId: str
     target: str
     resolutionNote: str = ""
+
+
+@dataclass(frozen=True)
+class ApproveWorkOrderCommand(Command):
+    workOrderId: str
+    note: str = ""
+
+
+@dataclass(frozen=True)
+class RejectWorkOrderCommand(Command):
+    workOrderId: str
+    note: str = ""

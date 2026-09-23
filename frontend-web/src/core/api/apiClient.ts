@@ -172,6 +172,34 @@ export class ApiClient {
     });
   }
 
+  /**
+   * Fetch a binary file (CSV/XLSX export) as a Blob with auth headers applied.
+   * Bypasses the JSON envelope handling used by the other verbs.
+   */
+  async download(
+    path: string,
+    options: { query?: ApiRequestOptions["query"]; signal?: AbortSignal } = {},
+  ): Promise<Blob> {
+    const requestPath = withQuery(path, options.query);
+    const accessToken = this.dependencies.getAccessToken();
+    const tenantId = this.dependencies.getTenantId();
+    const headers = new Headers();
+    headers.set("X-Client-Version", "tekarai-gui-0.18.0");
+    if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
+    if (tenantId) headers.set("X-Tenant-ID", tenantId);
+    const fetcher = this.config.fetcher ?? fetch;
+    const response = await fetcher(
+      joinUrl(this.config.baseUrl, `api/${this.config.apiVersion}/${requestPath}`),
+      { method: "GET", headers, signal: options.signal },
+    );
+    if (!response.ok) {
+      const correlationId = response.headers.get("X-Correlation-ID") ?? undefined;
+      const payload = await safeJson(response);
+      throw normalizeError(response.status, payload, correlationId);
+    }
+    return response.blob();
+  }
+
   async request<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
     const method: HttpMethod = options.method ?? "GET";
     const requestPath = withQuery(path, options.query);

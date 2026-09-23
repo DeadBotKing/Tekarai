@@ -96,6 +96,27 @@ class WorkOrderRepositoryDjango:
             .exists()
         )
 
+    def countOpenByAssignee(self, tenantId: uuid.UUID, department: str) -> dict[str, int]:
+        """Open work-order counts per technician within a department.
+
+        Feeds the auto-assign rule (least-loaded technician). Only non-terminal
+        orders that already have an assignee are counted.
+        """
+        rows = (
+            WorkOrderModel.objects.filter(
+                tenantId=tenantId,
+                department=department,
+                deletedAt__isnull=True,
+            )
+            .exclude(status__in=CLOSED_STATUSES)
+            .exclude(assignedToName="")
+            .values_list("assignedToName", flat=True)
+        )
+        counts: dict[str, int] = {}
+        for name in rows:
+            counts[name] = counts.get(name, 0) + 1
+        return counts
+
     def list(self, filters: WorkOrderFilters) -> WorkOrderPage:
         queryset = WorkOrderModel.objects.filter(tenantId=filters.tenantId, deletedAt__isnull=True)
         if filters.deviceId:
@@ -108,6 +129,10 @@ class WorkOrderRepositoryDjango:
             queryset = queryset.filter(priority=filters.priority)
         if filters.department:
             queryset = queryset.filter(department=filters.department)
+        if filters.createdFrom is not None:
+            queryset = queryset.filter(createdAt__gte=filters.createdFrom)
+        if filters.createdTo is not None:
+            queryset = queryset.filter(createdAt__lte=filters.createdTo)
         if filters.search:
             queryset = queryset.filter(
                 Q(title__icontains=filters.search)

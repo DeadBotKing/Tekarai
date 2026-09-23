@@ -1,11 +1,15 @@
 import { ApiClient } from "../../core/api/apiClient";
 import { apiEndpoints } from "../../core/api/endpoints";
 import type {
+  DeviceMaintenanceReport,
+  DeviceReportSummary,
   DeviceStatus,
   MaintenanceDepartment,
   MaintenanceDevice,
   Priority,
   WorkOrder,
+  WorkOrderHistoryAction,
+  WorkOrderHistoryEntry,
   WorkOrderStatus,
   WorkOrderType,
 } from "../../shared/types/domain";
@@ -40,7 +44,58 @@ interface WorkOrderDto {
   resolutionNote: string;
   createdAt: string;
   closedAt: string;
+  slaDueAt: string;
+  overdue: boolean;
 }
+
+interface WorkOrderHistoryDto {
+  id: string;
+  workOrderId: string;
+  action: string;
+  fromStatus: string;
+  toStatus: string;
+  fromDepartment: string;
+  toDepartment: string;
+  actorName: string;
+  note: string;
+  createdAt: string;
+}
+
+interface DeviceReportSummaryDto {
+  totalOrders: number;
+  openOrders: number;
+  completedOrders: number;
+  overdueOrders: number;
+  byStatus: Record<string, number>;
+  byType: Record<string, number>;
+  byPriority: Record<string, number>;
+  mttrHours: number | null;
+}
+
+interface DeviceMaintenanceReportDto {
+  device: DeviceDto;
+  workOrders: WorkOrderDto[];
+  summary: DeviceReportSummaryDto | null;
+  generatedAt: string;
+  fromDate: string;
+  toDate: string;
+}
+
+const toReportSummary = (
+  dto: DeviceReportSummaryDto | null,
+): DeviceReportSummary | null =>
+  dto
+    ? {
+        totalOrders: dto.totalOrders ?? 0,
+        openOrders: dto.openOrders ?? 0,
+        completedOrders: dto.completedOrders ?? 0,
+        overdueOrders: dto.overdueOrders ?? 0,
+        byStatus: dto.byStatus ?? {},
+        byType: dto.byType ?? {},
+        byPriority: dto.byPriority ?? {},
+        mttrHours: dto.mttrHours ?? null,
+      }
+    : null;
 
 const toDevice = (dto: DeviceDto): MaintenanceDevice => ({
   id: dto.id,
@@ -70,6 +125,21 @@ const toWorkOrder = (dto: WorkOrderDto): WorkOrder => ({
   resolutionNote: dto.resolutionNote ?? "",
   createdAt: dto.createdAt ?? "",
   closedAt: dto.closedAt ?? "",
+  slaDueAt: dto.slaDueAt ?? "",
+  overdue: Boolean(dto.overdue),
+});
+
+const toHistoryEntry = (dto: WorkOrderHistoryDto): WorkOrderHistoryEntry => ({
+  id: dto.id,
+  workOrderId: dto.workOrderId,
+  action: (dto.action as WorkOrderHistoryAction) ?? "statusChanged",
+  fromStatus: dto.fromStatus ?? "",
+  toStatus: dto.toStatus ?? "",
+  fromDepartment: dto.fromDepartment ?? "",
+  toDepartment: dto.toDepartment ?? "",
+  actorName: dto.actorName ?? "",
+  note: dto.note ?? "",
+  createdAt: dto.createdAt ?? "",
 });
 
 export interface RegisterDeviceInput {
@@ -135,12 +205,38 @@ export interface MaintenanceService {
     assignedToName: string,
     signal?: AbortSignal,
   ) => Promise<WorkOrder>;
+  autoAssignWorkOrder: (id: string, signal?: AbortSignal) => Promise<WorkOrder>;
   changeWorkOrderStatus: (
     id: string,
     target: WorkOrderStatus,
     resolutionNote?: string,
     signal?: AbortSignal,
   ) => Promise<WorkOrder>;
+  approveWorkOrder: (
+    id: string,
+    note?: string,
+    signal?: AbortSignal,
+  ) => Promise<WorkOrder>;
+  rejectWorkOrder: (
+    id: string,
+    note?: string,
+    signal?: AbortSignal,
+  ) => Promise<WorkOrder>;
+  listWorkOrderHistory: (
+    id: string,
+    signal?: AbortSignal,
+  ) => Promise<WorkOrderHistoryEntry[]>;
+  getDeviceReport: (
+    deviceId: string,
+    range?: { fromDate?: string; toDate?: string },
+    signal?: AbortSignal,
+  ) => Promise<DeviceMaintenanceReport>;
+  downloadDeviceReport: (
+    deviceId: string,
+    format: "csv" | "xlsx",
+    range?: { fromDate?: string; toDate?: string },
+    signal?: AbortSignal,
+  ) => Promise<Blob>;
 }
 
 export const createMaintenanceService = (api: ApiClient): MaintenanceService => ({
@@ -245,6 +341,14 @@ export const createMaintenanceService = (api: ApiClient): MaintenanceService => 
     );
     return toWorkOrder(dto);
   },
+  autoAssignWorkOrder: async (id, signal) => {
+    const dto = await api.post<WorkOrderDto>(
+      apiEndpoints.maintenance.workOrderAssign(id),
+      { auto: true },
+      { signal, retry: 0 },
+    );
+    return toWorkOrder(dto);
+  },
   changeWorkOrderStatus: async (id, target, resolutionNote = "", signal) => {
     const dto = await api.post<WorkOrderDto>(
       apiEndpoints.maintenance.workOrderStatus(id),
@@ -253,4 +357,56 @@ export const createMaintenanceService = (api: ApiClient): MaintenanceService => 
     );
     return toWorkOrder(dto);
   },
+  approveWorkOrder: async (id, note = "", signal) => {
+    const dto = await api.post<WorkOrderDto>(
+      apiEndpoints.maintenance.workOrderApprove(id),
+      { note },
+      { signal, retry: 0 },
+    );
+    return toWorkOrder(dto);
+  },
+  rejectWorkOrder: async (id, note = "", signal) => {
+    const dto = await api.post<WorkOrderDto>(
+      apiEndpoints.maintenance.workOrderReject(id),
+      { note },
+      { signal, retry: 0 },
+    );
+    return toWorkOrder(dto);
+  },
+  listWorkOrderHistory: async (id, signal) => {
+    const dtos = await api.get<WorkOrderHistoryDto[]>(
+      apiEndpoints.maintenance.workOrderHistory(id),
+      { signal },
+    );
+    return dtos.map(toHistoryEntry);
+  },
+  getDeviceReport: async (deviceId, range = {}, signal) => {
+    const dto = await api.get<DeviceMaintenanceReportDto>(
+      apiEndpoints.maintenance.deviceReport(deviceId),
+      {
+        query: {
+          fromDate: range.fromDate ?? "",
+          toDate: range.toDate ?? "",
+        },
+        signal,
+      },
+    );
+    return {
+      device: toDevice(dto.device),
+      workOrders: (dto.workOrders ?? []).map(toWorkOrder),
+      summary: toReportSummary(dto.summary),
+      generatedAt: dto.generatedAt ?? "",
+      fromDate: dto.fromDate ?? "",
+      toDate: dto.toDate ?? "",
+    };
+  },
+  downloadDeviceReport: (deviceId, format, range = {}, signal) =>
+    api.download(apiEndpoints.maintenance.deviceReport(deviceId), {
+      query: {
+        export: format,
+        fromDate: range.fromDate ?? "",
+        toDate: range.toDate ?? "",
+      },
+      signal,
+    }),
 });

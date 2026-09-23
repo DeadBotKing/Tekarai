@@ -41,6 +41,7 @@ WO_ROUTED = "routed"
 WO_ASSIGNED = "assigned"
 WO_IN_PROGRESS = "inProgress"
 WO_ON_HOLD = "onHold"
+WO_PENDING_APPROVAL = "pendingApproval"
 WO_COMPLETED = "completed"
 WO_CANCELLED = "cancelled"
 
@@ -50,6 +51,7 @@ WORK_ORDER_STATUSES = (
     WO_ASSIGNED,
     WO_IN_PROGRESS,
     WO_ON_HOLD,
+    WO_PENDING_APPROVAL,
     WO_COMPLETED,
     WO_CANCELLED,
 )
@@ -58,12 +60,19 @@ WORK_ORDER_STATUSES = (
 #: predictable. Two-step dispatch: a work order is first *routed* to a
 #: department, then *assigned* to an individual technician. Both a completed
 #: and a cancelled order are terminal.
+#: A completed order requires manager approval: a technician moves work from
+#: ``inProgress`` to ``pendingApproval`` (never straight to ``completed``); a
+#: manager then approves (→ ``completed``) or rejects (→ ``inProgress``).
 WORK_ORDER_TRANSITIONS: dict[str, tuple[str, ...]] = {
     WO_SUBMITTED: (WO_ROUTED, WO_ASSIGNED, WO_CANCELLED),
     WO_ROUTED: (WO_ASSIGNED, WO_ON_HOLD, WO_CANCELLED),
     WO_ASSIGNED: (WO_IN_PROGRESS, WO_ON_HOLD, WO_CANCELLED),
-    WO_IN_PROGRESS: (WO_ON_HOLD, WO_COMPLETED, WO_CANCELLED),
+    WO_IN_PROGRESS: (WO_ON_HOLD, WO_PENDING_APPROVAL, WO_CANCELLED),
     WO_ON_HOLD: (WO_IN_PROGRESS, WO_CANCELLED),
+    # From pendingApproval, completion/rework happen only through the dedicated
+    # approve/reject endpoints (which enforce the approve permission); the
+    # generic status endpoint may only cancel.
+    WO_PENDING_APPROVAL: (WO_CANCELLED,),
     WO_COMPLETED: (),
     WO_CANCELLED: (),
 }
@@ -97,6 +106,15 @@ WORK_ORDER_PRIORITIES = (
     PRIORITY_HIGH,
     PRIORITY_CRITICAL,
 )
+
+#: SLA target — hours from submission to completion, per priority (BR-WO-SLA).
+#: An open order past its target is flagged "overdue" so managers can escalate.
+SLA_HOURS_BY_PRIORITY: dict[str, int] = {
+    PRIORITY_CRITICAL: 4,
+    PRIORITY_HIGH: 24,
+    PRIORITY_NORMAL: 72,
+    PRIORITY_LOW: 168,
+}
 
 
 @dataclass(frozen=True)

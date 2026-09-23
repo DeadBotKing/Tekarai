@@ -13,8 +13,15 @@ import uuid
 from datetime import datetime
 from typing import Any
 
+from datetime import timedelta
+
 from apps.maintenance.domain.valueObjects.maintenanceState import (
+    SLA_HOURS_BY_PRIORITY,
     WO_ASSIGNED,
+    WO_CANCELLED,
+    WO_COMPLETED,
+    WO_IN_PROGRESS,
+    WO_PENDING_APPROVAL,
     WO_ROUTED,
     WO_SUBMITTED,
     MaintenanceDepartment,
@@ -210,6 +217,92 @@ class WorkOrder(AggregateRoot):
                 payload={"workOrderId": str(self.id), "from": previous, "to": target},
             )
         )
+
+    def submitForApproval(self, resolutionNote: str, now: datetime) -> None:
+        """Technician finishes work and sends the order for manager approval.
+
+        Replaces the old direct ``inProgress → completed`` jump: completion now
+        always passes through a review gate.
+        """
+        if not self.status.canTransitionTo(WO_PENDING_APPROVAL):
+            raise InvalidStateTransitionError(
+                f"Cannot submit for approval from '{self.status}'."
+            )
+        previous = str(self.status)
+        self.status = WorkOrderStatus(WO_PENDING_APPROVAL)
+        if resolutionNote.strip():
+            self.resolutionNote = resolutionNote.strip()
+        self.updatedAt = now
+        self.recordEvent(
+            DomainEvent(
+                name="workOrderSubmittedForApproval",
+                occurredAt=now,
+                tenantId=self.tenantId,
+                payload={
+                    "workOrderId": str(self.id),
+                    "from": previous,
+                    "department": str(self.department),
+                    "assignedTo": self.assignedToName,
+                },
+            )
+        )
+
+    def approve(self, note: str, now: datetime) -> None:
+        """Manager approves a pending order → completed."""
+        if str(self.status) != WO_PENDING_APPROVAL:
+            raise InvalidStateTransitionError(
+                f"Only a pending-approval order can be approved (was '{self.status}')."
+            )
+        # The manager's approval note is a separate comment (kept in history);
+        # it does not overwrite the technician's resolution note.
+        self.status = WorkOrderStatus(WO_COMPLETED)
+        self.closedAt = now
+        self.updatedAt = now
+        self.recordEvent(
+            DomainEvent(
+                name="workOrderApproved",
+                occurredAt=now,
+                tenantId=self.tenantId,
+                payload={
+                    "workOrderId": str(self.id),
+                    "to": WO_COMPLETED,
+                    "assignedTo": self.assignedToName,
+                },
+            )
+        )
+
+    def reject(self, note: str, now: datetime) -> None:
+        """Manager rejects a pending order → back to inProgress for rework."""
+        if str(self.status) != WO_PENDING_APPROVAL:
+            raise InvalidStateTransitionError(
+                f"Only a pending-approval order can be rejected (was '{self.status}')."
+            )
+        self.status = WorkOrderStatus(WO_IN_PROGRESS)
+        self.updatedAt = now
+        self.recordEvent(
+            DomainEvent(
+                name="workOrderRejected",
+                occurredAt=now,
+                tenantId=self.tenantId,
+                payload={
+                    "workOrderId": str(self.id),
+                    "to": WO_IN_PROGRESS,
+                    "assignedTo": self.assignedToName,
+                    "note": note.strip(),
+                },
+            )
+        )
+
+    def slaDueAt(self) -> datetime:
+        """Deadline = createdAt + the SLA window for this order's priority."""
+        hours = SLA_HOURS_BY_PRIORITY.get(str(self.priority), 72)
+        return self.createdAt + timedelta(hours=hours)
+
+    def isOverdue(self, now: datetime) -> bool:
+        """True when an *open* order has passed its SLA deadline."""
+        if str(self.status) in (WO_COMPLETED, WO_CANCELLED):
+            return False
+        return now > self.slaDueAt()
 
     def snapshot(self) -> dict[str, Any]:
         return {

@@ -12,17 +12,25 @@ from apps.maintenance.application.useCases.deviceUseCases import (
     UpdateDeviceUseCase,
 )
 from apps.maintenance.application.useCases.workOrderUseCases import (
+    ApproveWorkOrderUseCase,
     AssignWorkOrderUseCase,
+    AutoAssignWorkOrderUseCase,
     ChangeWorkOrderStatusUseCase,
+    DeviceMaintenanceReportUseCase,
     GeneratePmWorkOrdersUseCase,
     GetWorkOrderUseCase,
+    ListWorkOrderHistoryUseCase,
     ListWorkOrdersUseCase,
+    RejectWorkOrderUseCase,
     RouteWorkOrderUseCase,
     SubmitWorkOrderUseCase,
     UpdateWorkOrderUseCase,
 )
 from apps.maintenance.infrastructure.repositories.deviceRepositoryImpl import (
     DeviceRepositoryDjango,
+)
+from apps.maintenance.infrastructure.repositories.workOrderHistoryRepositoryImpl import (
+    WorkOrderHistoryRepositoryDjango,
 )
 from apps.maintenance.infrastructure.repositories.workOrderRepositoryImpl import (
     WorkOrderRepositoryDjango,
@@ -36,6 +44,10 @@ def deviceRepository() -> DeviceRepositoryDjango:
 
 def workOrderRepository() -> WorkOrderRepositoryDjango:
     return WorkOrderRepositoryDjango()
+
+
+def workOrderHistoryRepository() -> WorkOrderHistoryRepositoryDjango:
+    return WorkOrderHistoryRepositoryDjango()
 
 
 def _kernelPorts() -> dict:
@@ -53,7 +65,11 @@ def _deviceDeps() -> dict:
 
 
 def _workOrderDeps() -> dict:
-    return {"repository": workOrderRepository(), **_kernelPorts()}
+    return {
+        "repository": workOrderRepository(),
+        "historyRepository": workOrderHistoryRepository(),
+        **_kernelPorts(),
+    }
 
 
 # -- Device use cases -------------------------------------------------------------
@@ -90,6 +106,7 @@ def submitWorkOrderUseCase() -> SubmitWorkOrderUseCase:
     return SubmitWorkOrderUseCase(
         repository=workOrderRepository(),
         deviceRepository=deviceRepository(),
+        historyRepository=workOrderHistoryRepository(),
         **_kernelPorts(),
     )
 
@@ -106,6 +123,7 @@ def generatePmWorkOrdersUseCase() -> GeneratePmWorkOrdersUseCase:
     return GeneratePmWorkOrdersUseCase(
         repository=workOrderRepository(),
         deviceRepository=deviceRepository(),
+        historyRepository=workOrderHistoryRepository(),
         **_kernelPorts(),
     )
 
@@ -114,8 +132,25 @@ def assignWorkOrderUseCase() -> AssignWorkOrderUseCase:
     return AssignWorkOrderUseCase(**_workOrderDeps())
 
 
+def autoAssignWorkOrderUseCase() -> AutoAssignWorkOrderUseCase:
+    return AutoAssignWorkOrderUseCase(
+        repository=workOrderRepository(),
+        historyRepository=workOrderHistoryRepository(),
+        deviceRepository=deviceRepository(),
+        **_kernelPorts(),
+    )
+
+
 def changeWorkOrderStatusUseCase() -> ChangeWorkOrderStatusUseCase:
     return ChangeWorkOrderStatusUseCase(**_workOrderDeps())
+
+
+def approveWorkOrderUseCase() -> ApproveWorkOrderUseCase:
+    return ApproveWorkOrderUseCase(**_workOrderDeps())
+
+
+def rejectWorkOrderUseCase() -> RejectWorkOrderUseCase:
+    return RejectWorkOrderUseCase(**_workOrderDeps())
 
 
 def listWorkOrdersUseCase() -> ListWorkOrdersUseCase:
@@ -124,3 +159,13 @@ def listWorkOrdersUseCase() -> ListWorkOrdersUseCase:
 
 def getWorkOrderUseCase() -> GetWorkOrderUseCase:
     return GetWorkOrderUseCase(**_workOrderDeps())
+
+
+def listWorkOrderHistoryUseCase() -> ListWorkOrderHistoryUseCase:
+    return ListWorkOrderHistoryUseCase(**_workOrderDeps())
+
+
+def deviceMaintenanceReportUseCase() -> DeviceMaintenanceReportUseCase:
+    return DeviceMaintenanceReportUseCase(
+        deviceRepository=deviceRepository(), **_workOrderDeps()
+    )

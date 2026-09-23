@@ -207,9 +207,30 @@ class WorkOrderApiTests(MaintenanceApiBase):
         self.assertEqual(started.status_code, 200, started.content)
         self.assertEqual(started.json()["data"]["status"], "inProgress")
 
-        completed = self.client.post(
+        # Completion is gated by manager approval: the technician sends the work
+        # for approval (inProgress → pendingApproval), never straight to done.
+        pending = self.client.post(
             f"/api/v1/maintenance/work-orders/{order['id']}/status",
-            {"target": "completed", "resolutionNote": "یاتاقان تعویض شد"},
+            {"target": "pendingApproval", "resolutionNote": "یاتاقان تعویض شد"},
+            format="json",
+            **self.auth,
+        )
+        self.assertEqual(pending.status_code, 200, pending.content)
+        self.assertEqual(pending.json()["data"]["status"], "pendingApproval")
+
+        # Direct inProgress → completed is now blocked.
+        blocked = self.client.post(
+            f"/api/v1/maintenance/work-orders/{order['id']}/status",
+            {"target": "completed"},
+            format="json",
+            **self.auth,
+        )
+        self.assertEqual(blocked.status_code, 409, blocked.content)
+
+        # A manager approves the pending order → completed.
+        completed = self.client.post(
+            f"/api/v1/maintenance/work-orders/{order['id']}/approve",
+            {"note": "تأیید شد"},
             format="json",
             **self.auth,
         )
@@ -217,6 +238,24 @@ class WorkOrderApiTests(MaintenanceApiBase):
         self.assertEqual(completed.json()["data"]["status"], "completed")
         self.assertEqual(completed.json()["data"]["resolutionNote"], "یاتاقان تعویض شد")
         self.assertNotEqual(completed.json()["data"]["closedAt"], "")
+
+        # The timeline records every transition in order.
+        history = self.client.get(
+            f"/api/v1/maintenance/work-orders/{order['id']}/history",
+            **self.auth,
+        )
+        self.assertEqual(history.status_code, 200, history.content)
+        actions = [entry["action"] for entry in history.json()["data"]]
+        self.assertEqual(
+            actions,
+            [
+                "submitted",
+                "assigned",
+                "statusChanged",
+                "submittedForApproval",
+                "approved",
+            ],
+        )
 
     def testIllegalTransitionIsRejected(self) -> None:
         device = self.createDevice()
@@ -380,6 +419,105 @@ class PmAutoGenerationTests(MaintenanceApiBase):
         )
 
 
+class WorkOrderWorkflowTests(MaintenanceApiBase):
+    """Phase 22 — approval gate, SLA/overdue, auto-assign, rejection, timeline."""
+
+    def _toInProgress(self, orderId: str, technician: str = "رضا احمدی") -> None:
+        self.client.post(
+            f"/api/v1/maintenance/work-orders/{orderId}/assign",
+            {"assignedToName": technician},
+            format="json",
+            **self.auth,
+        )
+        self.client.post(
+            f"/api/v1/maintenance/work-orders/{orderId}/status",
+            {"target": "inProgress"},
+            format="json",
+            **self.auth,
+        )
+
+    def testRejectSendsPendingOrderBackToInProgress(self) -> None:
+        device = self.createDevice()
+        order = self.submitWorkOrder(device["id"])
+        self._toInProgress(order["id"])
+        self.client.post(
+            f"/api/v1/maintenance/work-orders/{order['id']}/status",
+            {"target": "pendingApproval", "resolutionNote": "انجام شد"},
+            format="json",
+            **self.auth,
+        )
+        rejected = self.client.post(
+            f"/api/v1/maintenance/work-orders/{order['id']}/reject",
+            {"note": "کار ناقص است"},
+            format="json",
+            **self.auth,
+        )
+        self.assertEqual(rejected.status_code, 200, rejected.content)
+        self.assertEqual(rejected.json()["data"]["status"], "inProgress")
+
+        history = self.client.get(
+            f"/api/v1/maintenance/work-orders/{order['id']}/history", **self.auth
+        )
+        actions = [entry["action"] for entry in history.json()["data"]]
+        self.assertIn("rejected", actions)
+
+    def testSlaFieldsAndOverdueFlagArePresent(self) -> None:
+        device = self.createDevice()
+        # A critical order has a 4-hour SLA window.
+        order = self.submitWorkOrder(device["id"], priority="critical")
+        self.assertTrue(order["slaDueAt"])  # deadline computed
+        self.assertFalse(order["overdue"])  # freshly created → not overdue
+
+    def testAutoAssignPicksLeastLoadedTechnician(self) -> None:
+        device = self.createDevice(department="electrical")
+        # Seed load: رضا already has two open orders in electrical.
+        for _ in range(2):
+            busy = self.submitWorkOrder(device["id"])
+            self.client.post(
+                f"/api/v1/maintenance/work-orders/{busy['id']}/assign",
+                {"assignedToName": "رضا احمدی"},
+                format="json",
+                **self.auth,
+            )
+        # مریم has just one.
+        light = self.submitWorkOrder(device["id"])
+        self.client.post(
+            f"/api/v1/maintenance/work-orders/{light['id']}/assign",
+            {"assignedToName": "مریم کریمی"},
+            format="json",
+            **self.auth,
+        )
+        # New order auto-assigns to the least-loaded technician (مریم).
+        target = self.submitWorkOrder(device["id"])
+        auto = self.client.post(
+            f"/api/v1/maintenance/work-orders/{target['id']}/assign",
+            {"auto": True},
+            format="json",
+            **self.auth,
+        )
+        self.assertEqual(auto.status_code, 200, auto.content)
+        self.assertEqual(auto.json()["data"]["assignedToName"], "مریم کریمی")
+
+    def testApproveRequiresPermissionGateAllowsAdmin(self) -> None:
+        device = self.createDevice()
+        order = self.submitWorkOrder(device["id"])
+        self._toInProgress(order["id"])
+        self.client.post(
+            f"/api/v1/maintenance/work-orders/{order['id']}/status",
+            {"target": "pendingApproval"},
+            format="json",
+            **self.auth,
+        )
+        approved = self.client.post(
+            f"/api/v1/maintenance/work-orders/{order['id']}/approve",
+            {"note": "ok"},
+            format="json",
+            **self.auth,
+        )
+        self.assertEqual(approved.status_code, 200, approved.content)
+        self.assertEqual(approved.json()["data"]["status"], "completed")
+
+
 class MaintenancePermissionCatalogTests(TestCase):
     def testLoginPayloadCarriesMaintenancePermissions(self) -> None:
         cache.clear()
@@ -394,6 +532,7 @@ class MaintenancePermissionCatalogTests(TestCase):
         self.assertIn("maintenance.workorder.create", permissions)
         self.assertIn("maintenance.workorder.route", permissions)
         self.assertIn("maintenance.workorder.assign", permissions)
+        self.assertIn("maintenance.workorder.approve", permissions)
 
     def testCmmsRolesAreSeeded(self) -> None:
         cache.clear()

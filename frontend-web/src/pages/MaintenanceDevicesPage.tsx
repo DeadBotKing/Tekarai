@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useApiClient } from "../core/api/apiContext";
 import { useLocalization } from "../core/localization/localizationContext";
 import { PERMISSIONS } from "../core/permissions/permissionContext";
@@ -46,6 +47,7 @@ const statusTone = (status: DeviceStatus): "success" | "info" | "danger" | "neut
 
 export function MaintenanceDevicesPage(): JSX.Element {
   const { t } = useLocalization();
+  const navigate = useNavigate();
   const api = useApiClient();
   const service = useMemo(() => createMaintenanceService(api), [api]);
   const [devices, setDevices] = useState<MaintenanceDevice[]>(
@@ -277,6 +279,16 @@ export function MaintenanceDevicesPage(): JSX.Element {
       accessor: () => "",
       render: (row) => (
         <div className="cmms-row-actions">
+          <PermissionGuard permission={PERMISSIONS.maintenanceWorkOrderView}>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon="file"
+              onClick={() => navigate(`/app/maintenance/devices/${row.id}/report`)}
+            >
+              {t("cmms.report.action")}
+            </Button>
+          </PermissionGuard>
           <PermissionGuard permission={PERMISSIONS.maintenanceDeviceManage}>
             <Button variant="ghost" size="sm" icon="edit" onClick={() => openEdit(row)}>
               {t("cmms.device.editTitle")}

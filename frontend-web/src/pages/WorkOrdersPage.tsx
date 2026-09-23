@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useApiClient } from "../core/api/apiContext";
 import { useLocalization } from "../core/localization/localizationContext";
+import type { TranslationKey } from "../core/localization/i18n";
 import { PERMISSIONS } from "../core/permissions/permissionContext";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { createMaintenanceService } from "../features/maintenance/maintenanceService";
@@ -10,6 +11,7 @@ import type {
   MaintenanceDevice,
   Priority,
   WorkOrder,
+  WorkOrderHistoryEntry,
   WorkOrderStatus,
   WorkOrderType,
 } from "../shared/types/domain";
@@ -35,6 +37,7 @@ const WO_STATUSES: WorkOrderStatus[] = [
   "assigned",
   "inProgress",
   "onHold",
+  "pendingApproval",
   "completed",
   "cancelled",
 ];
@@ -53,8 +56,11 @@ const NEXT_STATUSES: Record<WorkOrderStatus, WorkOrderStatus[]> = {
   submitted: ["routed", "assigned", "cancelled"],
   routed: ["assigned", "onHold", "cancelled"],
   assigned: ["inProgress", "onHold", "cancelled"],
-  inProgress: ["onHold", "completed", "cancelled"],
+  inProgress: ["onHold", "pendingApproval", "cancelled"],
   onHold: ["inProgress", "cancelled"],
+  // Completion/return from pendingApproval happens only via the approve/reject
+  // endpoints (which enforce the approve permission), never the public status route.
+  pendingApproval: ["cancelled"],
   completed: [],
   cancelled: [],
 };
@@ -68,19 +74,50 @@ const statusTone = (
       ? "info"
       : status === "onHold"
         ? "warning"
-        : status === "cancelled"
-          ? "danger"
-          : status === "assigned"
-            ? "purple"
-            : status === "routed"
-              ? "info"
-              : "neutral";
+        : status === "pendingApproval"
+          ? "purple"
+          : status === "cancelled"
+            ? "danger"
+            : status === "assigned"
+              ? "purple"
+              : status === "routed"
+                ? "info"
+                : "neutral";
 
 const priorityTone = (priority: Priority): "danger" | "warning" | "neutral" =>
   priority === "critical" ? "danger" : priority === "high" ? "warning" : "neutral";
 
+const WO_STATUS_SET = new Set<string>([
+  "submitted",
+  "routed",
+  "assigned",
+  "inProgress",
+  "onHold",
+  "pendingApproval",
+  "completed",
+  "cancelled",
+]);
+
+const statusLabel = (
+  t: (key: TranslationKey) => string,
+  status: string,
+): string =>
+  WO_STATUS_SET.has(status)
+    ? t(`cmms.woStatus.${status as WorkOrderStatus}`)
+    : status;
+
+const formatDateTime = (value: string, locale: string): string => {
+  if (!value) return "";
+  const time = new Date(value).getTime();
+  if (Number.isNaN(time)) return value;
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(time));
+};
+
 export function WorkOrdersPage(): JSX.Element {
-  const { t } = useLocalization();
+  const { t, locale } = useLocalization();
   const api = useApiClient();
   const service = useMemo(() => createMaintenanceService(api), [api]);
   const [orders, setOrders] = useState<WorkOrder[]>(runtimeConfig.demoMode ? demoWorkOrders : []);
@@ -122,6 +159,11 @@ export function WorkOrdersPage(): JSX.Element {
   const [formRequestedBy, setFormRequestedBy] = useState("");
   const [technicianName, setTechnicianName] = useState("");
   const [routeDepartment, setRouteDepartment] = useState<MaintenanceDepartment>("general");
+  const [approveOrder, setApproveOrder] = useState<WorkOrder | null>(null);
+  const [rejectOrder, setRejectOrder] = useState<WorkOrder | null>(null);
+  const [decisionNote, setDecisionNote] = useState("");
+  const [history, setHistory] = useState<WorkOrderHistoryEntry[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const deviceNames = useMemo(
     () => new Map(devices.map((device) => [device.id, `${device.code} — ${device.name}`])),
@@ -144,6 +186,25 @@ export function WorkOrdersPage(): JSX.Element {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (!activeOrder) {
+      setHistory([]);
+      return;
+    }
+    if (runtimeConfig.demoMode) {
+      setHistory([]);
+      return;
+    }
+    const controller = new AbortController();
+    setHistoryLoading(true);
+    service
+      .listWorkOrderHistory(activeOrder.id, controller.signal)
+      .then((entries) => setHistory(entries))
+      .catch(() => setHistory([]))
+      .finally(() => setHistoryLoading(false));
+    return () => controller.abort();
+  }, [activeOrder, service]);
 
   const filtered = useMemo(
     () =>
@@ -293,6 +354,68 @@ export function WorkOrdersPage(): JSX.Element {
     try {
       await service.changeWorkOrderStatus(order.id, target);
       setToast(t("cmms.wo.statusSuccess"));
+      await refresh();
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : t("cmms.wo.saveFailed"));
+    }
+  };
+
+  const autoAssign = async (order: WorkOrder): Promise<void> => {
+    if (runtimeConfig.demoMode) {
+      setToast(t("cmms.wo.autoAssignDemo"));
+      return;
+    }
+    try {
+      await service.autoAssignWorkOrder(order.id);
+      setToast(t("cmms.wo.autoAssignSuccess"));
+      await refresh();
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : t("cmms.wo.saveFailed"));
+    }
+  };
+
+  const approve = async (): Promise<void> => {
+    if (!approveOrder) return;
+    if (runtimeConfig.demoMode) {
+      setOrders((current) =>
+        current.map((item) =>
+          item.id === approveOrder.id ? { ...item, status: "completed" } : item,
+        ),
+      );
+      setApproveOrder(null);
+      setDecisionNote("");
+      setToast(t("cmms.wo.approveSuccess"));
+      return;
+    }
+    try {
+      await service.approveWorkOrder(approveOrder.id, decisionNote.trim());
+      setApproveOrder(null);
+      setDecisionNote("");
+      setToast(t("cmms.wo.approveSuccess"));
+      await refresh();
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : t("cmms.wo.saveFailed"));
+    }
+  };
+
+  const reject = async (): Promise<void> => {
+    if (!rejectOrder) return;
+    if (runtimeConfig.demoMode) {
+      setOrders((current) =>
+        current.map((item) =>
+          item.id === rejectOrder.id ? { ...item, status: "inProgress" } : item,
+        ),
+      );
+      setRejectOrder(null);
+      setDecisionNote("");
+      setToast(t("cmms.wo.rejectSuccess"));
+      return;
+    }
+    try {
+      await service.rejectWorkOrder(rejectOrder.id, decisionNote.trim());
+      setRejectOrder(null);
+      setDecisionNote("");
+      setToast(t("cmms.wo.rejectSuccess"));
       await refresh();
     } catch (error) {
       setToast(error instanceof Error ? error.message : t("cmms.wo.saveFailed"));
@@ -629,6 +752,19 @@ export function WorkOrdersPage(): JSX.Element {
                 <span>{t("cmms.wo.assignedTo")}</span>
                 <strong>{activeOrder.assignedToName || t("cmms.common.none")}</strong>
               </div>
+              {activeOrder.slaDueAt && (
+                <div>
+                  <span>{t("cmms.wo.slaDue")}</span>
+                  <strong>
+                    {formatDateTime(activeOrder.slaDueAt, locale)}{" "}
+                    {activeOrder.overdue && (
+                      <Badge tone="danger" dot>
+                        {t("cmms.wo.overdue")}
+                      </Badge>
+                    )}
+                  </strong>
+                </div>
+              )}
             </div>
             {activeOrder.description && (
               <p className="detail-panel__description">{activeOrder.description}</p>
@@ -657,16 +793,58 @@ export function WorkOrdersPage(): JSX.Element {
 
             <PermissionGuard permission={PERMISSIONS.maintenanceWorkOrderAssign}>
               {(activeOrder.status === "submitted" || activeOrder.status === "routed") && (
-                <Button
-                  variant="secondary"
-                  icon="user"
-                  onClick={() => {
-                    setAssignOrder(activeOrder);
-                    setActiveOrder(null);
-                  }}
-                >
-                  {t("cmms.wo.assign")}
-                </Button>
+                <div className="cmms-transition-row">
+                  <Button
+                    variant="secondary"
+                    icon="user"
+                    onClick={() => {
+                      setAssignOrder(activeOrder);
+                      setActiveOrder(null);
+                    }}
+                  >
+                    {t("cmms.wo.assign")}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    icon="sparkles"
+                    onClick={() => {
+                      const current = activeOrder;
+                      setActiveOrder(null);
+                      void autoAssign(current);
+                    }}
+                  >
+                    {t("cmms.wo.autoAssign")}
+                  </Button>
+                </div>
+              )}
+            </PermissionGuard>
+
+            <PermissionGuard permission={PERMISSIONS.maintenanceWorkOrderApprove}>
+              {activeOrder.status === "pendingApproval" && (
+                <div className="cmms-transition-row">
+                  <Button
+                    variant="primary"
+                    icon="check"
+                    onClick={() => {
+                      setDecisionNote("");
+                      setApproveOrder(activeOrder);
+                      setActiveOrder(null);
+                    }}
+                  >
+                    {t("cmms.wo.approve")}
+                  </Button>
+                  <Button
+                    variant="danger"
+                    icon="close"
+                    onClick={() => {
+                      setDecisionNote("");
+                      setRejectOrder(activeOrder);
+                      setActiveOrder(null);
+                    }}
+                  >
+                    {t("cmms.wo.reject")}
+                  </Button>
+                </div>
               )}
             </PermissionGuard>
 
@@ -690,8 +868,92 @@ export function WorkOrdersPage(): JSX.Element {
                 </div>
               )}
             </PermissionGuard>
+
+            <div className="cmms-timeline">
+              <h4 className="cmms-timeline__title">{t("cmms.wo.timeline")}</h4>
+              {historyLoading ? (
+                <p className="detail-panel__description">{t("cmms.common.loading")}</p>
+              ) : history.length === 0 ? (
+                <p className="detail-panel__description">{t("cmms.wo.timelineEmpty")}</p>
+              ) : (
+                <ol className="cmms-timeline__list">
+                  {history.map((entry) => (
+                    <li key={entry.id} className="cmms-timeline__item">
+                      <span className="cmms-timeline__dot" />
+                      <div className="cmms-timeline__body">
+                        <div className="cmms-timeline__head">
+                          <strong>{t(`cmms.historyAction.${entry.action}`)}</strong>
+                          <span className="muted-cell">{formatDateTime(entry.createdAt, locale)}</span>
+                        </div>
+                        <div className="cmms-timeline__meta">
+                          {entry.fromStatus && entry.toStatus && (
+                            <span>
+                              {statusLabel(t, entry.fromStatus)}
+                              {" → "}
+                              {statusLabel(t, entry.toStatus)}
+                            </span>
+                          )}
+                          {entry.actorName && <span>· {entry.actorName}</span>}
+                        </div>
+                        {entry.note && (
+                          <p className="cmms-timeline__note">{entry.note}</p>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
           </div>
         )}
+      </Modal>
+
+      <Modal
+        open={Boolean(approveOrder)}
+        title={t("cmms.wo.approveTitle")}
+        onClose={() => setApproveOrder(null)}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setApproveOrder(null)}>
+              {t("cmms.common.cancel")}
+            </Button>
+            <Button variant="primary" icon="check" onClick={approve}>
+              {t("cmms.wo.approve")}
+            </Button>
+          </>
+        }
+      >
+        <p className="detail-panel__description">{t("cmms.wo.approveHelp")}</p>
+        <TextArea
+          label={t("cmms.wo.decisionNote")}
+          value={decisionNote}
+          onChange={(event) => setDecisionNote(event.target.value)}
+          autoFocus
+        />
+      </Modal>
+
+      <Modal
+        open={Boolean(rejectOrder)}
+        title={t("cmms.wo.rejectTitle")}
+        onClose={() => setRejectOrder(null)}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setRejectOrder(null)}>
+              {t("cmms.common.cancel")}
+            </Button>
+            <Button variant="danger" icon="close" onClick={reject}>
+              {t("cmms.wo.reject")}
+            </Button>
+          </>
+        }
+      >
+        <p className="detail-panel__description">{t("cmms.wo.rejectHelp")}</p>
+        <TextArea
+          label={t("cmms.wo.decisionNote")}
+          value={decisionNote}
+          onChange={(event) => setDecisionNote(event.target.value)}
+          autoFocus
+        />
       </Modal>
 
       {toast && <Toast message={toast} onClose={() => setToast("")} />}

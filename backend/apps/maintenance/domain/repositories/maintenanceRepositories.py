@@ -8,10 +8,12 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
+from datetime import datetime  # noqa: TC003 — used in dataclass field annotations
 from typing import Protocol, runtime_checkable
 
 from apps.maintenance.domain.entities.device import Device
 from apps.maintenance.domain.entities.workOrder import WorkOrder
+from apps.maintenance.domain.entities.workOrderHistory import WorkOrderHistoryEntry
 
 
 @dataclass(frozen=True)
@@ -43,6 +45,9 @@ class WorkOrderFilters:
     ordering: str = "-createdAt"
     page: int = 1
     pageSize: int = 50
+    # Optional inclusive creation-date bounds (aware datetimes); Phase 23.
+    createdFrom: "datetime | None" = None
+    createdTo: "datetime | None" = None
 
 
 @dataclass(frozen=True)
@@ -82,4 +87,15 @@ class WorkOrderRepository(Protocol):
 
     def hasOpenPreventiveOrder(self, tenantId: uuid.UUID, deviceId: uuid.UUID) -> bool: ...
 
+    def countOpenByAssignee(self, tenantId: uuid.UUID, department: str) -> dict[str, int]: ...
+
     def list(self, filters: WorkOrderFilters) -> WorkOrderPage: ...
+
+
+@runtime_checkable
+class WorkOrderHistoryRepository(Protocol):
+    def append(self, entry: WorkOrderHistoryEntry) -> None: ...
+
+    def listForOrder(
+        self, tenantId: uuid.UUID, workOrderId: uuid.UUID
+    ) -> list[WorkOrderHistoryEntry]: ...

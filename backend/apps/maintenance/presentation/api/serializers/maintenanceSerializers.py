@@ -12,6 +12,7 @@ WORK_ORDER_STATUS_CHOICES = [
     "assigned",
     "inProgress",
     "onHold",
+    "pendingApproval",
     "completed",
     "cancelled",
 ]
@@ -73,9 +74,37 @@ class RouteWorkOrderSerializer(serializers.Serializer):
 
 
 class AssignWorkOrderSerializer(serializers.Serializer):
-    assignedToName = serializers.CharField(max_length=160)
+    # When ``auto`` is true the technician name is optional — the server picks
+    # the least-loaded technician of the order's department.
+    assignedToName = serializers.CharField(
+        max_length=160, required=False, allow_blank=True, default=""
+    )
+    auto = serializers.BooleanField(required=False, default=False)
 
 
 class ChangeWorkOrderStatusSerializer(serializers.Serializer):
     target = serializers.ChoiceField(choices=WORK_ORDER_STATUS_CHOICES)
     resolutionNote = serializers.CharField(required=False, allow_blank=True, default="")
+
+
+class ApproveWorkOrderSerializer(serializers.Serializer):
+    note = serializers.CharField(required=False, allow_blank=True, default="")
+
+
+class RejectWorkOrderSerializer(serializers.Serializer):
+    note = serializers.CharField(required=False, allow_blank=True, default="")
+
+
+class DeviceReportQuerySerializer(serializers.Serializer):
+    """Optional inclusive date bounds (YYYY-MM-DD) and export format.
+
+    The export selector is named ``export`` (not ``format``) on purpose:
+    DRF reserves the ``format`` query param for content negotiation and would
+    404 on an unknown value before the view ever runs.
+    """
+
+    fromDate = serializers.DateField(required=False, allow_null=True, default=None)
+    toDate = serializers.DateField(required=False, allow_null=True, default=None)
+    export = serializers.ChoiceField(
+        choices=("json", "csv", "xlsx"), required=False, default="json"
+    )

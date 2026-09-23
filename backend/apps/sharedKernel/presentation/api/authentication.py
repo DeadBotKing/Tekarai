@@ -49,6 +49,7 @@ def bindPrincipalIntoContext(principal: SessionPrincipal) -> None:
 
     context = currentContext()
     context.actorId = str(principal.userId)
+    context.actorName = str(getattr(principal, "displayName", "") or "")
     context.actorTenantId = str(principal.tenantId)
     if not context.tenantId:
         context.tenantId = str(principal.tenantId)

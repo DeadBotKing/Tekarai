@@ -78,8 +78,51 @@ export type WorkOrderStatus =
   | "assigned"
   | "inProgress"
   | "onHold"
+  | "pendingApproval"
   | "completed"
   | "cancelled";
+
+export type WorkOrderHistoryAction =
+  | "submitted"
+  | "routed"
+  | "assigned"
+  | "statusChanged"
+  | "submittedForApproval"
+  | "approved"
+  | "rejected";
+
+export interface DeviceReportSummary {
+  totalOrders: number;
+  openOrders: number;
+  completedOrders: number;
+  overdueOrders: number;
+  byStatus: Record<string, number>;
+  byType: Record<string, number>;
+  byPriority: Record<string, number>;
+  mttrHours: number | null;
+}
+
+export interface DeviceMaintenanceReport {
+  device: MaintenanceDevice;
+  workOrders: WorkOrder[];
+  summary: DeviceReportSummary | null;
+  generatedAt: string;
+  fromDate: string;
+  toDate: string;
+}
+
+export interface WorkOrderHistoryEntry {
+  id: string;
+  workOrderId: string;
+  action: WorkOrderHistoryAction;
+  fromStatus: string;
+  toStatus: string;
+  fromDepartment: string;
+  toDepartment: string;
+  actorName: string;
+  note: string;
+  createdAt: string;
+}
 export type MaintenanceDepartment =
   | "general"
   | "electrical"
@@ -115,4 +158,6 @@ export interface WorkOrder {
   resolutionNote: string;
   createdAt: string;
   closedAt: string;
+  slaDueAt?: string;
+  overdue?: boolean;
 }

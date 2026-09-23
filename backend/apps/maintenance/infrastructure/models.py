@@ -60,3 +60,31 @@ class WorkOrderModel(models.Model):
 
     def __str__(self) -> str:  # pragma: no cover — debug helper
         return f"{self.status}:{self.title}"
+
+
+class WorkOrderHistoryModel(models.Model):
+    """Append-only audit of every work-order transition (Phase 22 workflow).
+
+    One row per lifecycle event — submit, route, assign, status change,
+    approval decision. Powers the per-order timeline the frontend renders.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenantId = models.UUIDField(db_index=True)
+    workOrderId = models.UUIDField(db_index=True)
+    action = models.CharField(max_length=32)
+    fromStatus = models.CharField(max_length=20, blank=True, default="")
+    toStatus = models.CharField(max_length=20, blank=True, default="")
+    fromDepartment = models.CharField(max_length=24, blank=True, default="")
+    toDepartment = models.CharField(max_length=24, blank=True, default="")
+    actorName = models.CharField(max_length=160, blank=True, default="")
+    note = models.TextField(blank=True, default="")
+    createdAt = models.DateTimeField(db_index=True)
+
+    class Meta:
+        db_table = "WorkOrderHistory"
+        ordering = ["createdAt"]
+
+    def __str__(self) -> str:  # pragma: no cover — debug helper
+        return f"{self.action}:{self.workOrderId}"
+

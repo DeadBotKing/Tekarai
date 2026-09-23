@@ -24,6 +24,7 @@ class RequestContext:
     correlationId: str = ""
     requestId: str = ""
     actorId: str = ""
+    actorName: str = ""
     actorTenantId: str = ""
     tenantId: str = ""
     sessionId: str = ""

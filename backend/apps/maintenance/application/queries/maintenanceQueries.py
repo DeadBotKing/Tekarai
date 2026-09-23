@@ -43,3 +43,21 @@ class ListWorkOrdersQuery(Query):
 @dataclass(frozen=True)
 class GetWorkOrderQuery(Query):
     workOrderId: str
+
+
+@dataclass(frozen=True)
+class ListWorkOrderHistoryQuery(Query):
+    workOrderId: str
+
+
+@dataclass(frozen=True)
+class DeviceMaintenanceReportQuery(Query):
+    """Full maintenance history + stats for one device (Phase 23).
+
+    ``fromDate``/``toDate`` are optional ISO dates (YYYY-MM-DD) that bound the
+    work orders by creation date; empty means unbounded on that side.
+    """
+
+    deviceId: str
+    fromDate: str = ""
+    toDate: str = ""

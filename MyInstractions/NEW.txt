@@ -1,0 +1,2 @@
+cd C:\Users\Mitra\Desktop\Tekarai
+powershell.exe -ExecutionPolicy Bypass -File .\run_dev.ps1 -UseSqlite

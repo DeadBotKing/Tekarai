@@ -75,6 +75,7 @@ ACTIONS: list[tuple[str, str]] = [
     ("maintenance.workorder.update", "Update work orders and transition their status"),
     ("maintenance.workorder.route", "Route work orders to a maintenance department"),
     ("maintenance.workorder.assign", "Assign work orders to technicians"),
+    ("maintenance.workorder.approve", "Approve or reject completed work orders"),
     ("maintenance.workorder.list", "List maintenance work orders"),
     ("maintenance.workorder.view", "View work order details"),
 ]
@@ -114,6 +115,7 @@ _MAINTENANCE_MANAGER_ACTIONS = [
     "maintenance.workorder.update",
     "maintenance.workorder.route",
     "maintenance.workorder.assign",
+    "maintenance.workorder.approve",
     "maintenance.workorder.list",
     "maintenance.workorder.view",
 ]

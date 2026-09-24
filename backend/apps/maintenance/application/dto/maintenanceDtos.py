@@ -38,6 +38,38 @@ class DeviceListDto:
 
 
 @dataclass(frozen=True)
+class PmReminderItemDto:
+    """One device flagged by the PM reminder scan."""
+
+    deviceId: str
+    code: str
+    name: str
+    department: str
+    dueDate: str
+    daysLeft: int  # negative when overdue
+    kind: str  # "dueSoon" | "overdue"
+
+
+@dataclass(frozen=True)
+class PmReminderRunDto:
+    """Outcome of one PM reminder scan (SendPmRemindersUseCase)."""
+
+    asOf: str
+    leadDays: int
+    scannedCount: int = 0
+    dueSoonCount: int = 0
+    overdueCount: int = 0
+    items: list[PmReminderItemDto] = field(default_factory=list)
+
+    def asMeta(self) -> dict[str, object]:
+        return {
+            "scannedCount": self.scannedCount,
+            "dueSoonCount": self.dueSoonCount,
+            "overdueCount": self.overdueCount,
+        }
+
+
+@dataclass(frozen=True)
 class WorkOrderDto:
     id: str
     tenantId: str

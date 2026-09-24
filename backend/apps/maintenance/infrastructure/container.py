@@ -10,6 +10,7 @@ from apps.maintenance.application.useCases.deviceUseCases import (
     ListDuePmUseCase,
     RecordDevicePmUseCase,
     RegisterDeviceUseCase,
+    SendPmRemindersUseCase,
     UpdateDeviceUseCase,
 )
 from apps.maintenance.application.useCases.workOrderUseCases import (
@@ -111,6 +112,10 @@ def listDuePmUseCase() -> ListDuePmUseCase:
 
 def getDeviceUseCase() -> GetDeviceUseCase:
     return GetDeviceUseCase(**_deviceDeps())
+
+
+def sendPmRemindersUseCase() -> SendPmRemindersUseCase:
+    return SendPmRemindersUseCase(**_deviceDeps())
 
 
 # -- Work order use cases ---------------------------------------------------------

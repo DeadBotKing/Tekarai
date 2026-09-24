@@ -90,24 +90,28 @@ export function JalaliDatePicker({
 
   const display = value ? formatJalali(value, { style: "long" }) : "";
 
+  // NOTE: month/year are computed together OUTSIDE the state updaters.
+  // (Calling setViewYear inside setViewMonth's functional updater is impure;
+  // React StrictMode double-invokes updaters, which skipped a year on every
+  // Esfand↔Farvardin crossing — only every other year was reachable.)
   const goPrevMonth = (): void => {
-    setViewMonth((m) => {
-      if (m === 1) {
-        setViewYear((y) => y - 1);
-        return 12;
-      }
-      return m - 1;
-    });
+    if (viewMonth === 1) {
+      setViewYear(viewYear - 1);
+      setViewMonth(12);
+    } else {
+      setViewMonth(viewMonth - 1);
+    }
   };
   const goNextMonth = (): void => {
-    setViewMonth((m) => {
-      if (m === 12) {
-        setViewYear((y) => y + 1);
-        return 1;
-      }
-      return m + 1;
-    });
+    if (viewMonth === 12) {
+      setViewYear(viewYear + 1);
+      setViewMonth(1);
+    } else {
+      setViewMonth(viewMonth + 1);
+    }
   };
+  const goPrevYear = (): void => setViewYear(viewYear - 1);
+  const goNextYear = (): void => setViewYear(viewYear + 1);
 
   const pick = (day: number): void => {
     onChange(jalaliPartsToIso(viewYear, viewMonth, day));
@@ -132,7 +136,7 @@ export function JalaliDatePicker({
     todayParts[0] === viewYear && todayParts[1] === viewMonth && todayParts[2] === day;
 
   return (
-    <div className={`field ${error ? "has-error" : ""} ${className}`} ref={rootRef}>
+    <div className={`field jdp ${error ? "has-error" : ""} ${className}`} ref={rootRef}>
       {label && (
         <span className="field__label" id={`${inputId}-label`}>
           {label}
@@ -173,8 +177,19 @@ export function JalaliDatePicker({
           <div className="jdp__header">
             <button
               type="button"
+              className="jdp__nav jdp__nav--year"
+              aria-label="سال بعد"
+              title="سال بعد"
+              onClick={goNextYear}
+            >
+              <Icon name="chevronRight" size={13} />
+              <Icon name="chevronRight" size={13} />
+            </button>
+            <button
+              type="button"
               className="jdp__nav"
               aria-label="ماه بعد"
+              title="ماه بعد"
               onClick={goNextMonth}
             >
               <Icon name="chevronRight" size={16} />
@@ -186,9 +201,20 @@ export function JalaliDatePicker({
               type="button"
               className="jdp__nav"
               aria-label="ماه قبل"
+              title="ماه قبل"
               onClick={goPrevMonth}
             >
               <Icon name="chevronLeft" size={16} />
+            </button>
+            <button
+              type="button"
+              className="jdp__nav jdp__nav--year"
+              aria-label="سال قبل"
+              title="سال قبل"
+              onClick={goPrevYear}
+            >
+              <Icon name="chevronLeft" size={13} />
+              <Icon name="chevronLeft" size={13} />
             </button>
           </div>
 

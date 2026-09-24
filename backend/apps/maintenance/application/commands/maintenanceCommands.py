@@ -39,6 +39,19 @@ class RecordDevicePmCommand(Command):
     performedOn: str = ""
 
 
+@dataclass(frozen=True)
+class SendPmRemindersCommand(Command):
+    """Scan the PM schedule and emit due-soon / overdue reminder events.
+
+    ``leadDays`` is the look-ahead window: devices whose next PM date falls
+    within the next ``leadDays`` days raise ``devicePmDueSoon``; devices whose
+    date has already passed raise ``devicePmOverdue``.
+    """
+
+    tenantId: str = ""
+    leadDays: int = 3
+
+
 # -- Work order commands ----------------------------------------------------------
 @dataclass(frozen=True)
 class SubmitWorkOrderCommand(Command):

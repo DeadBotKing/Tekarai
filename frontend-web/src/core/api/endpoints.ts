@@ -23,6 +23,7 @@ export const apiEndpoints = {
     workOrderReject: (id: string) => `maintenance/work-orders/${id}/reject`,
     workOrderHistory: (id: string) => `maintenance/work-orders/${id}/history`,
     deviceReport: (id: string) => `maintenance/devices/${id}/report`,
+    deviceTimeline: (id: string) => `maintenance/devices/${id}/timeline`,
   },
   audit: "platform/audit-events",
   notifications: { list: "notifications", broadcasts: "notifications/broadcasts", unreadCount: "notifications/broadcasts/unread-count", read: (id: string) => `notifications/${id}/read`, broadcastRead: (id: string) => `notifications/broadcasts/${id}/read`, readBulk: "notifications/read-bulk", search: "notifications/search" },

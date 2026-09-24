@@ -61,3 +61,14 @@ class DeviceMaintenanceReportQuery(Query):
     deviceId: str
     fromDate: str = ""
     toDate: str = ""
+
+
+@dataclass(frozen=True)
+class GetDeviceTimelineQuery(Query):
+    """The unified, chronological timeline for a single device.
+
+    Merges the device's own history (registration, updates, status changes, PM
+    completions) with milestones of the work orders raised against it.
+    """
+
+    deviceId: str

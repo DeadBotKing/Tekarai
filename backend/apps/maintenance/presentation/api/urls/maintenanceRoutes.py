@@ -10,6 +10,7 @@ from apps.maintenance.presentation.api.views.deviceViews import (
     DeviceListView,
     DevicePmView,
     DeviceStatusView,
+    DeviceTimelineView,
     DuePmListView,
 )
 from apps.maintenance.presentation.api.views.workOrderViews import (
@@ -36,6 +37,11 @@ urlpatterns = [
         "devices/<uuid:deviceId>/report",
         DeviceMaintenanceReportView.as_view(),
         name="deviceMaintenanceReport",
+    ),
+    path(
+        "devices/<uuid:deviceId>/timeline",
+        DeviceTimelineView.as_view(),
+        name="deviceTimeline",
     ),
     # Work orders — static "generate-pm" path precedes the uuid capture.
     path("work-orders", WorkOrderListView.as_view(), name="workOrderList"),

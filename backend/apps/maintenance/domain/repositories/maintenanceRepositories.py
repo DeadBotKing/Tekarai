@@ -12,6 +12,7 @@ from datetime import datetime  # noqa: TC003 — used in dataclass field annotat
 from typing import Protocol, runtime_checkable
 
 from apps.maintenance.domain.entities.device import Device
+from apps.maintenance.domain.entities.deviceHistory import DeviceHistoryEntry
 from apps.maintenance.domain.entities.workOrder import WorkOrder
 from apps.maintenance.domain.entities.workOrderHistory import WorkOrderHistoryEntry
 
@@ -99,3 +100,12 @@ class WorkOrderHistoryRepository(Protocol):
     def listForOrder(
         self, tenantId: uuid.UUID, workOrderId: uuid.UUID
     ) -> list[WorkOrderHistoryEntry]: ...
+
+
+@runtime_checkable
+class DeviceHistoryRepository(Protocol):
+    def append(self, entry: DeviceHistoryEntry) -> None: ...
+
+    def listForDevice(
+        self, tenantId: uuid.UUID, deviceId: uuid.UUID
+    ) -> list[DeviceHistoryEntry]: ...

@@ -279,6 +279,16 @@ export function MaintenanceDevicesPage(): JSX.Element {
       accessor: () => "",
       render: (row) => (
         <div className="cmms-row-actions">
+          <PermissionGuard permission={PERMISSIONS.maintenanceDeviceView}>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon="clock"
+              onClick={() => navigate(`/app/maintenance/devices/${row.id}/timeline`)}
+            >
+              {t("cmms.timeline.action")}
+            </Button>
+          </PermissionGuard>
           <PermissionGuard permission={PERMISSIONS.maintenanceWorkOrderView}>
             <Button
               variant="ghost"

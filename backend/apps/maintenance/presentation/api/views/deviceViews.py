@@ -17,6 +17,7 @@ from apps.maintenance.application.commands.maintenanceCommands import (
 )
 from apps.maintenance.application.queries.maintenanceQueries import (
     GetDeviceQuery,
+    GetDeviceTimelineQuery,
     ListDevicesQuery,
     ListDuePmQuery,
 )
@@ -129,6 +130,27 @@ class DevicePmView(IdempotencyMixin, APIView):
             )
         )
         return Response(successEnvelope(asDict(dto)))
+
+
+class DeviceTimelineView(APIView):
+    """The unified, chronological timeline for a single device."""
+
+    authentication_classes = [BearerSessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request: Request, deviceId: str) -> Response:
+        dto = container.getDeviceTimelineUseCase().execute(
+            GetDeviceTimelineQuery(deviceId=str(deviceId))
+        )
+        return Response(
+            successEnvelope(
+                {
+                    "device": asDict(dto.device),
+                    "items": [asDict(item) for item in dto.items],
+                },
+                meta=dto.asMeta(),
+            )
+        )
 
 
 class DuePmListView(APIView):

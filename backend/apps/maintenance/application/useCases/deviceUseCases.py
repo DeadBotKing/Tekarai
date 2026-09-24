@@ -13,10 +13,14 @@ from apps.maintenance.application.commands.maintenanceCommands import (
 from apps.maintenance.application.dto.maintenanceDtos import (
     DeviceDto,
     DeviceListDto,
+    DeviceTimelineDto,
+    DeviceTimelineItemDto,
     deviceDtoFromDomain,
+    deviceHistoryTimelineItem,
 )
 from apps.maintenance.application.queries.maintenanceQueries import (
     GetDeviceQuery,
+    GetDeviceTimelineQuery,
     ListDevicesQuery,
     ListDuePmQuery,
 )
@@ -24,10 +28,20 @@ from apps.maintenance.application.services.tenantResolver import (
     parseDateOrToday,
     resolveTenantId,
 )
+from apps.maintenance.application.services.deviceHistory import (
+    DEVICE_HISTORY_PM_COMPLETED,
+    DEVICE_HISTORY_REGISTERED,
+    DEVICE_HISTORY_STATUS_CHANGED,
+    DEVICE_HISTORY_UPDATED,
+    recordDeviceHistory,
+)
 from apps.maintenance.domain.entities.device import Device
 from apps.maintenance.domain.repositories.maintenanceRepositories import (
     DeviceFilters,
+    DeviceHistoryRepository,
     DeviceRepository,
+    WorkOrderFilters,
+    WorkOrderRepository,
 )
 from apps.maintenance.domain.valueObjects.maintenanceState import (
     DEPARTMENT_GENERAL,
@@ -51,6 +65,7 @@ class DeviceUseCaseBase(UseCase):
     def __init__(
         self,
         repository: DeviceRepository,
+        historyRepository: DeviceHistoryRepository,
         unitOfWork: UnitOfWork,
         auditRecorder: AuditRecorder,
         eventDispatcher: EventDispatcher,
@@ -59,6 +74,7 @@ class DeviceUseCaseBase(UseCase):
     ) -> None:
         super().__init__(unitOfWork, auditRecorder, eventDispatcher, permissionGate, clock)
         self.repository = repository
+        self.historyRepository = historyRepository
 
 
 class RegisterDeviceUseCase(DeviceUseCaseBase):
@@ -82,6 +98,13 @@ class RegisterDeviceUseCase(DeviceUseCaseBase):
             now=self.clock.nowUtc(),
         )
         self.repository.create(device)
+        recordDeviceHistory(
+            self.historyRepository,
+            device,
+            DEVICE_HISTORY_REGISTERED,
+            self.clock.nowUtc(),
+            toStatus=str(device.status),
+        )
         self.collectEventsFrom(device)
         self.audit(
             AUDIT_CREATE,
@@ -101,14 +124,21 @@ class UpdateDeviceUseCase(DeviceUseCaseBase):
         device = self.repository.getById(tenantId, uuid.UUID(command.deviceId))
         if device is None:
             raise EntityNotFoundError("Device not found.")
+        now = self.clock.nowUtc()
         device.updateDetails(
             name=command.name,
             location=command.location,
             department=MaintenanceDepartment(command.department or DEPARTMENT_GENERAL),
             pmIntervalDays=int(command.pmIntervalDays),
-            now=self.clock.nowUtc(),
+            now=now,
         )
         self.repository.update(device)
+        recordDeviceHistory(
+            self.historyRepository,
+            device,
+            DEVICE_HISTORY_UPDATED,
+            now,
+        )
         self.collectEventsFrom(device)
         self.audit(
             AUDIT_UPDATE,
@@ -117,7 +147,7 @@ class UpdateDeviceUseCase(DeviceUseCaseBase):
             tenantId=tenantId,
             after=device.snapshot(),
         )
-        return deviceDtoFromDomain(device, self.clock.nowUtc().date())
+        return deviceDtoFromDomain(device, now.date())
 
 
 class ChangeDeviceStatusUseCase(DeviceUseCaseBase):
@@ -131,8 +161,18 @@ class ChangeDeviceStatusUseCase(DeviceUseCaseBase):
         device = self.repository.getById(tenantId, uuid.UUID(command.deviceId))
         if device is None:
             raise EntityNotFoundError("Device not found.")
-        device.changeStatus(command.target, self.clock.nowUtc())
+        now = self.clock.nowUtc()
+        previousStatus = str(device.status)
+        device.changeStatus(command.target, now)
         self.repository.update(device)
+        recordDeviceHistory(
+            self.historyRepository,
+            device,
+            DEVICE_HISTORY_STATUS_CHANGED,
+            now,
+            fromStatus=previousStatus,
+            toStatus=str(device.status),
+        )
         self.collectEventsFrom(device)
         self.audit(
             AUDIT_UPDATE,
@@ -156,6 +196,13 @@ class RecordDevicePmUseCase(DeviceUseCaseBase):
         performedOn = parseDateOrToday(command.performedOn, now.date())
         device.recordPreventiveMaintenance(performedOn, now)
         self.repository.update(device)
+        recordDeviceHistory(
+            self.historyRepository,
+            device,
+            DEVICE_HISTORY_PM_COMPLETED,
+            now,
+            note=performedOn.isoformat(),
+        )
         self.collectEventsFrom(device)
         self.audit(
             AUDIT_UPDATE,
@@ -213,3 +260,97 @@ class GetDeviceUseCase(DeviceUseCaseBase):
         if device is None:
             raise EntityNotFoundError("Device not found.")
         return deviceDtoFromDomain(device, self.clock.nowUtc().date())
+
+
+class GetDeviceTimelineUseCase(DeviceUseCaseBase):
+    """Merge device history with related work-order milestones into one timeline.
+
+    Device-history rows (registration, updates, status changes, PM completions)
+    are combined with the work orders raised against the device — each order
+    contributing a "raised" milestone and, when closed, a "closed" milestone.
+    The merged list is sorted chronologically (newest first) so the frontend
+    renders a single, unified device timeline.
+    """
+
+    requiredAction = "maintenance.device.view"
+
+    def __init__(
+        self,
+        *args: object,
+        workOrderRepository: WorkOrderRepository,
+        **kwargs: object,
+    ) -> None:
+        super().__init__(*args, **kwargs)  # type: ignore[arg-type]
+        self.workOrderRepository = workOrderRepository
+
+    def perform(self, query: GetDeviceTimelineQuery) -> DeviceTimelineDto:
+        tenantId = resolveTenantId("")
+        deviceId = uuid.UUID(query.deviceId)
+        device = self.repository.getById(tenantId, deviceId)
+        if device is None:
+            raise EntityNotFoundError("Device not found.")
+
+        now = self.clock.nowUtc()
+        items: list[DeviceTimelineItemDto] = [
+            deviceHistoryTimelineItem(entry)
+            for entry in self.historyRepository.listForDevice(tenantId, deviceId)
+        ]
+
+        for order in self._collectWorkOrders(tenantId, str(deviceId)):
+            items.append(
+                DeviceTimelineItemDto(
+                    id=f"wo-raised-{order.id}",
+                    source="workOrder",
+                    action="workOrderRaised",
+                    at=order.createdAt.isoformat(),
+                    toStatus=str(order.status),
+                    note=order.title,
+                    actorName=order.requestedByName,
+                    workOrderId=str(order.id),
+                    workOrderTitle=order.title,
+                    orderType=str(order.orderType),
+                    priority=str(order.priority),
+                )
+            )
+            if order.closedAt is not None:
+                items.append(
+                    DeviceTimelineItemDto(
+                        id=f"wo-closed-{order.id}",
+                        source="workOrder",
+                        action="workOrderClosed",
+                        at=order.closedAt.isoformat(),
+                        toStatus=str(order.status),
+                        note=order.resolutionNote,
+                        actorName=order.assignedToName,
+                        workOrderId=str(order.id),
+                        workOrderTitle=order.title,
+                        orderType=str(order.orderType),
+                        priority=str(order.priority),
+                    )
+                )
+
+        items.sort(key=lambda item: item.at, reverse=True)
+        return DeviceTimelineDto(
+            device=deviceDtoFromDomain(device, now.date()),
+            items=items,
+            generatedAt=now.isoformat(),
+        )
+
+    def _collectWorkOrders(self, tenantId, deviceId: str):
+        collected = []
+        page = 1
+        while True:
+            result = self.workOrderRepository.list(
+                WorkOrderFilters(
+                    tenantId=tenantId,
+                    deviceId=deviceId,
+                    ordering="-createdAt",
+                    page=page,
+                    pageSize=100,
+                )
+            )
+            collected.extend(result.items)
+            if len(collected) >= result.totalCount or not result.items:
+                break
+            page += 1
+        return collected

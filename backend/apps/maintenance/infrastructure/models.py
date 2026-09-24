@@ -88,3 +88,28 @@ class WorkOrderHistoryModel(models.Model):
     def __str__(self) -> str:  # pragma: no cover — debug helper
         return f"{self.action}:{self.workOrderId}"
 
+
+class DeviceHistoryModel(models.Model):
+    """Append-only history of every device lifecycle event (device timeline).
+
+    One row per event — registration, detail update, status change, PM
+    completion. Combined with the device's related work orders, this powers the
+    per-device timeline the frontend renders on the device detail page.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenantId = models.UUIDField(db_index=True)
+    deviceId = models.UUIDField(db_index=True)
+    action = models.CharField(max_length=32)
+    fromStatus = models.CharField(max_length=20, blank=True, default="")
+    toStatus = models.CharField(max_length=20, blank=True, default="")
+    note = models.TextField(blank=True, default="")
+    actorName = models.CharField(max_length=160, blank=True, default="")
+    createdAt = models.DateTimeField(db_index=True)
+
+    class Meta:
+        db_table = "DeviceHistory"
+        ordering = ["createdAt"]
+
+    def __str__(self) -> str:  # pragma: no cover — debug helper
+        return f"{self.action}:{self.deviceId}"

@@ -123,6 +123,37 @@ export interface WorkOrderHistoryEntry {
   note: string;
   createdAt: string;
 }
+export type DeviceTimelineSource = "device" | "workOrder";
+
+export type DeviceTimelineAction =
+  | "registered"
+  | "updated"
+  | "statusChanged"
+  | "pmCompleted"
+  | "workOrderRaised"
+  | "workOrderClosed";
+
+export interface DeviceTimelineItem {
+  id: string;
+  source: DeviceTimelineSource;
+  action: DeviceTimelineAction;
+  at: string;
+  fromStatus: string;
+  toStatus: string;
+  note: string;
+  actorName: string;
+  workOrderId: string;
+  workOrderTitle: string;
+  orderType: string;
+  priority: string;
+}
+
+export interface DeviceTimeline {
+  device: MaintenanceDevice;
+  items: DeviceTimelineItem[];
+  generatedAt: string;
+}
+
 export type MaintenanceDepartment =
   | "general"
   | "electrical"

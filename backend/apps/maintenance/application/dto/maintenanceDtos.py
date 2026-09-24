@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 
 from apps.maintenance.domain.entities.device import Device
+from apps.maintenance.domain.entities.deviceHistory import DeviceHistoryEntry
 from apps.maintenance.domain.entities.workOrder import WorkOrder
 from apps.maintenance.domain.entities.workOrderHistory import WorkOrderHistoryEntry
 
@@ -182,4 +183,51 @@ def workOrderDtoFromDomain(order: WorkOrder, now: datetime | None = None) -> Wor
         closedAt=order.closedAt.isoformat() if order.closedAt else "",
         slaDueAt=dueAt.isoformat() if dueAt else "",
         overdue=order.isOverdue(referenceNow),
+    )
+
+
+@dataclass(frozen=True)
+class DeviceTimelineItemDto:
+    """One entry on a device's unified timeline.
+
+    ``source`` is ``"device"`` for device-history entries (registration, detail
+    update, status change, PM completion) and ``"workOrder"`` for related
+    work-order milestones (raised, closed). Persian labels for ``action`` are
+    resolved in the frontend localization layer, never here.
+    """
+
+    id: str
+    source: str
+    action: str
+    at: str
+    fromStatus: str = ""
+    toStatus: str = ""
+    note: str = ""
+    actorName: str = ""
+    workOrderId: str = ""
+    workOrderTitle: str = ""
+    orderType: str = ""
+    priority: str = ""
+
+
+@dataclass(frozen=True)
+class DeviceTimelineDto:
+    device: DeviceDto
+    items: list[DeviceTimelineItemDto] = field(default_factory=list)
+    generatedAt: str = ""
+
+    def asMeta(self) -> dict[str, object]:
+        return {"totalCount": len(self.items), "generatedAt": self.generatedAt}
+
+
+def deviceHistoryTimelineItem(entry: DeviceHistoryEntry) -> DeviceTimelineItemDto:
+    return DeviceTimelineItemDto(
+        id=str(entry.id),
+        source="device",
+        action=entry.action,
+        at=entry.createdAt.isoformat(),
+        fromStatus=entry.fromStatus,
+        toStatus=entry.toStatus,
+        note=entry.note,
+        actorName=entry.actorName,
     )

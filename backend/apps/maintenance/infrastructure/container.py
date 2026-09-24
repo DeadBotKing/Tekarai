@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from apps.maintenance.application.useCases.deviceUseCases import (
     ChangeDeviceStatusUseCase,
+    GetDeviceTimelineUseCase,
     GetDeviceUseCase,
     ListDevicesUseCase,
     ListDuePmUseCase,
@@ -25,6 +26,9 @@ from apps.maintenance.application.useCases.workOrderUseCases import (
     RouteWorkOrderUseCase,
     SubmitWorkOrderUseCase,
     UpdateWorkOrderUseCase,
+)
+from apps.maintenance.infrastructure.repositories.deviceHistoryRepositoryImpl import (
+    DeviceHistoryRepositoryDjango,
 )
 from apps.maintenance.infrastructure.repositories.deviceRepositoryImpl import (
     DeviceRepositoryDjango,
@@ -50,6 +54,10 @@ def workOrderHistoryRepository() -> WorkOrderHistoryRepositoryDjango:
     return WorkOrderHistoryRepositoryDjango()
 
 
+def deviceHistoryRepository() -> DeviceHistoryRepositoryDjango:
+    return DeviceHistoryRepositoryDjango()
+
+
 def _kernelPorts() -> dict:
     return {
         "unitOfWork": sharedKernelProvider("unitOfWork")(),
@@ -61,7 +69,11 @@ def _kernelPorts() -> dict:
 
 
 def _deviceDeps() -> dict:
-    return {"repository": deviceRepository(), **_kernelPorts()}
+    return {
+        "repository": deviceRepository(),
+        "historyRepository": deviceHistoryRepository(),
+        **_kernelPorts(),
+    }
 
 
 def _workOrderDeps() -> dict:
@@ -168,4 +180,10 @@ def listWorkOrderHistoryUseCase() -> ListWorkOrderHistoryUseCase:
 def deviceMaintenanceReportUseCase() -> DeviceMaintenanceReportUseCase:
     return DeviceMaintenanceReportUseCase(
         deviceRepository=deviceRepository(), **_workOrderDeps()
+    )
+
+
+def getDeviceTimelineUseCase() -> GetDeviceTimelineUseCase:
+    return GetDeviceTimelineUseCase(
+        workOrderRepository=workOrderRepository(), **_deviceDeps()
     )

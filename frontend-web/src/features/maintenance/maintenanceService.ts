@@ -4,6 +4,10 @@ import type {
   DeviceMaintenanceReport,
   DeviceReportSummary,
   DeviceStatus,
+  DeviceTimeline,
+  DeviceTimelineAction,
+  DeviceTimelineItem,
+  DeviceTimelineSource,
   MaintenanceDepartment,
   MaintenanceDevice,
   Priority,
@@ -81,6 +85,26 @@ interface DeviceMaintenanceReportDto {
   toDate: string;
 }
 
+interface DeviceTimelineItemDto {
+  id: string;
+  source: string;
+  action: string;
+  at: string;
+  fromStatus: string;
+  toStatus: string;
+  note: string;
+  actorName: string;
+  workOrderId: string;
+  workOrderTitle: string;
+  orderType: string;
+  priority: string;
+}
+
+interface DeviceTimelineDto {
+  device: DeviceDto;
+  items: DeviceTimelineItemDto[];
+}
+
 const toReportSummary = (
   dto: DeviceReportSummaryDto | null,
 ): DeviceReportSummary | null =>
@@ -140,6 +164,21 @@ const toHistoryEntry = (dto: WorkOrderHistoryDto): WorkOrderHistoryEntry => ({
   actorName: dto.actorName ?? "",
   note: dto.note ?? "",
   createdAt: dto.createdAt ?? "",
+});
+
+const toTimelineItem = (dto: DeviceTimelineItemDto): DeviceTimelineItem => ({
+  id: dto.id,
+  source: (dto.source as DeviceTimelineSource) ?? "device",
+  action: (dto.action as DeviceTimelineAction) ?? "statusChanged",
+  at: dto.at ?? "",
+  fromStatus: dto.fromStatus ?? "",
+  toStatus: dto.toStatus ?? "",
+  note: dto.note ?? "",
+  actorName: dto.actorName ?? "",
+  workOrderId: dto.workOrderId ?? "",
+  workOrderTitle: dto.workOrderTitle ?? "",
+  orderType: dto.orderType ?? "",
+  priority: dto.priority ?? "",
 });
 
 export interface RegisterDeviceInput {
@@ -237,6 +276,10 @@ export interface MaintenanceService {
     range?: { fromDate?: string; toDate?: string },
     signal?: AbortSignal,
   ) => Promise<Blob>;
+  getDeviceTimeline: (
+    deviceId: string,
+    signal?: AbortSignal,
+  ) => Promise<DeviceTimeline>;
 }
 
 export const createMaintenanceService = (api: ApiClient): MaintenanceService => ({
@@ -409,4 +452,15 @@ export const createMaintenanceService = (api: ApiClient): MaintenanceService => 
       },
       signal,
     }),
+  getDeviceTimeline: async (deviceId, signal) => {
+    const dto = await api.get<DeviceTimelineDto>(
+      apiEndpoints.maintenance.deviceTimeline(deviceId),
+      { signal },
+    );
+    return {
+      device: toDevice(dto.device),
+      items: (dto.items ?? []).map(toTimelineItem),
+      generatedAt: "",
+    };
+  },
 });

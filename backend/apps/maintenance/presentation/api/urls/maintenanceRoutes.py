@@ -8,6 +8,7 @@ from apps.maintenance.presentation.api.views import openapiRegistration  # noqa:
 from apps.maintenance.presentation.api.views.deviceViews import (
     DeviceDetailView,
     DeviceListView,
+    DevicePmRemindersView,
     DevicePmView,
     DeviceStatusView,
     DeviceTimelineView,
@@ -30,6 +31,11 @@ urlpatterns = [
     # Devices — order matters: the static "due-pm" path precedes the uuid capture.
     path("devices", DeviceListView.as_view(), name="deviceList"),
     path("devices/due-pm", DuePmListView.as_view(), name="devicesDuePm"),
+    path(
+        "devices/pm-reminders",
+        DevicePmRemindersView.as_view(),
+        name="devicesPmReminders",
+    ),
     path("devices/<uuid:deviceId>", DeviceDetailView.as_view(), name="deviceDetail"),
     path("devices/<uuid:deviceId>/status", DeviceStatusView.as_view(), name="deviceStatus"),
     path("devices/<uuid:deviceId>/pm", DevicePmView.as_view(), name="devicePm"),

@@ -20,6 +20,8 @@ import {
   TextInput,
 } from "../shared/components/primitives";
 import { Icon } from "../shared/components/Icon";
+import { JalaliDatePicker } from "../shared/components/JalaliDatePicker";
+import { formatJalali, todayIso } from "../core/localization/jalali";
 
 const DEVICE_STATUSES: DeviceStatus[] = [
   "operational",
@@ -67,7 +69,7 @@ export function MaintenanceDevicesPage(): JSX.Element {
   const [formLocation, setFormLocation] = useState("");
   const [formDepartment, setFormDepartment] = useState<MaintenanceDepartment>("general");
   const [formInterval, setFormInterval] = useState("30");
-  const [pmDate, setPmDate] = useState("2026-09-22");
+  const [pmDate, setPmDate] = useState(() => todayIso());
 
   const refresh = useCallback(async (): Promise<void> => {
     if (runtimeConfig.demoMode) return;
@@ -267,7 +269,7 @@ export function MaintenanceDevicesPage(): JSX.Element {
       render: (row) =>
         row.nextDueDate ? (
           <span className={row.pmDue ? "cmms-due" : ""}>
-            {row.pmDue && <Icon name="warning" size={14} />} {row.nextDueDate}
+            {row.pmDue && <Icon name="warning" size={14} />} {formatJalali(row.nextDueDate, { style: "short" })}
           </span>
         ) : (
           <span className="muted-cell">{t("cmms.common.none")}</span>
@@ -511,11 +513,10 @@ export function MaintenanceDevicesPage(): JSX.Element {
             <p className="detail-panel__description">
               {pmDevice.code} — {pmDevice.name}
             </p>
-            <TextInput
+            <JalaliDatePicker
               label={t("cmms.device.performedOn")}
-              type="date"
               value={pmDate}
-              onChange={(event) => setPmDate(event.target.value)}
+              onChange={setPmDate}
             />
           </>
         )}

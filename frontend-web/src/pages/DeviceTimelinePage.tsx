@@ -6,15 +6,10 @@ import { createMaintenanceService } from "../features/maintenance/maintenanceSer
 import type { DeviceTimeline, DeviceTimelineItem } from "../shared/types/domain";
 import { Badge, Button, Card, SectionHeader } from "../shared/components/primitives";
 import { Icon, type IconName } from "../shared/components/Icon";
+import { formatJalali } from "../core/localization/jalali";
 
-const formatDateTime = (value: string, locale: string): string => {
-  if (!value) return "";
-  const time = new Date(value).getTime();
-  if (Number.isNaN(time)) return value;
-  return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(
-    new Date(time),
-  );
-};
+const formatDateTime = (value: string): string =>
+  value ? formatJalali(value, { withTime: true }) : "";
 
 const ACTION_ICON: Record<DeviceTimelineItem["action"], IconName> = {
   registered: "plus",
@@ -38,7 +33,7 @@ const ACTION_TONE: Record<
 };
 
 export function DeviceTimelinePage(): JSX.Element {
-  const { t, locale } = useLocalization();
+  const { t } = useLocalization();
   const navigate = useNavigate();
   const api = useApiClient();
   const service = useMemo(() => createMaintenanceService(api), [api]);
@@ -195,7 +190,7 @@ export function DeviceTimelinePage(): JSX.Element {
                           {t(`cmms.timeline.action.${item.action}` as never)}
                         </strong>
                         <time className="cmms-timeline__time">
-                          {formatDateTime(item.at, locale)}
+                          {formatDateTime(item.at)}
                         </time>
                       </div>
                       <p className="cmms-timeline__desc">{describe(item)}</p>

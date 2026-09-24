@@ -8,9 +8,11 @@ import type {
   Priority,
   WorkOrderStatus,
 } from "../shared/types/domain";
-import { Badge, Button, Card, MetricCard, SectionHeader, TextInput } from "../shared/components/primitives";
+import { Badge, Button, Card, MetricCard, SectionHeader } from "../shared/components/primitives";
+import { JalaliDatePicker } from "../shared/components/JalaliDatePicker";
 import { DonutChart } from "../shared/components/charts";
 import { Toast } from "../shared/components/overlays";
+import { formatJalali } from "../core/localization/jalali";
 
 const statusTone = (
   status: string,
@@ -34,14 +36,8 @@ const statusTone = (
 const priorityTone = (priority: string): "danger" | "warning" | "neutral" =>
   priority === "critical" ? "danger" : priority === "high" ? "warning" : "neutral";
 
-const formatDateTime = (value: string, locale: string): string => {
-  if (!value) return "";
-  const time = new Date(value).getTime();
-  if (Number.isNaN(time)) return value;
-  return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(
-    new Date(time),
-  );
-};
+const formatDateTime = (value: string): string =>
+  value ? formatJalali(value, { withTime: true }) : "";
 
 const triggerDownload = (blob: Blob, filename: string): void => {
   const url = URL.createObjectURL(blob);
@@ -55,7 +51,7 @@ const triggerDownload = (blob: Blob, filename: string): void => {
 };
 
 export function DeviceReportPage(): JSX.Element {
-  const { t, locale } = useLocalization();
+  const { t } = useLocalization();
   const navigate = useNavigate();
   const api = useApiClient();
   const service = useMemo(() => createMaintenanceService(api), [api]);
@@ -156,17 +152,15 @@ export function DeviceReportPage(): JSX.Element {
 
       <Card className="content-card dash-actions--noprint" padding="md">
         <div className="cmms-report-filter">
-          <TextInput
-            type="date"
+          <JalaliDatePicker
             label={t("cmms.report.fromDate")}
             value={fromDate}
-            onChange={(event) => setFromDate(event.target.value)}
+            onChange={setFromDate}
           />
-          <TextInput
-            type="date"
+          <JalaliDatePicker
             label={t("cmms.report.toDate")}
             value={toDate}
-            onChange={(event) => setToDate(event.target.value)}
+            onChange={setToDate}
           />
           <Button variant="primary" icon="filter" onClick={() => void load()}>
             {t("cmms.report.applyRange")}
@@ -195,7 +189,7 @@ export function DeviceReportPage(): JSX.Element {
           <div className="cmms-report__print-head">
             <h1>{t("cmms.report.title")}</h1>
             <p>
-              {t("cmms.report.generatedAt")}: {formatDateTime(report.generatedAt, locale)}
+              {t("cmms.report.generatedAt")}: {formatDateTime(report.generatedAt)}
             </p>
           </div>
 
@@ -313,7 +307,7 @@ export function DeviceReportPage(): JSX.Element {
                           </Badge>
                         </td>
                         <td>{order.assignedToName || t("cmms.common.none")}</td>
-                        <td>{formatDateTime(order.createdAt, locale)}</td>
+                        <td>{formatDateTime(order.createdAt)}</td>
                         <td>
                           {order.overdue ? (
                             <Badge tone="danger">{t("cmms.report.yes")}</Badge>

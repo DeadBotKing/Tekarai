@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApiClient } from "../core/api/apiContext";
 import { useLocalization } from "../core/localization/localizationContext";
+import { JALALI_MONTHS, gregorianToJalali, toPersianDigits } from "../core/localization/jalali";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { createMaintenanceService } from "../features/maintenance/maintenanceService";
 import { demoDevices, demoWorkOrders } from "../features/maintenance/maintenanceDemoData";
@@ -79,14 +80,18 @@ interface Bucket {
 }
 
 // Split a [from, to] window into `count` contiguous buckets for the trend charts.
-const buildBuckets = (from: number, to: number, count: number, locale: string): Bucket[] => {
+const buildBuckets = (from: number, to: number, count: number): Bucket[] => {
   const span = Math.max(to - from, DAY_MS);
   const step = span / count;
-  const formatter = new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" });
+  const label = (ms: number): string => {
+    const d = new Date(ms);
+    const [, jm, jd] = gregorianToJalali(d.getFullYear(), d.getMonth() + 1, d.getDate());
+    return toPersianDigits(`${jd} ${JALALI_MONTHS[jm - 1]}`);
+  };
   return Array.from({ length: count }, (_, index) => {
     const start = from + index * step;
     const end = index === count - 1 ? to + 1 : from + (index + 1) * step;
-    return { label: formatter.format(new Date(start)), start, end };
+    return { label: label(start), start, end };
   });
 };
 
@@ -95,7 +100,7 @@ const toCsvValue = (value: string | number): string =>
   `"${String(value).replace(/"/g, '""')}"`;
 
 export function MaintenanceDashboardPage(): JSX.Element {
-  const { t, locale } = useLocalization();
+  const { t } = useLocalization();
   const api = useApiClient();
   const navigate = useNavigate();
   const service = useMemo(() => createMaintenanceService(api), [api]);
@@ -205,7 +210,7 @@ export function MaintenanceDashboardPage(): JSX.Element {
   // Trend: submitted (by createdAt) vs completed (by closedAt) across the window.
   const trend = useMemo(() => {
     const bucketCount = range === "7" ? 7 : 6;
-    const buckets = buildBuckets(windowBounds.from, windowBounds.to, bucketCount, locale);
+    const buckets = buildBuckets(windowBounds.from, windowBounds.to, bucketCount);
     const submitted = buckets.map(
       (bucket) =>
         orders.filter((order) => {
@@ -240,7 +245,7 @@ export function MaintenanceDashboardPage(): JSX.Element {
     });
     const hasMttr = mttr.some((value) => value > 0);
     return { labels: buckets.map((bucket) => bucket.label), submitted, completed, mttr, hasMttr };
-  }, [orders, windowBounds, range, locale]);
+  }, [orders, windowBounds, range]);
 
   const hasData = orders.length > 0 || devices.length > 0;
 

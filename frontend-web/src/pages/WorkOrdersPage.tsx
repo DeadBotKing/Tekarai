@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useApiClient } from "../core/api/apiContext";
 import { useLocalization } from "../core/localization/localizationContext";
+import { formatJalali } from "../core/localization/jalali";
 import type { TranslationKey } from "../core/localization/i18n";
 import { PERMISSIONS } from "../core/permissions/permissionContext";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
@@ -106,18 +107,11 @@ const statusLabel = (
     ? t(`cmms.woStatus.${status as WorkOrderStatus}`)
     : status;
 
-const formatDateTime = (value: string, locale: string): string => {
-  if (!value) return "";
-  const time = new Date(value).getTime();
-  if (Number.isNaN(time)) return value;
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(time));
-};
+const formatDateTime = (value: string): string =>
+  value ? formatJalali(value, { withTime: true }) : "";
 
 export function WorkOrdersPage(): JSX.Element {
-  const { t, locale } = useLocalization();
+  const { t } = useLocalization();
   const api = useApiClient();
   const service = useMemo(() => createMaintenanceService(api), [api]);
   const [orders, setOrders] = useState<WorkOrder[]>(runtimeConfig.demoMode ? demoWorkOrders : []);
@@ -756,7 +750,7 @@ export function WorkOrdersPage(): JSX.Element {
                 <div>
                   <span>{t("cmms.wo.slaDue")}</span>
                   <strong>
-                    {formatDateTime(activeOrder.slaDueAt, locale)}{" "}
+                    {formatDateTime(activeOrder.slaDueAt)}{" "}
                     {activeOrder.overdue && (
                       <Badge tone="danger" dot>
                         {t("cmms.wo.overdue")}
@@ -883,7 +877,7 @@ export function WorkOrdersPage(): JSX.Element {
                       <div className="cmms-timeline__body">
                         <div className="cmms-timeline__head">
                           <strong>{t(`cmms.historyAction.${entry.action}`)}</strong>
-                          <span className="muted-cell">{formatDateTime(entry.createdAt, locale)}</span>
+                          <span className="muted-cell">{formatDateTime(entry.createdAt)}</span>
                         </div>
                         <div className="cmms-timeline__meta">
                           {entry.fromStatus && entry.toStatus && (

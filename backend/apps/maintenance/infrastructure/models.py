@@ -62,6 +62,65 @@ class WorkOrderModel(models.Model):
         return f"{self.status}:{self.title}"
 
 
+class SparePartModel(models.Model):
+    """Tenant-scoped spare-part stock balance."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenantId = models.UUIDField(db_index=True)
+    code = models.CharField(max_length=60)
+    name = models.CharField(max_length=200)
+    unit = models.CharField(max_length=30, default="عدد")
+    quantityOnHand = models.DecimalField(max_digits=14, decimal_places=3, default=0)
+    minimumStock = models.DecimalField(max_digits=14, decimal_places=3, default=0)
+    createdAt = models.DateTimeField(auto_now_add=True, db_index=True)
+    updatedAt = models.DateTimeField(null=True, blank=True)
+    deletedAt = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "SparePart"
+        ordering = ["code"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenantId", "code"],
+                condition=models.Q(deletedAt__isnull=True),
+                name="uq_spare_part_tenant_code",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(quantityOnHand__gte=0),
+                name="ck_spare_part_stock_nonnegative",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(minimumStock__gte=0),
+                name="ck_spare_part_minimum_nonnegative",
+            ),
+        ]
+
+
+class WorkOrderPartUsageModel(models.Model):
+    """Immutable record of stock consumed by a work order."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenantId = models.UUIDField(db_index=True)
+    workOrderId = models.UUIDField(db_index=True)
+    partId = models.UUIDField(db_index=True)
+    partCode = models.CharField(max_length=60)
+    partName = models.CharField(max_length=200)
+    unit = models.CharField(max_length=30)
+    quantity = models.DecimalField(max_digits=14, decimal_places=3)
+    note = models.CharField(max_length=500, blank=True, default="")
+    consumedAt = models.DateTimeField(db_index=True)
+
+    class Meta:
+        db_table = "WorkOrderPartUsage"
+        ordering = ["-consumedAt"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(quantity__gt=0),
+                name="ck_work_order_part_usage_positive",
+            )
+        ]
+
+
 class WorkOrderHistoryModel(models.Model):
     """Append-only audit of every work-order transition (Phase 22 workflow).
 

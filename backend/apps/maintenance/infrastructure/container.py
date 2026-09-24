@@ -13,6 +13,13 @@ from apps.maintenance.application.useCases.deviceUseCases import (
     SendPmRemindersUseCase,
     UpdateDeviceUseCase,
 )
+from apps.maintenance.application.useCases.sparePartUseCases import (
+    ConsumeSparePartUseCase,
+    CreateSparePartUseCase,
+    ListSparePartsUseCase,
+    ListWorkOrderPartUsageUseCase,
+    UpdateSparePartUseCase,
+)
 from apps.maintenance.application.useCases.workOrderUseCases import (
     ApproveWorkOrderUseCase,
     AssignWorkOrderUseCase,
@@ -33,6 +40,9 @@ from apps.maintenance.infrastructure.repositories.deviceHistoryRepositoryImpl im
 )
 from apps.maintenance.infrastructure.repositories.deviceRepositoryImpl import (
     DeviceRepositoryDjango,
+)
+from apps.maintenance.infrastructure.repositories.sparePartRepositoryImpl import (
+    SparePartRepositoryDjango,
 )
 from apps.maintenance.infrastructure.repositories.workOrderHistoryRepositoryImpl import (
     WorkOrderHistoryRepositoryDjango,
@@ -57,6 +67,10 @@ def workOrderHistoryRepository() -> WorkOrderHistoryRepositoryDjango:
 
 def deviceHistoryRepository() -> DeviceHistoryRepositoryDjango:
     return DeviceHistoryRepositoryDjango()
+
+
+def sparePartRepository() -> SparePartRepositoryDjango:
+    return SparePartRepositoryDjango()
 
 
 def _kernelPorts() -> dict:
@@ -116,6 +130,27 @@ def getDeviceUseCase() -> GetDeviceUseCase:
 
 def sendPmRemindersUseCase() -> SendPmRemindersUseCase:
     return SendPmRemindersUseCase(**_deviceDeps())
+
+
+# -- Spare-parts inventory --------------------------------------------------------
+def createSparePartUseCase() -> CreateSparePartUseCase:
+    return CreateSparePartUseCase(repository=sparePartRepository(), **_kernelPorts())
+
+
+def updateSparePartUseCase() -> UpdateSparePartUseCase:
+    return UpdateSparePartUseCase(repository=sparePartRepository(), **_kernelPorts())
+
+
+def listSparePartsUseCase() -> ListSparePartsUseCase:
+    return ListSparePartsUseCase(repository=sparePartRepository(), **_kernelPorts())
+
+
+def consumeSparePartUseCase() -> ConsumeSparePartUseCase:
+    return ConsumeSparePartUseCase(repository=sparePartRepository(), **_kernelPorts())
+
+
+def listWorkOrderPartUsageUseCase() -> ListWorkOrderPartUsageUseCase:
+    return ListWorkOrderPartUsageUseCase(repository=sparePartRepository(), **_kernelPorts())
 
 
 # -- Work order use cases ---------------------------------------------------------

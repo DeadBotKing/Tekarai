@@ -175,6 +175,30 @@ export interface MaintenanceDevice {
   createdAt: string;
 }
 
+export interface SparePart {
+  id: string;
+  code: string;
+  name: string;
+  unit: string;
+  quantityOnHand: number;
+  minimumStock: number;
+  lowStock: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkOrderPartUsage {
+  id: string;
+  workOrderId: string;
+  partId: string;
+  partCode: string;
+  partName: string;
+  unit: string;
+  quantity: number;
+  note: string;
+  consumedAt: string;
+}
+
 export interface WorkOrder {
   id: string;
   deviceId: string;

@@ -78,6 +78,9 @@ ACTIONS: list[tuple[str, str]] = [
     ("maintenance.workorder.approve", "Approve or reject completed work orders"),
     ("maintenance.workorder.list", "List maintenance work orders"),
     ("maintenance.workorder.view", "View work order details"),
+    ("maintenance.inventory.view", "View spare-parts inventory and consumption"),
+    ("maintenance.inventory.manage", "Create parts and adjust warehouse stock"),
+    ("maintenance.inventory.consume", "Consume spare parts on maintenance work orders"),
 ]
 
 
@@ -106,6 +109,8 @@ _MAINTENANCE_TECHNICIAN_ACTIONS = [
     "maintenance.workorder.update",
     "maintenance.workorder.list",
     "maintenance.workorder.view",
+    "maintenance.inventory.view",
+    "maintenance.inventory.consume",
 ]
 _MAINTENANCE_MANAGER_ACTIONS = [
     "maintenance.device.manage",
@@ -118,6 +123,9 @@ _MAINTENANCE_MANAGER_ACTIONS = [
     "maintenance.workorder.approve",
     "maintenance.workorder.list",
     "maintenance.workorder.view",
+    "maintenance.inventory.view",
+    "maintenance.inventory.manage",
+    "maintenance.inventory.consume",
 ]
 
 ROLE_PRESETS: dict[str, list[str]] = {

@@ -14,6 +14,11 @@ from apps.maintenance.presentation.api.views.deviceViews import (
     DeviceTimelineView,
     DuePmListView,
 )
+from apps.maintenance.presentation.api.views.sparePartViews import (
+    SparePartDetailView,
+    SparePartListView,
+    WorkOrderPartUsageView,
+)
 from apps.maintenance.presentation.api.views.workOrderViews import (
     DeviceMaintenanceReportView,
     WorkOrderApproveView,
@@ -49,6 +54,9 @@ urlpatterns = [
         DeviceTimelineView.as_view(),
         name="deviceTimeline",
     ),
+    # Spare-parts warehouse.
+    path("spare-parts", SparePartListView.as_view(), name="sparePartList"),
+    path("spare-parts/<uuid:partId>", SparePartDetailView.as_view(), name="sparePartDetail"),
     # Work orders — static "generate-pm" path precedes the uuid capture.
     path("work-orders", WorkOrderListView.as_view(), name="workOrderList"),
     path(
@@ -90,5 +98,10 @@ urlpatterns = [
         "work-orders/<uuid:workOrderId>/history",
         WorkOrderHistoryView.as_view(),
         name="workOrderHistory",
+    ),
+    path(
+        "work-orders/<uuid:workOrderId>/parts",
+        WorkOrderPartUsageView.as_view(),
+        name="workOrderPartUsage",
     ),
 ]

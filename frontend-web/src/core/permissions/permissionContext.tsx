@@ -32,6 +32,9 @@ export const PERMISSIONS = {
   maintenanceWorkOrderApprove: "maintenance.workorder.approve",
   maintenanceWorkOrderList: "maintenance.workorder.list",
   maintenanceWorkOrderView: "maintenance.workorder.view",
+  maintenanceInventoryView: "maintenance.inventory.view",
+  maintenanceInventoryManage: "maintenance.inventory.manage",
+  maintenanceInventoryConsume: "maintenance.inventory.consume",
 } as const;
 
 interface PermissionContextValue {

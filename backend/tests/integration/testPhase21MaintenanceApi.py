@@ -418,6 +418,107 @@ class PmAutoGenerationTests(MaintenanceApiBase):
             len([i for i in second.json()["data"] if i["deviceId"] == overdue["id"]]), 0
         )
 
+    def testScheduledTaskAutomaticallyCreatesDuePmOrder(self) -> None:
+        """Celery Beat's system task runs the same idempotent generator."""
+        overdue = self.createDevice(
+            code="PM-SCHEDULED-1", department="facilities", pmIntervalDays=7
+        )
+        recorded = self.client.post(
+            f"/api/v1/maintenance/devices/{overdue['id']}/pm",
+            {"performedOn": "2020-01-01"},
+            format="json",
+            **self.auth,
+        )
+        self.assertEqual(recorded.status_code, 200, recorded.content)
+
+        from apps.maintenance.infrastructure.models import WorkOrderModel
+        from apps.maintenance.infrastructure.tasks import generateDuePmWorkOrders
+
+        first = generateDuePmWorkOrders()
+        self.assertGreaterEqual(first["createdCount"], 1)
+        generated = WorkOrderModel.objects.filter(
+            deviceId=overdue["id"],
+            orderType="preventive",
+            deletedAt__isnull=True,
+        )
+        self.assertEqual(generated.count(), 1)
+        self.assertEqual(generated.get().status, "routed")
+        self.assertEqual(generated.get().department, "facilities")
+        self.assertEqual(generated.get().requestedByName, "سامانه (خودکار)")
+
+        # A subsequent hourly Beat tick must not duplicate the open request.
+        second = generateDuePmWorkOrders()
+        self.assertEqual(second["createdCount"], 0)
+        self.assertEqual(generated.count(), 1)
+
+
+class SparePartsInventoryTests(MaintenanceApiBase):
+    def testConsumePartDeductsStockAndRecordsWorkOrderUsage(self) -> None:
+        device = self.createDevice(code="PART-DEVICE")
+        order = self.submitWorkOrder(device["id"], title="تعویض فیلتر")
+        created = self.client.post(
+            "/api/v1/maintenance/spare-parts",
+            {
+                "code": "FILTER-01",
+                "name": "فیلتر روغن",
+                "unit": "عدد",
+                "quantityOnHand": "10.000",
+                "minimumStock": "3.000",
+            },
+            format="json",
+            **self.auth,
+        )
+        self.assertEqual(created.status_code, 201, created.content)
+        part = created.json()["data"]
+
+        consumed = self.client.post(
+            f"/api/v1/maintenance/work-orders/{order['id']}/parts",
+            {"partId": part["id"], "quantity": "2.000", "note": "تعویض دوره‌ای"},
+            format="json",
+            **self.auth,
+        )
+        self.assertEqual(consumed.status_code, 201, consumed.content)
+        self.assertEqual(consumed.json()["data"]["partCode"], "FILTER-01")
+        self.assertEqual(consumed.json()["data"]["quantity"], "2.000")
+
+        inventory = self.client.get("/api/v1/maintenance/spare-parts", **self.auth)
+        self.assertEqual(inventory.status_code, 200, inventory.content)
+        saved = next(item for item in inventory.json()["data"] if item["id"] == part["id"])
+        self.assertEqual(saved["quantityOnHand"], "8.000")
+        self.assertFalse(saved["lowStock"])
+
+        usage = self.client.get(
+            f"/api/v1/maintenance/work-orders/{order['id']}/parts", **self.auth
+        )
+        self.assertEqual(usage.status_code, 200, usage.content)
+        self.assertEqual(len(usage.json()["data"]), 1)
+        self.assertEqual(usage.json()["data"][0]["note"], "تعویض دوره‌ای")
+
+    def testInsufficientStockIsRejectedWithoutPartialDeduction(self) -> None:
+        device = self.createDevice(code="PART-DEVICE-2")
+        order = self.submitWorkOrder(device["id"], title="تعمیر یاتاقان")
+        created = self.client.post(
+            "/api/v1/maintenance/spare-parts",
+            {
+                "code": "BEARING-01",
+                "name": "یاتاقان",
+                "quantityOnHand": "1.000",
+                "minimumStock": "1.000",
+            },
+            format="json",
+            **self.auth,
+        ).json()["data"]
+        rejected = self.client.post(
+            f"/api/v1/maintenance/work-orders/{order['id']}/parts",
+            {"partId": created["id"], "quantity": "2.000"},
+            format="json",
+            **self.auth,
+        )
+        self.assertEqual(rejected.status_code, 409, rejected.content)
+        inventory = self.client.get("/api/v1/maintenance/spare-parts", **self.auth)
+        saved = next(item for item in inventory.json()["data"] if item["id"] == created["id"])
+        self.assertEqual(saved["quantityOnHand"], "1.000")
+
 
 class WorkOrderWorkflowTests(MaintenanceApiBase):
     """Phase 22 — approval gate, SLA/overdue, auto-assign, rejection, timeline."""

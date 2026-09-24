@@ -11,7 +11,9 @@ import type {
   MaintenanceDepartment,
   MaintenanceDevice,
   Priority,
+  SparePart,
   WorkOrder,
+  WorkOrderPartUsage,
   WorkOrderHistoryAction,
   WorkOrderHistoryEntry,
   WorkOrderStatus,
@@ -50,6 +52,30 @@ interface WorkOrderDto {
   closedAt: string;
   slaDueAt: string;
   overdue: boolean;
+}
+
+interface SparePartDto {
+  id: string;
+  code: string;
+  name: string;
+  unit: string;
+  quantityOnHand: string;
+  minimumStock: string;
+  lowStock: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface WorkOrderPartUsageDto {
+  id: string;
+  workOrderId: string;
+  partId: string;
+  partCode: string;
+  partName: string;
+  unit: string;
+  quantity: string;
+  note: string;
+  consumedAt: string;
 }
 
 interface WorkOrderHistoryDto {
@@ -153,6 +179,30 @@ const toWorkOrder = (dto: WorkOrderDto): WorkOrder => ({
   overdue: Boolean(dto.overdue),
 });
 
+const toSparePart = (dto: SparePartDto): SparePart => ({
+  id: dto.id,
+  code: dto.code,
+  name: dto.name,
+  unit: dto.unit,
+  quantityOnHand: Number(dto.quantityOnHand),
+  minimumStock: Number(dto.minimumStock),
+  lowStock: Boolean(dto.lowStock),
+  createdAt: dto.createdAt ?? "",
+  updatedAt: dto.updatedAt ?? "",
+});
+
+const toPartUsage = (dto: WorkOrderPartUsageDto): WorkOrderPartUsage => ({
+  id: dto.id,
+  workOrderId: dto.workOrderId,
+  partId: dto.partId,
+  partCode: dto.partCode,
+  partName: dto.partName,
+  unit: dto.unit,
+  quantity: Number(dto.quantity),
+  note: dto.note ?? "",
+  consumedAt: dto.consumedAt ?? "",
+});
+
 const toHistoryEntry = (dto: WorkOrderHistoryDto): WorkOrderHistoryEntry => ({
   id: dto.id,
   workOrderId: dto.workOrderId,
@@ -206,7 +256,30 @@ export interface SubmitWorkOrderInput {
   requestedByName?: string;
 }
 
+export interface CreateSparePartInput {
+  code: string;
+  name: string;
+  unit?: string;
+  quantityOnHand: number;
+  minimumStock?: number;
+}
+
 export interface MaintenanceService {
+  listSpareParts: (search?: string, signal?: AbortSignal) => Promise<SparePart[]>;
+  createSparePart: (input: CreateSparePartInput, signal?: AbortSignal) => Promise<SparePart>;
+  updateSparePart: (
+    id: string,
+    input: Omit<CreateSparePartInput, "code">,
+    signal?: AbortSignal,
+  ) => Promise<SparePart>;
+  listWorkOrderParts: (id: string, signal?: AbortSignal) => Promise<WorkOrderPartUsage[]>;
+  consumeSparePart: (
+    workOrderId: string,
+    partId: string,
+    quantity: number,
+    note?: string,
+    signal?: AbortSignal,
+  ) => Promise<WorkOrderPartUsage>;
   listDevices: (
     filters?: { status?: string; department?: string; search?: string },
     signal?: AbortSignal,
@@ -283,6 +356,44 @@ export interface MaintenanceService {
 }
 
 export const createMaintenanceService = (api: ApiClient): MaintenanceService => ({
+  listSpareParts: async (search = "", signal) => {
+    const dtos = await api.get<SparePartDto[]>(apiEndpoints.maintenance.spareParts, {
+      query: { search },
+      signal,
+    });
+    return dtos.map(toSparePart);
+  },
+  createSparePart: async (input, signal) => {
+    const dto = await api.post<SparePartDto>(
+      apiEndpoints.maintenance.spareParts,
+      input,
+      { signal, retry: 0 },
+    );
+    return toSparePart(dto);
+  },
+  updateSparePart: async (id, input, signal) => {
+    const dto = await api.patch<SparePartDto>(
+      apiEndpoints.maintenance.sparePart(id),
+      input,
+      { signal, retry: 0 },
+    );
+    return toSparePart(dto);
+  },
+  listWorkOrderParts: async (id, signal) => {
+    const dtos = await api.get<WorkOrderPartUsageDto[]>(
+      apiEndpoints.maintenance.workOrderParts(id),
+      { signal },
+    );
+    return dtos.map(toPartUsage);
+  },
+  consumeSparePart: async (workOrderId, partId, quantity, note = "", signal) => {
+    const dto = await api.post<WorkOrderPartUsageDto>(
+      apiEndpoints.maintenance.workOrderParts(workOrderId),
+      { partId, quantity, note },
+      { signal, retry: 0 },
+    );
+    return toPartUsage(dto);
+  },
   listDevices: async (filters = {}, signal) => {
     const dtos = await api.get<DeviceDto[]>(apiEndpoints.maintenance.devices, {
       signal,

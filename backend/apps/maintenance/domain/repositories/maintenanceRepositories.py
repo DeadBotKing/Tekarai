@@ -9,10 +9,12 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 from datetime import datetime  # noqa: TC003 — used in dataclass field annotations
+from decimal import Decimal  # noqa: TC003 — used in protocol annotations
 from typing import Protocol, runtime_checkable
 
 from apps.maintenance.domain.entities.device import Device
 from apps.maintenance.domain.entities.deviceHistory import DeviceHistoryEntry
+from apps.maintenance.domain.entities.sparePart import SparePart, WorkOrderPartUsage
 from apps.maintenance.domain.entities.workOrder import WorkOrder
 from apps.maintenance.domain.entities.workOrderHistory import WorkOrderHistoryEntry
 
@@ -47,8 +49,8 @@ class WorkOrderFilters:
     page: int = 1
     pageSize: int = 50
     # Optional inclusive creation-date bounds (aware datetimes); Phase 23.
-    createdFrom: "datetime | None" = None
-    createdTo: "datetime | None" = None
+    createdFrom: datetime | None = None
+    createdTo: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -91,6 +93,45 @@ class WorkOrderRepository(Protocol):
     def countOpenByAssignee(self, tenantId: uuid.UUID, department: str) -> dict[str, int]: ...
 
     def list(self, filters: WorkOrderFilters) -> WorkOrderPage: ...
+
+
+@runtime_checkable
+class SparePartRepository(Protocol):
+    def create(
+        self,
+        tenantId: uuid.UUID,
+        code: str,
+        name: str,
+        unit: str,
+        quantityOnHand: Decimal,
+        minimumStock: Decimal,
+    ) -> SparePart: ...
+
+    def update(
+        self,
+        tenantId: uuid.UUID,
+        partId: uuid.UUID,
+        name: str,
+        unit: str,
+        quantityOnHand: Decimal,
+        minimumStock: Decimal,
+    ) -> SparePart: ...
+
+    def list(self, tenantId: uuid.UUID, search: str = "") -> list[SparePart]: ...
+
+    def consume(
+        self,
+        tenantId: uuid.UUID,
+        workOrderId: uuid.UUID,
+        partId: uuid.UUID,
+        quantity: Decimal,
+        note: str,
+        consumedAt: datetime,
+    ) -> WorkOrderPartUsage: ...
+
+    def listUsage(
+        self, tenantId: uuid.UUID, workOrderId: uuid.UUID
+    ) -> list[WorkOrderPartUsage]: ...
 
 
 @runtime_checkable

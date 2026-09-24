@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 from rest_framework import serializers
 
 DEVICE_STATUS_CHOICES = ["operational", "underMaintenance", "outOfService", "retired"]
@@ -48,6 +50,32 @@ class ChangeDeviceStatusSerializer(serializers.Serializer):
 
 class RecordDevicePmSerializer(serializers.Serializer):
     performedOn = serializers.CharField(required=False, allow_blank=True, default="")
+
+
+# -- Spare-parts inventory ---------------------------------------------------------
+class CreateSparePartSerializer(serializers.Serializer):
+    code = serializers.CharField(max_length=60)
+    name = serializers.CharField(max_length=200)
+    unit = serializers.CharField(max_length=30, required=False, default="عدد")
+    quantityOnHand = serializers.DecimalField(max_digits=14, decimal_places=3, min_value=Decimal("0"))
+    minimumStock = serializers.DecimalField(
+        max_digits=14, decimal_places=3, min_value=Decimal("0"), required=False, default=0
+    )
+
+
+class UpdateSparePartSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=200)
+    unit = serializers.CharField(max_length=30, required=False, default="عدد")
+    quantityOnHand = serializers.DecimalField(max_digits=14, decimal_places=3, min_value=Decimal("0"))
+    minimumStock = serializers.DecimalField(
+        max_digits=14, decimal_places=3, min_value=Decimal("0"), required=False, default=0
+    )
+
+
+class ConsumeSparePartSerializer(serializers.Serializer):
+    partId = serializers.UUIDField()
+    quantity = serializers.DecimalField(max_digits=14, decimal_places=3, min_value=Decimal("0.001"))
+    note = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
 
 
 # -- Work order -------------------------------------------------------------------

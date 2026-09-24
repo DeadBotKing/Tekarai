@@ -621,6 +621,7 @@ CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_TASK_ROUTES = {
     "notifications.dispatch": {"queue": "notifications.normal"},
     "notifications.workerTick": {"queue": "notifications.maintenance"},
+    "maintenance.generatePmWorkOrders": {"queue": "notifications.maintenance"},
     "learning.processJob": {"queue": "learning.training"},
     "learning.monitorDeployments": {"queue": "learning.monitoring"},
     "projectIntelligence.processJob": {"queue": "project-intelligence.analysis"},
@@ -630,6 +631,13 @@ CELERY_BEAT_SCHEDULE = {
         "task": "notifications.workerTick",
         "schedule": 10.0,
         "args": (200,),
+    },
+    # PM dates are day-granular; an hourly scan creates the preventive request
+    # shortly after it becomes due and remains safe to retry (generator is
+    # idempotent while an open preventive order exists for the device).
+    "maintenance-generate-due-pm-work-orders": {
+        "task": "maintenance.generatePmWorkOrders",
+        "schedule": 3600.0,
     },
     "learning-monitor-heartbeat": {
         "task": "learning.monitorDeployments",

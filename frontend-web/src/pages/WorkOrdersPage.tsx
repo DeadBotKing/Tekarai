@@ -11,7 +11,9 @@ import type {
   MaintenanceDepartment,
   MaintenanceDevice,
   Priority,
+  SparePart,
   WorkOrder,
+  WorkOrderPartUsage,
   WorkOrderHistoryEntry,
   WorkOrderStatus,
   WorkOrderType,
@@ -158,6 +160,17 @@ export function WorkOrdersPage(): JSX.Element {
   const [decisionNote, setDecisionNote] = useState("");
   const [history, setHistory] = useState<WorkOrderHistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [parts, setParts] = useState<SparePart[]>([]);
+  const [partUsage, setPartUsage] = useState<WorkOrderPartUsage[]>([]);
+  const [inventoryOpen, setInventoryOpen] = useState(false);
+  const [partCode, setPartCode] = useState("");
+  const [partName, setPartName] = useState("");
+  const [partUnit, setPartUnit] = useState("عدد");
+  const [partStock, setPartStock] = useState("0");
+  const [partMinimum, setPartMinimum] = useState("0");
+  const [consumePartId, setConsumePartId] = useState("");
+  const [consumeQuantity, setConsumeQuantity] = useState("1");
+  const [consumeNote, setConsumeNote] = useState("");
 
   const deviceNames = useMemo(
     () => new Map(devices.map((device) => [device.id, `${device.code} — ${device.name}`])),
@@ -167,12 +180,14 @@ export function WorkOrdersPage(): JSX.Element {
   const refresh = useCallback(async (): Promise<void> => {
     if (runtimeConfig.demoMode) return;
     try {
-      const [woList, deviceList] = await Promise.all([
+      const [woList, deviceList, partList] = await Promise.all([
         service.listWorkOrders(),
         service.listDevices().catch(() => [] as MaintenanceDevice[]),
+        service.listSpareParts().catch(() => [] as SparePart[]),
       ]);
       setOrders(woList);
       setDevices(deviceList);
+      setParts(partList);
     } catch {
       /* keep last known state */
     }
@@ -197,6 +212,19 @@ export function WorkOrdersPage(): JSX.Element {
       .then((entries) => setHistory(entries))
       .catch(() => setHistory([]))
       .finally(() => setHistoryLoading(false));
+    return () => controller.abort();
+  }, [activeOrder, service]);
+
+  useEffect(() => {
+    if (!activeOrder || runtimeConfig.demoMode) {
+      setPartUsage([]);
+      return;
+    }
+    const controller = new AbortController();
+    service
+      .listWorkOrderParts(activeOrder.id, controller.signal)
+      .then(setPartUsage)
+      .catch(() => setPartUsage([]));
     return () => controller.abort();
   }, [activeOrder, service]);
 
@@ -416,6 +444,102 @@ export function WorkOrdersPage(): JSX.Element {
     }
   };
 
+  const createPart = async (): Promise<void> => {
+    if (!partCode.trim() || !partName.trim()) return;
+    if (runtimeConfig.demoMode) {
+      setParts((current) => [
+        ...current,
+        {
+          id: `part-${Date.now()}`,
+          code: partCode.trim().toUpperCase(),
+          name: partName.trim(),
+          unit: partUnit.trim() || "عدد",
+          quantityOnHand: Number(partStock),
+          minimumStock: Number(partMinimum),
+          lowStock: Number(partStock) <= Number(partMinimum),
+          createdAt: new Date().toISOString(),
+          updatedAt: "",
+        },
+      ]);
+      setPartCode("");
+      setPartName("");
+      setToast("قطعه با موفقیت در انبار ثبت شد.");
+      return;
+    }
+    try {
+      await service.createSparePart({
+        code: partCode.trim(),
+        name: partName.trim(),
+        unit: partUnit.trim() || "عدد",
+        quantityOnHand: Number(partStock),
+        minimumStock: Number(partMinimum),
+      });
+      setPartCode("");
+      setPartName("");
+      setPartStock("0");
+      setPartMinimum("0");
+      setToast("قطعه با موفقیت در انبار ثبت شد.");
+      await refresh();
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "ثبت قطعه انجام نشد.");
+    }
+  };
+
+  const consumePart = async (): Promise<void> => {
+    if (!activeOrder || !consumePartId || Number(consumeQuantity) <= 0) return;
+    const selectedPart = parts.find((part) => part.id === consumePartId);
+    const requestedQuantity = Number(consumeQuantity);
+    if (!selectedPart || selectedPart.quantityOnHand < requestedQuantity) {
+      setToast("موجودی قطعه کافی نیست.");
+      return;
+    }
+    if (runtimeConfig.demoMode) {
+      setParts((current) => current.map((part) =>
+        part.id === selectedPart.id
+          ? {
+              ...part,
+              quantityOnHand: part.quantityOnHand - requestedQuantity,
+              lowStock: part.quantityOnHand - requestedQuantity <= part.minimumStock,
+            }
+          : part,
+      ));
+      setPartUsage((current) => [{
+        id: `usage-${Date.now()}`,
+        workOrderId: activeOrder.id,
+        partId: selectedPart.id,
+        partCode: selectedPart.code,
+        partName: selectedPart.name,
+        unit: selectedPart.unit,
+        quantity: requestedQuantity,
+        note: consumeNote.trim(),
+        consumedAt: new Date().toISOString(),
+      }, ...current]);
+      setConsumeQuantity("1");
+      setConsumeNote("");
+      setToast("قطعه مصرفی ثبت و از موجودی انبار کسر شد.");
+      return;
+    }
+    try {
+      await service.consumeSparePart(
+        activeOrder.id,
+        consumePartId,
+        Number(consumeQuantity),
+        consumeNote.trim(),
+      );
+      const [usage, inventory] = await Promise.all([
+        service.listWorkOrderParts(activeOrder.id),
+        service.listSpareParts(),
+      ]);
+      setPartUsage(usage);
+      setParts(inventory);
+      setConsumeQuantity("1");
+      setConsumeNote("");
+      setToast("قطعه مصرفی ثبت و از موجودی انبار کسر شد.");
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "موجودی قطعه کافی نیست.");
+    }
+  };
+
   const openCount = orders.filter(
     (order) => order.status !== "completed" && order.status !== "cancelled",
   ).length;
@@ -500,6 +624,9 @@ export function WorkOrdersPage(): JSX.Element {
         actions={
           <PermissionGuard permission={PERMISSIONS.maintenanceWorkOrderCreate}>
             <div className="cmms-header-actions">
+              <Button variant="secondary" icon="layers" onClick={() => setInventoryOpen(true)}>
+                انبار قطعات
+              </Button>
               <Button variant="secondary" icon="refresh" onClick={generatePm}>
                 {t("cmms.wo.generatePm")}
               </Button>
@@ -706,6 +833,46 @@ export function WorkOrdersPage(): JSX.Element {
       </Modal>
 
       <Modal
+        open={inventoryOpen}
+        title="انبار قطعات یدکی"
+        onClose={() => setInventoryOpen(false)}
+        footer={
+          <Button variant="secondary" onClick={() => setInventoryOpen(false)}>
+            {t("cmms.common.close")}
+          </Button>
+        }
+      >
+        <PermissionGuard permission={PERMISSIONS.maintenanceInventoryManage}>
+          <div className="form-grid form-grid--compact">
+            <TextInput label="کد قطعه" required value={partCode} onChange={(event) => setPartCode(event.target.value)} />
+            <TextInput label="نام قطعه" required value={partName} onChange={(event) => setPartName(event.target.value)} />
+            <TextInput label="واحد" value={partUnit} onChange={(event) => setPartUnit(event.target.value)} />
+            <TextInput label="موجودی اولیه" type="number" min="0" step="0.001" value={partStock} onChange={(event) => setPartStock(event.target.value)} />
+            <TextInput label="حداقل موجودی" type="number" min="0" step="0.001" value={partMinimum} onChange={(event) => setPartMinimum(event.target.value)} />
+            <Button variant="primary" icon="plus" onClick={createPart}>ثبت قطعه</Button>
+          </div>
+        </PermissionGuard>
+        <div className="cmms-timeline">
+          <h4 className="cmms-timeline__title">موجودی فعلی</h4>
+          {parts.length === 0 ? (
+            <p className="detail-panel__description">هنوز قطعه‌ای در انبار ثبت نشده است.</p>
+          ) : (
+            <div className="detail-stats">
+              {parts.map((part) => (
+                <div key={part.id}>
+                  <span>{part.code} — {part.name}</span>
+                  <strong>
+                    {part.quantityOnHand} {part.unit}{" "}
+                    {part.lowStock && <Badge tone="danger">کمبود موجودی</Badge>}
+                  </strong>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      <Modal
         open={Boolean(activeOrder)}
         title={activeOrder?.title ?? t("cmms.wo.detailTitle")}
         onClose={() => setActiveOrder(null)}
@@ -862,6 +1029,65 @@ export function WorkOrdersPage(): JSX.Element {
                 </div>
               )}
             </PermissionGuard>
+
+            <div className="cmms-timeline">
+              <h4 className="cmms-timeline__title">قطعات مصرفی</h4>
+              <PermissionGuard permission={PERMISSIONS.maintenanceInventoryConsume}>
+                <div className="form-grid form-grid--compact">
+                  <SelectInput
+                    label="قطعه انبار"
+                    value={consumePartId}
+                    onChange={(event) => setConsumePartId(event.target.value)}
+                    options={[
+                      { value: "", label: "انتخاب قطعه" },
+                      ...parts
+                        .filter((part) => part.quantityOnHand > 0)
+                        .map((part) => ({
+                          value: part.id,
+                          label: `${part.code} — ${part.name} (${part.quantityOnHand} ${part.unit})`,
+                        })),
+                    ]}
+                  />
+                  <TextInput
+                    label="مقدار مصرف"
+                    type="number"
+                    min="0.001"
+                    step="0.001"
+                    value={consumeQuantity}
+                    onChange={(event) => setConsumeQuantity(event.target.value)}
+                  />
+                  <TextInput
+                    label="یادداشت"
+                    value={consumeNote}
+                    onChange={(event) => setConsumeNote(event.target.value)}
+                  />
+                  <Button variant="secondary" icon="minus" onClick={consumePart}>
+                    ثبت مصرف و کسر موجودی
+                  </Button>
+                </div>
+              </PermissionGuard>
+              {partUsage.length === 0 ? (
+                <p className="detail-panel__description">هنوز قطعه‌ای برای این درخواست ثبت نشده است.</p>
+              ) : (
+                <ol className="cmms-timeline__list">
+                  {partUsage.map((usage) => (
+                    <li key={usage.id} className="cmms-timeline__item">
+                      <span className="cmms-timeline__dot" />
+                      <div className="cmms-timeline__body">
+                        <div className="cmms-timeline__head">
+                          <strong>{usage.partCode} — {usage.partName}</strong>
+                          <span>{usage.quantity} {usage.unit}</span>
+                        </div>
+                        <div className="cmms-timeline__meta">
+                          <span>{formatDateTime(usage.consumedAt)}</span>
+                        </div>
+                        {usage.note && <p className="cmms-timeline__note">{usage.note}</p>}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
 
             <div className="cmms-timeline">
               <h4 className="cmms-timeline__title">{t("cmms.wo.timeline")}</h4>

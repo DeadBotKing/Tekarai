@@ -13,6 +13,7 @@ from apps.maintenance.application.commands.maintenanceCommands import (
     ChangeDeviceStatusCommand,
     RecordDevicePmCommand,
     RegisterDeviceCommand,
+    SendPmRemindersCommand,
     UpdateDeviceCommand,
 )
 from apps.maintenance.application.queries.maintenanceQueries import (
@@ -160,3 +161,26 @@ class DuePmListView(APIView):
     def get(self, request: Request) -> Response:
         dto = container.listDuePmUseCase().execute(ListDuePmQuery())
         return Response(successEnvelope([asDict(item) for item in dto.items], meta=dto.asMeta()))
+
+
+class DevicePmRemindersView(IdempotencyMixin, APIView):
+    """Trigger one PM reminder scan (due-soon / overdue → role notifications).
+
+    Idempotent per PM cycle — repeating the call does not duplicate
+    notifications; normally the ``sendPmReminders`` management command runs
+    this on a schedule, and this endpoint offers a manual trigger.
+    """
+
+    authentication_classes = [BearerSessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Request) -> Response:
+        dto = container.sendPmRemindersUseCase().execute(
+            SendPmRemindersCommand(
+                tenantId=str(request.data.get("tenantId", "")),
+                leadDays=int(request.data.get("leadDays", 3) or 3),
+            )
+        )
+        return Response(
+            successEnvelope([asDict(item) for item in dto.items], meta=dto.asMeta())
+        )

@@ -8,6 +8,7 @@ from apps.maintenance.application.commands.maintenanceCommands import (
     ChangeDeviceStatusCommand,
     RecordDevicePmCommand,
     RegisterDeviceCommand,
+    SendPmRemindersCommand,
     UpdateDeviceCommand,
 )
 from apps.maintenance.application.dto.maintenanceDtos import (
@@ -15,6 +16,8 @@ from apps.maintenance.application.dto.maintenanceDtos import (
     DeviceListDto,
     DeviceTimelineDto,
     DeviceTimelineItemDto,
+    PmReminderItemDto,
+    PmReminderRunDto,
     deviceDtoFromDomain,
     deviceHistoryTimelineItem,
 )
@@ -57,6 +60,7 @@ from apps.sharedKernel.application.ports import (
 )
 from apps.sharedKernel.application.useCase import AUDIT_CREATE, AUDIT_UPDATE, UseCase
 from apps.sharedKernel.domain.errors import DuplicateBusinessCodeError, EntityNotFoundError
+from apps.sharedKernel.domain.events import DomainEvent
 
 
 class DeviceUseCaseBase(UseCase):
@@ -248,6 +252,85 @@ class ListDuePmUseCase(DeviceUseCaseBase):
         return DeviceListDto(
             items=[deviceDtoFromDomain(item, asOf) for item in due],
             totalCount=len(due),
+        )
+
+
+class SendPmRemindersUseCase(DeviceUseCaseBase):
+    """Scan the PM schedule and emit reminder events for the notification
+    engine (§30 route table: ``devicePmDueSoon`` / ``devicePmOverdue``).
+
+    System job — normally driven by the ``sendPmReminders`` management
+    command on a schedule (cron / --loop), hence no per-user permission.
+    Idempotent per PM cycle: every event carries a deterministic ``eventId``
+    (event name + device + due date), so the notification engine's §29
+    idempotency key suppresses duplicates when the scan re-runs before the
+    cycle advances. Completing a PM moves ``nextDueDate`` forward, which
+    yields a fresh ``eventId`` for the next cycle.
+    """
+
+    requiredAction = ""  # system scheduler job (like the notification worker)
+
+    def perform(self, command: SendPmRemindersCommand) -> PmReminderRunDto:
+        tenantId = resolveTenantId(command.tenantId)
+        now = self.clock.nowUtc()
+        asOf = now.date()
+        leadDays = max(int(command.leadDays), 0)
+
+        items: list[PmReminderItemDto] = []
+        dueSoon = overdue = scanned = 0
+        for device in self.repository.listDueForPm(tenantId):
+            scanned += 1
+            due = device.nextDueDate()
+            if due is None:
+                continue
+            daysLeft = (due - asOf).days
+            if daysLeft < 0 or device.isPmDue(asOf):
+                eventName, kind = "devicePmOverdue", "overdue"
+                overdue += 1
+            elif daysLeft <= leadDays:
+                eventName, kind = "devicePmDueSoon", "dueSoon"
+                dueSoon += 1
+            else:
+                continue
+
+            device.recordEvent(
+                DomainEvent(
+                    name=eventName,
+                    occurredAt=now,
+                    tenantId=tenantId,
+                    payload={
+                        # Deterministic id per device + PM cycle (§29 dedup).
+                        "eventId": f"{eventName}:{device.id}:{due.isoformat()}",
+                        "sourceId": str(device.id),
+                        "deviceId": str(device.id),
+                        "deviceCode": device.code,
+                        "deviceName": device.name,
+                        "department": str(device.department),
+                        "dueDate": due.isoformat(),
+                        "daysLeft": daysLeft,
+                    },
+                )
+            )
+            self.collectEventsFrom(device)
+            items.append(
+                PmReminderItemDto(
+                    deviceId=str(device.id),
+                    code=device.code,
+                    name=device.name,
+                    department=str(device.department),
+                    dueDate=due.isoformat(),
+                    daysLeft=daysLeft,
+                    kind=kind,
+                )
+            )
+
+        return PmReminderRunDto(
+            asOf=asOf.isoformat(),
+            leadDays=leadDays,
+            scannedCount=scanned,
+            dueSoonCount=dueSoon,
+            overdueCount=overdue,
+            items=items,
         )
 
 

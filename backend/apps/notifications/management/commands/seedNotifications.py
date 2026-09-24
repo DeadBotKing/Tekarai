@@ -14,6 +14,7 @@ from apps.notifications.domain.valueObjects.notificationTypes import (
     CATEGORY_AI,
     CATEGORY_COMMUNICATION,
     CATEGORY_DOCUMENT,
+    CATEGORY_MAINTENANCE,
     CATEGORY_MEETING,
     CATEGORY_SECURITY,
     CATEGORY_SYSTEM,
@@ -82,6 +83,38 @@ TEMPLATES: list[tuple[str, str, tuple[str, str, str], tuple[str, str, str]]] = [
         CHANNEL_IN_APP,
         ("You have new notifications", "", "{itemCount} notifications were grouped."),
         ("اعلان‌های جدید دارید", "", "{itemCount} اعلان گروه‌بندی شد."),
+    ),
+    (
+        "maintenance.pmDueSoon",
+        CHANNEL_IN_APP,
+        (
+            "PM reminder: {deviceName}",
+            "",
+            "Preventive maintenance for «{deviceName}» ({deviceCode}) is due on "
+            "{dueDate} — {daysLeft} day(s) left.",
+        ),
+        (
+            "یادآوری PM: {deviceName}",
+            "",
+            "سررسید نگهداری پیشگیرانه دستگاه «{deviceName}» (کد {deviceCode}) "
+            "تاریخ {dueDate} است؛ {daysLeft} روز باقی مانده است.",
+        ),
+    ),
+    (
+        "maintenance.pmOverdue",
+        CHANNEL_IN_APP,
+        (
+            "PM overdue: {deviceName}",
+            "",
+            "Preventive maintenance for «{deviceName}» ({deviceCode}) was due on "
+            "{dueDate} and is now overdue.",
+        ),
+        (
+            "عقب‌افتادگی PM: {deviceName}",
+            "",
+            "موعد نگهداری پیشگیرانه دستگاه «{deviceName}» (کد {deviceCode}) در "
+            "تاریخ {dueDate} بوده و اکنون گذشته است؛ لطفاً فوراً اقدام کنید.",
+        ),
     ),
     (
         "security.alert",
@@ -159,6 +192,19 @@ POLICIES: list[tuple[str, str, str, str, tuple[str, ...], bool, bool, int]] = [
         (CHANNEL_IN_APP, CHANNEL_EMAIL, CHANNEL_PUSH),
         False,
         True,  # §5 explicit bypass for SECURITY only
+        0,
+    ),
+    (
+        # PM reminders: cooldown 0 so several devices may alert in one scan
+        # without the anti-storm window downgrading the later ones (§28);
+        # per-device duplicates are already prevented by the §29 eventId key.
+        "maintenance.reminders",
+        "CATEGORY",
+        CATEGORY_MAINTENANCE,
+        PRIORITY_HIGH,
+        (CHANNEL_IN_APP,),
+        False,
+        False,
         0,
     ),
     (

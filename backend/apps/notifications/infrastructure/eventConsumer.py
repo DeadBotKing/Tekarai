@@ -132,6 +132,36 @@ DEFAULT_EVENT_ROUTES: dict[str, dict[str, Any]] = {
         "recipientSpec": {"type": "ROLE", "value": ["maintenanceTechnician"]},
         "sourceType": "MAINTENANCE",
     },
+    # -- PM schedule reminders (SendPmRemindersUseCase scan) ------------------
+    # The scan emits one event per device per PM cycle with a deterministic
+    # payload eventId (device + due date), so daily re-runs de-duplicate via
+    # the §29 idempotency key. Recipients are the maintenance roles.
+    "devicePmDueSoon": {
+        "notificationType": "maintenance.pmDueSoon",
+        "category": "MAINTENANCE",
+        "priority": "HIGH",
+        "templateKey": "maintenance.pmDueSoon",
+        "title": "یادآوری نگهداری پیشگیرانه (PM)",
+        "body": "سررسید نگهداری پیشگیرانه یک دستگاه نزدیک است؛ لطفاً برنامه‌ریزی کنید.",
+        "recipientSpec": {
+            "type": "ROLE",
+            "value": ["maintenanceTechnician", "maintenanceManager"],
+        },
+        "sourceType": "MAINTENANCE",
+    },
+    "devicePmOverdue": {
+        "notificationType": "maintenance.pmOverdue",
+        "category": "MAINTENANCE",
+        "priority": "URGENT",
+        "templateKey": "maintenance.pmOverdue",
+        "title": "سررسید نگهداری پیشگیرانه گذشته است",
+        "body": "موعد نگهداری پیشگیرانه یک دستگاه سپری شده و اقدام فوری لازم است.",
+        "recipientSpec": {
+            "type": "ROLE",
+            "value": ["maintenanceTechnician", "maintenanceManager"],
+        },
+        "sourceType": "MAINTENANCE",
+    },
 }
 
 

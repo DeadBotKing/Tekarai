@@ -110,7 +110,30 @@ class Command(BaseCommand):
         else:
             access.grantRoleToUser(existingUser.id, tenantId, adminRoleId)
             self._ensureMembership(existingUser.id, tenantId)
-            self.stdout.write(f"platform admin ready: {username}")
+            self._syncAdminCredentials(existingUser.id, password)
+            self.stdout.write(
+                f"platform admin ready: {username} (password synced, account unlocked)"
+            )
+
+    @staticmethod
+    def _syncAdminCredentials(userId: uuid.UUID, password: str) -> None:
+        """Idempotent seed guarantee — every bootstrap run re-aligns the
+        platform admin with PLATFORM_ADMIN_PASSWORD and clears any lockout,
+        so the credentials the run script prints ALWAYS work (a stale
+        database from an earlier install can no longer lock the operator
+        out)."""
+        from django.contrib.auth.hashers import make_password
+        from django.utils import timezone
+
+        from apps.identity.infrastructure.models import UserModel
+
+        UserModel.objects.filter(id=userId).update(
+            passwordHash=make_password(password),
+            failedLoginCount=0,
+            lockedUntil=None,
+            status="active",
+            passwordChangedAt=timezone.now(),
+        )
 
     def _ensureMembership(self, userId: uuid.UUID, tenantId: uuid.UUID) -> None:
         """§11/§12 — login resolves an ACTIVE TenantMembership."""

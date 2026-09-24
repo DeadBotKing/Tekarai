@@ -132,7 +132,7 @@ export function JalaliDatePicker({
     todayParts[0] === viewYear && todayParts[1] === viewMonth && todayParts[2] === day;
 
   return (
-    <div className={`field ${error ? "has-error" : ""} ${className}`} ref={rootRef}>
+    <div className={`field jdp ${error ? "has-error" : ""} ${className}`} ref={rootRef}>
       {label && (
         <span className="field__label" id={`${inputId}-label`}>
           {label}

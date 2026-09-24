@@ -149,6 +149,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .jdp__placeholder { color: var(--text-faint); }
 .jdp__clear { position: absolute; inset-inline-end: 10px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 22px; height: 22px; color: var(--text-muted); background: transparent; border: 0; border-radius: 6px; cursor: pointer; }
 .jdp__clear:hover { color: var(--danger); background: var(--surface-2); }
+.jdp { position: relative; } /* anchor for the absolutely-positioned popover (fixes popover rendering off-screen inside modals) */
 .jdp__popover { position: absolute; z-index: var(--z-dropdown, 50); inset-block-start: calc(100% + 6px); inset-inline-end: 0; width: 268px; padding: 12px; background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius-md, 12px); box-shadow: var(--shadow-lg); animation: modal-in .14s ease-out; }
 .jdp__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .jdp__title { font-size: 13px; font-weight: 700; color: var(--text-strong); }

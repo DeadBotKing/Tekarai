@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "./Icon";
 import {
   JALALI_MONTHS,
@@ -51,6 +52,9 @@ export function JalaliDatePicker({
   const inputId = `jdp-${generatedId}`;
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
 
   const selected = useMemo(() => isoToJalaliParts(value), [value]);
 
@@ -75,7 +79,14 @@ export function JalaliDatePicker({
   useEffect(() => {
     if (!open) return;
     const onDown = (event: MouseEvent): void => {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (
+        rootRef.current &&
+        !rootRef.current.contains(target) &&
+        !popoverRef.current?.contains(target)
+      ) {
+        setOpen(false);
+      }
     };
     const onKey = (event: KeyboardEvent): void => {
       if (event.key === "Escape") setOpen(false);
@@ -85,6 +96,33 @@ export function JalaliDatePicker({
     return () => {
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  // Render the calendar at document level. Modals use an overflow container;
+  // keeping the popover inside it could clip the month title and day grid.
+  useEffect(() => {
+    if (!open) return;
+    const placePopover = (): void => {
+      const trigger = triggerRef.current;
+      if (!trigger) return;
+      const rect = trigger.getBoundingClientRect();
+      const width = Math.min(288, window.innerWidth - 16);
+      const estimatedHeight = 390;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const top =
+        spaceBelow >= estimatedHeight || rect.top < estimatedHeight
+          ? rect.bottom + 6
+          : Math.max(8, rect.top - estimatedHeight - 6);
+      const left = Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8));
+      setPopoverPosition({ top, left });
+    };
+    placePopover();
+    window.addEventListener("resize", placePopover);
+    window.addEventListener("scroll", placePopover, true);
+    return () => {
+      window.removeEventListener("resize", placePopover);
+      window.removeEventListener("scroll", placePopover, true);
     };
   }, [open]);
 
@@ -148,6 +186,7 @@ export function JalaliDatePicker({
         <button
           type="button"
           id={inputId}
+          ref={triggerRef}
           className="jdp__trigger"
           aria-haspopup="dialog"
           aria-expanded={open}
@@ -172,8 +211,16 @@ export function JalaliDatePicker({
         )}
       </div>
 
-      {open && (
-        <div className="jdp__popover" role="dialog" aria-modal="false">
+      {open &&
+        createPortal(
+        <div
+          ref={popoverRef}
+          className="jdp__popover jdp__popover--portal"
+          role="dialog"
+          aria-modal="false"
+          dir="rtl"
+          style={{ top: popoverPosition.top, left: popoverPosition.left }}
+        >
           <div className="jdp__header">
             <button
               type="button"
@@ -260,8 +307,9 @@ export function JalaliDatePicker({
               امروز
             </button>
           </div>
-        </div>
-      )}
+        </div>,
+          document.body,
+        )}
 
       {(hint || error) && (
         <span className={`field__message ${error ? "field__message--error" : ""}`}>

@@ -1,8 +1,14 @@
 * { box-sizing: border-box; }
 html, body, #root { min-height: 100%; margin: 0; }
 html { background: var(--surface-0); }
-body { color: var(--text); background: var(--surface-0); font-family: var(--font-sans); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
-button, input, select, textarea { font: inherit; }
+body { color: var(--text); background: var(--surface-0); font-family: var(--font-sans); font-size: 14px; font-weight: 400; font-optical-sizing: auto; font-feature-settings: "kern" 1, "liga" 1, "calt" 1; line-height: 1.65; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
+button, input, select, textarea { font: inherit; font-feature-settings: inherit; }
+strong, b, h1, h2, h3, h4, h5, h6 { font-weight: 720; }
+[dir="rtl"] { text-align: right; }
+[dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3, [dir="rtl"] h4, [dir="rtl"] strong, [dir="rtl"] .button, [dir="rtl"] .eyebrow { letter-spacing: 0; }
+input::placeholder, textarea::placeholder { font-weight: 400; }
+button, .button, .badge, .nav-item, .field__label { font-weight: 650; }
+.metric-card__value, .jdp__cell, .jdp__title, table, time { font-variant-numeric: tabular-nums; }
 button, a { -webkit-tap-highlight-color: transparent; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .52; }

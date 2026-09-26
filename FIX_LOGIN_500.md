@@ -28,6 +28,40 @@ return Response(errorEnvelope([errorEntry("SYS_INTERNAL_ERROR", "Unexpected serv
 یا پایگاه دادهٔ پیکربندی‌شده (به‌طور پیش‌فرض SQL Server) اصلاً بالا نیست.
 اگر نام کاربری یا گذرواژه اشتباه بود، خطا ۴۰۱ می‌شد نه ۵۰۰.
 
+## اگر ویندوز گفت «file is not digitally signed»
+
+این خطای خود ویندوز است (سیاست اجرای اسکریپت)، نه خطای پروژه. سه راه، از ساده به پیشرفته:
+
+**۱) از فایل‌های `.cmd` استفاده کنید — هیچ محدودیتی ندارند (پیشنهادی):**
+
+```powershell
+.\fix_login.cmd        # عیب‌یابی و رفع خودکار
+.\run_dev.cmd -UseSqlite   # اجرای کل برنامه
+```
+(می‌توانید در File Explorer هم روی همین دو فایل دوبار کلیک کنید.)
+
+**۲) اجرای یک‌بارهٔ اسکریپت PowerShell با دور زدن سیاست:**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\fix_login.ps1 -Sqlite
+powershell -ExecutionPolicy Bypass -File .\run_dev.ps1 -UseSqlite
+```
+
+**۳) اجازهٔ دائمی برای کاربر خودتان (فایل‌ها هم باید از حالت «دانلودشده» خارج شوند):**
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+Get-ChildItem -Recurse -Filter *.ps1 | Unblock-File
+```
+
+**۴) بدون هیچ اسکریپتی، مستقیم با پایتون:**
+
+```powershell
+cd C:\Users\Mitra\Desktop\Tekarai
+backend\venv\Scripts\python.exe backend\scripts\doctorLogin.py --fix --sqlite
+```
+(اگر محیط مجازی شما `.venv` نام دارد، همان را جایگزین کنید.)
+
 ## راه‌حل ۰ — عیب‌یاب خودکار (سریع‌ترین راه، تازه اضافه شد)
 
 در ریشهٔ پروژه (`C:\Users\Mitra\Desktop\Tekarai`):

@@ -574,3 +574,92 @@ export interface PartUsageReport {
   totalQuantity: number;
   devices: PartUsageReportRow[];
 }
+
+// -- Chat / communication (Phase 27) ------------------------------------------
+
+/** A conversation is direct (two people), a private group, or an open channel. */
+export type ConversationType = "DIRECT" | "GROUP" | "CHANNEL";
+export type ParticipantRole = "OWNER" | "ADMIN" | "MODERATOR" | "MEMBER" | "GUEST";
+export type ChannelVisibility = "PUBLIC" | "PRIVATE" | "RESTRICTED";
+
+export const CONVERSATION_TYPES: ConversationType[] = ["DIRECT", "GROUP", "CHANNEL"];
+export const PARTICIPANT_ROLES: ParticipantRole[] = [
+  "OWNER",
+  "ADMIN",
+  "MODERATOR",
+  "MEMBER",
+  "GUEST",
+];
+/** Quick reactions offered under every message. */
+export const QUICK_REACTIONS = ["👍", "❤️", "😊", "🎉", "👏", "🙏"];
+
+export interface Conversation {
+  id: string;
+  type: ConversationType;
+  name: string;
+  description: string;
+  topic: string;
+  visibility: string;
+  isActive: boolean;
+  archivedAt: string;
+  createdAt: string;
+  lastMessageAt: string;
+  lastMessagePreview: string;
+  unreadCount: number;
+}
+
+export interface ConversationParticipant {
+  id: string;
+  conversationId: string;
+  userId: string;
+  displayName: string;
+  role: ParticipantRole;
+  joinedAt: string;
+  leftAt: string;
+  isMuted: boolean;
+  isActive: boolean;
+}
+
+export interface MessageReaction {
+  reaction: string;
+  userId: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  senderName: string;
+  messageType: string;
+  body: string;
+  createdAt: string;
+  replyToId: string;
+  editedAt: string;
+  deleted: boolean;
+  pending?: boolean;
+  failed?: boolean;
+  reactions: MessageReaction[];
+}
+
+export interface ChatDirectoryUser {
+  id: string;
+  displayName: string;
+  email: string;
+}
+
+export interface SendMessageInput {
+  body: string;
+  replyToId?: string;
+  clientRequestId?: string;
+}
+
+export interface CreateConversationInput {
+  kind: "direct" | "group" | "channel";
+  peerUserId?: string;
+  name?: string;
+  description?: string;
+  memberIds?: string[];
+  code?: string;
+  topic?: string;
+  visibility?: ChannelVisibility;
+}

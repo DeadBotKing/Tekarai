@@ -5,6 +5,7 @@ import "../styles/fonts.css";
 import "../styles/tokens.css";
 import "../styles/globals.css";
 import "../styles/maintenanceAttachments.css";
+import "../styles/chat.css";
 
 export function App(): JSX.Element {
   return <BrowserRouter><AppProviders><AppRouter /></AppProviders></BrowserRouter>;

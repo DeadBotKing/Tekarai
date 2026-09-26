@@ -19,6 +19,7 @@ import { DocumentsPage } from "../../pages/DocumentsPage";
 import { ReportsPage } from "../../pages/ReportsPage";
 import { IntelligencePage } from "../../pages/IntelligencePage";
 import { AdministrationPage } from "../../pages/AdministrationPage";
+import { ChatPage } from "../../pages/ChatPage";
 import { NotificationsPage } from "../../pages/NotificationsPage";
 import { SettingsPage } from "../../pages/SettingsPage";
 import { NotFoundPage } from "../../pages/NotFoundPage";
@@ -51,6 +52,7 @@ export function AppRouter(): JSX.Element {
       <Route path="reports" element={<ReportsPage />} />
       <Route path="intelligence" element={<IntelligencePage />} />
       <Route path="administration/*" element={<AdministrationPage />} />
+      <Route path="chat" element={<ChatPage />} />
       <Route path="notifications" element={<NotificationsPage />} />
       <Route path="settings" element={<SettingsPage />} />
       <Route path="*" element={<NotFoundPage />} />

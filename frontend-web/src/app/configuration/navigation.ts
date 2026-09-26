@@ -65,6 +65,14 @@ export const navigationConfig: NavigationItem[] = [
     ],
   },
   {
+    id: "communication",
+    label: "nav.chat",
+    icon: "message",
+    children: [
+      { id: "chat", label: "nav.chat", icon: "message", route: "/app/chat" },
+    ],
+  },
+  {
     id: "reporting",
     label: "nav.reports",
     icon: "chart",

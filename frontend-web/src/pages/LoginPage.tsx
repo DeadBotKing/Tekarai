@@ -25,7 +25,15 @@ export function LoginPage(): JSX.Element {
       navigate("/app/dashboard", { replace: true });
     } catch (reason) {
       const classified = classifyError(reason);
-      setError(classified.category === "authentication" ? t("auth.invalid") : classified.message);
+      setError(
+        classified.category === "authentication"
+          ? t("auth.invalid")
+          : classified.category === "server"
+            ? t("auth.serverError")
+            : classified.category === "network" || classified.category === "timeout"
+              ? t("auth.networkError")
+              : classified.message,
+      );
     }
   };
 

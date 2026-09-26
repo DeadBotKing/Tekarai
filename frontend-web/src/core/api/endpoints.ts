@@ -7,6 +7,25 @@ export const apiEndpoints = {
   roles: "roles",
   projects: { list: "projects/", create: "projects/", detail: (id: string) => `projects/${id}`, update: (id: string) => `projects/${id}`, status: (id: string) => `projects/${id}/status` },
   tasks: { list: "tasks/", create: "tasks/", detail: (id: string) => `tasks/${id}`, status: (id: string) => `tasks/${id}/status` },
+  communication: {
+    conversations: "communication/conversations",
+    conversation: (id: string) => `communication/conversations/${id}`,
+    conversationArchive: (id: string) => `communication/conversations/${id}/archive`,
+    conversationParticipants: (id: string) => `communication/conversations/${id}/participants`,
+    conversationParticipant: (conversationId: string, userId: string) =>
+      `communication/conversations/${conversationId}/participants/${userId}`,
+    conversationLeave: (id: string) => `communication/conversations/${id}/leave`,
+    conversationPreferences: (id: string) => `communication/conversations/${id}/preferences`,
+    conversationMessages: (id: string) => `communication/conversations/${id}/messages`,
+    conversationRead: (id: string) => `communication/conversations/${id}/read`,
+    conversationPins: (id: string) => `communication/conversations/${id}/pins`,
+    conversationPin: (conversationId: string, messageId: string) =>
+      `communication/conversations/${conversationId}/pins/${messageId}`,
+    message: (id: string) => `communication/messages/${id}`,
+    messageReactions: (id: string) => `communication/messages/${id}/reactions`,
+    messageSearch: "communication/messages/search",
+    presence: "communication/presence",
+  },
   maintenance: {
     devices: "maintenance/devices",
     device: (id: string) => `maintenance/devices/${id}`,

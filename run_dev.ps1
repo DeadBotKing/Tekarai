@@ -1,4 +1,4 @@
-﻿# =============================================================================
+# =============================================================================
 # Tekarai - run the WHOLE platform (backend + frontend) with ONE command.
 # Windows PowerShell + SQL Server (SQL Express).
 #
@@ -97,12 +97,23 @@ if ($UseWaitress) {
 }
 
 # --- 2. frontend dependencies ---------------------------------------------------
-if (-not (Test-Path "frontend-web\node_modules")) {
-  Write-Host ">> installing frontend dependencies (one time) ..."
+# node_modules may exist but be stale after package.json/package-lock changes.
+# `npm ls` catches missing direct dependencies (for example bundled fonts) and
+# triggers a clean, reproducible install only when needed.
+$frontendNeedsInstall = -not (Test-Path "frontend-web\node_modules")
+if (-not $frontendNeedsInstall) {
+  Push-Location frontend-web
+  npm ls --depth=0 --silent *> $null
+  $frontendNeedsInstall = $LASTEXITCODE -ne 0
+  Pop-Location
+}
+if ($frontendNeedsInstall) {
+  Write-Host ">> installing/updating frontend dependencies ..."
   Push-Location frontend-web
   npm ci
+  $npmExitCode = $LASTEXITCODE
   Pop-Location
-  if ($LASTEXITCODE -ne 0) { Write-Host "npm ci failed. See output above." -ForegroundColor Red; exit 1 }
+  if ($npmExitCode -ne 0) { Write-Host "npm ci failed. See output above." -ForegroundColor Red; exit 1 }
 }
 
 # --- 3. database configuration --------------------------------------------------

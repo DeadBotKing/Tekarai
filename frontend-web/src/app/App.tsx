@@ -1,7 +1,7 @@
 import { BrowserRouter } from "react-router-dom";
-import "@fontsource-variable/vazirmatn";
 import { AppProviders } from "./providers/AppProviders";
 import { AppRouter } from "./router/AppRouter";
+import "../styles/fonts.css";
 import "../styles/tokens.css";
 import "../styles/globals.css";
 

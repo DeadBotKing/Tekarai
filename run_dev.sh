@@ -46,9 +46,11 @@ if [ "$ENGINE" = "mssql" ]; then
   (cd backend && ./.venv/bin/python scripts/ensureDatabase.py)
 fi
 
-# --- frontend dependencies (one time) ----------------------------------------
-if [ ! -d frontend-web/node_modules ]; then
-  echo ">> installing frontend dependencies (one time) ..."
+# --- frontend dependencies ---------------------------------------------------
+# Reinstall when node_modules exists but no longer matches package-lock.json
+# (for example after adding a locally bundled font package).
+if [ ! -d frontend-web/node_modules ] || ! (cd frontend-web && npm ls --depth=0 --silent >/dev/null 2>&1); then
+  echo ">> installing/updating frontend dependencies ..."
   (cd frontend-web && npm ci)
 fi
 

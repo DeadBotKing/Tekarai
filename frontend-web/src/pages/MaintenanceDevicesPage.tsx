@@ -66,6 +66,10 @@ export function MaintenanceDevicesPage(): JSX.Element {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
+  const [pmFromDraft, setPmFromDraft] = useState("");
+  const [pmToDraft, setPmToDraft] = useState("");
+  const [pmFrom, setPmFrom] = useState("");
+  const [pmTo, setPmTo] = useState("");
   const [toast, setToast] = useState("");
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -97,12 +101,30 @@ export function MaintenanceDevicesPage(): JSX.Element {
         (device) =>
           (statusFilter === "all" || device.status === statusFilter) &&
           (departmentFilter === "all" || device.department === departmentFilter) &&
+          (!pmFrom || (device.nextDueDate && device.nextDueDate >= pmFrom)) &&
+          (!pmTo || (device.nextDueDate && device.nextDueDate <= pmTo)) &&
           `${device.code} ${device.name} ${device.location}`
             .toLowerCase()
             .includes(search.toLowerCase()),
       ),
-    [devices, search, statusFilter, departmentFilter],
+    [devices, search, statusFilter, departmentFilter, pmFrom, pmTo],
   );
+
+  const applyPmRange = (): void => {
+    if (pmFromDraft && pmToDraft && pmFromDraft > pmToDraft) {
+      setToast("تاریخ شروع بازه PM نباید بعد از تاریخ پایان باشد.");
+      return;
+    }
+    setPmFrom(pmFromDraft);
+    setPmTo(pmToDraft);
+  };
+
+  const clearPmRange = (): void => {
+    setPmFromDraft("");
+    setPmToDraft("");
+    setPmFrom("");
+    setPmTo("");
+  };
 
   const openCreate = (): void => {
     setFormCode("");
@@ -362,11 +384,22 @@ export function MaintenanceDevicesPage(): JSX.Element {
         title={t("cmms.devices.title")}
         subtitle={t("cmms.devices.subtitle")}
         actions={
-          <PermissionGuard permission={PERMISSIONS.maintenanceDeviceManage}>
-            <Button variant="primary" icon="plus" onClick={openCreate}>
-              {t("cmms.devices.new")}
-            </Button>
-          </PermissionGuard>
+          <div className="cmms-header-actions">
+            <PermissionGuard permission={PERMISSIONS.maintenanceWorkOrderList}>
+              <Button
+                variant="secondary"
+                icon="chart"
+                onClick={() => navigate("/app/maintenance/reports")}
+              >
+                گزارش کلی نگهداری
+              </Button>
+            </PermissionGuard>
+            <PermissionGuard permission={PERMISSIONS.maintenanceDeviceManage}>
+              <Button variant="primary" icon="plus" onClick={openCreate}>
+                {t("cmms.devices.new")}
+              </Button>
+            </PermissionGuard>
+          </div>
         }
       />
 
@@ -375,6 +408,33 @@ export function MaintenanceDevicesPage(): JSX.Element {
         <MetricCard label={t("cmms.metric.operational")} value={operationalCount} icon="checkCircle" tone="green" />
         <MetricCard label={t("cmms.metric.duePm")} value={dueCount} icon="warning" tone="amber" />
       </div>
+
+      <Card className="content-card" padding="md">
+        <div className="cmms-report-filter">
+          <div className="cmms-range-intro">
+            <strong>فیلتر موعد PM دستگاه‌ها</strong>
+            <span>دستگاه‌هایی را نشان می‌دهد که تاریخ PM بعدی آن‌ها داخل این بازه است.</span>
+          </div>
+          <JalaliDatePicker
+            label="PM از تاریخ"
+            value={pmFromDraft}
+            onChange={setPmFromDraft}
+          />
+          <JalaliDatePicker
+            label="PM تا تاریخ"
+            value={pmToDraft}
+            onChange={setPmToDraft}
+          />
+          <Button variant="primary" icon="filter" onClick={applyPmRange}>
+            فیلتر موعد PM
+          </Button>
+          {(pmFrom || pmTo || pmFromDraft || pmToDraft) && (
+            <Button variant="ghost" icon="close" onClick={clearPmRange}>
+              پاک کردن
+            </Button>
+          )}
+        </div>
+      </Card>
 
       <Card className="content-card" padding="none">
         <div className="view-toolbar">

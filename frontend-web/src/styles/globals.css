@@ -124,6 +124,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .cmms-report__print-head { display: none; }
 .cmms-report__section-title { margin: 0 0 12px; font-size: 15px; font-weight: 600; }
 .cmms-report-filter { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.cmms-range-intro { display: flex; flex: 1 1 100%; flex-direction: column; gap: 3px; margin-bottom: 2px; }
+.cmms-range-intro strong { color: var(--text-strong); font-size: 13px; }
+.cmms-range-intro span { color: var(--text-muted); font-size: 11px; }
 .cmms-report__completion { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
 .cmms-report__table-head { padding: 16px 16px 0; }
 .cmms-report__table-wrap { overflow-x: auto; padding: 12px 16px 16px; }

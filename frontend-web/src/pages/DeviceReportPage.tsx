@@ -152,6 +152,10 @@ export function DeviceReportPage(): JSX.Element {
 
       <Card className="content-card dash-actions--noprint" padding="md">
         <div className="cmms-report-filter">
+          <div className="cmms-range-intro">
+            <strong>{t("cmms.report.rangeHelp")}</strong>
+            <span>این فیلتر تاریخ PM دستگاه را تغییر نمی‌دهد.</span>
+          </div>
           <JalaliDatePicker
             label={t("cmms.report.fromDate")}
             value={fromDate}

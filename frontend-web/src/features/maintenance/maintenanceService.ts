@@ -395,11 +395,16 @@ export const createMaintenanceService = (api: ApiClient): MaintenanceService => 
     return toPartUsage(dto);
   },
   listDevices: async (filters = {}, signal) => {
-    const dtos = await api.get<DeviceDto[]>(apiEndpoints.maintenance.devices, {
-      signal,
-      query: { ...filters, page: 1, pageSize: 100 },
-    });
-    return dtos.map(toDevice);
+    const all: DeviceDto[] = [];
+    for (let page = 1; page <= 1000; page += 1) {
+      const batch = await api.get<DeviceDto[]>(apiEndpoints.maintenance.devices, {
+        signal,
+        query: { ...filters, page, pageSize: 100 },
+      });
+      all.push(...batch);
+      if (batch.length < 100) break;
+    }
+    return all.map(toDevice);
   },
   registerDevice: async (input, signal) => {
     const dto = await api.post<DeviceDto>(
@@ -457,11 +462,16 @@ export const createMaintenanceService = (api: ApiClient): MaintenanceService => 
     return dtos.map(toWorkOrder);
   },
   listWorkOrders: async (filters = {}, signal) => {
-    const dtos = await api.get<WorkOrderDto[]>(apiEndpoints.maintenance.workOrders, {
-      signal,
-      query: { ...filters, page: 1, pageSize: 100 },
-    });
-    return dtos.map(toWorkOrder);
+    const all: WorkOrderDto[] = [];
+    for (let page = 1; page <= 1000; page += 1) {
+      const batch = await api.get<WorkOrderDto[]>(apiEndpoints.maintenance.workOrders, {
+        signal,
+        query: { ...filters, page, pageSize: 100 },
+      });
+      all.push(...batch);
+      if (batch.length < 100) break;
+    }
+    return all.map(toWorkOrder);
   },
   submitWorkOrder: async (input, signal) => {
     const dto = await api.post<WorkOrderDto>(

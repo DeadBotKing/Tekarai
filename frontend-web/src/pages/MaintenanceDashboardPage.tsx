@@ -321,6 +321,13 @@ export function MaintenanceDashboardPage(): JSX.Element {
               {t("cmms.dash.print")}
             </Button>
             <Button
+              variant="secondary"
+              icon="chart"
+              onClick={() => navigate("/app/maintenance/reports")}
+            >
+              گزارش کلی
+            </Button>
+            <Button
               variant="primary"
               icon="checkSquare"
               onClick={() => navigate("/app/maintenance/work-orders")}

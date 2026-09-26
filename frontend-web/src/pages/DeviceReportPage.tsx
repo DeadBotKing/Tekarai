@@ -217,8 +217,20 @@ export function DeviceReportPage(): JSX.Element {
                 <strong>{t(`cmms.status.${report.device.status}`)}</strong>
               </div>
               <div>
+                <span>{t("cmms.device.lastPm")}</span>
+                <strong>
+                  {report.device.lastPmDate
+                    ? formatJalali(report.device.lastPmDate, { style: "short" })
+                    : t("cmms.common.none")}
+                </strong>
+              </div>
+              <div>
                 <span>{t("cmms.device.nextPm")}</span>
-                <strong>{report.device.nextDueDate || t("cmms.common.none")}</strong>
+                <strong>
+                  {report.device.nextDueDate
+                    ? formatJalali(report.device.nextDueDate, { style: "short" })
+                    : t("cmms.common.none")}
+                </strong>
               </div>
             </div>
           </Card>

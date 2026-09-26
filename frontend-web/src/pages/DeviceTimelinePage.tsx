@@ -158,8 +158,20 @@ export function DeviceTimelinePage(): JSX.Element {
                 <strong>{t(`cmms.status.${device.status}`)}</strong>
               </div>
               <div>
+                <span>{t("cmms.device.lastPm")}</span>
+                <strong>
+                  {device.lastPmDate
+                    ? formatJalali(device.lastPmDate, { style: "short" })
+                    : t("cmms.common.none")}
+                </strong>
+              </div>
+              <div>
                 <span>{t("cmms.device.nextPm")}</span>
-                <strong>{device.nextDueDate || t("cmms.common.none")}</strong>
+                <strong>
+                  {device.nextDueDate
+                    ? formatJalali(device.nextDueDate, { style: "short" })
+                    : t("cmms.common.none")}
+                </strong>
               </div>
             </div>
           </Card>

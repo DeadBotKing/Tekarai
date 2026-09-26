@@ -47,6 +47,14 @@ const statusTone = (status: DeviceStatus): "success" | "info" | "danger" | "neut
         ? "danger"
         : "neutral";
 
+const addDaysToIso = (isoDate: string, days: number): string => {
+  const date = new Date(`${isoDate}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return "";
+  date.setDate(date.getDate() + days);
+  const pad = (value: number): string => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
+
 export function MaintenanceDevicesPage(): JSX.Element {
   const { t } = useLocalization();
   const navigate = useNavigate();
@@ -207,7 +215,15 @@ export function MaintenanceDevicesPage(): JSX.Element {
     if (runtimeConfig.demoMode) {
       setDevices((current) =>
         current.map((item) =>
-          item.id === pmDevice.id ? { ...item, lastPmDate: pmDate, pmDue: false } : item,
+          item.id === pmDevice.id
+            ? {
+                ...item,
+                lastPmDate: pmDate,
+                nextDueDate:
+                  item.pmIntervalDays > 0 ? addDaysToIso(pmDate, item.pmIntervalDays) : "",
+                pmDue: false,
+              }
+            : item,
         ),
       );
       setPmDevice(null);
@@ -215,7 +231,12 @@ export function MaintenanceDevicesPage(): JSX.Element {
       return;
     }
     try {
-      await service.recordPm(pmDevice.id, pmDate);
+      const updated = await service.recordPm(pmDevice.id, pmDate);
+      // Apply the server response immediately so the selected date and newly
+      // calculated next PM remain visible even if the follow-up refresh fails.
+      setDevices((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item)),
+      );
       setPmDevice(null);
       setToast(t("cmms.device.pmSuccess"));
       await refresh();
@@ -262,6 +283,18 @@ export function MaintenanceDevicesPage(): JSX.Element {
       ),
     },
     {
+      key: "lastPmDate",
+      label: t("cmms.device.lastPm"),
+      accessor: (row) => row.lastPmDate,
+      sortable: true,
+      render: (row) =>
+        row.lastPmDate ? (
+          <span>{formatJalali(row.lastPmDate, { style: "short" })}</span>
+        ) : (
+          <span className="muted-cell">{t("cmms.common.none")}</span>
+        ),
+    },
+    {
       key: "nextDueDate",
       label: t("cmms.device.nextPm"),
       accessor: (row) => row.nextDueDate,
@@ -305,7 +338,15 @@ export function MaintenanceDevicesPage(): JSX.Element {
             <Button variant="ghost" size="sm" icon="edit" onClick={() => openEdit(row)}>
               {t("cmms.device.editTitle")}
             </Button>
-            <Button variant="ghost" size="sm" icon="check" onClick={() => setPmDevice(row)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon="check"
+              onClick={() => {
+                setPmDate(row.lastPmDate || todayIso());
+                setPmDevice(row);
+              }}
+            >
               {t("cmms.device.recordPm")}
             </Button>
           </PermissionGuard>

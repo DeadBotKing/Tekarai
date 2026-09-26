@@ -40,6 +40,21 @@ class Device(AggregateRoot):
         createdAt: datetime,
         updatedAt: datetime | None = None,
         deletedAt: datetime | None = None,
+        *,
+        # -- Phase 26 registry attributes -------------------------------------------
+        # Optional master data that the registry writes through a dedicated
+        # nameplate command. They are descriptive only: no maintenance rule
+        # depends on them, so every pre-Phase-26 device stays valid.
+        manufacturer: str = "",
+        modelNumber: str = "",
+        serialNumber: str = "",
+        equipmentType: str = "",
+        criticality: str = "medium",
+        locationId: uuid.UUID | None = None,
+        locationPath: str = "",
+        parentDeviceId: uuid.UUID | None = None,
+        operatorUnit: str = "",
+        runningHours: float = 0.0,
     ) -> None:
         super().__init__(id)
         self.tenantId = tenantId
@@ -53,6 +68,16 @@ class Device(AggregateRoot):
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.deletedAt = deletedAt
+        self.manufacturer = manufacturer
+        self.modelNumber = modelNumber
+        self.serialNumber = serialNumber
+        self.equipmentType = equipmentType
+        self.criticality = criticality
+        self.locationId = locationId
+        self.locationPath = locationPath
+        self.parentDeviceId = parentDeviceId
+        self.operatorUnit = operatorUnit
+        self.runningHours = runningHours
 
     @staticmethod
     def create(

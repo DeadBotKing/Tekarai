@@ -26,6 +26,17 @@ class DeviceDto:
     pmDue: bool
     createdAt: str
     updatedAt: str = ""
+    # -- Phase 26 registry columns (empty for devices never edited in the registry) --
+    manufacturer: str = ""
+    modelNumber: str = ""
+    serialNumber: str = ""
+    equipmentType: str = ""
+    criticality: str = "medium"
+    locationId: str = ""
+    locationPath: str = ""
+    parentDeviceId: str = ""
+    operatorUnit: str = ""
+    runningHours: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -191,6 +202,16 @@ def deviceDtoFromDomain(device: Device, asOf: date) -> DeviceDto:
         pmDue=device.isPmDue(asOf),
         createdAt=device.createdAt.isoformat(),
         updatedAt=device.updatedAt.isoformat() if device.updatedAt else "",
+        manufacturer=getattr(device, "manufacturer", ""),
+        modelNumber=getattr(device, "modelNumber", ""),
+        serialNumber=getattr(device, "serialNumber", ""),
+        equipmentType=getattr(device, "equipmentType", ""),
+        criticality=getattr(device, "criticality", "medium") or "medium",
+        locationId=str(getattr(device, "locationId", "") or ""),
+        locationPath=getattr(device, "locationPath", ""),
+        parentDeviceId=str(getattr(device, "parentDeviceId", "") or ""),
+        operatorUnit=getattr(device, "operatorUnit", ""),
+        runningHours=float(getattr(device, "runningHours", 0.0) or 0.0),
     )
 
 

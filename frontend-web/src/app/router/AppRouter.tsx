@@ -6,6 +6,11 @@ import { ProjectsPage } from "../../pages/ProjectsPage";
 import { TasksPage } from "../../pages/TasksPage";
 import { MaintenanceDashboardPage } from "../../pages/MaintenanceDashboardPage";
 import { MaintenanceDevicesPage } from "../../pages/MaintenanceDevicesPage";
+import { EquipmentRegistryPage } from "../../pages/EquipmentRegistryPage";
+import { DeviceProfilePage } from "../../pages/DeviceProfilePage";
+import { MaintenanceLocationsPage } from "../../pages/MaintenanceLocationsPage";
+import { MaintenancePersonnelPage } from "../../pages/MaintenancePersonnelPage";
+import { FleetAnalyticsPage } from "../../pages/FleetAnalyticsPage";
 import { MaintenanceReportPage } from "../../pages/MaintenanceReportPage";
 import { DeviceReportPage } from "../../pages/DeviceReportPage";
 import { DeviceTimelinePage } from "../../pages/DeviceTimelinePage";
@@ -30,6 +35,11 @@ export function AppRouter(): JSX.Element {
       <Route path="tasks" element={<TasksPage />} />
       <Route path="maintenance/dashboard" element={<MaintenanceDashboardPage />} />
       <Route path="maintenance/devices" element={<MaintenanceDevicesPage />} />
+      <Route path="maintenance/registry" element={<EquipmentRegistryPage />} />
+      <Route path="maintenance/devices/:deviceId/profile" element={<DeviceProfilePage />} />
+      <Route path="maintenance/locations" element={<MaintenanceLocationsPage />} />
+      <Route path="maintenance/personnel" element={<MaintenancePersonnelPage />} />
+      <Route path="maintenance/fleet" element={<FleetAnalyticsPage />} />
       <Route path="maintenance/reports" element={<MaintenanceReportPage />} />
       <Route path="maintenance/devices/:deviceId/report" element={<DeviceReportPage />} />
       <Route path="maintenance/devices/:deviceId/timeline" element={<DeviceTimelinePage />} />

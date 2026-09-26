@@ -85,6 +85,8 @@ DEPARTMENT_ELECTRICAL = "electrical"
 DEPARTMENT_MECHANICAL = "mechanical"
 DEPARTMENT_FACILITIES = "facilities"
 DEPARTMENT_INSTRUMENTATION = "instrumentation"
+DEPARTMENT_HYDRAULIC = "hydraulic"
+DEPARTMENT_PNEUMATIC = "pneumatic"
 
 MAINTENANCE_DEPARTMENTS = (
     DEPARTMENT_GENERAL,
@@ -92,6 +94,104 @@ MAINTENANCE_DEPARTMENTS = (
     DEPARTMENT_MECHANICAL,
     DEPARTMENT_FACILITIES,
     DEPARTMENT_INSTRUMENTATION,
+    DEPARTMENT_HYDRAULIC,
+    DEPARTMENT_PNEUMATIC,
+)
+
+#: The seven maintenance disciplines a PM plan can belong to (Phase 26 asset
+#: registry). Identical to the department catalogue on purpose: a PM plan is
+#: owned by the same unit that receives its generated work orders, so routing
+#: stays consistent. Persian labels live in the frontend localization layer.
+PM_DISCIPLINES = MAINTENANCE_DEPARTMENTS
+
+# -- Equipment criticality (Phase 26) --------------------------------------------------
+CRITICALITY_LOW = "low"
+CRITICALITY_MEDIUM = "medium"
+CRITICALITY_HIGH = "high"
+CRITICALITY_VITAL = "vital"
+
+ASSET_CRITICALITIES = (
+    CRITICALITY_LOW,
+    CRITICALITY_MEDIUM,
+    CRITICALITY_HIGH,
+    CRITICALITY_VITAL,
+)
+
+# -- Location kinds (Phase 26 hierarchical location tree) --------------------------
+# A location is a node in a self-referencing tree; the kind is descriptive only,
+# so depth is never capped at site → building → room.
+LOCATION_SITE = "site"
+LOCATION_BUILDING = "building"
+LOCATION_FLOOR = "floor"
+LOCATION_HALL = "hall"
+LOCATION_LINE = "line"
+LOCATION_ROOM = "room"
+LOCATION_AREA = "area"
+
+LOCATION_KINDS = (
+    LOCATION_SITE,
+    LOCATION_BUILDING,
+    LOCATION_FLOOR,
+    LOCATION_HALL,
+    LOCATION_LINE,
+    LOCATION_ROOM,
+    LOCATION_AREA,
+)
+
+# -- PM plan frequency units (Phase 26) --------------------------------------------
+FREQUENCY_DAY = "day"
+FREQUENCY_WEEK = "week"
+FREQUENCY_MONTH = "month"
+FREQUENCY_RUNNING_HOUR = "runningHour"
+
+PM_FREQUENCY_UNITS = (
+    FREQUENCY_DAY,
+    FREQUENCY_WEEK,
+    FREQUENCY_MONTH,
+    FREQUENCY_RUNNING_HOUR,
+)
+
+#: Days per frequency unit, used to normalise a PM plan's period into days.
+#: ``runningHour`` has no calendar equivalent and is scheduled by meter reading.
+FREQUENCY_DAYS: dict[str, int] = {
+    FREQUENCY_DAY: 1,
+    FREQUENCY_WEEK: 7,
+    FREQUENCY_MONTH: 30,
+}
+
+# -- Device personnel assignment roles (Phase 26) ----------------------------------
+ASSIGNMENT_OPERATOR = "operator"
+ASSIGNMENT_RESPONSIBLE = "responsible"
+ASSIGNMENT_TECHNICIAN = "technician"
+ASSIGNMENT_DEPUTY = "deputy"
+
+DEVICE_ASSIGNMENT_ROLES = (
+    ASSIGNMENT_OPERATOR,
+    ASSIGNMENT_RESPONSIBLE,
+    ASSIGNMENT_TECHNICIAN,
+    ASSIGNMENT_DEPUTY,
+)
+
+# -- Failure classification (Phase 26 reporting) -----------------------------------
+FAILURE_NONE = ""
+FAILURE_MECHANICAL = "mechanicalFailure"
+FAILURE_ELECTRICAL = "electricalFailure"
+FAILURE_WEAR = "wear"
+FAILURE_LUBRICATION = "lubrication"
+FAILURE_OPERATOR_ERROR = "operatorError"
+FAILURE_PART_QUALITY = "partQuality"
+FAILURE_MISSED_PM = "missedPm"
+FAILURE_OTHER = "otherFailure"
+
+FAILURE_TYPES = (
+    FAILURE_MECHANICAL,
+    FAILURE_ELECTRICAL,
+    FAILURE_WEAR,
+    FAILURE_LUBRICATION,
+    FAILURE_OPERATOR_ERROR,
+    FAILURE_PART_QUALITY,
+    FAILURE_MISSED_PM,
+    FAILURE_OTHER,
 )
 
 # -- Priority (shared vocabulary with tasks for consistency) -----------------------
@@ -188,3 +288,61 @@ class MaintenanceDepartment(ValueObject):
 
     def __str__(self) -> str:
         return self.value
+
+
+@dataclass(frozen=True)
+class EquipmentCriticality(ValueObject):
+    """How badly the plant suffers when this asset stops (Phase 26)."""
+
+    value: str
+
+    def __post_init__(self) -> None:
+        if self.value not in ASSET_CRITICALITIES:
+            raise ValidationFailedError(
+                "Invalid asset criticality.", fieldErrors={"criticality": self.value}
+            )
+
+    def __str__(self) -> str:
+        return self.value
+
+
+@dataclass(frozen=True)
+class LocationKind(ValueObject):
+    """Descriptive kind of a node in the location tree (Phase 26)."""
+
+    value: str
+
+    def __post_init__(self) -> None:
+        if self.value not in LOCATION_KINDS:
+            raise ValidationFailedError(
+                "Invalid location kind.", fieldErrors={"kind": self.value}
+            )
+
+    def __str__(self) -> str:
+        return self.value
+
+
+@dataclass(frozen=True)
+class PmFrequency(ValueObject):
+    """How often a PM plan repeats — ``every`` units of ``unit`` (Phase 26)."""
+
+    every: int
+    unit: str
+
+    def __post_init__(self) -> None:
+        if self.unit not in PM_FREQUENCY_UNITS:
+            raise ValidationFailedError(
+                "Invalid PM frequency unit.", fieldErrors={"frequencyUnit": self.unit}
+            )
+        if self.every <= 0:
+            raise ValidationFailedError(
+                "PM frequency must be positive.", fieldErrors={"frequencyEvery": str(self.every)}
+            )
+
+    def asDays(self) -> int | None:
+        """Calendar period in days, or None for meter-based (runningHour) plans."""
+        perUnit = FREQUENCY_DAYS.get(self.unit)
+        return None if perUnit is None else perUnit * self.every
+
+    def __str__(self) -> str:
+        return f"{self.every}:{self.unit}"

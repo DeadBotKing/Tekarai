@@ -6,6 +6,8 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
+from apps.maintenance.domain.valueObjects.maintenanceState import MAINTENANCE_DEPARTMENTS
+
 DEVICE_STATUS_CHOICES = ["operational", "underMaintenance", "outOfService", "retired"]
 WORK_ORDER_TYPE_CHOICES = ["corrective", "preventive", "inspection"]
 WORK_ORDER_STATUS_CHOICES = [
@@ -19,13 +21,10 @@ WORK_ORDER_STATUS_CHOICES = [
     "cancelled",
 ]
 PRIORITY_CHOICES = ["low", "normal", "high", "critical"]
-DEPARTMENT_CHOICES = [
-    "general",
-    "electrical",
-    "mechanical",
-    "facilities",
-    "instrumentation",
-]
+# Derived from the domain catalogue so the seven maintenance disciplines
+# (general, electrical, mechanical, facilities, instrumentation, hydraulic,
+# pneumatic) never drift between the domain and the API contract.
+DEPARTMENT_CHOICES = list(MAINTENANCE_DEPARTMENTS)
 
 
 # -- Device -----------------------------------------------------------------------

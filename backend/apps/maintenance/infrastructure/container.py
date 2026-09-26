@@ -265,3 +265,141 @@ def getDeviceTimelineUseCase() -> GetDeviceTimelineUseCase:
     return GetDeviceTimelineUseCase(
         workOrderRepository=workOrderRepository(), **_deviceDeps()
     )
+
+
+# -- Phase 26: asset registry + analytics -----------------------------------------
+from apps.maintenance.application.useCases.registryUseCases import (  # noqa: E402
+    DeleteLocationUseCase,
+    DeletePersonnelUseCase,
+    DeletePmPlanUseCase,
+    GetDeviceAnalyticsUseCase,
+    GetDeviceProfileUseCase,
+    GetFleetAnalyticsUseCase,
+    GetPartUsageReportUseCase,
+    ListLocationsUseCase,
+    ListPersonnelUseCase,
+    ListPmPlansUseCase,
+    RecordClosureDetailsUseCase,
+    RecordPmExecutionUseCase,
+    RemoveBomItemUseCase,
+    SaveAssignmentsUseCase,
+    SaveBomItemUseCase,
+    SaveLocationUseCase,
+    SavePersonnelUseCase,
+    SavePmPlanUseCase,
+    SaveSpecificationsUseCase,
+    UpdateDeviceNameplateUseCase,
+)
+from apps.maintenance.infrastructure.repositories.assetRegistryRepositoryImpl import (  # noqa: E402
+    DeviceRegistryRepositoryDjango,
+    LocationRepositoryDjango,
+    MaintenanceAnalyticsRepositoryDjango,
+    PersonnelRepositoryDjango,
+)
+
+
+def locationRepository() -> LocationRepositoryDjango:
+    return LocationRepositoryDjango()
+
+
+def personnelRepository() -> PersonnelRepositoryDjango:
+    return PersonnelRepositoryDjango()
+
+
+def deviceRegistryRepository() -> DeviceRegistryRepositoryDjango:
+    return DeviceRegistryRepositoryDjango()
+
+
+def maintenanceAnalyticsRepository() -> MaintenanceAnalyticsRepositoryDjango:
+    return MaintenanceAnalyticsRepositoryDjango()
+
+
+def _registryDeps() -> dict:
+    return {
+        "deviceRepository": deviceRepository(),
+        "registryRepository": deviceRegistryRepository(),
+        "locationRepository": locationRepository(),
+        "personnelRepository": personnelRepository(),
+        "analyticsRepository": maintenanceAnalyticsRepository(),
+        **_kernelPorts(),
+    }
+
+
+def saveLocationUseCase() -> SaveLocationUseCase:
+    return SaveLocationUseCase(**_registryDeps())
+
+
+def deleteLocationUseCase() -> DeleteLocationUseCase:
+    return DeleteLocationUseCase(**_registryDeps())
+
+
+def listLocationsUseCase() -> ListLocationsUseCase:
+    return ListLocationsUseCase(**_registryDeps())
+
+
+def savePersonnelUseCase() -> SavePersonnelUseCase:
+    return SavePersonnelUseCase(**_registryDeps())
+
+
+def deletePersonnelUseCase() -> DeletePersonnelUseCase:
+    return DeletePersonnelUseCase(**_registryDeps())
+
+
+def listPersonnelUseCase() -> ListPersonnelUseCase:
+    return ListPersonnelUseCase(**_registryDeps())
+
+
+def saveSpecificationsUseCase() -> SaveSpecificationsUseCase:
+    return SaveSpecificationsUseCase(**_registryDeps())
+
+
+def savePmPlanUseCase() -> SavePmPlanUseCase:
+    return SavePmPlanUseCase(**_registryDeps())
+
+
+def deletePmPlanUseCase() -> DeletePmPlanUseCase:
+    return DeletePmPlanUseCase(**_registryDeps())
+
+
+def listPmPlansUseCase() -> ListPmPlansUseCase:
+    return ListPmPlansUseCase(**_registryDeps())
+
+
+def recordPmExecutionUseCase() -> RecordPmExecutionUseCase:
+    return RecordPmExecutionUseCase(**_registryDeps())
+
+
+def saveBomItemUseCase() -> SaveBomItemUseCase:
+    return SaveBomItemUseCase(**_registryDeps())
+
+
+def removeBomItemUseCase() -> RemoveBomItemUseCase:
+    return RemoveBomItemUseCase(**_registryDeps())
+
+
+def saveAssignmentsUseCase() -> SaveAssignmentsUseCase:
+    return SaveAssignmentsUseCase(**_registryDeps())
+
+
+def getDeviceProfileUseCase() -> GetDeviceProfileUseCase:
+    return GetDeviceProfileUseCase(**_registryDeps())
+
+
+def getDeviceAnalyticsUseCase() -> GetDeviceAnalyticsUseCase:
+    return GetDeviceAnalyticsUseCase(**_registryDeps())
+
+
+def getFleetAnalyticsUseCase() -> GetFleetAnalyticsUseCase:
+    return GetFleetAnalyticsUseCase(**_registryDeps())
+
+
+def getPartUsageReportUseCase() -> GetPartUsageReportUseCase:
+    return GetPartUsageReportUseCase(**_registryDeps())
+
+
+def updateDeviceNameplateUseCase() -> UpdateDeviceNameplateUseCase:
+    return UpdateDeviceNameplateUseCase(**_registryDeps())
+
+
+def recordClosureDetailsUseCase() -> RecordClosureDetailsUseCase:
+    return RecordClosureDetailsUseCase(**_registryDeps())

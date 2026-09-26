@@ -20,6 +20,25 @@ from apps.maintenance.presentation.api.views.maintenanceAttachmentViews import (
     MaintenanceAttachmentDownloadView,
     WorkOrderAttachmentView,
 )
+from apps.maintenance.presentation.api.views.registryViews import (
+    DeviceAnalyticsView,
+    DeviceAssignmentsView,
+    DeviceBomItemView,
+    DeviceBomView,
+    DeviceNameplateView,
+    DevicePmPlanListView,
+    DeviceProfileView,
+    DeviceSpecificationsView,
+    FleetAnalyticsView,
+    LocationDetailView,
+    LocationListView,
+    PartUsageReportView,
+    PersonnelDetailView,
+    PersonnelListView,
+    PmPlanDetailView,
+    PmPlanExecutionView,
+    WorkOrderClosureView,
+)
 from apps.maintenance.presentation.api.views.sparePartViews import (
     SparePartDetailView,
     SparePartListView,
@@ -64,6 +83,74 @@ urlpatterns = [
         "devices/<uuid:deviceId>/timeline",
         DeviceTimelineView.as_view(),
         name="deviceTimeline",
+    ),
+    # -- Phase 26 asset registry -------------------------------------------------
+    # Static registry paths precede the device uuid capture above them only where
+    # they do not collide; device-scoped registry paths live under the uuid.
+    path("locations", LocationListView.as_view(), name="maintenanceLocationList"),
+    path(
+        "locations/<uuid:locationId>",
+        LocationDetailView.as_view(),
+        name="maintenanceLocationDetail",
+    ),
+    path("personnel", PersonnelListView.as_view(), name="maintenancePersonnelList"),
+    path(
+        "personnel/<uuid:personnelId>",
+        PersonnelDetailView.as_view(),
+        name="maintenancePersonnelDetail",
+    ),
+    path(
+        "devices/<uuid:deviceId>/profile",
+        DeviceProfileView.as_view(),
+        name="deviceProfile",
+    ),
+    path(
+        "devices/<uuid:deviceId>/nameplate",
+        DeviceNameplateView.as_view(),
+        name="deviceNameplate",
+    ),
+    path(
+        "devices/<uuid:deviceId>/specifications",
+        DeviceSpecificationsView.as_view(),
+        name="deviceSpecifications",
+    ),
+    path(
+        "devices/<uuid:deviceId>/pm-plans",
+        DevicePmPlanListView.as_view(),
+        name="devicePmPlans",
+    ),
+    path("pm-plans/<uuid:planId>", PmPlanDetailView.as_view(), name="pmPlanDetail"),
+    path(
+        "pm-plans/<uuid:planId>/executions",
+        PmPlanExecutionView.as_view(),
+        name="pmPlanExecutions",
+    ),
+    path("devices/<uuid:deviceId>/bom", DeviceBomView.as_view(), name="deviceBom"),
+    path(
+        "devices/<uuid:deviceId>/bom/<uuid:partId>",
+        DeviceBomItemView.as_view(),
+        name="deviceBomItem",
+    ),
+    path(
+        "devices/<uuid:deviceId>/assignments",
+        DeviceAssignmentsView.as_view(),
+        name="deviceAssignments",
+    ),
+    path(
+        "devices/<uuid:deviceId>/analytics",
+        DeviceAnalyticsView.as_view(),
+        name="deviceAnalytics",
+    ),
+    path("analytics/fleet", FleetAnalyticsView.as_view(), name="fleetAnalytics"),
+    path(
+        "analytics/parts/<uuid:partId>",
+        PartUsageReportView.as_view(),
+        name="partUsageReport",
+    ),
+    path(
+        "work-orders/<uuid:workOrderId>/closure",
+        WorkOrderClosureView.as_view(),
+        name="workOrderClosure",
     ),
     # Spare-parts warehouse.
     path("spare-parts", SparePartListView.as_view(), name="sparePartList"),

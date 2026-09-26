@@ -38,6 +38,8 @@ DEPARTMENT_FA: dict[str, str] = {
     "mechanical": "مکانیک",
     "facilities": "تأسیسات",
     "instrumentation": "ابزار دقیق",
+    "hydraulic": "هیدرولیک",
+    "pneumatic": "پنوماتیک",
 }
 
 DEVICE_STATUS_FA: dict[str, str] = {

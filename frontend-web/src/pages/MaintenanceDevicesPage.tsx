@@ -338,6 +338,14 @@ export function MaintenanceDevicesPage(): JSX.Element {
       accessor: () => "",
       render: (row) => (
         <div className="cmms-row-actions">
+          <Button
+            variant="ghost"
+            size="sm"
+            icon="file"
+            onClick={() => navigate(`/app/maintenance/devices/${row.id}/profile`)}
+          >
+            {t("registry.openProfile")}
+          </Button>
           <PermissionGuard permission={PERMISSIONS.maintenanceAttachmentView}>
             <Button
               variant="ghost"

@@ -159,7 +159,20 @@ export type MaintenanceDepartment =
   | "electrical"
   | "mechanical"
   | "facilities"
-  | "instrumentation";
+  | "instrumentation"
+  | "hydraulic"
+  | "pneumatic";
+
+/** The seven maintenance disciplines a PM plan can belong to (Phase 26). */
+export const MAINTENANCE_DEPARTMENTS: MaintenanceDepartment[] = [
+  "mechanical",
+  "electrical",
+  "instrumentation",
+  "general",
+  "hydraulic",
+  "pneumatic",
+  "facilities",
+];
 
 export interface MaintenanceDevice {
   id: string;
@@ -173,6 +186,17 @@ export interface MaintenanceDevice {
   nextDueDate: string;
   pmDue: boolean;
   createdAt: string;
+  /** Registry master data; blank for devices never edited in the registry. */
+  manufacturer?: string;
+  modelNumber?: string;
+  serialNumber?: string;
+  equipmentType?: string;
+  criticality?: EquipmentCriticality;
+  locationId?: string;
+  locationPath?: string;
+  parentDeviceId?: string;
+  operatorUnit?: string;
+  runningHours?: number;
 }
 
 export type MaintenanceAttachmentCategory = "failurePhoto" | "manual" | "invoice" | "other";
@@ -229,4 +253,294 @@ export interface WorkOrder {
   closedAt: string;
   slaDueAt?: string;
   overdue?: boolean;
+}
+
+// -- Phase 26: equipment registry -------------------------------------------------
+export type EquipmentCriticality = "critical" | "high" | "medium" | "low";
+export type LocationKind = "site" | "building" | "area" | "room";
+export type PmFrequencyUnit = "day" | "week" | "month" | "runningHour";
+export type DeviceAssignmentRole = "operator" | "responsible" | "technician" | "deputy";
+
+export const EQUIPMENT_CRITICALITIES: EquipmentCriticality[] = [
+  "critical",
+  "high",
+  "medium",
+  "low",
+];
+export const LOCATION_KINDS: LocationKind[] = ["site", "building", "area", "room"];
+export const PM_FREQUENCY_UNITS: PmFrequencyUnit[] = ["day", "week", "month", "runningHour"];
+export const DEVICE_ASSIGNMENT_ROLES: DeviceAssignmentRole[] = [
+  "operator",
+  "responsible",
+  "technician",
+  "deputy",
+];
+
+export interface MaintenanceLocation {
+  id: string;
+  code: string;
+  name: string;
+  kind: LocationKind;
+  parentId: string;
+  path: string;
+  note: string;
+  deviceCount: number;
+}
+
+export interface MaintenancePersonnel {
+  id: string;
+  personnelCode: string;
+  fullName: string;
+  specialty: MaintenanceDepartment;
+  unit: string;
+  phone: string;
+  shift: string;
+  skills: string[];
+  certifications: string[];
+  active: boolean;
+}
+
+export interface DeviceSpecification {
+  id: string;
+  label: string;
+  value: string;
+  unit: string;
+  sortOrder: number;
+}
+
+export interface PmPlan {
+  id: string;
+  deviceId: string;
+  title: string;
+  discipline: MaintenanceDepartment;
+  description: string;
+  checklist: string[];
+  frequencyEvery: number;
+  frequencyUnit: PmFrequencyUnit;
+  periodDays: number;
+  estimatedMinutes: number;
+  responsibleName: string;
+  lastExecutedOn: string;
+  nextDueOn: string;
+  overdue: boolean;
+  active: boolean;
+}
+
+export interface PmExecution {
+  id: string;
+  planId: string;
+  deviceId: string;
+  discipline: MaintenanceDepartment;
+  performedOn: string;
+  dueOn: string;
+  onTime: boolean;
+  performedByName: string;
+  durationMinutes: number;
+  findings: string;
+}
+
+export interface DeviceBomItem {
+  id: string;
+  partId: string;
+  partCode: string;
+  partName: string;
+  unit: string;
+  position: string;
+  standardQuantity: number;
+  note: string;
+  quantityOnHand: number;
+  minimumStock: number;
+  lowStock: boolean;
+  usageCount: number;
+  usedQuantity: number;
+  lastUsedAt: string;
+}
+
+export interface DeviceAssignment {
+  id: string;
+  role: DeviceAssignmentRole;
+  personnelId: string;
+  personnelName: string;
+  unit: string;
+  fromDate: string;
+  toDate: string;
+  current: boolean;
+}
+
+export interface DeviceNameplate {
+  manufacturer: string;
+  modelNumber: string;
+  serialNumber: string;
+  assetType: string;
+  manufactureYear: string;
+  capacity: string;
+  powerRating: string;
+  electricalSpec: string;
+  criticality: EquipmentCriticality;
+  parentDeviceId: string;
+  locationId: string;
+  locationPath: string;
+  operatorUnit: string;
+  supplier: string;
+  purchasedOn: string;
+  installedOn: string;
+  commissionedOn: string;
+  warrantyUntil: string;
+  purchaseCost: string;
+  runningHours: string;
+  notes: string;
+}
+
+export interface FailureModeCount {
+  label: string;
+  count: number;
+}
+
+export interface PartConsumption {
+  partId: string;
+  partCode: string;
+  partName: string;
+  unit: string;
+  usageCount: number;
+  totalQuantity: number;
+  totalCost: number;
+  lastUsedAt: string;
+  deviceCount: number;
+}
+
+export interface TechnicianStat {
+  name: string;
+  totalOrders: number;
+  correctiveOrders: number;
+  preventiveOrders: number;
+  completedOrders: number;
+  openOrders: number;
+  labourHours: number;
+  averageRepairHours: number | null;
+}
+
+export interface MaintenanceTrendBucket {
+  label: string;
+  failures: number;
+  preventive: number;
+  downtimeHours: number;
+  cost: number;
+}
+
+export interface DeviceAnalytics {
+  deviceId: string;
+  fromDate: string;
+  toDate: string;
+  windowDays: number;
+  totalOrders: number;
+  repairCount: number;
+  preventiveCount: number;
+  inspectionCount: number;
+  openOrders: number;
+  completedOrders: number;
+  repeatFailures: number;
+  totalDowntimeHours: number;
+  operatingHours: number;
+  mtbfHours: number | null;
+  mttrHours: number | null;
+  availabilityPercent: number | null;
+  pmScheduled: number;
+  pmCompleted: number;
+  pmOnTime: number;
+  pmOverdue: number;
+  pmCompliancePercent: number | null;
+  labourCost: number;
+  partsCost: number;
+  totalCost: number;
+  labourHours: number;
+  partsUsedCount: number;
+  partsUsedQuantity: number;
+  lastFailureAt: string;
+  lastRepairAt: string;
+  byFailureType: FailureModeCount[];
+  byFailedComponent: FailureModeCount[];
+  byRootCause: FailureModeCount[];
+  byDepartment: FailureModeCount[];
+  byStatus: Record<string, number>;
+  byType: Record<string, number>;
+  byPriority: Record<string, number>;
+  partConsumption: PartConsumption[];
+  technicians: TechnicianStat[];
+  trend: MaintenanceTrendBucket[];
+}
+
+export interface DeviceProfile {
+  device: MaintenanceDevice;
+  nameplate: DeviceNameplate;
+  specifications: DeviceSpecification[];
+  pmPlans: PmPlan[];
+  pmExecutions: PmExecution[];
+  bom: DeviceBomItem[];
+  assignments: DeviceAssignment[];
+  location: MaintenanceLocation | null;
+  locationPath: string;
+  children: { id: string; code: string; name: string }[];
+  analytics: DeviceAnalytics | null;
+  generatedAt: string;
+}
+
+export interface FleetAnalyticsRow {
+  deviceId: string;
+  code: string;
+  name: string;
+  department: MaintenanceDepartment;
+  criticality: EquipmentCriticality;
+  locationPath: string;
+  status: DeviceStatus;
+  repairCount: number;
+  preventiveCount: number;
+  repeatFailures: number;
+  downtimeHours: number;
+  mtbfHours: number | null;
+  mttrHours: number | null;
+  availabilityPercent: number | null;
+  pmCompliancePercent: number | null;
+  partsUsedQuantity: number;
+  totalCost: number;
+}
+
+export interface FleetAnalytics {
+  fromDate: string;
+  toDate: string;
+  generatedAt: string;
+  deviceCount: number;
+  totalRepairs: number;
+  totalPreventive: number;
+  totalDowntimeHours: number;
+  totalCost: number;
+  fleetMtbfHours: number | null;
+  fleetMttrHours: number | null;
+  fleetAvailabilityPercent: number | null;
+  pmCompliancePercent: number | null;
+  rows: FleetAnalyticsRow[];
+  topParts: PartConsumption[];
+  topFailureTypes: FailureModeCount[];
+  technicians: TechnicianStat[];
+  trend: MaintenanceTrendBucket[];
+}
+
+export interface PartUsageReportRow {
+  deviceId: string;
+  deviceCode: string;
+  deviceName: string;
+  usageCount: number;
+  totalQuantity: number;
+  lastUsedAt: string;
+}
+
+export interface PartUsageReport {
+  partId: string;
+  partCode: string;
+  partName: string;
+  unit: string;
+  fromDate: string;
+  toDate: string;
+  totalUsageCount: number;
+  totalQuantity: number;
+  devices: PartUsageReportRow[];
 }

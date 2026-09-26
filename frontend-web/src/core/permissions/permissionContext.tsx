@@ -35,6 +35,8 @@ export const PERMISSIONS = {
   maintenanceInventoryView: "maintenance.inventory.view",
   maintenanceInventoryManage: "maintenance.inventory.manage",
   maintenanceInventoryConsume: "maintenance.inventory.consume",
+  maintenanceAttachmentView: "maintenance.attachment.view",
+  maintenanceAttachmentManage: "maintenance.attachment.manage",
 } as const;
 
 interface PermissionContextValue {

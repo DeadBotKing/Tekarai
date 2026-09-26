@@ -13,6 +13,12 @@ from apps.maintenance.application.useCases.deviceUseCases import (
     SendPmRemindersUseCase,
     UpdateDeviceUseCase,
 )
+from apps.maintenance.application.useCases.maintenanceAttachmentUseCases import (
+    DeleteMaintenanceAttachmentUseCase,
+    DownloadMaintenanceAttachmentUseCase,
+    ListMaintenanceAttachmentsUseCase,
+    UploadMaintenanceAttachmentUseCase,
+)
 from apps.maintenance.application.useCases.sparePartUseCases import (
     ConsumeSparePartUseCase,
     CreateSparePartUseCase,
@@ -40,6 +46,9 @@ from apps.maintenance.infrastructure.repositories.deviceHistoryRepositoryImpl im
 )
 from apps.maintenance.infrastructure.repositories.deviceRepositoryImpl import (
     DeviceRepositoryDjango,
+)
+from apps.maintenance.infrastructure.repositories.maintenanceAttachmentRepositoryImpl import (
+    MaintenanceAttachmentRepositoryDjango,
 )
 from apps.maintenance.infrastructure.repositories.sparePartRepositoryImpl import (
     SparePartRepositoryDjango,
@@ -71,6 +80,10 @@ def deviceHistoryRepository() -> DeviceHistoryRepositoryDjango:
 
 def sparePartRepository() -> SparePartRepositoryDjango:
     return SparePartRepositoryDjango()
+
+
+def maintenanceAttachmentRepository() -> MaintenanceAttachmentRepositoryDjango:
+    return MaintenanceAttachmentRepositoryDjango()
 
 
 def _kernelPorts() -> dict:
@@ -130,6 +143,31 @@ def getDeviceUseCase() -> GetDeviceUseCase:
 
 def sendPmRemindersUseCase() -> SendPmRemindersUseCase:
     return SendPmRemindersUseCase(**_deviceDeps())
+
+
+# -- Maintenance attachments -----------------------------------------------------
+def uploadMaintenanceAttachmentUseCase() -> UploadMaintenanceAttachmentUseCase:
+    return UploadMaintenanceAttachmentUseCase(
+        repository=maintenanceAttachmentRepository(), **_kernelPorts()
+    )
+
+
+def listMaintenanceAttachmentsUseCase() -> ListMaintenanceAttachmentsUseCase:
+    return ListMaintenanceAttachmentsUseCase(
+        repository=maintenanceAttachmentRepository(), **_kernelPorts()
+    )
+
+
+def downloadMaintenanceAttachmentUseCase() -> DownloadMaintenanceAttachmentUseCase:
+    return DownloadMaintenanceAttachmentUseCase(
+        repository=maintenanceAttachmentRepository(), **_kernelPorts()
+    )
+
+
+def deleteMaintenanceAttachmentUseCase() -> DeleteMaintenanceAttachmentUseCase:
+    return DeleteMaintenanceAttachmentUseCase(
+        repository=maintenanceAttachmentRepository(), **_kernelPorts()
+    )
 
 
 # -- Spare-parts inventory --------------------------------------------------------

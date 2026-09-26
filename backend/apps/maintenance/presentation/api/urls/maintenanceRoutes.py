@@ -14,6 +14,12 @@ from apps.maintenance.presentation.api.views.deviceViews import (
     DeviceTimelineView,
     DuePmListView,
 )
+from apps.maintenance.presentation.api.views.maintenanceAttachmentViews import (
+    DeviceAttachmentView,
+    MaintenanceAttachmentDetailView,
+    MaintenanceAttachmentDownloadView,
+    WorkOrderAttachmentView,
+)
 from apps.maintenance.presentation.api.views.sparePartViews import (
     SparePartDetailView,
     SparePartListView,
@@ -44,6 +50,11 @@ urlpatterns = [
     path("devices/<uuid:deviceId>", DeviceDetailView.as_view(), name="deviceDetail"),
     path("devices/<uuid:deviceId>/status", DeviceStatusView.as_view(), name="deviceStatus"),
     path("devices/<uuid:deviceId>/pm", DevicePmView.as_view(), name="devicePm"),
+    path(
+        "devices/<uuid:deviceId>/attachments",
+        DeviceAttachmentView.as_view(),
+        name="deviceAttachments",
+    ),
     path(
         "devices/<uuid:deviceId>/report",
         DeviceMaintenanceReportView.as_view(),
@@ -103,5 +114,20 @@ urlpatterns = [
         "work-orders/<uuid:workOrderId>/parts",
         WorkOrderPartUsageView.as_view(),
         name="workOrderPartUsage",
+    ),
+    path(
+        "work-orders/<uuid:workOrderId>/attachments",
+        WorkOrderAttachmentView.as_view(),
+        name="workOrderAttachments",
+    ),
+    path(
+        "attachments/<uuid:attachmentId>/download",
+        MaintenanceAttachmentDownloadView.as_view(),
+        name="maintenanceAttachmentDownload",
+    ),
+    path(
+        "attachments/<uuid:attachmentId>",
+        MaintenanceAttachmentDetailView.as_view(),
+        name="maintenanceAttachmentDetail",
     ),
 ]

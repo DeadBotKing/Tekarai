@@ -8,6 +8,8 @@ import type {
   DeviceTimelineAction,
   DeviceTimelineItem,
   DeviceTimelineSource,
+  MaintenanceAttachment,
+  MaintenanceAttachmentCategory,
   MaintenanceDepartment,
   MaintenanceDevice,
   Priority,
@@ -52,6 +54,18 @@ interface WorkOrderDto {
   closedAt: string;
   slaDueAt: string;
   overdue: boolean;
+}
+
+interface MaintenanceAttachmentDto {
+  id: string;
+  targetType: "device" | "workOrder";
+  targetId: string;
+  category: MaintenanceAttachmentCategory;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  uploadedAt: string;
+  downloadUrl: string;
 }
 
 interface SparePartDto {
@@ -265,6 +279,21 @@ export interface CreateSparePartInput {
 }
 
 export interface MaintenanceService {
+  listAttachments: (
+    targetType: "device" | "workOrder",
+    targetId: string,
+    signal?: AbortSignal,
+  ) => Promise<MaintenanceAttachment[]>;
+  uploadAttachment: (
+    targetType: "device" | "workOrder",
+    targetId: string,
+    category: MaintenanceAttachmentCategory,
+    file: File,
+    onProgress?: (progress: number) => void,
+    signal?: AbortSignal,
+  ) => Promise<MaintenanceAttachment>;
+  downloadAttachment: (id: string, signal?: AbortSignal) => Promise<Blob>;
+  deleteAttachment: (id: string, signal?: AbortSignal) => Promise<void>;
   listSpareParts: (search?: string, signal?: AbortSignal) => Promise<SparePart[]>;
   createSparePart: (input: CreateSparePartInput, signal?: AbortSignal) => Promise<SparePart>;
   updateSparePart: (
@@ -356,6 +385,29 @@ export interface MaintenanceService {
 }
 
 export const createMaintenanceService = (api: ApiClient): MaintenanceService => ({
+  listAttachments: (targetType, targetId, signal) =>
+    api.get<MaintenanceAttachmentDto[]>(
+      targetType === "device"
+        ? apiEndpoints.maintenance.deviceAttachments(targetId)
+        : apiEndpoints.maintenance.workOrderAttachments(targetId),
+      { signal },
+    ),
+  uploadAttachment: (targetType, targetId, category, file, onProgress, signal) =>
+    api.upload<MaintenanceAttachmentDto>(
+      targetType === "device"
+        ? apiEndpoints.maintenance.deviceAttachments(targetId)
+        : apiEndpoints.maintenance.workOrderAttachments(targetId),
+      file,
+      { fields: { category }, onProgress, signal },
+    ),
+  downloadAttachment: (id, signal) =>
+    api.download(apiEndpoints.maintenance.maintenanceAttachmentDownload(id), { signal }),
+  deleteAttachment: async (id, signal) => {
+    await api.delete<null>(apiEndpoints.maintenance.maintenanceAttachment(id), {
+      signal,
+      retry: 0,
+    });
+  },
   listSpareParts: async (search = "", signal) => {
     const dtos = await api.get<SparePartDto[]>(apiEndpoints.maintenance.spareParts, {
       query: { search },

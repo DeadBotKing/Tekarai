@@ -7,8 +7,11 @@ pin the public boundary the Persian frontend consumes.
 
 from __future__ import annotations
 
+from tempfile import TemporaryDirectory
+
 from django.core.cache import cache
-from django.test import TestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
 from tests.support.phase6Helpers import loginViaApi, seedPlatform
@@ -450,6 +453,82 @@ class PmAutoGenerationTests(MaintenanceApiBase):
         second = generateDuePmWorkOrders()
         self.assertEqual(second["createdCount"], 0)
         self.assertEqual(generated.count(), 1)
+
+
+class MaintenanceAttachmentTests(MaintenanceApiBase):
+    def setUp(self) -> None:
+        self.mediaDirectory = TemporaryDirectory()
+        self.mediaOverride = override_settings(MEDIA_ROOT=self.mediaDirectory.name)
+        self.mediaOverride.enable()
+        self.addCleanup(self.mediaOverride.disable)
+        self.addCleanup(self.mediaDirectory.cleanup)
+        super().setUp()
+
+    def testUploadListDownloadAndDeleteDeviceAttachment(self) -> None:
+        device = self.createDevice(code="ATTACH-DEVICE")
+        uploaded = self.client.post(
+            f"/api/v1/maintenance/devices/{device['id']}/attachments",
+            {
+                "category": "manual",
+                "file": SimpleUploadedFile(
+                    "راهنما.pdf", b"%PDF-1.4\nTekarai manual\n%%EOF", "application/pdf"
+                ),
+            },
+            format="multipart",
+            **self.auth,
+        )
+        self.assertEqual(uploaded.status_code, 201, uploaded.content)
+        attachment = uploaded.json()["data"]
+        self.assertEqual(attachment["category"], "manual")
+        self.assertEqual(attachment["mimeType"], "application/pdf")
+        self.assertGreater(attachment["sizeBytes"], 0)
+
+        listed = self.client.get(
+            f"/api/v1/maintenance/devices/{device['id']}/attachments", **self.auth
+        )
+        self.assertEqual(listed.status_code, 200, listed.content)
+        self.assertEqual(len(listed.json()["data"]), 1)
+
+        downloaded = self.client.get(
+            f"/api/v1/maintenance/attachments/{attachment['id']}/download", **self.auth
+        )
+        self.assertEqual(downloaded.status_code, 200)
+        self.assertEqual(downloaded["Content-Type"], "application/pdf")
+        self.assertEqual(b"".join(downloaded.streaming_content)[:4], b"%PDF")
+
+        removed = self.client.delete(
+            f"/api/v1/maintenance/attachments/{attachment['id']}", **self.auth
+        )
+        self.assertEqual(removed.status_code, 200, removed.content)
+        listedAgain = self.client.get(
+            f"/api/v1/maintenance/devices/{device['id']}/attachments", **self.auth
+        )
+        self.assertEqual(listedAgain.json()["data"], [])
+
+    def testWorkOrderPhotoAttachmentAndInvalidFileRejection(self) -> None:
+        device = self.createDevice(code="ATTACH-WO-DEVICE")
+        order = self.submitWorkOrder(device["id"], title="خرابی پمپ")
+        photo = self.client.post(
+            f"/api/v1/maintenance/work-orders/{order['id']}/attachments",
+            {
+                "category": "failurePhoto",
+                "file": SimpleUploadedFile("fault.jpg", b"\xff\xd8\xffdemo", "image/jpeg"),
+            },
+            format="multipart",
+            **self.auth,
+        )
+        self.assertEqual(photo.status_code, 201, photo.content)
+
+        rejected = self.client.post(
+            f"/api/v1/maintenance/work-orders/{order['id']}/attachments",
+            {
+                "category": "other",
+                "file": SimpleUploadedFile("script.exe", b"MZ", "application/octet-stream"),
+            },
+            format="multipart",
+            **self.auth,
+        )
+        self.assertEqual(rejected.status_code, 422, rejected.content)
 
 
 class SparePartsInventoryTests(MaintenanceApiBase):

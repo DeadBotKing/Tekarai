@@ -175,6 +175,20 @@ export interface MaintenanceDevice {
   createdAt: string;
 }
 
+export type MaintenanceAttachmentCategory = "failurePhoto" | "manual" | "invoice" | "other";
+
+export interface MaintenanceAttachment {
+  id: string;
+  targetType: "device" | "workOrder";
+  targetId: string;
+  category: MaintenanceAttachmentCategory;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  uploadedAt: string;
+  downloadUrl: string;
+}
+
 export interface SparePart {
   id: string;
   code: string;

@@ -3,8 +3,18 @@
 from __future__ import annotations
 
 import uuid
+from pathlib import Path
 
 from django.db import models
+
+
+def maintenanceAttachmentPath(instance, filename: str) -> str:  # noqa: ANN001
+    """Opaque, tenant-partitioned storage key; never trust the client filename."""
+    extension = Path(filename).suffix.lower()[:12]
+    return (
+        f"maintenance/{instance.tenantId}/{instance.targetType}/"
+        f"{instance.targetId}/{uuid.uuid4().hex}{extension}"
+    )
 
 
 class DeviceModel(models.Model):
@@ -60,6 +70,37 @@ class WorkOrderModel(models.Model):
 
     def __str__(self) -> str:  # pragma: no cover — debug helper
         return f"{self.status}:{self.title}"
+
+
+class MaintenanceAttachmentModel(models.Model):
+    """File metadata; bytes are stored under MEDIA_ROOT using an opaque key."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenantId = models.UUIDField(db_index=True)
+    targetType = models.CharField(max_length=20, db_index=True)
+    targetId = models.UUIDField(db_index=True)
+    category = models.CharField(max_length=20, default="other")
+    originalName = models.CharField(max_length=255)
+    mimeType = models.CharField(max_length=120)
+    sizeBytes = models.PositiveBigIntegerField()
+    file = models.FileField(upload_to=maintenanceAttachmentPath, max_length=500)
+    uploadedAt = models.DateTimeField(auto_now_add=True, db_index=True)
+    deletedAt = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "MaintenanceAttachment"
+        ordering = ["-uploadedAt"]
+        indexes = [models.Index(fields=["tenantId", "targetType", "targetId"])]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(targetType__in=("device", "workOrder")),
+                name="ck_maintenance_attachment_target",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(category__in=("failurePhoto", "manual", "invoice", "other")),
+                name="ck_maintenance_attachment_category",
+            ),
+        ]
 
 
 class SparePartModel(models.Model):

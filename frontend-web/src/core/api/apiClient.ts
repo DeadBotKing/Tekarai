@@ -140,7 +140,7 @@ export class ApiClient {
     return this.request<T>(path, { ...options, method: "DELETE" });
   }
 
-  upload<T>(path: string, file: File, options: { fieldName?: string; signal?: AbortSignal; onProgress?: (progress: number) => void } = {}): Promise<T> {
+  upload<T>(path: string, file: File, options: { fieldName?: string; fields?: Record<string, string>; signal?: AbortSignal; onProgress?: (progress: number) => void } = {}): Promise<T> {
     const controller = new AbortController();
     const request = new XMLHttpRequest();
     const url = joinUrl(this.config.baseUrl, `api/${this.config.apiVersion}/${path}`);
@@ -168,7 +168,10 @@ export class ApiClient {
       const abort = (): void => { controller.abort(); request.abort(); };
       options.signal?.addEventListener("abort", abort, { once: true });
       request.onloadend = () => options.signal?.removeEventListener("abort", abort);
-      const form = new FormData(); form.append(options.fieldName ?? "file", file); request.send(form);
+      const form = new FormData();
+      form.append(options.fieldName ?? "file", file);
+      Object.entries(options.fields ?? {}).forEach(([key, value]) => form.append(key, value));
+      request.send(form);
     });
   }
 

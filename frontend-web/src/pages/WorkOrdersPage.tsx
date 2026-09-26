@@ -5,6 +5,7 @@ import { formatJalali } from "../core/localization/jalali";
 import type { TranslationKey } from "../core/localization/i18n";
 import { PERMISSIONS } from "../core/permissions/permissionContext";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
+import { MaintenanceAttachments } from "../features/maintenance/MaintenanceAttachments";
 import { createMaintenanceService } from "../features/maintenance/maintenanceService";
 import { demoDevices, demoWorkOrders } from "../features/maintenance/maintenanceDemoData";
 import type {
@@ -935,6 +936,15 @@ export function WorkOrdersPage(): JSX.Element {
                 {t("cmms.wo.resolution")}: {activeOrder.resolutionNote}
               </p>
             )}
+
+            <PermissionGuard permission={PERMISSIONS.maintenanceAttachmentView}>
+              <MaintenanceAttachments
+                targetType="workOrder"
+                targetId={activeOrder.id}
+                service={service}
+                onMessage={setToast}
+              />
+            </PermissionGuard>
 
             <PermissionGuard permission={PERMISSIONS.maintenanceWorkOrderRoute}>
               {(activeOrder.status === "submitted" || activeOrder.status === "routed") && (

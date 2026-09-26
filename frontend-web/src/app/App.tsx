@@ -4,6 +4,7 @@ import { AppRouter } from "./router/AppRouter";
 import "../styles/fonts.css";
 import "../styles/tokens.css";
 import "../styles/globals.css";
+import "../styles/maintenanceAttachments.css";
 
 export function App(): JSX.Element {
   return <BrowserRouter><AppProviders><AppRouter /></AppProviders></BrowserRouter>;

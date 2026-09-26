@@ -52,6 +52,14 @@ class RecordDevicePmSerializer(serializers.Serializer):
     performedOn = serializers.CharField(required=False, allow_blank=True, default="")
 
 
+# -- Maintenance attachments -------------------------------------------------------
+class MaintenanceAttachmentUploadSerializer(serializers.Serializer):
+    file = serializers.FileField()
+    category = serializers.ChoiceField(
+        choices=("failurePhoto", "manual", "invoice", "other"), default="other"
+    )
+
+
 # -- Spare-parts inventory ---------------------------------------------------------
 class CreateSparePartSerializer(serializers.Serializer):
     code = serializers.CharField(max_length=60)

@@ -4,6 +4,7 @@ import { useApiClient } from "../core/api/apiContext";
 import { useLocalization } from "../core/localization/localizationContext";
 import { PERMISSIONS } from "../core/permissions/permissionContext";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
+import { MaintenanceAttachments } from "../features/maintenance/MaintenanceAttachments";
 import { createMaintenanceService } from "../features/maintenance/maintenanceService";
 import { demoDevices } from "../features/maintenance/maintenanceDemoData";
 import type { DeviceStatus, MaintenanceDepartment, MaintenanceDevice } from "../shared/types/domain";
@@ -75,6 +76,7 @@ export function MaintenanceDevicesPage(): JSX.Element {
   const [createOpen, setCreateOpen] = useState(false);
   const [editDevice, setEditDevice] = useState<MaintenanceDevice | null>(null);
   const [pmDevice, setPmDevice] = useState<MaintenanceDevice | null>(null);
+  const [attachmentDevice, setAttachmentDevice] = useState<MaintenanceDevice | null>(null);
 
   const [formCode, setFormCode] = useState("");
   const [formName, setFormName] = useState("");
@@ -336,6 +338,16 @@ export function MaintenanceDevicesPage(): JSX.Element {
       accessor: () => "",
       render: (row) => (
         <div className="cmms-row-actions">
+          <PermissionGuard permission={PERMISSIONS.maintenanceAttachmentView}>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon="paperclip"
+              onClick={() => setAttachmentDevice(row)}
+            >
+              پیوست‌ها
+            </Button>
+          </PermissionGuard>
           <PermissionGuard permission={PERMISSIONS.maintenanceDeviceView}>
             <Button
               variant="ghost"
@@ -483,6 +495,26 @@ export function MaintenanceDevicesPage(): JSX.Element {
           exportName="tekarai-devices"
         />
       </Card>
+
+      <Modal
+        open={Boolean(attachmentDevice)}
+        title={attachmentDevice ? `پیوست‌های ${attachmentDevice.name}` : "پیوست‌های دستگاه"}
+        onClose={() => setAttachmentDevice(null)}
+        footer={
+          <Button variant="secondary" onClick={() => setAttachmentDevice(null)}>
+            {t("cmms.common.close")}
+          </Button>
+        }
+      >
+        {attachmentDevice && (
+          <MaintenanceAttachments
+            targetType="device"
+            targetId={attachmentDevice.id}
+            service={service}
+            onMessage={setToast}
+          />
+        )}
+      </Modal>
 
       <Modal
         open={createOpen}

@@ -14,6 +14,7 @@ from typing import Protocol, runtime_checkable
 
 from apps.maintenance.domain.entities.device import Device
 from apps.maintenance.domain.entities.deviceHistory import DeviceHistoryEntry
+from apps.maintenance.domain.entities.maintenanceAttachment import MaintenanceAttachment
 from apps.maintenance.domain.entities.sparePart import SparePart, WorkOrderPartUsage
 from apps.maintenance.domain.entities.workOrder import WorkOrder
 from apps.maintenance.domain.entities.workOrderHistory import WorkOrderHistoryEntry
@@ -93,6 +94,37 @@ class WorkOrderRepository(Protocol):
     def countOpenByAssignee(self, tenantId: uuid.UUID, department: str) -> dict[str, int]: ...
 
     def list(self, filters: WorkOrderFilters) -> WorkOrderPage: ...
+
+
+@runtime_checkable
+class MaintenanceAttachmentRepository(Protocol):
+    def targetExists(
+        self, tenantId: uuid.UUID, targetType: str, targetId: uuid.UUID
+    ) -> bool: ...
+
+    def create(
+        self,
+        tenantId: uuid.UUID,
+        targetType: str,
+        targetId: uuid.UUID,
+        category: str,
+        originalName: str,
+        mimeType: str,
+        sizeBytes: int,
+        uploadedFile: object,
+    ) -> MaintenanceAttachment: ...
+
+    def listForTarget(
+        self, tenantId: uuid.UUID, targetType: str, targetId: uuid.UUID
+    ) -> list[MaintenanceAttachment]: ...
+
+    def getById(
+        self, tenantId: uuid.UUID, attachmentId: uuid.UUID
+    ) -> MaintenanceAttachment | None: ...
+
+    def openFile(self, tenantId: uuid.UUID, attachmentId: uuid.UUID) -> object: ...
+
+    def delete(self, tenantId: uuid.UUID, attachmentId: uuid.UUID, deletedAt: datetime) -> None: ...
 
 
 @runtime_checkable

@@ -1,0 +1,19 @@
+/* Maintenance device/work-order attachment panel */
+.maintenance-attachments { display: flex; flex-direction: column; gap: 14px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border); }
+.maintenance-attachments__heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.maintenance-attachments__heading h4 { margin: 0; color: var(--text-strong); font-size: 14px; }
+.maintenance-attachments__heading p { margin: 3px 0 0; color: var(--text-muted); font-size: 11px; }
+.maintenance-attachments__upload { display: grid; grid-template-columns: minmax(140px, .6fr) minmax(210px, 1fr) auto; align-items: end; gap: 10px; padding: 13px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-md); }
+.attachment-file-input { position: absolute; overflow: hidden; width: 1px; height: 1px; clip: rect(0 0 0 0); white-space: nowrap; }
+.attachment-file-picker { display: flex; align-items: center; gap: 8px; min-height: 42px; padding: 0 12px; color: var(--text); background: var(--surface-1); border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); cursor: pointer; font-size: 12px; }
+.attachment-file-picker:hover { color: var(--primary); border-color: var(--primary); background: var(--primary-soft); }
+.attachment-selection { display: flex; flex-wrap: wrap; gap: 6px; }
+.attachment-selection span { padding: 4px 8px; color: var(--text-muted); background: var(--surface-2); border-radius: 6px; font-size: 10px; }
+.attachment-list { display: flex; flex-direction: column; gap: 7px; }
+.attachment-item { display: flex; align-items: center; gap: 10px; padding: 10px 11px; background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.attachment-item__icon { display: grid; place-items: center; flex: 0 0 auto; width: 34px; height: 34px; color: var(--primary); background: var(--primary-soft); border-radius: 8px; }
+.attachment-item__body { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 2px; }
+.attachment-item__body strong { overflow: hidden; color: var(--text-strong); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.attachment-item__body span { color: var(--text-muted); font-size: 10px; }
+.attachment-empty { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 70px; color: var(--text-faint); background: var(--surface-2); border: 1px dashed var(--border); border-radius: var(--radius-sm); font-size: 11px; }
+@media (max-width: 700px) { .maintenance-attachments__upload { grid-template-columns: 1fr; }.attachment-item { align-items: flex-start; flex-wrap: wrap; }.attachment-item__body { min-width: calc(100% - 48px); }.attachment-item .button { flex: 1; } }

@@ -23,6 +23,9 @@ import {
 import { Icon } from "../shared/components/Icon";
 import { JalaliDatePicker } from "../shared/components/JalaliDatePicker";
 import { formatJalali, todayIso } from "../core/localization/jalali";
+import { taxonomyLabel } from "../core/localization/taxonomyLabel";
+import { CreatableSelect } from "../shared/components/CreatableSelect";
+import { mergeOptions } from "../features/maintenance/optionCatalog";
 
 const DEVICE_STATUSES: DeviceStatus[] = [
   "operational",
@@ -293,7 +296,7 @@ export function MaintenanceDevicesPage(): JSX.Element {
       label: t("cmms.device.department"),
       accessor: (row) => row.department,
       sortable: true,
-      render: (row) => <Badge tone="neutral">{t(`cmms.department.${row.department}`)}</Badge>,
+      render: (row) => <Badge tone="neutral">{taxonomyLabel(t, "cmms.department.", row.department)}</Badge>,
     },
     {
       key: "status",
@@ -302,7 +305,7 @@ export function MaintenanceDevicesPage(): JSX.Element {
       sortable: true,
       render: (row) => (
         <Badge tone={statusTone(row.status)} dot>
-          {t(`cmms.status.${row.status}`)}
+          {taxonomyLabel(t, "cmms.status.", row.status)}
         </Badge>
       ),
     },
@@ -476,7 +479,7 @@ export function MaintenanceDevicesPage(): JSX.Element {
                 { value: "all", label: t("cmms.common.all") },
                 ...DEVICE_STATUSES.map((status) => ({
                   value: status,
-                  label: t(`cmms.status.${status}`),
+                  label: taxonomyLabel(t, "cmms.status.", status),
                 })),
               ]}
             />
@@ -486,10 +489,12 @@ export function MaintenanceDevicesPage(): JSX.Element {
               onChange={(event) => setDepartmentFilter(event.target.value)}
               options={[
                 { value: "all", label: t("cmms.department.allUnits") },
-                ...DEPARTMENTS.map((department) => ({
-                  value: department,
-                  label: t(`cmms.department.${department}`),
-                })),
+                ...mergeOptions({
+                  canonical: DEPARTMENTS,
+                  translate: (department) => taxonomyLabel(t, "cmms.department.", department),
+                  fromData: devices.map((item) => item.department),
+                  catalogKey: "device.department",
+                }),
               ]}
             />
           </div>
@@ -565,14 +570,19 @@ export function MaintenanceDevicesPage(): JSX.Element {
             onChange={(event) => setFormInterval(event.target.value)}
           />
         </div>
-        <SelectInput
+        <CreatableSelect
           label={t("cmms.device.department")}
           value={formDepartment}
-          onChange={(event) => setFormDepartment(event.target.value as MaintenanceDepartment)}
-          options={DEPARTMENTS.map((department) => ({
-            value: department,
-            label: t(`cmms.department.${department}`),
-          }))}
+          onChange={(value) => setFormDepartment(value as MaintenanceDepartment)}
+          catalogKey="device.department"
+          canonical={DEPARTMENTS}
+          options={mergeOptions({
+            canonical: DEPARTMENTS,
+            translate: (department) => taxonomyLabel(t, "cmms.department.", department),
+            fromData: devices.map((item) => item.department),
+            catalogKey: "device.department",
+            current: formDepartment,
+          })}
         />
       </Modal>
 
@@ -612,14 +622,19 @@ export function MaintenanceDevicesPage(): JSX.Element {
                 onChange={(event) => setFormInterval(event.target.value)}
               />
             </div>
-            <SelectInput
+            <CreatableSelect
               label={t("cmms.device.department")}
               value={formDepartment}
-              onChange={(event) => setFormDepartment(event.target.value as MaintenanceDepartment)}
-              options={DEPARTMENTS.map((department) => ({
-                value: department,
-                label: t(`cmms.department.${department}`),
-              }))}
+              onChange={(value) => setFormDepartment(value as MaintenanceDepartment)}
+              catalogKey="device.department"
+              canonical={DEPARTMENTS}
+              options={mergeOptions({
+                canonical: DEPARTMENTS,
+                translate: (department) => taxonomyLabel(t, "cmms.department.", department),
+                fromData: devices.map((item) => item.department),
+                catalogKey: "device.department",
+                current: formDepartment,
+              })}
             />
             <SelectInput
               label={t("cmms.device.changeStatus")}
@@ -627,7 +642,7 @@ export function MaintenanceDevicesPage(): JSX.Element {
               onChange={(event) => changeStatus(editDevice, event.target.value as DeviceStatus)}
               options={DEVICE_STATUSES.map((status) => ({
                 value: status,
-                label: t(`cmms.status.${status}`),
+                label: taxonomyLabel(t, "cmms.status.", status),
               }))}
             />
           </>

@@ -13,6 +13,7 @@ import { JalaliDatePicker } from "../shared/components/JalaliDatePicker";
 import { DonutChart } from "../shared/components/charts";
 import { Toast } from "../shared/components/overlays";
 import { formatJalali } from "../core/localization/jalali";
+import { taxonomyLabel } from "../core/localization/taxonomyLabel";
 
 const statusTone = (
   status: string,
@@ -214,11 +215,11 @@ export function DeviceReportPage(): JSX.Element {
               </div>
               <div>
                 <span>{t("cmms.device.department")}</span>
-                <strong>{t(`cmms.department.${report.device.department}`)}</strong>
+                <strong>{taxonomyLabel(t, "cmms.department.", report.device.department)}</strong>
               </div>
               <div>
                 <span>{t("cmms.device.status")}</span>
-                <strong>{t(`cmms.status.${report.device.status}`)}</strong>
+                <strong>{taxonomyLabel(t, "cmms.status.", report.device.status)}</strong>
               </div>
               <div>
                 <span>{t("cmms.device.lastPm")}</span>

@@ -13,6 +13,7 @@ import {
 } from "../shared/types/domain";
 import { DataTable, type DataTableColumn } from "../shared/components/DataTable";
 import { Modal, Toast } from "../shared/components/overlays";
+import { taxonomyLabel } from "../core/localization/taxonomyLabel";
 import {
   Badge,
   Button,
@@ -24,6 +25,8 @@ import {
   TextArea,
   TextInput,
 } from "../shared/components/primitives";
+import { CreatableSelect } from "../shared/components/CreatableSelect";
+import { mergeOptions } from "../features/maintenance/optionCatalog";
 
 /** Directory of maintenance staff that devices and PM plans are assigned to. */
 export function MaintenancePersonnelPage(): JSX.Element {
@@ -173,7 +176,7 @@ export function MaintenancePersonnelPage(): JSX.Element {
       label: t("registry.personnel.specialty"),
       accessor: (row) => row.specialty,
       sortable: true,
-      render: (row) => <Badge tone="info">{t(`cmms.department.${row.specialty}`)}</Badge>,
+      render: (row) => <Badge tone="info">{taxonomyLabel(t, "cmms.department.", row.specialty)}</Badge>,
     },
     {
       key: "unit",
@@ -290,10 +293,12 @@ export function MaintenancePersonnelPage(): JSX.Element {
             onChange={(event) => setSpecialtyFilter(event.target.value)}
             options={[
               { value: "all", label: t("registry.personnel.allSpecialties") },
-              ...MAINTENANCE_DEPARTMENTS.map((department) => ({
-                value: department,
-                label: t(`cmms.department.${department}`),
-              })),
+              ...mergeOptions({
+                canonical: MAINTENANCE_DEPARTMENTS,
+                translate: (department) => taxonomyLabel(t, "cmms.department.", department),
+                fromData: people.map((person) => person.specialty),
+                catalogKey: "personnel.specialty",
+              }),
             ]}
           />
         </div>
@@ -336,14 +341,19 @@ export function MaintenancePersonnelPage(): JSX.Element {
             value={formCode}
             onChange={(event) => setFormCode(event.target.value)}
           />
-          <SelectInput
+          <CreatableSelect
             label={t("registry.personnel.specialty")}
             value={formSpecialty}
-            onChange={(event) => setFormSpecialty(event.target.value as MaintenanceDepartment)}
-            options={MAINTENANCE_DEPARTMENTS.map((department) => ({
-              value: department,
-              label: t(`cmms.department.${department}`),
-            }))}
+            onChange={(value) => setFormSpecialty(value as MaintenanceDepartment)}
+            catalogKey="personnel.specialty"
+            canonical={MAINTENANCE_DEPARTMENTS}
+            options={mergeOptions({
+              canonical: MAINTENANCE_DEPARTMENTS,
+              translate: (department) => taxonomyLabel(t, "cmms.department.", department),
+              fromData: people.map((person) => person.specialty),
+              catalogKey: "personnel.specialty",
+              current: formSpecialty,
+            })}
           />
           <TextInput
             label={t("registry.personnel.unit")}

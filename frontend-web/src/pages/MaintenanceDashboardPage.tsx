@@ -15,6 +15,7 @@ import type {
 } from "../shared/types/domain";
 import { BarChart, DonutChart, TrendChart } from "../shared/components/charts";
 import { Icon } from "../shared/components/Icon";
+import { taxonomyLabel } from "../core/localization/taxonomyLabel";
 import {
   Badge,
   Button,
@@ -276,7 +277,7 @@ export function MaintenanceDashboardPage(): JSX.Element {
       order.title,
       t(`cmms.woStatus.${order.status}`),
       t(`cmms.priority.${order.priority}`),
-      t(`cmms.department.${order.department}`),
+      taxonomyLabel(t, "cmms.department.", order.department),
       t(`cmms.type.${order.orderType}`),
       order.requestedByName,
       order.assignedToName,
@@ -571,7 +572,7 @@ export function MaintenanceDashboardPage(): JSX.Element {
                     }}
                   >
                     <span className="dash-department-row__name">
-                      {t(`cmms.department.${department}`)}
+                      {taxonomyLabel(t, "cmms.department.", department)}
                     </span>
                     <div className="dash-department-row__bar">
                       <ProgressBar

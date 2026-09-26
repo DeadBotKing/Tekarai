@@ -7,6 +7,7 @@ import type { DeviceTimeline, DeviceTimelineItem } from "../shared/types/domain"
 import { Badge, Button, Card, SectionHeader } from "../shared/components/primitives";
 import { Icon, type IconName } from "../shared/components/Icon";
 import { formatJalali } from "../core/localization/jalali";
+import { taxonomyLabel } from "../core/localization/taxonomyLabel";
 
 const formatDateTime = (value: string): string =>
   value ? formatJalali(value, { withTime: true }) : "";
@@ -151,11 +152,11 @@ export function DeviceTimelinePage(): JSX.Element {
               </div>
               <div>
                 <span>{t("cmms.device.department")}</span>
-                <strong>{t(`cmms.department.${device.department}`)}</strong>
+                <strong>{taxonomyLabel(t, "cmms.department.", device.department)}</strong>
               </div>
               <div>
                 <span>{t("cmms.device.status")}</span>
-                <strong>{t(`cmms.status.${device.status}`)}</strong>
+                <strong>{taxonomyLabel(t, "cmms.status.", device.status)}</strong>
               </div>
               <div>
                 <span>{t("cmms.device.lastPm")}</span>

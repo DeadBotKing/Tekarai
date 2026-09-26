@@ -50,6 +50,9 @@ import {
 import { Icon } from "../shared/components/Icon";
 import { JalaliDatePicker } from "../shared/components/JalaliDatePicker";
 import { formatJalali, todayIso } from "../core/localization/jalali";
+import { taxonomyLabel } from "../core/localization/taxonomyLabel";
+import { CreatableSelect } from "../shared/components/CreatableSelect";
+import { mergeOptions } from "../features/maintenance/optionCatalog";
 
 type TabId =
   | "nameplate"
@@ -428,16 +431,18 @@ export function DeviceProfilePage(): JSX.Element {
           value={nameplate.electricalSpec}
           onChange={(event) => patchNameplate({ electricalSpec: event.target.value })}
         />
-        <SelectInput
+        <CreatableSelect
           label={t("registry.nameplate.criticality")}
           value={nameplate.criticality}
-          onChange={(event) =>
-            patchNameplate({ criticality: event.target.value as EquipmentCriticality })
-          }
-          options={EQUIPMENT_CRITICALITIES.map((level) => ({
-            value: level,
-            label: t(`registry.criticality.${level}`),
-          }))}
+          onChange={(value) => patchNameplate({ criticality: value as EquipmentCriticality })}
+          catalogKey="device.criticality"
+          canonical={EQUIPMENT_CRITICALITIES}
+          options={mergeOptions({
+            canonical: EQUIPMENT_CRITICALITIES,
+            translate: (level) => taxonomyLabel(t, "registry.criticality.", level),
+            catalogKey: "device.criticality",
+            current: nameplate.criticality,
+          })}
         />
         <TextInput
           label={t("registry.nameplate.supplier")}
@@ -601,7 +606,7 @@ export function DeviceProfilePage(): JSX.Element {
             return (
               <Card key={discipline} padding="sm" className="registry-discipline">
                 <div className="registry-discipline__head">
-                  <h3>{t(`cmms.department.${discipline}`)}</h3>
+                  <h3>{taxonomyLabel(t, "cmms.department.", discipline)}</h3>
                   <Badge tone={plans.length ? "info" : "neutral"}>
                     {t("registry.pm.planCount")}: {plans.length}
                   </Badge>
@@ -711,7 +716,7 @@ export function DeviceProfilePage(): JSX.Element {
               {profile.pmExecutions.map((execution) => (
                 <tr key={execution.id}>
                   <td>{formatJalali(execution.performedOn, { style: "short" })}</td>
-                  <td>{t(`cmms.department.${execution.discipline}`)}</td>
+                  <td>{taxonomyLabel(t, "cmms.department.", execution.discipline)}</td>
                   <td>{execution.performedByName || t("registry.common.none")}</td>
                   <td>{execution.durationMinutes}</td>
                   <td>
@@ -895,22 +900,27 @@ export function DeviceProfilePage(): JSX.Element {
               {assignmentRows.map((row, index) => (
                 <tr key={`assign-${index}`}>
                   <td>
-                    <SelectInput
-                      aria-label={t("registry.assign.role")}
+                    <CreatableSelect
+                      label={t("registry.assign.role")}
                       value={row.role}
-                      onChange={(event) =>
+                      onChange={(value) =>
                         setAssignmentRows((rows) =>
                           rows.map((item, position) =>
                             position === index
-                              ? { ...item, role: event.target.value as DeviceAssignmentRole }
+                              ? { ...item, role: value as DeviceAssignmentRole }
                               : item,
                           ),
                         )
                       }
-                      options={DEVICE_ASSIGNMENT_ROLES.map((role) => ({
-                        value: role,
-                        label: t(`registry.role.${role}`),
-                      }))}
+                      catalogKey="assignment.role"
+                      canonical={DEVICE_ASSIGNMENT_ROLES}
+                      options={mergeOptions({
+                        canonical: DEVICE_ASSIGNMENT_ROLES,
+                        translate: (role) => taxonomyLabel(t, "registry.role.", role),
+                        fromData: assignmentRows.map((item) => item.role),
+                        catalogKey: "assignment.role",
+                        current: row.role,
+                      })}
                     />
                   </td>
                   <td>
@@ -936,7 +946,7 @@ export function DeviceProfilePage(): JSX.Element {
                         { value: "", label: t("registry.assign.manual") },
                         ...personnel.map((person) => ({
                           value: person.id,
-                          label: `${person.fullName} — ${t(`cmms.department.${person.specialty}`)}`,
+                          label: `${person.fullName} — ${taxonomyLabel(t, "cmms.department.", person.specialty)}`,
                         })),
                       ]}
                     />
@@ -1042,11 +1052,11 @@ export function DeviceProfilePage(): JSX.Element {
                     <Icon name="user" size={22} />
                     <div>
                       <strong>{assignment.personnelName || t("registry.common.none")}</strong>
-                      <div className="muted-cell">{t(`registry.role.${assignment.role}`)}</div>
+                      <div className="muted-cell">{taxonomyLabel(t, "registry.role.", assignment.role)}</div>
                       <div className="muted-cell">{assignment.unit || t("registry.common.none")}</div>
                       {person && (
                         <div className="muted-cell">
-                          {t(`cmms.department.${person.specialty}`)}
+                          {taxonomyLabel(t, "cmms.department.", person.specialty)}
                           {person.phone ? ` · ${person.phone}` : ""}
                           {person.shift ? ` · ${person.shift}` : ""}
                         </div>
@@ -1220,11 +1230,11 @@ export function DeviceProfilePage(): JSX.Element {
 
       <div className="registry-hero">
         <Badge tone="info" dot>
-          {t(`cmms.status.${device.status}`)}
+          {taxonomyLabel(t, "cmms.status.", device.status)}
         </Badge>
-        <Badge tone="neutral">{t(`cmms.department.${device.department}`)}</Badge>
+        <Badge tone="neutral">{taxonomyLabel(t, "cmms.department.", device.department)}</Badge>
         <Badge tone="purple">
-          {t("registry.column.criticality")}: {t(`registry.criticality.${nameplate.criticality}`)}
+          {t("registry.column.criticality")}: {taxonomyLabel(t, "registry.criticality.", nameplate.criticality)}
         </Badge>
         <span className="muted-cell">
           {nameplate.manufacturer || t("registry.common.none")}
@@ -1279,19 +1289,21 @@ export function DeviceProfilePage(): JSX.Element {
           onChange={(event) => setPlanForm((form) => ({ ...form, title: event.target.value }))}
         />
         <div className="form-grid form-grid--compact">
-          <SelectInput
+          <CreatableSelect
             label={t("registry.pm.discipline")}
             value={planForm.discipline}
-            onChange={(event) =>
-              setPlanForm((form) => ({
-                ...form,
-                discipline: event.target.value as MaintenanceDepartment,
-              }))
+            onChange={(value) =>
+              setPlanForm((form) => ({ ...form, discipline: value as MaintenanceDepartment }))
             }
-            options={MAINTENANCE_DEPARTMENTS.map((department) => ({
-              value: department,
-              label: t(`cmms.department.${department}`),
-            }))}
+            catalogKey="pm.discipline"
+            canonical={MAINTENANCE_DEPARTMENTS}
+            options={mergeOptions({
+              canonical: MAINTENANCE_DEPARTMENTS,
+              translate: (department) => taxonomyLabel(t, "cmms.department.", department),
+              fromData: profile.pmPlans.map((plan) => plan.discipline),
+              catalogKey: "pm.discipline",
+              current: planForm.discipline,
+            })}
           />
           <TextInput
             label={t("registry.pm.frequencyEvery")}

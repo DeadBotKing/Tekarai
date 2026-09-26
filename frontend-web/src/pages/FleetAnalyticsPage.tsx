@@ -23,6 +23,8 @@ import {
   SelectInput,
 } from "../shared/components/primitives";
 import { JalaliDatePicker } from "../shared/components/JalaliDatePicker";
+import { taxonomyLabel } from "../core/localization/taxonomyLabel";
+import { mergeOptions } from "../features/maintenance/optionCatalog";
 
 const formatNumber = (value: number | null, digits = 1): string =>
   value === null || Number.isNaN(value) ? "—" : value.toFixed(digits);
@@ -87,7 +89,7 @@ export function FleetAnalyticsPage(): JSX.Element {
       sortable: true,
       render: (row) => (
         <Badge tone={row.criticality === "critical" ? "danger" : "neutral"}>
-          {t(`registry.criticality.${row.criticality}`)}
+          {taxonomyLabel(t, "registry.criticality.", row.criticality)}
         </Badge>
       ),
     },
@@ -199,10 +201,12 @@ export function FleetAnalyticsPage(): JSX.Element {
             onChange={(event) => setDepartment(event.target.value)}
             options={[
               { value: "", label: t("cmms.department.allUnits") },
-              ...MAINTENANCE_DEPARTMENTS.map((item) => ({
-                value: item,
-                label: t(`cmms.department.${item}`),
-              })),
+              ...mergeOptions({
+                canonical: MAINTENANCE_DEPARTMENTS,
+                translate: (item) => taxonomyLabel(t, "cmms.department.", item),
+                fromData: (fleet?.rows ?? []).map((row) => row.department ?? ""),
+                catalogKey: "device.department",
+              }),
             ]}
           />
           <SelectInput
@@ -211,10 +215,12 @@ export function FleetAnalyticsPage(): JSX.Element {
             onChange={(event) => setCriticality(event.target.value)}
             options={[
               { value: "", label: t("registry.filter.allCriticalities") },
-              ...EQUIPMENT_CRITICALITIES.map((level) => ({
-                value: level,
-                label: t(`registry.criticality.${level}`),
-              })),
+              ...mergeOptions({
+                canonical: EQUIPMENT_CRITICALITIES,
+                translate: (level) => taxonomyLabel(t, "registry.criticality.", level),
+                fromData: (fleet?.rows ?? []).map((row) => row.criticality),
+                catalogKey: "device.criticality",
+              }),
             ]}
           />
           <Button variant="secondary" icon="refresh" onClick={() => void refresh()}>

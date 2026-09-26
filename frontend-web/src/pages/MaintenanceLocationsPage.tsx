@@ -26,15 +26,10 @@ import {
   TextInput,
 } from "../shared/components/primitives";
 import { Icon } from "../shared/components/Icon";
+import { taxonomyLabel } from "../core/localization/taxonomyLabel";
+import { CreatableSelect } from "../shared/components/CreatableSelect";
+import { mergeOptions } from "../features/maintenance/optionCatalog";
 
-const kindLabelKey = (kind: LocationKind): string =>
-  kind === "site"
-    ? "registry.location.site"
-    : kind === "building"
-      ? "registry.location.building"
-      : kind === "area"
-        ? "registry.location.area"
-        : "registry.location.room";
 
 const kindIcon = (kind: LocationKind): "building" | "home" | "grid" | "layers" =>
   kind === "site" ? "building" : kind === "building" ? "home" : kind === "area" ? "grid" : "layers";
@@ -153,7 +148,7 @@ export function MaintenanceLocationsPage(): JSX.Element {
       <div className="registry-tree__row">
         <Icon name={kindIcon(location.kind)} size={16} />
         <strong>{location.name}</strong>
-        <Badge tone="neutral">{t(kindLabelKey(location.kind) as Parameters<typeof t>[0])}</Badge>
+        <Badge tone="neutral">{taxonomyLabel(t, "registry.location.", location.kind)}</Badge>
         {location.code && <span className="muted-cell">{location.code}</span>}
         <span className="muted-cell">
           {t("registry.location.deviceCount")}: {location.deviceCount}
@@ -273,14 +268,19 @@ export function MaintenanceLocationsPage(): JSX.Element {
             value={formCode}
             onChange={(event) => setFormCode(event.target.value)}
           />
-          <SelectInput
+          <CreatableSelect
             label={t("registry.location.kind")}
             value={formKind}
-            onChange={(event) => setFormKind(event.target.value as LocationKind)}
-            options={LOCATION_KINDS.map((kind) => ({
-              value: kind,
-              label: t(kindLabelKey(kind) as Parameters<typeof t>[0]),
-            }))}
+            onChange={(value) => setFormKind(value as LocationKind)}
+            catalogKey="location.kind"
+            canonical={LOCATION_KINDS}
+            options={mergeOptions({
+              canonical: LOCATION_KINDS,
+              translate: (kind) => taxonomyLabel(t, "registry.location.", kind),
+              fromData: locations.map((location) => location.kind),
+              catalogKey: "location.kind",
+              current: formKind,
+            })}
           />
           <SelectInput
             label={t("registry.location.parent")}

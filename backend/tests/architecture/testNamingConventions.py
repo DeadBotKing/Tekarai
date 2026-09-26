@@ -40,6 +40,7 @@ FRAMEWORK_HOOKS = {
     "authenticate",  # DRF authentication hook
     "authenticate_header",  # DRF authentication hook
     "dispatch",  # DRF view dispatch
+    "to_internal_value",  # DRF Field deserialisation hook (Phase 26.1)
     "is_authenticated",  # DRF principal property
     "_backfill_refresh_hashes",  # Phase 07 migration helper (snake per Django)
     "receive_json",  # Channels AsyncJsonWebsocketConsumer hook (Phase 08)

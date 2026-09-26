@@ -11,6 +11,27 @@ from dataclasses import dataclass
 from apps.sharedKernel.domain.errors import ValidationFailedError
 from apps.sharedKernel.domain.valueObjects import ValueObject
 
+
+# -- Open vocabularies (Phase 26.1) ------------------------------------------------
+#: Longest operator-defined label the database columns accept.
+OPEN_VOCABULARY_MAX_LENGTH = 24
+
+
+def isOpenVocabularyValue(value: str) -> bool:
+    """Whether ``value`` is a usable taxonomy label (canonical or plant-defined).
+
+    Shape only: non-empty once trimmed, short enough for the column, and free of
+    control characters that would corrupt CSV/Excel exports.
+    """
+
+    if not isinstance(value, str):
+        return False
+    trimmed = value.strip()
+    if not trimmed or len(trimmed) > OPEN_VOCABULARY_MAX_LENGTH:
+        return False
+    return not any(ord(character) < 32 or 127 <= ord(character) <= 159 for character in trimmed)
+
+
 # -- Device status ----------------------------------------------------------------
 DEVICE_OPERATIONAL = "operational"
 DEVICE_UNDER_MAINTENANCE = "underMaintenance"
@@ -278,13 +299,26 @@ class WorkOrderPriority(ValueObject):
 
 @dataclass(frozen=True)
 class MaintenanceDepartment(ValueObject):
+    """The unit that owns a device and receives its work orders.
+
+    :data:`MAINTENANCE_DEPARTMENTS` is the catalogue every deployment starts
+    with, not a closed set: a plant may add its own discipline (for example
+    «جوشکاری») from the registry UI, so any short printable label is valid.
+    """
+
     value: str
 
     def __post_init__(self) -> None:
-        if self.value not in MAINTENANCE_DEPARTMENTS:
+        if not isOpenVocabularyValue(self.value):
             raise ValidationFailedError(
                 "Invalid maintenance department.", fieldErrors={"department": self.value}
             )
+
+    @property
+    def isCanonical(self) -> bool:
+        """True when the value is one of the built-in departments."""
+
+        return self.value in MAINTENANCE_DEPARTMENTS
 
     def __str__(self) -> str:
         return self.value
@@ -292,15 +326,26 @@ class MaintenanceDepartment(ValueObject):
 
 @dataclass(frozen=True)
 class EquipmentCriticality(ValueObject):
-    """How badly the plant suffers when this asset stops (Phase 26)."""
+    """How badly the plant suffers when this asset stops (Phase 26).
+
+    :data:`ASSET_CRITICALITIES` is the starting catalogue; a plant may define
+    its own grade from the registry UI, so the value is validated for shape
+    rather than membership.
+    """
 
     value: str
 
     def __post_init__(self) -> None:
-        if self.value not in ASSET_CRITICALITIES:
+        if not isOpenVocabularyValue(self.value):
             raise ValidationFailedError(
-                "Invalid asset criticality.", fieldErrors={"criticality": self.value}
+                "Invalid equipment criticality.", fieldErrors={"criticality": self.value}
             )
+
+    @property
+    def isCanonical(self) -> bool:
+        """True when the value is one of the built-in criticality grades."""
+
+        return self.value in ASSET_CRITICALITIES
 
     def __str__(self) -> str:
         return self.value

@@ -341,16 +341,34 @@ class DepartmentRoutingTests(MaintenanceApiBase):
         self.assertEqual(assigned.json()["data"]["department"], "electrical")
         self.assertEqual(assigned.json()["data"]["assignedToName"], "حسین برقی")
 
-    def testInvalidDepartmentIsRejected(self) -> None:
+    def testDepartmentAcceptsAPlantDefinedLabelButRejectsGarbage(self) -> None:
+        """Phase 26.1: routing departments are an open vocabulary.
+
+        A plant may add its own discipline from the registry UI (for example
+        «جوشکاری»), so an unknown label routes like any other. Input that could
+        not be a label at all — blank, longer than the column, or carrying
+        control characters — is still rejected.
+        """
+
         device = self.createDevice(code="BAD-DEP-1")
         order = self.submitWorkOrder(device["id"])
-        bad = self.client.post(
+        accepted = self.client.post(
             f"/api/v1/maintenance/work-orders/{order['id']}/route",
-            {"department": "teleportation"},
+            {"department": "جوشکاری"},
             format="json",
             **self.auth,
         )
-        self.assertEqual(bad.status_code, 400, bad.content)
+        self.assertEqual(accepted.status_code, 200, accepted.content)
+        self.assertEqual(accepted.json()["data"]["department"], "جوشکاری")
+
+        for invalid in ("", "   ", "x" * 25, "برق\x07"):
+            rejected = self.client.post(
+                f"/api/v1/maintenance/work-orders/{order['id']}/route",
+                {"department": invalid},
+                format="json",
+                **self.auth,
+            )
+            self.assertEqual(rejected.status_code, 400, rejected.content)
 
     def testFilterWorkOrdersByDepartment(self) -> None:
         elec = self.createDevice(code="F-ELEC", department="electrical")

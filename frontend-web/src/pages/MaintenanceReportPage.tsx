@@ -12,6 +12,7 @@ import { DataTable, type DataTableColumn } from "../shared/components/DataTable"
 import { JalaliDatePicker } from "../shared/components/JalaliDatePicker";
 import { Badge, Button, Card, MetricCard, SectionHeader } from "../shared/components/primitives";
 import { Toast } from "../shared/components/overlays";
+import { taxonomyLabel } from "../core/localization/taxonomyLabel";
 
 const STATUS_ORDER: WorkOrderStatus[] = [
   "submitted",
@@ -127,7 +128,7 @@ export function MaintenanceReportPage(): JSX.Element {
       {
         key: "department",
         label: "واحد",
-        accessor: (row) => t(`cmms.department.${row.department}`),
+        accessor: (row) => taxonomyLabel(t, "cmms.department.", row.department),
       },
       {
         key: "status",

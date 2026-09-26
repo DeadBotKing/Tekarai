@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
+from apps.maintenance.presentation.api.serializers.taxonomyFields import openVocabulary
+
 from apps.maintenance.domain.valueObjects.maintenanceState import (
     ASSET_CRITICALITIES,
     DEVICE_ASSIGNMENT_ROLES,
@@ -22,7 +24,7 @@ ASSIGNMENT_ROLE_CHOICES = list(DEVICE_ASSIGNMENT_ROLES)
 class SaveLocationSerializer(serializers.Serializer):
     code = serializers.CharField(max_length=60, required=False, allow_blank=True, default="")
     name = serializers.CharField(max_length=200)
-    kind = serializers.ChoiceField(choices=LOCATION_KIND_CHOICES, default="site")
+    kind = openVocabulary(LOCATION_KIND_CHOICES, default="site")
     parentId = serializers.CharField(required=False, allow_blank=True, default="")
     note = serializers.CharField(required=False, allow_blank=True, default="")
 
@@ -32,7 +34,7 @@ class SavePersonnelSerializer(serializers.Serializer):
         max_length=60, required=False, allow_blank=True, default=""
     )
     fullName = serializers.CharField(max_length=200)
-    specialty = serializers.ChoiceField(choices=DEPARTMENT_CHOICES, default="general")
+    specialty = openVocabulary(DEPARTMENT_CHOICES, default="general")
     unit = serializers.CharField(max_length=160, required=False, allow_blank=True, default="")
     phone = serializers.CharField(max_length=40, required=False, allow_blank=True, default="")
     shift = serializers.CharField(max_length=60, required=False, allow_blank=True, default="")
@@ -58,7 +60,7 @@ class SaveSpecificationsSerializer(serializers.Serializer):
 
 class SavePmPlanSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=300)
-    discipline = serializers.ChoiceField(choices=DEPARTMENT_CHOICES, default="general")
+    discipline = openVocabulary(DEPARTMENT_CHOICES, default="general")
     description = serializers.CharField(required=False, allow_blank=True, default="")
     checklist = serializers.ListField(
         child=serializers.CharField(max_length=300), required=False, default=list
@@ -95,7 +97,7 @@ class AssignmentRowSerializer(serializers.Serializer):
     personnelName = serializers.CharField(
         max_length=200, required=False, allow_blank=True, default=""
     )
-    role = serializers.ChoiceField(choices=ASSIGNMENT_ROLE_CHOICES, default="technician")
+    role = openVocabulary(ASSIGNMENT_ROLE_CHOICES, default="technician")
     unit = serializers.CharField(max_length=160, required=False, allow_blank=True, default="")
     fromDate = serializers.CharField(required=False, allow_blank=True, default="")
     toDate = serializers.CharField(required=False, allow_blank=True, default="")
@@ -130,9 +132,7 @@ class UpdateDeviceNameplateSerializer(serializers.Serializer):
     electricalSpec = serializers.CharField(
         max_length=300, required=False, allow_blank=True, default=""
     )
-    criticality = serializers.ChoiceField(
-        choices=CRITICALITY_CHOICES, required=False, default="medium"
-    )
+    criticality = openVocabulary(CRITICALITY_CHOICES, default="medium")
     parentDeviceId = serializers.CharField(required=False, allow_blank=True, default="")
     locationId = serializers.CharField(required=False, allow_blank=True, default="")
     operatorUnit = serializers.CharField(

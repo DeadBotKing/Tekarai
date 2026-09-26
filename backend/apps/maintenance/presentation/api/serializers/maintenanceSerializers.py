@@ -6,6 +6,8 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
+from apps.maintenance.presentation.api.serializers.taxonomyFields import openVocabulary
+
 from apps.maintenance.domain.valueObjects.maintenanceState import MAINTENANCE_DEPARTMENTS
 
 DEVICE_STATUS_CHOICES = ["operational", "underMaintenance", "outOfService", "retired"]
@@ -32,14 +34,14 @@ class RegisterDeviceSerializer(serializers.Serializer):
     code = serializers.CharField(max_length=60)
     name = serializers.CharField(max_length=200)
     location = serializers.CharField(required=False, allow_blank=True, default="")
-    department = serializers.ChoiceField(choices=DEPARTMENT_CHOICES, default="general")
+    department = openVocabulary(DEPARTMENT_CHOICES, default="general")
     pmIntervalDays = serializers.IntegerField(required=False, min_value=0, default=0)
 
 
 class UpdateDeviceSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=200)
     location = serializers.CharField(required=False, allow_blank=True, default="")
-    department = serializers.ChoiceField(choices=DEPARTMENT_CHOICES, default="general")
+    department = openVocabulary(DEPARTMENT_CHOICES, default="general")
     pmIntervalDays = serializers.IntegerField(required=False, min_value=0, default=0)
 
 
@@ -92,9 +94,7 @@ class SubmitWorkOrderSerializer(serializers.Serializer):
     description = serializers.CharField(required=False, allow_blank=True, default="")
     orderType = serializers.ChoiceField(choices=WORK_ORDER_TYPE_CHOICES, default="corrective")
     priority = serializers.ChoiceField(choices=PRIORITY_CHOICES, default="normal")
-    department = serializers.ChoiceField(
-        choices=DEPARTMENT_CHOICES, required=False, allow_blank=True, default=""
-    )
+    department = openVocabulary(DEPARTMENT_CHOICES, default="", allowBlank=True)
     requestedByName = serializers.CharField(required=False, allow_blank=True, default="")
 
 
@@ -105,7 +105,7 @@ class UpdateWorkOrderSerializer(serializers.Serializer):
 
 
 class RouteWorkOrderSerializer(serializers.Serializer):
-    department = serializers.ChoiceField(choices=DEPARTMENT_CHOICES)
+    department = openVocabulary(DEPARTMENT_CHOICES)
 
 
 class AssignWorkOrderSerializer(serializers.Serializer):

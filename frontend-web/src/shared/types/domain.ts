@@ -161,7 +161,9 @@ export type MaintenanceDepartment =
   | "facilities"
   | "instrumentation"
   | "hydraulic"
-  | "pneumatic";
+  | "pneumatic"
+  // Phase 26.1: a plant may add its own discipline from any department dropdown.
+  | (string & {});
 
 /** The seven maintenance disciplines a PM plan can belong to (Phase 26). */
 export const MAINTENANCE_DEPARTMENTS: MaintenanceDepartment[] = [
@@ -256,18 +258,46 @@ export interface WorkOrder {
 }
 
 // -- Phase 26: equipment registry -------------------------------------------------
-export type EquipmentCriticality = "critical" | "high" | "medium" | "low";
-export type LocationKind = "site" | "building" | "area" | "room";
+/**
+ * Phase 26.1 — open vocabularies.
+ *
+ * The union lists the codes the product ships with (and keeps editor
+ * autocomplete working); `(string & {})` keeps any value the plant adds from a
+ * dropdown at run time assignable. The API validates shape, not membership.
+ */
+export type EquipmentCriticality = "vital" | "high" | "medium" | "low" | (string & {});
+export type LocationKind =
+  | "site"
+  | "building"
+  | "floor"
+  | "hall"
+  | "line"
+  | "room"
+  | "area"
+  | (string & {});
 export type PmFrequencyUnit = "day" | "week" | "month" | "runningHour";
-export type DeviceAssignmentRole = "operator" | "responsible" | "technician" | "deputy";
+export type DeviceAssignmentRole =
+  | "operator"
+  | "responsible"
+  | "technician"
+  | "deputy"
+  | (string & {});
 
 export const EQUIPMENT_CRITICALITIES: EquipmentCriticality[] = [
-  "critical",
+  "vital",
   "high",
   "medium",
   "low",
 ];
-export const LOCATION_KINDS: LocationKind[] = ["site", "building", "area", "room"];
+export const LOCATION_KINDS: LocationKind[] = [
+  "site",
+  "building",
+  "floor",
+  "hall",
+  "line",
+  "area",
+  "room",
+];
 export const PM_FREQUENCY_UNITS: PmFrequencyUnit[] = ["day", "week", "month", "runningHour"];
 export const DEVICE_ASSIGNMENT_ROLES: DeviceAssignmentRole[] = [
   "operator",

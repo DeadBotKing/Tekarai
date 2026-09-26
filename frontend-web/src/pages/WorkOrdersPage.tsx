@@ -34,6 +34,9 @@ import {
   TextInput,
 } from "../shared/components/primitives";
 import { Icon } from "../shared/components/Icon";
+import { taxonomyLabel } from "../core/localization/taxonomyLabel";
+import { CreatableSelect } from "../shared/components/CreatableSelect";
+import { mergeOptions } from "../features/maintenance/optionCatalog";
 
 const WO_STATUSES: WorkOrderStatus[] = [
   "submitted",
@@ -580,7 +583,7 @@ export function WorkOrdersPage(): JSX.Element {
       label: t("cmms.wo.department"),
       accessor: (row) => row.department,
       sortable: true,
-      render: (row) => <Badge tone="neutral">{t(`cmms.department.${row.department}`)}</Badge>,
+      render: (row) => <Badge tone="neutral">{taxonomyLabel(t, "cmms.department.", row.department)}</Badge>,
     },
     {
       key: "status",
@@ -688,10 +691,12 @@ export function WorkOrdersPage(): JSX.Element {
               onChange={(event) => setDepartmentFilter(event.target.value)}
               options={[
                 { value: "all", label: t("cmms.department.allUnits") },
-                ...DEPARTMENTS.map((department) => ({
-                  value: department,
-                  label: t(`cmms.department.${department}`),
-                })),
+                ...mergeOptions({
+                  canonical: DEPARTMENTS,
+                  translate: (department) => taxonomyLabel(t, "cmms.department.", department),
+                  fromData: orders.map((item) => item.department),
+                  catalogKey: "device.department",
+                }),
               ]}
             />
           </div>
@@ -763,16 +768,21 @@ export function WorkOrdersPage(): JSX.Element {
             }))}
           />
         </div>
-        <SelectInput
+        <CreatableSelect
           label={t("cmms.wo.department")}
           value={formDepartment}
-          onChange={(event) => setFormDepartment(event.target.value as MaintenanceDepartment | "")}
+          onChange={(value) => setFormDepartment(value as MaintenanceDepartment | "")}
+          catalogKey="device.department"
+          canonical={DEPARTMENTS}
           options={[
             { value: "", label: t("cmms.wo.departmentInherit") },
-            ...DEPARTMENTS.map((department) => ({
-              value: department,
-              label: t(`cmms.department.${department}`),
-            })),
+            ...mergeOptions({
+              canonical: DEPARTMENTS,
+              translate: (department) => taxonomyLabel(t, "cmms.department.", department),
+              fromData: orders.map((item) => item.department),
+              catalogKey: "device.department",
+              current: formDepartment,
+            }),
           ]}
         />
         <TextInput
@@ -822,14 +832,19 @@ export function WorkOrdersPage(): JSX.Element {
         }
       >
         <p className="detail-panel__description">{t("cmms.wo.routeHelp")}</p>
-        <SelectInput
+        <CreatableSelect
           label={t("cmms.wo.department")}
           value={routeDepartment}
-          onChange={(event) => setRouteDepartment(event.target.value as MaintenanceDepartment)}
-          options={DEPARTMENTS.map((department) => ({
-            value: department,
-            label: t(`cmms.department.${department}`),
-          }))}
+          onChange={(value) => setRouteDepartment(value as MaintenanceDepartment)}
+          catalogKey="device.department"
+          canonical={DEPARTMENTS}
+          options={mergeOptions({
+            canonical: DEPARTMENTS,
+            translate: (department) => taxonomyLabel(t, "cmms.department.", department),
+            fromData: orders.map((item) => item.department),
+            catalogKey: "device.department",
+            current: routeDepartment,
+          })}
         />
       </Modal>
 
@@ -900,7 +915,7 @@ export function WorkOrdersPage(): JSX.Element {
               </div>
               <div>
                 <span>{t("cmms.wo.department")}</span>
-                <strong>{t(`cmms.department.${activeOrder.department}`)}</strong>
+                <strong>{taxonomyLabel(t, "cmms.department.", activeOrder.department)}</strong>
               </div>
               <div>
                 <span>{t("cmms.wo.priority")}</span>

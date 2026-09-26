@@ -34,6 +34,9 @@ import {
   TextInput,
 } from "../shared/components/primitives";
 import { JalaliDatePicker } from "../shared/components/JalaliDatePicker";
+import { taxonomyLabel } from "../core/localization/taxonomyLabel";
+import { CreatableSelect } from "../shared/components/CreatableSelect";
+import { mergeOptions } from "../features/maintenance/optionCatalog";
 
 const DEVICE_STATUSES: DeviceStatus[] = [
   "operational",
@@ -297,7 +300,7 @@ export function EquipmentRegistryPage(): JSX.Element {
       label: t("registry.column.department"),
       accessor: (row) => row.department,
       sortable: true,
-      render: (row) => <Badge tone="neutral">{t(`cmms.department.${row.department}`)}</Badge>,
+      render: (row) => <Badge tone="neutral">{taxonomyLabel(t, "cmms.department.", row.department)}</Badge>,
     },
     {
       key: "criticality",
@@ -306,7 +309,7 @@ export function EquipmentRegistryPage(): JSX.Element {
       sortable: true,
       render: (row) => (
         <Badge tone={criticalityTone(row.criticality ?? "medium")}>
-          {t(`registry.criticality.${row.criticality ?? "medium"}`)}
+          {taxonomyLabel(t, "registry.criticality.", row.criticality ?? "medium")}
         </Badge>
       ),
     },
@@ -317,7 +320,7 @@ export function EquipmentRegistryPage(): JSX.Element {
       sortable: true,
       render: (row) => (
         <Badge tone={statusTone(row.status)} dot>
-          {t(`cmms.status.${row.status}`)}
+          {taxonomyLabel(t, "cmms.status.", row.status)}
         </Badge>
       ),
     },
@@ -414,7 +417,7 @@ export function EquipmentRegistryPage(): JSX.Element {
               { value: "all", label: t("cmms.status.all") },
               ...DEVICE_STATUSES.map((status) => ({
                 value: status,
-                label: t(`cmms.status.${status}`),
+                label: taxonomyLabel(t, "cmms.status.", status),
               })),
             ]}
           />
@@ -424,10 +427,12 @@ export function EquipmentRegistryPage(): JSX.Element {
             onChange={(event) => setDepartmentFilter(event.target.value)}
             options={[
               { value: "all", label: t("cmms.department.allUnits") },
-              ...MAINTENANCE_DEPARTMENTS.map((department) => ({
-                value: department,
-                label: t(`cmms.department.${department}`),
-              })),
+              ...mergeOptions({
+                canonical: MAINTENANCE_DEPARTMENTS,
+                translate: (department) => taxonomyLabel(t, "cmms.department.", department),
+                fromData: devices.map((item) => item.department),
+                catalogKey: "device.department",
+              }),
             ]}
           />
           <SelectInput
@@ -436,10 +441,12 @@ export function EquipmentRegistryPage(): JSX.Element {
             onChange={(event) => setCriticalityFilter(event.target.value)}
             options={[
               { value: "all", label: t("registry.filter.allCriticalities") },
-              ...EQUIPMENT_CRITICALITIES.map((level) => ({
-                value: level,
-                label: t(`registry.criticality.${level}`),
-              })),
+              ...mergeOptions({
+                canonical: EQUIPMENT_CRITICALITIES,
+                translate: (level) => taxonomyLabel(t, "registry.criticality.", level),
+                fromData: devices.map((item) => item.criticality ?? ""),
+                catalogKey: "device.criticality",
+              }),
             ]}
           />
           <SelectInput
@@ -494,23 +501,33 @@ export function EquipmentRegistryPage(): JSX.Element {
             value={formName}
             onChange={(event) => setFormName(event.target.value)}
           />
-          <SelectInput
+          <CreatableSelect
             label={t("registry.column.department")}
             value={formDepartment}
-            onChange={(event) => setFormDepartment(event.target.value as MaintenanceDepartment)}
-            options={MAINTENANCE_DEPARTMENTS.map((department) => ({
-              value: department,
-              label: t(`cmms.department.${department}`),
-            }))}
+            onChange={(value) => setFormDepartment(value as MaintenanceDepartment)}
+            catalogKey="device.department"
+            canonical={MAINTENANCE_DEPARTMENTS}
+            options={mergeOptions({
+              canonical: MAINTENANCE_DEPARTMENTS,
+              translate: (department) => taxonomyLabel(t, "cmms.department.", department),
+              fromData: devices.map((item) => item.department),
+              catalogKey: "device.department",
+              current: formDepartment,
+            })}
           />
-          <SelectInput
+          <CreatableSelect
             label={t("registry.nameplate.criticality")}
             value={formCriticality}
-            onChange={(event) => setFormCriticality(event.target.value as EquipmentCriticality)}
-            options={EQUIPMENT_CRITICALITIES.map((level) => ({
-              value: level,
-              label: t(`registry.criticality.${level}`),
-            }))}
+            onChange={(value) => setFormCriticality(value as EquipmentCriticality)}
+            catalogKey="device.criticality"
+            canonical={EQUIPMENT_CRITICALITIES}
+            options={mergeOptions({
+              canonical: EQUIPMENT_CRITICALITIES,
+              translate: (level) => taxonomyLabel(t, "registry.criticality.", level),
+              fromData: devices.map((item) => item.criticality ?? ""),
+              catalogKey: "device.criticality",
+              current: formCriticality,
+            })}
           />
           <SelectInput
             label={t("registry.nameplate.location")}

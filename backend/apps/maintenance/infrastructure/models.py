@@ -41,7 +41,7 @@ class DeviceModel(models.Model):
     capacity = models.CharField(max_length=160, blank=True, default="")
     powerRating = models.CharField(max_length=160, blank=True, default="")
     electricalSpec = models.CharField(max_length=300, blank=True, default="")
-    criticality = models.CharField(max_length=10, default="medium", db_index=True)
+    criticality = models.CharField(max_length=24, default="medium", db_index=True)
     # Self-reference: a line owns machines, a machine owns its motor/gearbox.
     parentDeviceId = models.UUIDField(null=True, blank=True, db_index=True)
     locationId = models.UUIDField(null=True, blank=True, db_index=True)
@@ -284,7 +284,7 @@ class MaintenanceLocationModel(models.Model):
     parentId = models.UUIDField(null=True, blank=True, db_index=True)
     code = models.CharField(max_length=60)
     name = models.CharField(max_length=200)
-    kind = models.CharField(max_length=20, default="site")
+    kind = models.CharField(max_length=24, default="site")
     path = models.CharField(max_length=800, blank=True, default="")
     note = models.TextField(blank=True, default="")
     createdAt = models.DateTimeField(db_index=True)
@@ -301,10 +301,11 @@ class MaintenanceLocationModel(models.Model):
                 condition=models.Q(deletedAt__isnull=True),
                 name="uq_maintenance_location_tenant_code",
             ),
+            # Phase 26.1: the kind is an open vocabulary — the UI offers the
+            # canonical catalogue and lets a plant add its own word («سوله»),
+            # so the database only guarantees that a kind was given at all.
             models.CheckConstraint(
-                condition=models.Q(
-                    kind__in=("site", "building", "floor", "hall", "line", "room", "area")
-                ),
+                condition=~models.Q(kind=""),
                 name="ck_maintenance_location_kind",
             ),
         ]
@@ -480,7 +481,7 @@ class DeviceAssignmentModel(models.Model):
     deviceId = models.UUIDField(db_index=True)
     personnelId = models.UUIDField(null=True, blank=True, db_index=True)
     personnelName = models.CharField(max_length=200, blank=True, default="")
-    role = models.CharField(max_length=20, default="technician")
+    role = models.CharField(max_length=24, default="technician")
     unit = models.CharField(max_length=160, blank=True, default="")
     fromDate = models.DateField(null=True, blank=True)
     toDate = models.DateField(null=True, blank=True)
@@ -491,10 +492,9 @@ class DeviceAssignmentModel(models.Model):
         ordering = ["role", "personnelName"]
         indexes = [models.Index(fields=["tenantId", "deviceId", "role"])]
         constraints = [
+            # Phase 26.1: open vocabulary — see the location kind above.
             models.CheckConstraint(
-                condition=models.Q(
-                    role__in=("operator", "responsible", "technician", "deputy")
-                ),
+                condition=~models.Q(role=""),
                 name="ck_device_assignment_role",
             )
         ]

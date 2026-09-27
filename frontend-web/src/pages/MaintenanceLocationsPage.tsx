@@ -21,13 +21,17 @@ import {
   MetricCard,
   PermissionGuard,
   SectionHeader,
-  SelectInput,
   TextArea,
   TextInput,
 } from "../shared/components/primitives";
 import { Icon } from "../shared/components/Icon";
 import { taxonomyLabel } from "../core/localization/taxonomyLabel";
 import { CreatableSelect } from "../shared/components/CreatableSelect";
+import { QuickAddSelect } from "../shared/components/QuickAddSelect";
+import {
+  QuickLocationModal,
+  type QuickLocationInput,
+} from "../shared/components/QuickCreateModals";
 import { mergeOptions } from "../features/maintenance/optionCatalog";
 
 
@@ -51,6 +55,7 @@ export function MaintenanceLocationsPage(): JSX.Element {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<MaintenanceLocation | null>(null);
   const [saving, setSaving] = useState(false);
+  const [quickParentOpen, setQuickParentOpen] = useState(false);
 
   const [formCode, setFormCode] = useState("");
   const [formName, setFormName] = useState("");
@@ -130,6 +135,19 @@ export function MaintenanceLocationsPage(): JSX.Element {
     } finally {
       setSaving(false);
     }
+  };
+
+  /** «➕ افزودن محل جدید…» from the parent picker inside the location form. */
+  const saveQuickParent = async (input: QuickLocationInput): Promise<string> => {
+    const created = await registry.createLocation({
+      code: input.code,
+      name: input.name,
+      kind: input.kind,
+      note: input.note,
+    });
+    setToast("محل جدید ثبت شد و به‌عنوان والد انتخاب گردید.");
+    await refresh();
+    return created.id;
   };
 
   const remove = async (location: MaintenanceLocation): Promise<void> => {
@@ -282,10 +300,12 @@ export function MaintenanceLocationsPage(): JSX.Element {
               current: formKind,
             })}
           />
-          <SelectInput
+          <QuickAddSelect
             label={t("registry.location.parent")}
             value={formParentId}
-            onChange={(event) => setFormParentId(event.target.value)}
+            onChange={setFormParentId}
+            addLabel="➕ افزودن محل جدید…"
+            onQuickAdd={() => setQuickParentOpen(true)}
             options={[
               { value: "", label: t("registry.location.noParent") },
               ...locations
@@ -300,6 +320,13 @@ export function MaintenanceLocationsPage(): JSX.Element {
           onChange={(event) => setFormNote(event.target.value)}
         />
       </Modal>
+
+      <QuickLocationModal
+        open={quickParentOpen}
+        onClose={() => setQuickParentOpen(false)}
+        onSave={saveQuickParent}
+        onCreated={setFormParentId}
+      />
 
       {toast && <Toast message={toast} onClose={() => setToast("")} />}
     </div>

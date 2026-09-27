@@ -8,6 +8,7 @@ import type {
   DeviceTimelineAction,
   DeviceTimelineItem,
   DeviceTimelineSource,
+  LabourEntry,
   MaintenanceAttachment,
   MaintenanceAttachmentCategory,
   MaintenanceDepartment,
@@ -15,6 +16,7 @@ import type {
   Priority,
   SparePart,
   WorkOrder,
+  WorkOrderCostSummary,
   WorkOrderPartUsage,
   WorkOrderHistoryAction,
   WorkOrderHistoryEntry,
@@ -75,6 +77,7 @@ interface SparePartDto {
   unit: string;
   quantityOnHand: string;
   minimumStock: string;
+  unitCost: string;
   lowStock: boolean;
   createdAt: string;
   updatedAt: string;
@@ -88,8 +91,36 @@ interface WorkOrderPartUsageDto {
   partName: string;
   unit: string;
   quantity: string;
+  unitCost: string;
+  totalCost: string;
   note: string;
   consumedAt: string;
+}
+
+interface LabourEntryDto {
+  id: string;
+  workOrderId: string;
+  technicianName: string;
+  hours: string;
+  hourlyRate: string;
+  totalCost: string;
+  workedAt: string;
+  note: string;
+  createdAt: string;
+}
+
+interface WorkOrderCostSummaryDto {
+  workOrderId: string;
+  title: string;
+  status: string;
+  deviceId: string;
+  assignedToName: string;
+  labourHours: string;
+  labourCost: string;
+  partsCost: string;
+  totalCost: string;
+  labourEntries: LabourEntryDto[];
+  partUsages: WorkOrderPartUsageDto[];
 }
 
 interface WorkOrderHistoryDto {
@@ -200,6 +231,7 @@ const toSparePart = (dto: SparePartDto): SparePart => ({
   unit: dto.unit,
   quantityOnHand: Number(dto.quantityOnHand),
   minimumStock: Number(dto.minimumStock),
+  unitCost: Number(dto.unitCost ?? 0),
   lowStock: Boolean(dto.lowStock),
   createdAt: dto.createdAt ?? "",
   updatedAt: dto.updatedAt ?? "",
@@ -213,8 +245,36 @@ const toPartUsage = (dto: WorkOrderPartUsageDto): WorkOrderPartUsage => ({
   partName: dto.partName,
   unit: dto.unit,
   quantity: Number(dto.quantity),
+  unitCost: Number(dto.unitCost ?? 0),
+  totalCost: Number(dto.totalCost ?? 0),
   note: dto.note ?? "",
   consumedAt: dto.consumedAt ?? "",
+});
+
+const toLabourEntry = (dto: LabourEntryDto): LabourEntry => ({
+  id: dto.id,
+  workOrderId: dto.workOrderId,
+  technicianName: dto.technicianName,
+  hours: Number(dto.hours),
+  hourlyRate: Number(dto.hourlyRate),
+  totalCost: Number(dto.totalCost ?? 0),
+  workedAt: dto.workedAt ?? "",
+  note: dto.note ?? "",
+  createdAt: dto.createdAt ?? "",
+});
+
+const toCostSummary = (dto: WorkOrderCostSummaryDto): WorkOrderCostSummary => ({
+  workOrderId: dto.workOrderId,
+  title: dto.title ?? "",
+  status: dto.status ?? "",
+  deviceId: dto.deviceId,
+  assignedToName: dto.assignedToName ?? "",
+  labourHours: Number(dto.labourHours ?? 0),
+  labourCost: Number(dto.labourCost ?? 0),
+  partsCost: Number(dto.partsCost ?? 0),
+  totalCost: Number(dto.totalCost ?? 0),
+  labourEntries: (dto.labourEntries ?? []).map(toLabourEntry),
+  partUsages: (dto.partUsages ?? []).map(toPartUsage),
 });
 
 const toHistoryEntry = (dto: WorkOrderHistoryDto): WorkOrderHistoryEntry => ({
@@ -276,6 +336,15 @@ export interface CreateSparePartInput {
   unit?: string;
   quantityOnHand: number;
   minimumStock?: number;
+  unitCost?: number;
+}
+
+export interface LogLabourEntryInput {
+  technicianName: string;
+  hours: number;
+  hourlyRate?: number;
+  workedAt?: string;
+  note?: string;
 }
 
 export interface MaintenanceService {
@@ -309,6 +378,18 @@ export interface MaintenanceService {
     note?: string,
     signal?: AbortSignal,
   ) => Promise<WorkOrderPartUsage>;
+  // Time & cost tracking (ثبت زمان و هزینه).
+  listLabourEntries: (id: string, signal?: AbortSignal) => Promise<LabourEntry[]>;
+  logLabourEntry: (
+    workOrderId: string,
+    input: LogLabourEntryInput,
+    signal?: AbortSignal,
+  ) => Promise<LabourEntry>;
+  deleteLabourEntry: (id: string, signal?: AbortSignal) => Promise<LabourEntry>;
+  getWorkOrderCostSummary: (
+    id: string,
+    signal?: AbortSignal,
+  ) => Promise<WorkOrderCostSummary>;
   listDevices: (
     filters?: { status?: string; department?: string; search?: string },
     signal?: AbortSignal,
@@ -445,6 +526,41 @@ export const createMaintenanceService = (api: ApiClient): MaintenanceService => 
       { signal, retry: 0 },
     );
     return toPartUsage(dto);
+  },
+  listLabourEntries: async (id, signal) => {
+    const dtos = await api.get<LabourEntryDto[]>(
+      apiEndpoints.maintenance.workOrderLabour(id),
+      { signal },
+    );
+    return dtos.map(toLabourEntry);
+  },
+  logLabourEntry: async (workOrderId, input, signal) => {
+    const dto = await api.post<LabourEntryDto>(
+      apiEndpoints.maintenance.workOrderLabour(workOrderId),
+      {
+        technicianName: input.technicianName,
+        hours: String(input.hours),
+        hourlyRate: String(input.hourlyRate ?? 0),
+        workedAt: input.workedAt ?? "",
+        note: input.note ?? "",
+      },
+      { signal, retry: 0 },
+    );
+    return toLabourEntry(dto);
+  },
+  deleteLabourEntry: async (id, signal) => {
+    const dto = await api.delete<LabourEntryDto>(apiEndpoints.maintenance.labourEntry(id), {
+      signal,
+      retry: 0,
+    });
+    return toLabourEntry(dto);
+  },
+  getWorkOrderCostSummary: async (id, signal) => {
+    const dto = await api.get<WorkOrderCostSummaryDto>(
+      apiEndpoints.maintenance.workOrderCostSummary(id),
+      { signal },
+    );
+    return toCostSummary(dto);
   },
   listDevices: async (filters = {}, signal) => {
     const all: DeviceDto[] = [];

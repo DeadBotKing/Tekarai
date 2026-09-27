@@ -70,6 +70,10 @@ class CreateSparePartSerializer(serializers.Serializer):
     minimumStock = serializers.DecimalField(
         max_digits=14, decimal_places=3, min_value=Decimal("0"), required=False, default=0
     )
+    # Latest price per unit; each consumption row snapshots it (time & cost).
+    unitCost = serializers.DecimalField(
+        max_digits=16, decimal_places=2, min_value=Decimal("0"), required=False, default=0
+    )
 
 
 class UpdateSparePartSerializer(serializers.Serializer):
@@ -78,6 +82,9 @@ class UpdateSparePartSerializer(serializers.Serializer):
     quantityOnHand = serializers.DecimalField(max_digits=14, decimal_places=3, min_value=Decimal("0"))
     minimumStock = serializers.DecimalField(
         max_digits=14, decimal_places=3, min_value=Decimal("0"), required=False, default=0
+    )
+    unitCost = serializers.DecimalField(
+        max_digits=16, decimal_places=2, min_value=Decimal("0"), required=False, default=0
     )
 
 
@@ -140,6 +147,33 @@ class DeviceReportQuerySerializer(serializers.Serializer):
 
     fromDate = serializers.DateField(required=False, allow_null=True, default=None)
     toDate = serializers.DateField(required=False, allow_null=True, default=None)
+    export = serializers.ChoiceField(
+        choices=("json", "csv", "xlsx"), required=False, default="json"
+    )
+
+
+# -- Time & cost tracking ------------------------------------------------------
+class LogLabourEntrySerializer(serializers.Serializer):
+    """One technician work log: ساعت‌کار تکنسین + نرخ ساعتی."""
+
+    technicianName = serializers.CharField(max_length=160)
+    hours = serializers.DecimalField(
+        max_digits=10, decimal_places=2, min_value=Decimal("0.01")
+    )
+    hourlyRate = serializers.DecimalField(
+        max_digits=16, decimal_places=2, min_value=Decimal("0"), required=False, default=0
+    )
+    workedAt = serializers.CharField(required=False, allow_blank=True, default="")
+    note = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
+
+
+class CostReportQuerySerializer(serializers.Serializer):
+    """Filters of the maintenance cost report (same bounds as the device report)."""
+
+    fromDate = serializers.DateField(required=False, allow_null=True, default=None)
+    toDate = serializers.DateField(required=False, allow_null=True, default=None)
+    deviceId = serializers.UUIDField(required=False, allow_null=True, default=None)
+    department = serializers.CharField(required=False, allow_blank=True, default="")
     export = serializers.ChoiceField(
         choices=("json", "csv", "xlsx"), required=False, default="json"
     )

@@ -12,6 +12,7 @@ class CreateSparePartCommand(Command):
     unit: str = "عدد"
     quantityOnHand: str = "0"
     minimumStock: str = "0"
+    unitCost: str = "0"
 
 
 @dataclass(frozen=True)
@@ -21,6 +22,7 @@ class UpdateSparePartCommand(Command):
     unit: str = "عدد"
     quantityOnHand: str = "0"
     minimumStock: str = "0"
+    unitCost: str = "0"
 
 
 @dataclass(frozen=True)

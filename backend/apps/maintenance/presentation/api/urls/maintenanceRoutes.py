@@ -44,6 +44,12 @@ from apps.maintenance.presentation.api.views.sparePartViews import (
     SparePartListView,
     WorkOrderPartUsageView,
 )
+from apps.maintenance.presentation.api.views.timeCostViews import (
+    LabourEntryDetailView,
+    MaintenanceCostReportView,
+    WorkOrderCostSummaryView,
+    WorkOrderLabourEntryView,
+)
 from apps.maintenance.presentation.api.views.workOrderViews import (
     DeviceMaintenanceReportView,
     WorkOrderApproveView,
@@ -201,6 +207,27 @@ urlpatterns = [
         "work-orders/<uuid:workOrderId>/parts",
         WorkOrderPartUsageView.as_view(),
         name="workOrderPartUsage",
+    ),
+    # Time & cost tracking (ثبت زمان و هزینه).
+    path(
+        "work-orders/<uuid:workOrderId>/labour",
+        WorkOrderLabourEntryView.as_view(),
+        name="workOrderLabourEntries",
+    ),
+    path(
+        "work-orders/<uuid:workOrderId>/cost-summary",
+        WorkOrderCostSummaryView.as_view(),
+        name="workOrderCostSummary",
+    ),
+    path(
+        "labour-entries/<uuid:entryId>",
+        LabourEntryDetailView.as_view(),
+        name="labourEntryDetail",
+    ),
+    path(
+        "reports/maintenance-costs",
+        MaintenanceCostReportView.as_view(),
+        name="maintenanceCostReport",
     ),
     path(
         "work-orders/<uuid:workOrderId>/attachments",

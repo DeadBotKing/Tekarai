@@ -26,6 +26,13 @@ from apps.maintenance.application.useCases.sparePartUseCases import (
     ListWorkOrderPartUsageUseCase,
     UpdateSparePartUseCase,
 )
+from apps.maintenance.application.useCases.timeCostUseCases import (
+    DeleteLabourEntryUseCase,
+    GetMaintenanceCostReportUseCase,
+    GetWorkOrderCostSummaryUseCase,
+    ListLabourEntriesUseCase,
+    LogLabourEntryUseCase,
+)
 from apps.maintenance.application.useCases.workOrderUseCases import (
     ApproveWorkOrderUseCase,
     AssignWorkOrderUseCase,
@@ -44,8 +51,14 @@ from apps.maintenance.application.useCases.workOrderUseCases import (
 from apps.maintenance.infrastructure.repositories.deviceHistoryRepositoryImpl import (
     DeviceHistoryRepositoryDjango,
 )
+from apps.maintenance.infrastructure.repositories.costReportRepositoryImpl import (
+    MaintenanceCostRepositoryDjango,
+)
 from apps.maintenance.infrastructure.repositories.deviceRepositoryImpl import (
     DeviceRepositoryDjango,
+)
+from apps.maintenance.infrastructure.repositories.labourEntryRepositoryImpl import (
+    LabourEntryRepositoryDjango,
 )
 from apps.maintenance.infrastructure.repositories.maintenanceAttachmentRepositoryImpl import (
     MaintenanceAttachmentRepositoryDjango,
@@ -84,6 +97,14 @@ def sparePartRepository() -> SparePartRepositoryDjango:
 
 def maintenanceAttachmentRepository() -> MaintenanceAttachmentRepositoryDjango:
     return MaintenanceAttachmentRepositoryDjango()
+
+
+def labourEntryRepository() -> LabourEntryRepositoryDjango:
+    return LabourEntryRepositoryDjango()
+
+
+def maintenanceCostRepository() -> MaintenanceCostRepositoryDjango:
+    return MaintenanceCostRepositoryDjango()
 
 
 def _kernelPorts() -> dict:
@@ -189,6 +210,40 @@ def consumeSparePartUseCase() -> ConsumeSparePartUseCase:
 
 def listWorkOrderPartUsageUseCase() -> ListWorkOrderPartUsageUseCase:
     return ListWorkOrderPartUsageUseCase(repository=sparePartRepository(), **_kernelPorts())
+
+
+# -- Time & cost tracking (ثبت زمان و هزینه) --------------------------------------
+def logLabourEntryUseCase() -> LogLabourEntryUseCase:
+    return LogLabourEntryUseCase(
+        labourEntryRepository=labourEntryRepository(), **_kernelPorts()
+    )
+
+
+def listLabourEntriesUseCase() -> ListLabourEntriesUseCase:
+    return ListLabourEntriesUseCase(
+        labourEntryRepository=labourEntryRepository(), **_kernelPorts()
+    )
+
+
+def deleteLabourEntryUseCase() -> DeleteLabourEntryUseCase:
+    return DeleteLabourEntryUseCase(
+        labourEntryRepository=labourEntryRepository(), **_kernelPorts()
+    )
+
+
+def getWorkOrderCostSummaryUseCase() -> GetWorkOrderCostSummaryUseCase:
+    return GetWorkOrderCostSummaryUseCase(
+        labourEntryRepository=labourEntryRepository(),
+        workOrderRepository=workOrderRepository(),
+        sparePartRepository=sparePartRepository(),
+        **_kernelPorts(),
+    )
+
+
+def getMaintenanceCostReportUseCase() -> GetMaintenanceCostReportUseCase:
+    return GetMaintenanceCostReportUseCase(
+        costRepository=maintenanceCostRepository(), **_kernelPorts()
+    )
 
 
 # -- Work order use cases ---------------------------------------------------------

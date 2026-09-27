@@ -32,6 +32,8 @@ export const PERMISSIONS = {
   maintenanceWorkOrderApprove: "maintenance.workorder.approve",
   maintenanceWorkOrderList: "maintenance.workorder.list",
   maintenanceWorkOrderView: "maintenance.workorder.view",
+  maintenanceWorkOrderLogTime: "maintenance.workorder.logTime",
+  maintenanceCostsView: "maintenance.costs.view",
   maintenanceInventoryView: "maintenance.inventory.view",
   maintenanceInventoryManage: "maintenance.inventory.manage",
   maintenanceInventoryConsume: "maintenance.inventory.consume",

@@ -52,6 +52,15 @@ import { JalaliDatePicker } from "../shared/components/JalaliDatePicker";
 import { formatJalali, todayIso } from "../core/localization/jalali";
 import { taxonomyLabel } from "../core/localization/taxonomyLabel";
 import { CreatableSelect } from "../shared/components/CreatableSelect";
+import { QuickAddSelect } from "../shared/components/QuickAddSelect";
+import {
+  QuickLocationModal,
+  QuickPersonModal,
+  QuickPartModal,
+  type QuickLocationInput,
+  type QuickPersonInput,
+  type QuickPartInput,
+} from "../shared/components/QuickCreateModals";
 import { mergeOptions } from "../features/maintenance/optionCatalog";
 
 type TabId =
@@ -133,6 +142,10 @@ export function DeviceProfilePage(): JSX.Element {
   const [bomPosition, setBomPosition] = useState("");
   const [bomQuantity, setBomQuantity] = useState("1");
   const [bomNote, setBomNote] = useState("");
+
+  const [quickLocationOpen, setQuickLocationOpen] = useState(false);
+  const [quickPersonTarget, setQuickPersonTarget] = useState<number | null>(null);
+  const [quickPartOpen, setQuickPartOpen] = useState(false);
 
   const load = useCallback(async (): Promise<void> => {
     if (!deviceId) return;
@@ -357,6 +370,73 @@ export function DeviceProfilePage(): JSX.Element {
     } finally {
       setSaving(false);
     }
+  };
+
+  /** «➕ افزودن محل جدید…» from the nameplate's location-change picker. */
+  const saveQuickLocation = async (input: QuickLocationInput): Promise<string> => {
+    const created = await registry.createLocation({
+      code: input.code,
+      name: input.name,
+      kind: input.kind,
+      note: input.note,
+    });
+    setLocations(await registry.listLocations());
+    setToast("محل ثبت شد و انتخاب گردید.");
+    return created.id;
+  };
+
+  /** «➕ افزودن فرد جدید…» from an assignment row's person picker. */
+  const saveQuickPerson = async (input: QuickPersonInput): Promise<string> => {
+    const created = await registry.createPersonnel({
+      fullName: input.fullName,
+      specialty: input.specialty,
+      unit: input.unit ?? "",
+      phone: input.phone ?? "",
+      shift: "",
+    });
+    setPersonnel(await registry.listPersonnel());
+    if (quickPersonTarget !== null) {
+      const target = quickPersonTarget;
+      setAssignmentRows((rows) =>
+        rows.map((item, position) =>
+          position === target
+            ? {
+                ...item,
+                personnelId: created.id,
+                personnelName: created.fullName,
+                unit: item.unit || created.unit || "",
+              }
+            : item,
+        ),
+      );
+    }
+    setToast("فرد ثبت شد و در ردیف انتخاب گردید.");
+    return created.id;
+  };
+
+  /** «➕ افزودن قطعه‌ی جدید…» from the BOM part picker. */
+  const saveQuickPart = async (input: QuickPartInput): Promise<string> => {
+    if (runtimeConfig.demoMode) {
+      const part: SparePart = {
+        id: `part-${Date.now()}`,
+        code: input.code.toUpperCase(),
+        name: input.name,
+        unit: input.unit,
+        quantityOnHand: input.quantityOnHand,
+        minimumStock: input.minimumStock,
+        unitCost: input.unitCost,
+        lowStock: input.quantityOnHand <= input.minimumStock,
+        createdAt: new Date().toISOString(),
+        updatedAt: "",
+      };
+      setSpareParts((current) => [...current, part]);
+      setToast("قطعه ثبت شد و در فرم انتخاب گردید.");
+      return part.id;
+    }
+    const created = await maintenance.createSparePart(input);
+    setSpareParts(await maintenance.listSpareParts());
+    setToast("قطعه ثبت شد و در فرم انتخاب گردید.");
+    return created.id;
   };
 
   const removeBomItem = async (partId: string): Promise<void> => {
@@ -827,10 +907,12 @@ export function DeviceProfilePage(): JSX.Element {
         </div>
       </div>
       <div className="form-grid form-grid--compact">
-        <SelectInput
+        <QuickAddSelect
           label={t("registry.location.change")}
           value={nameplate.locationId}
-          onChange={(event) => patchNameplate({ locationId: event.target.value })}
+          onChange={(value) => patchNameplate({ locationId: value })}
+          addLabel="➕ افزودن محل جدید…"
+          onQuickAdd={() => setQuickLocationOpen(true)}
           options={[
             { value: "", label: t("registry.nameplate.noLocation") },
             ...locations.map((location) => ({ value: location.id, label: location.path })),
@@ -924,17 +1006,17 @@ export function DeviceProfilePage(): JSX.Element {
                     />
                   </td>
                   <td>
-                    <SelectInput
-                      aria-label={t("registry.assign.person")}
+                    <QuickAddSelect
+                      ariaLabel={t("registry.assign.person")}
                       value={row.personnelId ?? ""}
-                      onChange={(event) => {
-                        const person = personnel.find((item) => item.id === event.target.value);
+                      onChange={(value) => {
+                        const person = personnel.find((item) => item.id === value);
                         setAssignmentRows((rows) =>
                           rows.map((item, position) =>
                             position === index
                               ? {
                                   ...item,
-                                  personnelId: event.target.value,
+                                  personnelId: value,
                                   personnelName: person?.fullName ?? "",
                                   unit: item.unit || person?.unit || "",
                                 }
@@ -942,6 +1024,8 @@ export function DeviceProfilePage(): JSX.Element {
                           ),
                         );
                       }}
+                      addLabel="➕ افزودن فرد جدید…"
+                      onQuickAdd={() => setQuickPersonTarget(index)}
                       options={[
                         { value: "", label: t("registry.assign.manual") },
                         ...personnel.map((person) => ({
@@ -1431,10 +1515,12 @@ export function DeviceProfilePage(): JSX.Element {
           <p className="muted-cell">{t("registry.parts.noCatalog")}</p>
         ) : (
           <>
-            <SelectInput
+            <QuickAddSelect
               label={t("registry.parts.part")}
               value={bomPartId}
-              onChange={(event) => setBomPartId(event.target.value)}
+              onChange={setBomPartId}
+              addLabel="➕ افزودن قطعه‌ی جدید…"
+              onQuickAdd={() => setQuickPartOpen(true)}
               options={[
                 { value: "", label: t("registry.common.none") },
                 ...spareParts.map((part) => ({
@@ -1463,6 +1549,27 @@ export function DeviceProfilePage(): JSX.Element {
           </>
         )}
       </Modal>
+
+      <QuickLocationModal
+        open={quickLocationOpen}
+        onClose={() => setQuickLocationOpen(false)}
+        onSave={saveQuickLocation}
+        onCreated={(id) => patchNameplate({ locationId: id })}
+      />
+
+      <QuickPersonModal
+        open={quickPersonTarget !== null}
+        onClose={() => setQuickPersonTarget(null)}
+        onSave={saveQuickPerson}
+        onCreated={() => setQuickPersonTarget(null)}
+      />
+
+      <QuickPartModal
+        open={quickPartOpen}
+        onClose={() => setQuickPartOpen(false)}
+        onSave={saveQuickPart}
+        onCreated={setBomPartId}
+      />
 
       {toast && <Toast message={toast} onClose={() => setToast("")} />}
     </div>

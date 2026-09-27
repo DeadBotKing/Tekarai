@@ -24,6 +24,7 @@ from apps.maintenance.application.commands.timeCostCommands import (
 from apps.maintenance.infrastructure import container
 from apps.maintenance.presentation.api.reports.costReportExporters import (
     buildCostReportCsv,
+    buildCostReportPdf,
     buildCostReportXlsx,
 )
 from apps.maintenance.presentation.api.serializers.maintenanceSerializers import (
@@ -139,6 +140,14 @@ class MaintenanceCostReportView(APIView):
             )
             response["Content-Disposition"] = (
                 f'attachment; filename="maintenance-costs-{report.fromDate}.xlsx"'
+            )
+            return response
+
+        if exportFormat == "pdf":
+            content = buildCostReportPdf(report)
+            response = HttpResponse(content, content_type="application/pdf")
+            response["Content-Disposition"] = (
+                f'attachment; filename="maintenance-costs-{report.fromDate}.pdf"'
             )
             return response
 

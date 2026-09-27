@@ -17,14 +17,12 @@ import { DeviceReportPage } from "../../pages/DeviceReportPage";
 import { DeviceTimelinePage } from "../../pages/DeviceTimelinePage";
 import { WorkOrdersPage } from "../../pages/WorkOrdersPage";
 import { DocumentsPage } from "../../pages/DocumentsPage";
-import { ReportsPage } from "../../pages/ReportsPage";
 import { IntelligencePage } from "../../pages/IntelligencePage";
 import { AdministrationPage } from "../../pages/AdministrationPage";
 import { ChatPage } from "../../pages/ChatPage";
 import { NotificationsPage } from "../../pages/NotificationsPage";
 import { SettingsPage } from "../../pages/SettingsPage";
 import { NotFoundPage } from "../../pages/NotFoundPage";
-import { OperationsResourcePage } from "../../pages/OperationsResourcePage";
 
 export function AppRouter(): JSX.Element {
   return <Routes>
@@ -48,10 +46,6 @@ export function AppRouter(): JSX.Element {
       <Route path="maintenance/work-orders" element={<WorkOrdersPage />} />
       <Route path="maintenance/pm-calendar" element={<MaintenancePmCalendarPage />} />
       <Route path="documents" element={<DocumentsPage />} />
-      <Route path="organization/employees" element={<OperationsResourcePage />} />
-      <Route path="organization/departments" element={<OperationsResourcePage />} />
-      <Route path="devices" element={<OperationsResourcePage />} />
-      <Route path="reports" element={<ReportsPage />} />
       <Route path="intelligence" element={<IntelligencePage />} />
       <Route path="administration/*" element={<AdministrationPage />} />
       <Route path="chat" element={<ChatPage />} />

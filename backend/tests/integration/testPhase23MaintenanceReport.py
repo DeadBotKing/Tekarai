@@ -215,7 +215,7 @@ class DeviceReportExportTests(MaintenanceReportBase):
         device = self.createDevice()
         response = self.client.get(
             f"/api/v1/maintenance/devices/{device['id']}/report",
-            {"export": "pdf"},
+            {"export": "html"},  # genuinely unsupported (pdf joined the family in Phase 28)
             **self.auth,
         )
         self.assertEqual(response.status_code, 400, response.content)

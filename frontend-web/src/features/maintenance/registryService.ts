@@ -769,6 +769,12 @@ export interface RegistryService {
     query?: { fromDate?: string; toDate?: string; discipline?: string },
     signal?: AbortSignal,
   ) => Promise<PmScheduleItem[]>;
+  /** Download the PM schedule as a file (گزارش خروجی) — CSV / Excel / PDF (Phase 28). */
+  downloadPmScheduleExport: (
+    format: "csv" | "xlsx" | "pdf",
+    query?: { fromDate?: string; toDate?: string; discipline?: string },
+    signal?: AbortSignal,
+  ) => Promise<Blob>;
   createPmPlan: (
     deviceId: string,
     input: SavePmPlanInput,
@@ -945,6 +951,16 @@ export const createRegistryService = (api: ApiClient): RegistryService => ({
     });
     return dtos.map(toPmScheduleItem);
   },
+  downloadPmScheduleExport: (format, query = {}, signal) =>
+    api.download(apiEndpoints.maintenance.pmSchedule, {
+      query: {
+        fromDate: query.fromDate,
+        toDate: query.toDate,
+        discipline: query.discipline,
+        export: format,
+      },
+      signal,
+    }),
   createPmPlan: async (deviceId, input, signal) => {
     const dto = await api.post<PmPlanDto>(
       apiEndpoints.maintenance.devicePmPlans(deviceId),

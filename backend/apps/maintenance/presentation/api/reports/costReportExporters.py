@@ -238,3 +238,26 @@ def buildCostReportXlsx(report: MaintenanceCostReportDto) -> bytes:
     stream = io.BytesIO()
     workbook.save(stream)
     return stream.getvalue()
+
+
+def buildCostReportPdf(report: MaintenanceCostReportDto) -> bytes:
+    """Shaped Persian A4-landscape PDF of the cost report (Phase 28).
+
+    Carries the summary numbers in the subtitle line and the full work-order
+    cost table underneath — the same columns as the CSV/XLSX exports.
+    """
+    from apps.maintenance.presentation.api.reports import pdfUtils
+
+    subtitle = (
+        f"بازه‌ی {report.fromDate or 'شروع'} تا {report.toDate or 'امروز'}"
+        f" — {report.workOrderCount} درخواست"
+        f" — ساعت‌کار: {report.totalLabourHours} ساعت"
+        f" — هزینه‌ی کل: {report.totalCost}"
+    )
+    return pdfUtils.buildPersianTablePdf(
+        title="گزارش زمان و هزینه‌ی نگهداری",
+        subtitle=subtitle,
+        columns=COST_COLUMNS,
+        rows=[_costRow(item) for item in report.items],
+        wide=True,
+    )

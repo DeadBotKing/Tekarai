@@ -189,3 +189,29 @@ def buildDeviceReportXlsx(report: DeviceMaintenanceReportDto) -> bytes:
     stream = io.BytesIO()
     workbook.save(stream)
     return stream.getvalue()
+
+
+def buildDeviceReportPdf(report: DeviceMaintenanceReportDto) -> bytes:
+    """Shaped Persian PDF of a single device's maintenance history (Phase 28)."""
+    from apps.maintenance.presentation.api.reports import pdfUtils
+
+    summary = report.summary
+    stats = ""
+    if summary is not None:
+        stats = (
+            f" — درخواست‌ها: {summary.totalOrders}"
+            f" (باز: {summary.openOrders}، معوق: {summary.overdueOrders})"
+            f" — MTTR: {summary.mttrHours if summary.mttrHours is not None else '—'} ساعت"
+        )
+    subtitle = (
+        f"دستگاه {report.device.name} ({report.device.code})"
+        f" — بازه‌ی {report.fromDate or 'شروع'} تا {report.toDate or 'امروز'}"
+        f"{stats}"
+    )
+    return pdfUtils.buildPersianTablePdf(
+        title="گزارش نگهداری دستگاه",
+        subtitle=subtitle,
+        columns=L.WORK_ORDER_COLUMNS,
+        rows=[_workOrderRow(order) for order in report.workOrders],
+        wide=True,
+    )

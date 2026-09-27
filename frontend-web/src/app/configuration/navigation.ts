@@ -23,15 +23,6 @@ export const navigationConfig: NavigationItem[] = [
     ],
   },
   {
-    id: "organization",
-    label: "nav.organization",
-    icon: "building",
-    children: [
-      { id: "employees", label: "nav.employees", icon: "users", route: "/app/organization/employees", permission: PERMISSIONS.userManage },
-      { id: "departments", label: "nav.departments", icon: "layers", route: "/app/organization/departments", permission: PERMISSIONS.userManage },
-    ],
-  },
-  {
     id: "delivery",
     label: "nav.projects",
     icon: "briefcase",
@@ -42,11 +33,10 @@ export const navigationConfig: NavigationItem[] = [
   },
   {
     id: "records",
-    label: "nav.documents",
+    label: "nav.records",
     icon: "file",
     children: [
       { id: "documents", label: "nav.documents", icon: "file", route: "/app/documents", permission: PERMISSIONS.documentView },
-      { id: "devices", label: "nav.devices", icon: "cpu", route: "/app/devices", permission: PERMISSIONS.projectView },
     ],
   },
   {
@@ -71,14 +61,6 @@ export const navigationConfig: NavigationItem[] = [
     icon: "message",
     children: [
       { id: "chat", label: "nav.chat", icon: "message", route: "/app/chat" },
-    ],
-  },
-  {
-    id: "reporting",
-    label: "nav.reports",
-    icon: "chart",
-    children: [
-      { id: "reports", label: "nav.reports", icon: "chart", route: "/app/reports", permission: PERMISSIONS.reportView },
     ],
   },
   {

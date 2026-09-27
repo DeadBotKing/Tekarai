@@ -2,9 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApiClient } from "../core/api/apiContext";
 import { useLocalization } from "../core/localization/localizationContext";
-import { JALALI_MONTHS, gregorianToJalali, toPersianDigits } from "../core/localization/jalali";
+import { JALALI_MONTHS, gregorianToJalali, jalaliPartsToIso, toPersianDigits } from "../core/localization/jalali";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
-import { createMaintenanceService } from "../features/maintenance/maintenanceService";
+import {
+  createMaintenanceService,
+  type MaintenanceCostReport,
+} from "../features/maintenance/maintenanceService";
+import { triggerDownload } from "../core/files/downloadUtils";
 import { demoDevices, demoWorkOrders } from "../features/maintenance/maintenanceDemoData";
 import type {
   MaintenanceDepartment,
@@ -100,6 +104,14 @@ const buildBuckets = (from: number, to: number, count: number): Bucket[] => {
 const toCsvValue = (value: string | number): string =>
   `"${String(value).replace(/"/g, '""')}"`;
 
+// Wire money comes as a plain decimal; format locally with Persian digits.
+const formatMoney = (value: number): string => {
+  const grouped = Math.round(value)
+    .toLocaleString("en-US")
+    .replace(/,/g, "٬");
+  return `${toPersianDigits(grouped)} تومان`;
+};
+
 export function MaintenanceDashboardPage(): JSX.Element {
   const { t } = useLocalization();
   const api = useApiClient();
@@ -113,6 +125,41 @@ export function MaintenanceDashboardPage(): JSX.Element {
   );
   const [loading, setLoading] = useState(!runtimeConfig.demoMode);
   const [range, setRange] = useState<RangeKey>("30");
+  // «زمان و هزینه» month totals + export buttons (Phase 28).
+  const [costReport, setCostReport] = useState<MaintenanceCostReport | null>(null);
+  const [costExporting, setCostExporting] = useState(false);
+
+  const monthCostRange = useMemo((): { fromDate: string; toDate: string } => {
+    // First day of the *Jalali* month (the UI's natural period) in ISO form.
+    const now = new Date();
+    const [jy, jm] = gregorianToJalali(now.getFullYear(), now.getMonth() + 1, now.getDate());
+    return {
+      fromDate: jalaliPartsToIso(jy, jm, 1),
+      toDate: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`,
+    };
+  }, []);
+
+  useEffect(() => {
+    if (runtimeConfig.demoMode) return;
+    service
+      .getMaintenanceCostReport(monthCostRange)
+      .then(setCostReport)
+      .catch(() => setCostReport(null));
+  }, [service, monthCostRange]);
+
+  const downloadCostReport = async (format: "csv" | "xlsx" | "pdf"): Promise<void> => {
+    if (runtimeConfig.demoMode) return;
+    setCostExporting(true);
+    try {
+      const blob = await service.downloadCostReportExport(format, monthCostRange);
+      triggerDownload(blob, `maintenance-costs.${format}`);
+    } catch {
+      // Keep the card stable; the error lands on screen via the toast of the page.
+      window.alert(t("cmms.export.failed"));
+    } finally {
+      setCostExporting(false);
+    }
+  };
 
   const refresh = useCallback(async (): Promise<void> => {
     if (runtimeConfig.demoMode) return;
@@ -363,6 +410,74 @@ export function MaintenanceDashboardPage(): JSX.Element {
           ))}
         </div>
       </div>
+
+      {!runtimeConfig.demoMode && (
+        <Card className="dash-cost dash-actions--noprint" padding="md">
+          <CardHeader
+            title={t("cmms.costDash.title")}
+            subtitle={t("cmms.costDash.subtitle")}
+            icon="chart"
+            action={
+              <div className="dash-cost__actions">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon="download"
+                  disabled={costExporting}
+                  onClick={() => void downloadCostReport("csv")}
+                >
+                  {t("cmms.export.csv")}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon="table"
+                  disabled={costExporting}
+                  onClick={() => void downloadCostReport("xlsx")}
+                >
+                  {t("cmms.export.excel")}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon="file"
+                  disabled={costExporting}
+                  onClick={() => void downloadCostReport("pdf")}
+                >
+                  {t("cmms.export.pdf")}
+                </Button>
+              </div>
+            }
+          />
+          {costReport ? (
+            <div className="dash-cost__grid">
+              <MetricCard
+                label={t("cmms.costDash.totalCost")}
+                value={formatMoney(costReport.totalCost)}
+                icon="chart"
+                tone="blue"
+                trendLabel={t("cmms.costDash.orders", { count: costReport.workOrderCount })}
+              />
+              <MetricCard
+                label={t("cmms.costDash.labour")}
+                value={formatMoney(costReport.totalLabourCost)}
+                icon="clock"
+                tone="purple"
+                trendLabel={t("cmms.costDash.labourHours", { hours: toPersianDigits(costReport.totalLabourHours) })}
+              />
+              <MetricCard
+                label={t("cmms.costDash.parts")}
+                value={formatMoney(costReport.totalPartsCost)}
+                icon="grid"
+                tone="amber"
+                trendLabel={t("cmms.costDash.items", { count: costReport.itemCount })}
+              />
+            </div>
+          ) : (
+            <p className="dash-cost__empty">{costReport === null ? t("cmms.costDash.none") : ""}</p>
+          )}
+        </Card>
+      )}
 
       <div className="metric-grid">
         <MetricCard

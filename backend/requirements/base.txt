@@ -22,3 +22,8 @@ celery==5.5.3
 
 # Phase 23 — maintenance report exports (Excel .xlsx generation)
 openpyxl==3.1.5
+
+# Phase 28 — PDF exports with proper Persian shaping (pure wheels, Windows-safe)
+reportlab==5.0.1
+arabic-reshaper==3.0.1
+python-bidi==0.6.11

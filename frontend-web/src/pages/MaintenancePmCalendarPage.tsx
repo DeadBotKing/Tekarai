@@ -5,6 +5,7 @@ import { useLocalization } from "../core/localization/localizationContext";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { createRegistryService } from "../features/maintenance/registryService";
 import { createDemoRegistryService } from "../features/maintenance/registryDemoData";
+import { rowsToCsvBlob, triggerDownload } from "../core/files/downloadUtils";
 import { MAINTENANCE_DEPARTMENTS, type PmScheduleItem } from "../shared/types/domain";
 import { Modal, Toast } from "../shared/components/overlays";
 import {
@@ -67,6 +68,37 @@ export function MaintenancePmCalendarPage(): JSX.Element {
   const [toast, setToast] = useState("");
   const [disciplineFilter, setDisciplineFilter] = useState("");
   const [dayModal, setDayModal] = useState<{ iso: string; items: PmScheduleItem[] } | null>(null);
+  const [downloading, setDownloading] = useState(false);
+
+  const downloadExport = async (format: "csv" | "xlsx" | "pdf"): Promise<void> => {
+    setDownloading(true);
+    try {
+      const query = {
+        fromDate: monthStartIso,
+        toDate: monthEndIso,
+        discipline: disciplineFilter || undefined,
+      };
+      const usedFormat = runtimeConfig.demoMode ? "csv" : format;
+      const blob = runtimeConfig.demoMode
+        ? rowsToCsvBlob([
+            ["دستگاه", "عنوان PM", "موعد", "وضعیت"],
+            ...items.map((item) => [
+              `${item.deviceCode} — ${item.deviceName}`.trim(),
+              item.title,
+              item.dueOn || "بدون تاریخ",
+              item.overdue ? "عقب‌افتاده" : "در برنامه",
+            ]),
+          ])
+        : await registry.downloadPmScheduleExport(format, query);
+      const stem = JALALI_MONTHS[month.month - 1];
+      triggerDownload(blob, `pm-schedule-${stem}-${month.year}.${usedFormat}`);
+      setToast(t("cmms.export.ready"));
+    } catch {
+      setToast(t("cmms.export.failed"));
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const monthStartIso = jalaliPartsToIso(month.year, month.month, 1);
   const monthLength = jalaliMonthLength(month.year, month.month);
@@ -141,6 +173,12 @@ export function MaintenancePmCalendarPage(): JSX.Element {
         subtitle={t("cmms.pmCal.subtitle")}
         actions={
           <div className="cmms-header-actions">
+            <Button variant="ghost" icon="table" disabled={downloading} onClick={() => void downloadExport("xlsx")}>
+              {t("cmms.export.excel")}
+            </Button>
+            <Button variant="ghost" icon="download" disabled={downloading} onClick={() => void downloadExport("pdf")}>
+              {t("cmms.export.pdf")}
+            </Button>
             <Button variant="secondary" icon="chevronRight" onClick={() => setMonth(stepMonth(month, -1))}>
               {t("cmms.pmCal.prevMonth")}
             </Button>
@@ -164,7 +202,8 @@ export function MaintenancePmCalendarPage(): JSX.Element {
         <div className="pm-cal__toolbar">
           <h2 className="pm-cal__month-title">
             <Icon name="calendar" size={20} />
-            {JALALI_MONTHS[month.month - 1]} {toPersianDigits(month.year)}
+            {JALALI_MONTHS[month.month - 1]}
+            <span className="pm-cal__year">{toPersianDigits(month.year)}</span>
           </h2>
           <SelectInput
             aria-label={t("cmms.pmCal.filterDiscipline")}
@@ -202,10 +241,17 @@ export function MaintenancePmCalendarPage(): JSX.Element {
               }
               const dayItems = itemsByDay.get(cell.iso) ?? [];
               const overflow = dayItems.length - MAX_CHIPS_PER_CELL;
+              const hasOverdue = dayItems.some((item) => item.overdue);
               return (
                 <div
                   key={cell.iso}
-                  className={`pm-cal__cell ${cell.iso === today ? "pm-cal__cell--today" : ""} ${dayItems.length > 0 ? "is-clickable" : ""}`}
+                  className={[
+                    "pm-cal__cell",
+                    index % 7 === 6 ? "pm-cal__cell--fri" : "",
+                    cell.iso === today ? "pm-cal__cell--today" : "",
+                    hasOverdue ? "pm-cal__cell--has-overdue" : "",
+                    dayItems.length > 0 ? "is-clickable" : "",
+                  ].filter(Boolean).join(" ")}
                   onClick={() => openDay(cell.iso)}
                   role={dayItems.length > 0 ? "button" : undefined}
                   tabIndex={dayItems.length > 0 ? 0 : undefined}

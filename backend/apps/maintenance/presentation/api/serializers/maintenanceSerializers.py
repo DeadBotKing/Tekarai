@@ -6,9 +6,8 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
-from apps.maintenance.presentation.api.serializers.taxonomyFields import openVocabulary
-
 from apps.maintenance.domain.valueObjects.maintenanceState import MAINTENANCE_DEPARTMENTS
+from apps.maintenance.presentation.api.serializers.taxonomyFields import openVocabulary
 
 DEVICE_STATUS_CHOICES = ["operational", "underMaintenance", "outOfService", "retired"]
 WORK_ORDER_TYPE_CHOICES = ["corrective", "preventive", "inspection"]
@@ -148,7 +147,7 @@ class DeviceReportQuerySerializer(serializers.Serializer):
     fromDate = serializers.DateField(required=False, allow_null=True, default=None)
     toDate = serializers.DateField(required=False, allow_null=True, default=None)
     export = serializers.ChoiceField(
-        choices=("json", "csv", "xlsx"), required=False, default="json"
+        choices=("json", "csv", "xlsx", "pdf"), required=False, default="json"
     )
 
 
@@ -175,5 +174,5 @@ class CostReportQuerySerializer(serializers.Serializer):
     deviceId = serializers.UUIDField(required=False, allow_null=True, default=None)
     department = serializers.CharField(required=False, allow_blank=True, default="")
     export = serializers.ChoiceField(
-        choices=("json", "csv", "xlsx"), required=False, default="json"
+        choices=("json", "csv", "xlsx", "pdf"), required=False, default="json"
     )

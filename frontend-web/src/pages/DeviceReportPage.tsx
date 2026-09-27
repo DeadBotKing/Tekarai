@@ -91,7 +91,7 @@ export function DeviceReportPage(): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deviceId]);
 
-  const download = async (format: "csv" | "xlsx"): Promise<void> => {
+  const download = async (format: "csv" | "xlsx" | "pdf"): Promise<void> => {
     if (!report) return;
     setDownloading(true);
     try {
@@ -140,7 +140,15 @@ export function DeviceReportPage(): JSX.Element {
               {t("cmms.report.exportExcel")}
             </Button>
             <Button
-              variant="primary"
+              variant="secondary"
+              icon="download"
+              onClick={() => void download("pdf")}
+              disabled={!report || downloading}
+            >
+              {t("cmms.report.exportPdf")}
+            </Button>
+            <Button
+              variant="ghost"
               icon="file"
               onClick={() => window.print()}
               disabled={!report}

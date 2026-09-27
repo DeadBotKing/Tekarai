@@ -74,7 +74,7 @@ def registerMaintenanceEndpoints() -> None:
             permission="maintenance.workorder.list",
             errorCodes=MAINTENANCE_ERRORS,
             paginated=True,
-            filterable=("status", "orderType", "priority", "deviceId"),
+            filterable=("export", "status", "orderType", "priority", "deviceId"),
             sortable=("createdAt", "title", "status", "priority"),
             searchable=True,
         ),
@@ -173,7 +173,7 @@ def registerMaintenanceEndpoints() -> None:
             summary="Maintenance cost report with device/department/technician breakdowns.",
             permission="maintenance.costs.view",
             errorCodes=MAINTENANCE_ERRORS,
-            filterable=("fromDate", "toDate", "deviceId", "department"),
+            filterable=("fromDate", "toDate", "deviceId", "department", "export"),
         ),
         EndpointSpec(
             method="GET",
@@ -181,7 +181,7 @@ def registerMaintenanceEndpoints() -> None:
             summary="Cross-device upcoming PM feed for the maintenance calendar.",
             permission="maintenance.device.view",
             errorCodes=MAINTENANCE_ERRORS,
-            filterable=("fromDate", "toDate", "discipline"),
+            filterable=("fromDate", "toDate", "discipline", "export"),
         ),
     ]
     for spec in specs:

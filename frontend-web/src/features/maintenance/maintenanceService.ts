@@ -123,6 +123,37 @@ interface WorkOrderCostSummaryDto {
   partUsages: WorkOrderPartUsageDto[];
 }
 
+/** Money comes off the wire as decimal strings (see toCostSummary); numbers here. */
+export interface MaintenanceCostReport {
+  fromDate: string;
+  toDate: string;
+  generatedAt: string;
+  workOrderCount: number;
+  totalLabourHours: number;
+  totalLabourCost: number;
+  totalPartsCost: number;
+  totalCost: number;
+  byDevice: Array<{ key: string; label: string; workOrderCount: number; totalCost: number }>;
+  byDepartment: Array<{ key: string; label: string; workOrderCount: number; totalCost: number }>;
+  byTechnician: Array<{ technicianName: string; entryCount: number; hours: number; cost: number }>;
+  itemCount: number;
+}
+
+interface MaintenanceCostReportDto {
+  fromDate: string;
+  toDate: string;
+  generatedAt: string;
+  workOrderCount: number;
+  totalLabourHours: string;
+  totalLabourCost: string;
+  totalPartsCost: string;
+  totalCost: string;
+  items: unknown[];
+  byDevice: Array<{ key: string; label: string; workOrderCount: number; labourHours: string; labourCost: string; partsCost: string; totalCost: string }>;
+  byDepartment: Array<{ key: string; label: string; workOrderCount: number; labourHours: string; labourCost: string; partsCost: string; totalCost: string }>;
+  byTechnician: Array<{ technicianName: string; entryCount: number; hours: string; cost: string }>;
+}
+
 interface WorkOrderHistoryDto {
   id: string;
   workOrderId: string;
@@ -277,6 +308,38 @@ const toCostSummary = (dto: WorkOrderCostSummaryDto): WorkOrderCostSummary => ({
   partUsages: (dto.partUsages ?? []).map(toPartUsage),
 });
 
+const toCostGroupEntry = (dto: {
+  key: string;
+  label: string;
+  workOrderCount: number;
+  totalCost: string;
+}): { key: string; label: string; workOrderCount: number; totalCost: number } => ({
+  key: dto.key ?? "",
+  label: dto.label ?? "",
+  workOrderCount: Number(dto.workOrderCount ?? 0),
+  totalCost: Number(dto.totalCost ?? 0),
+});
+
+export const toMaintenanceCostReport = (dto: MaintenanceCostReportDto): MaintenanceCostReport => ({
+  fromDate: dto.fromDate ?? "",
+  toDate: dto.toDate ?? "",
+  generatedAt: dto.generatedAt ?? "",
+  workOrderCount: Number(dto.workOrderCount ?? 0),
+  totalLabourHours: Number(dto.totalLabourHours ?? 0),
+  totalLabourCost: Number(dto.totalLabourCost ?? 0),
+  totalPartsCost: Number(dto.totalPartsCost ?? 0),
+  totalCost: Number(dto.totalCost ?? 0),
+  byDevice: (dto.byDevice ?? []).map(toCostGroupEntry),
+  byDepartment: (dto.byDepartment ?? []).map(toCostGroupEntry),
+  byTechnician: (dto.byTechnician ?? []).map((entry) => ({
+    technicianName: entry.technicianName ?? "",
+    entryCount: Number(entry.entryCount ?? 0),
+    hours: Number(entry.hours ?? 0),
+    cost: Number(entry.cost ?? 0),
+  })),
+  itemCount: (dto.items ?? []).length,
+});
+
 const toHistoryEntry = (dto: WorkOrderHistoryDto): WorkOrderHistoryEntry => ({
   id: dto.id,
   workOrderId: dto.workOrderId,
@@ -416,6 +479,26 @@ export interface MaintenanceService {
     filters?: { status?: string; deviceId?: string; department?: string; search?: string },
     signal?: AbortSignal,
   ) => Promise<WorkOrder[]>;
+  /**
+   * Download the work-order list as a file (گزارش خروجی) honouring the same
+   * filters as the on-screen list; format ∈ csv | xlsx | pdf (Phase 28).
+   */
+  downloadWorkOrdersExport: (
+    format: "csv" | "xlsx" | "pdf",
+    filters?: { status?: string; deviceId?: string; department?: string; search?: string },
+    signal?: AbortSignal,
+  ) => Promise<Blob>;
+  /** Tenant-wide time-and-cost report (زمان و هزینه) for dashboard KPIs. */
+  getMaintenanceCostReport: (
+    range?: { fromDate?: string; toDate?: string },
+    signal?: AbortSignal,
+  ) => Promise<MaintenanceCostReport>;
+  /** Download the cost report as a file (CSV / Excel / PDF). */
+  downloadCostReportExport: (
+    format: "csv" | "xlsx" | "pdf",
+    range?: { fromDate?: string; toDate?: string },
+    signal?: AbortSignal,
+  ) => Promise<Blob>;
   submitWorkOrder: (input: SubmitWorkOrderInput, signal?: AbortSignal) => Promise<WorkOrder>;
   routeWorkOrder: (
     id: string,
@@ -455,7 +538,7 @@ export interface MaintenanceService {
   ) => Promise<DeviceMaintenanceReport>;
   downloadDeviceReport: (
     deviceId: string,
-    format: "csv" | "xlsx",
+    format: "csv" | "xlsx" | "pdf",
     range?: { fromDate?: string; toDate?: string },
     signal?: AbortSignal,
   ) => Promise<Blob>;
@@ -641,6 +724,30 @@ export const createMaintenanceService = (api: ApiClient): MaintenanceService => 
     }
     return all.map(toWorkOrder);
   },
+  downloadWorkOrdersExport: (format, filters = {}, signal) =>
+    api.download(apiEndpoints.maintenance.workOrders, {
+      query: { ...filters, export: format },
+      signal,
+    }),
+  getMaintenanceCostReport: async (range = {}, signal) => {
+    const dto = await api.get<MaintenanceCostReportDto>(
+      apiEndpoints.maintenance.maintenanceCostReport,
+      {
+        query: { fromDate: range.fromDate ?? "", toDate: range.toDate ?? "" },
+        signal,
+      },
+    );
+    return toMaintenanceCostReport(dto);
+  },
+  downloadCostReportExport: (format, range = {}, signal) =>
+    api.download(apiEndpoints.maintenance.maintenanceCostReport, {
+      query: {
+        fromDate: range.fromDate ?? "",
+        toDate: range.toDate ?? "",
+        export: format,
+      },
+      signal,
+    }),
   submitWorkOrder: async (input, signal) => {
     const dto = await api.post<WorkOrderDto>(
       apiEndpoints.maintenance.workOrders,

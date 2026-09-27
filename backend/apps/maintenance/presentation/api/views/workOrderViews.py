@@ -29,6 +29,7 @@ from apps.maintenance.application.queries.maintenanceQueries import (
 from apps.maintenance.infrastructure import container
 from apps.maintenance.presentation.api.reports.reportExporters import (
     buildDeviceReportCsv,
+    buildDeviceReportPdf,
     buildDeviceReportXlsx,
 )
 from apps.maintenance.presentation.api.serializers.maintenanceSerializers import (
@@ -55,19 +56,54 @@ class WorkOrderListView(IdempotencyMixin, APIView):
     authentication_classes = [BearerSessionAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def get(self, request: Request) -> Response:
-        query = ListWorkOrdersQuery(
-            deviceId=str(request.query_params.get("deviceId", "")).strip(),
-            status=str(request.query_params.get("status", "")).strip(),
-            orderType=str(request.query_params.get("orderType", "")).strip(),
-            priority=str(request.query_params.get("priority", "")).strip(),
-            department=str(request.query_params.get("department", "")).strip(),
-            search=str(request.query_params.get("search", "")).strip(),
-            ordering=str(request.query_params.get("ordering", "-createdAt")).strip(),
-            page=int(request.query_params.get("page", 1) or 1),
-            pageSize=int(request.query_params.get("pageSize", 50) or 50),
+    def get(self, request: Request) -> Response | HttpResponse:
+        exportFormat = str(request.query_params.get("export", "")).strip().lower()
+
+        def buildQuery(page: int, pageSize: int) -> ListWorkOrdersQuery:
+            return ListWorkOrdersQuery(
+                deviceId=str(request.query_params.get("deviceId", "")).strip(),
+                status=str(request.query_params.get("status", "")).strip(),
+                orderType=str(request.query_params.get("orderType", "")).strip(),
+                priority=str(request.query_params.get("priority", "")).strip(),
+                department=str(request.query_params.get("department", "")).strip(),
+                search=str(request.query_params.get("search", "")).strip(),
+                ordering=str(request.query_params.get("ordering", "-createdAt")).strip(),
+                page=page,
+                pageSize=pageSize,
+            )
+
+        if exportFormat in ("csv", "xlsx", "pdf"):
+            # Exports always carry the FULL filtered result set, not one page.
+            from apps.maintenance.presentation.api.reports.listExporters import (
+                EXPORT_CONTENT_TYPES as LIST_EXPORT_TYPES,
+            )
+            from apps.maintenance.presentation.api.reports.listExporters import (
+                buildWorkOrdersExport,
+            )
+
+            collected: list[Any] = []
+            page = 1
+            while True:
+                dto = container.listWorkOrdersUseCase().execute(buildQuery(page, 250))
+                collected.extend(dto.items)
+                if len(collected) >= dto.totalCount or not dto.items:
+                    break
+                page += 1
+            content = buildWorkOrdersExport(collected, exportFormat)
+            response = HttpResponse(
+                content, content_type=LIST_EXPORT_TYPES[exportFormat]
+            )
+            response["Content-Disposition"] = (
+                f'attachment; filename="work-orders.{exportFormat}"'
+            )
+            return response
+
+        dto = container.listWorkOrdersUseCase().execute(
+            buildQuery(
+                page=int(request.query_params.get("page", 1) or 1),
+                pageSize=int(request.query_params.get("pageSize", 50) or 50),
+            )
         )
-        dto = container.listWorkOrdersUseCase().execute(query)
         return Response(successEnvelope([asDict(item) for item in dto.items], meta=dto.asMeta()))
 
     def post(self, request: Request) -> Response:
@@ -269,6 +305,13 @@ class DeviceMaintenanceReportView(APIView):
                     "spreadsheetml.sheet"
                 ),
             )
+            response["Content-Disposition"] = f'attachment; filename="{filename}"'
+            return response
+
+        if exportFormat == "pdf":
+            content = buildDeviceReportPdf(report)
+            filename = f"maintenance-report-{report.device.code}.pdf"
+            response = HttpResponse(content, content_type="application/pdf")
             response["Content-Disposition"] = f'attachment; filename="{filename}"'
             return response
 

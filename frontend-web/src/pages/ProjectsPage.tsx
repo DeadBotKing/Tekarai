@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useApiClient } from "../core/api/apiContext";
+import { useAuth } from "../core/auth/authContext";
 import { useLocalization } from "../core/localization/localizationContext";
 import { PERMISSIONS } from "../core/permissions/permissionContext";
 import { demoProjects } from "../features/demo/demoData";
@@ -15,13 +16,15 @@ import { JalaliDatePicker } from "../shared/components/JalaliDatePicker";
 import { formatJalali } from "../core/localization/jalali";
 
 interface ProjectForm { name: string; description: string; owner: string; dueDate: string; }
-const emptyForm: ProjectForm = { name: "", description: "", owner: "Maya Chen", dueDate: "2026-12-31" };
+const emptyForm: ProjectForm = { name: "", description: "", owner: "", dueDate: "2026-12-31" };
 
 export function ProjectsPage(): JSX.Element {
   const { t } = useLocalization();
+  const { session } = useAuth();
   const api = useApiClient();
   const service = useMemo(() => createProjectService(api), [api]);
   const [searchParams, setSearchParams] = useSearchParams();
+  const defaultForm = useCallback((): ProjectForm => ({ ...emptyForm, owner: session?.user.displayName ?? "" }), [session]);
   const [projects, setProjects] = useState<Project[]>(demoProjects);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
@@ -40,10 +43,10 @@ export function ProjectsPage(): JSX.Element {
 
   useEffect(() => {
     if (searchParams.get("create") === "1") {
-      setEditing(null); setEditorOpen(true); setForm(emptyForm); setSearchParams({}, { replace: true });
+      setEditing(null); setEditorOpen(true); setForm(defaultForm()); setSearchParams({}, { replace: true });
     }
-  }, [searchParams, setSearchParams]);
-  const openEditor = (project?: Project): void => { setEditing(project ?? null); setEditorOpen(true); setForm(project ? { name: project.name, description: project.description, owner: project.owner, dueDate: project.dueDate } : emptyForm); setFormError(""); };
+  }, [searchParams, setSearchParams, defaultForm]);
+  const openEditor = (project?: Project): void => { setEditing(project ?? null); setEditorOpen(true); setForm(project ? { name: project.name, description: project.description, owner: project.owner, dueDate: project.dueDate } : defaultForm()); setFormError(""); };
   const saveProject = async (): Promise<void> => {
     if (!form.name.trim()) { setFormError(t("auth.required")); return; }
     setFormError("");
@@ -57,7 +60,7 @@ export function ProjectsPage(): JSX.Element {
         setProjects((current) => [newProject, ...current]);
         setToast(t("project.createSuccess"));
       }
-      setEditing(null); setEditorOpen(false); setForm(emptyForm);
+      setEditing(null); setEditorOpen(false); setForm(defaultForm());
       return;
     }
     try {
@@ -68,7 +71,7 @@ export function ProjectsPage(): JSX.Element {
         await service.create({ name: form.name.trim(), description: form.description.trim(), owner: form.owner, dueDate: form.dueDate });
         setToast(t("project.createSuccess"));
       }
-      setEditing(null); setEditorOpen(false); setForm(emptyForm);
+      setEditing(null); setEditorOpen(false); setForm(defaultForm());
       await refresh();
     } catch (error) {
       setFormError(error instanceof Error ? error.message : t("project.saveFailed"));

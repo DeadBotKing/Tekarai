@@ -1,94 +1,174 @@
-/* PM schedule calendar (Phase 27) — Jalali month grid. */
+/* =========================================================================
+   PM schedule calendar (Phase 27) — Jalali month grid
+   Styled on the app design tokens (tokens.css) so light/dark both work.
+   ========================================================================= */
+
+/* ---------- toolbar ---------- */
 
 .pm-cal__toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: var(--space-3, 12px);
-  margin-bottom: var(--space-4, 16px);
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .pm-cal__month-title {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 1.2rem;
-  font-weight: 700;
+  align-items: baseline;
+  gap: 10px;
   margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text-strong);
+  letter-spacing: -0.01em;
 }
+
+.pm-cal__month-title svg { color: var(--primary); align-self: center; }
+
+.pm-cal__month-title .pm-cal__year {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+
+.pm-cal__filter { min-width: 170px; }
 
 .pm-cal__legend {
   display: flex;
-  gap: 16px;
-  font-size: 0.8rem;
-  color: var(--text-muted, #6b7280);
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 
 .pm-cal__legend span {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
 }
 
 .pm-cal__dot {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: var(--accent, #2563eb);
+  flex: none;
+  background: var(--info);
 }
 
-.pm-cal__dot--overdue { background: var(--danger, #dc2626); }
-.pm-cal__dot--today { background: var(--warning, #d97706); }
+.pm-cal__dot--overdue { background: var(--danger); }
+.pm-cal__dot--today { background: var(--warning); }
+
+/* ---------- month grid ---------- */
 
 .pm-cal__grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
 
 .pm-cal__weekday {
-  text-align: center;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-muted, #6b7280);
-  padding: 6px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 9px 0;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  background: var(--surface-2);
 }
 
+.pm-cal__weekday:last-child { color: var(--danger); opacity: 0.85; } /* جمعه */
+
 .pm-cal__cell {
-  min-height: 92px;
-  border: 1px solid var(--border, #e5e7eb);
-  border-radius: 8px;
-  padding: 6px;
-  background: var(--surface, #fff);
+  position: relative;
+  min-height: 108px;
+  padding: 8px 7px 6px;
+  background: var(--surface-1);
   display: flex;
   flex-direction: column;
   gap: 4px;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
 }
 
-.pm-cal__cell--blank {
-  background: transparent;
-  border-color: transparent;
-}
+.pm-cal__cell--blank { background: var(--surface-0); }
+
+.pm-cal__cell--fri { background: color-mix(in srgb, var(--danger) 4%, var(--surface-1)); }
 
 .pm-cal__cell.is-clickable { cursor: pointer; }
-.pm-cal__cell.is-clickable:hover { border-color: var(--accent, #2563eb); }
-.pm-cal__cell.is-clickable:focus-visible {
-  outline: 2px solid var(--accent, #2563eb);
-  outline-offset: 1px;
+
+.pm-cal__cell.is-clickable:hover {
+  background: var(--primary-soft);
+  box-shadow: inset 0 0 0 2px var(--primary);
+  z-index: 1;
 }
 
-.pm-cal__cell--today {
-  border-color: var(--warning, #d97706);
-  box-shadow: inset 0 0 0 1px var(--warning, #d97706);
+.pm-cal__cell.is-clickable:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--primary);
+  z-index: 1;
 }
+
+/* today: soft primary wash + accent stripe on top */
+.pm-cal__cell--today {
+  background: linear-gradient(180deg, var(--primary-soft) 0%, var(--surface-1) 70%);
+}
+
+.pm-cal__cell--today::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 3px;
+  background: var(--primary);
+}
+
+/* days containing overdue items get a faint danger wash */
+.pm-cal__cell--has-overdue {
+  background: linear-gradient(180deg, var(--danger-soft) 0%, var(--surface-1) 65%);
+}
+
+.pm-cal__cell--has-overdue.is-clickable:hover {
+  background: var(--danger-soft);
+  box-shadow: inset 0 0 0 2px var(--danger);
+}
+
+/* ---------- day number ---------- */
 
 .pm-cal__day {
-  font-size: 0.85rem;
-  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin-inline-start: 2px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--text-strong);
+  border-radius: 50%;
 }
 
-.pm-cal__cell--today .pm-cal__day { color: var(--warning, #d97706); }
+.pm-cal__cell--today .pm-cal__day {
+  color: #fff;
+  background: var(--primary);
+  box-shadow: 0 3px 8px rgb(40 120 255 / 0.35);
+}
+
+/* ---------- event chips ---------- */
 
 .pm-cal__events {
   display: flex;
@@ -98,52 +178,74 @@
 }
 
 .pm-cal__event {
-  display: block;
-  font-size: 0.7rem;
-  line-height: 1.4;
-  padding: 2px 6px;
-  border-radius: 5px;
-  background: color-mix(in srgb, var(--accent, #2563eb) 12%, transparent);
-  color: var(--accent, #2563eb);
-  border-inline-start: 3px solid var(--accent, #2563eb);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.45;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--info-soft);
+  color: var(--primary-strong);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.pm-cal__event--overdue {
-  background: color-mix(in srgb, var(--danger, #dc2626) 12%, transparent);
-  color: var(--danger, #dc2626);
-  border-inline-start-color: var(--danger, #dc2626);
-  font-weight: 600;
+.pm-cal__event::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--info);
 }
+
+.pm-cal__event--overdue {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.pm-cal__event--overdue::before { background: var(--danger); }
 
 .pm-cal__event--today {
-  background: color-mix(in srgb, var(--warning, #d97706) 14%, transparent);
-  color: var(--warning, #d97706);
-  border-inline-start-color: var(--warning, #d97706);
-  font-weight: 600;
+  background: var(--warning-soft);
+  color: var(--warning);
 }
 
+.pm-cal__event--today::before { background: var(--warning); }
+
 .pm-cal__more {
-  font-size: 0.68rem;
-  color: var(--text-muted, #6b7280);
+  align-self: flex-start;
+  margin-top: 1px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 1px 8px;
 }
 
 .pm-cal__empty {
   text-align: center;
-  color: var(--text-muted, #6b7280);
-  padding: 24px 0 8px;
+  color: var(--text-muted);
+  padding: var(--space-6) 0 var(--space-3);
 }
+
+/* ---------- undated strip ---------- */
 
 .pm-cal__undated-title {
   display: flex;
   align-items: center;
   gap: 6px;
+  margin: 0 0 var(--space-3);
   font-size: 0.95rem;
-  font-weight: 700;
-  margin: 0 0 12px;
+  font-weight: 800;
+  color: var(--text-strong);
 }
+
+.pm-cal__undated-title svg { color: var(--warning); }
 
 .pm-cal__undated-strip {
   display: flex;
@@ -155,42 +257,60 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px dashed var(--border, #e5e7eb);
-  border-radius: 8px;
   padding: 8px 12px;
-  background: var(--surface, #fff);
-  cursor: pointer;
   font-size: 0.8rem;
+  background: var(--surface-2);
+  border: 1px dashed var(--border-strong);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease, border 0.15s ease, transform 0.15s ease;
 }
 
-.pm-cal__undated-chip:hover { border-color: var(--accent, #2563eb); }
-.pm-cal__undated-chip span { color: var(--text-muted, #6b7280); }
+.pm-cal__undated-chip:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.pm-cal__undated-chip strong { color: var(--text-strong); }
+.pm-cal__undated-chip > span { color: var(--text-muted); }
+
+/* ---------- day modal ---------- */
 
 .pm-cal__day-item {
-  border-block-end: 1px solid var(--border, #e5e7eb);
-  padding: 10px 0;
+  padding: 12px;
+  margin-bottom: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
 }
 
-.pm-cal__day-item:last-child { border-block-end: none; }
+.pm-cal__day-item:last-child { margin-bottom: 0; }
 
 .pm-cal__day-item-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  color: var(--text-strong);
 }
 
 .pm-cal__day-item p {
   margin: 6px 0;
   font-size: 0.85rem;
+  color: var(--text);
 }
 
 .pm-cal__day-item-meta {
-  color: var(--text-muted, #6b7280);
-  font-size: 0.78rem;
+  color: var(--text-muted) !important;
+  font-size: 0.78rem !important;
 }
 
+/* ---------- responsive ---------- */
+
 @media (max-width: 760px) {
-  .pm-cal__cell { min-height: 64px; padding: 4px; }
-  .pm-cal__event { font-size: 0.6rem; padding: 1px 4px; }
+  .pm-cal__cell { min-height: 72px; padding: 5px 4px 4px; }
+  .pm-cal__day { width: 22px; height: 22px; font-size: 0.72rem; }
+  .pm-cal__event { font-size: 0.58rem; padding: 1px 6px; }
+  .pm-cal__legend { display: none; }
 }

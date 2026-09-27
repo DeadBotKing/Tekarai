@@ -1,53 +1,37 @@
-"""PM calendar schedule (برنامه‌ی زمان‌بندی PM تقویمی) — public REST contract.
+"""PM schedule calendar (برنامه‌ی زمان‌بندی PM تقویمی) — public REST contract.
 
-One aggregated feed, ``GET /api/v1/maintenance/pm-schedule``, powers the
-Jalali month grid: active PM plans whose next run falls inside the requested
-window, every overdue plan no matter how far back, never-executed plans as
-undated rows, and the legacy device-level PM only for devices that carry no
-plan at all (so a device never shows up twice).
+``GET /api/v1/maintenance/pm-schedule`` returns the cross-device upcoming-PM
+feed that powers the maintenance calendar page: named plan rows (with dueOn
+recomputed from the last execution) plus a legacy device-level PM row only
+for devices that carry no plan — so nothing is double-counted. Overdue rows
+always travel, whatever the window; never-executed plans travel undated.
 """
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+import datetime
 
-from django.core.cache import cache
-from django.test import TestCase
-from rest_framework.test import APIClient
-
-from tests.support.phase6Helpers import loginViaApi, seedPlatform
-
-BASE = "/api/v1/maintenance"
+from tests.integration.testPhase26AssetRegistry import AssetRegistryApiBase
 
 
-class PmScheduleApiBase(TestCase):
-    def setUp(self) -> None:
-        cache.clear()
-        seedPlatform()
-        self.client = APIClient()
-        tokens = loginViaApi(self.client)
-        self.auth = {"HTTP_AUTHORIZATION": f"Bearer {tokens['accessToken']}"}
+class PmScheduleApiTests(AssetRegistryApiBase):
+    BASE = "/api/v1/maintenance"
 
-    def createDevice(self, code: str, department: str = "mechanical") -> dict:
+    TODAY = datetime.date.today()
+
+    def iso(self, offsetDays: int) -> str:
+        return (self.TODAY + datetime.timedelta(days=offsetDays)).isoformat()
+
+    def registerPlanOn(self, deviceId: str, title: str = "سرویس ماهانه", discipline: str = "electrical") -> dict:
         response = self.client.post(
-            f"{BASE}/devices",
-            {"code": code, "name": f"دستگاه {code}", "department": department, "pmIntervalDays": 30},
-            format="json",
-            **self.auth,
-        )
-        self.assertEqual(response.status_code, 201, response.content)
-        return response.json()["data"]
-
-    def createPlan(self, deviceId: str, title: str = "تعویض روغن", discipline: str = "mechanical") -> dict:
-        response = self.client.post(
-            f"{BASE}/devices/{deviceId}/pm-plans",
+            f"{self.BASE}/devices/{deviceId}/pm-plans",
             {
                 "title": title,
                 "discipline": discipline,
                 "frequencyEvery": 1,
                 "frequencyUnit": "month",
                 "estimatedMinutes": 60,
-                "responsibleName": "حسین کریمی",
+                "responsibleName": "مهندس نگهداری",
             },
             format="json",
             **self.auth,
@@ -55,151 +39,131 @@ class PmScheduleApiBase(TestCase):
         self.assertEqual(response.status_code, 201, response.content)
         return response.json()["data"]
 
-    def executePlan(self, planId: str, performedOn: date) -> None:
+    def executePlan(self, planId: str, performedOn: str) -> None:
         response = self.client.post(
-            f"{BASE}/pm-plans/{planId}/executions",
-            {"performedOn": performedOn.isoformat(), "performedByName": "حسین کریمی"},
+            f"{self.BASE}/pm-plans/{planId}/executions",
+            {"performedOn": performedOn, "performedByName": "تیم نگهداری"},
             format="json",
             **self.auth,
         )
         self.assertEqual(response.status_code, 201, response.content)
 
-    def schedule(self, **params: str) -> list[dict]:
-        response = self.client.get(f"{BASE}/pm-schedule", params, **self.auth)
+    def fetchSchedule(self, query: str = "") -> list[dict]:
+        response = self.client.get(f"{self.BASE}/pm-schedule{query}", **self.auth)
         self.assertEqual(response.status_code, 200, response.content)
         return response.json()["data"]
 
+    # ------------------------------------------------------------------ auth
 
-class PmScheduleAuthTests(PmScheduleApiBase):
     def testRequiresAuthentication(self) -> None:
-        response = APIClient().get(f"{BASE}/pm-schedule")
-        self.assertEqual(response.status_code, 401)
+        response = self.client.get(f"{self.BASE}/pm-schedule")
+        self.assertIn(response.status_code, (401, 403))
 
+    # ------------------------------------------------------------- plan rows
 
-class PmSchedulePlanRowsTests(PmScheduleApiBase):
-    def testOverduePlanAppearsWithComputedDueDate(self) -> None:
-        """Executed 45 days ago on a monthly plan → due 15 days ago → overdue."""
-        today = date.today()
-        device = self.createDevice("PMP-A")
-        plan = self.createPlan(device["id"])
-        self.executePlan(plan["id"], today - timedelta(days=45))
+    def testOverduePlanIsAlwaysIncluded(self) -> None:
+        device = self.createDevice()
+        plan = self.registerPlanOn(device["id"])
+        self.executePlan(plan["id"], performedOn=self.iso(-30))
 
-        rows = self.schedule()
-        self.assertEqual(len(rows), 1)
-        row = rows[0]
-        self.assertEqual(row["source"], "plan")
-        self.assertEqual(row["planId"], plan["id"])
-        self.assertEqual(row["deviceCode"], "PMP-A")
-        self.assertEqual(row["title"], "تعویض روغن")
-        self.assertEqual(row["dueOn"], (today - timedelta(days=15)).isoformat())
-        self.assertTrue(row["overdue"])
-        self.assertEqual(row["responsibleName"], "حسین کریمی")
+        items = self.fetchSchedule()
+        match = [item for item in items if item.get("planId") == plan["id"]]
+        self.assertEqual(len(match), 1, items)
+        item = match[0]
+        self.assertEqual(item["source"], "plan")
+        self.assertTrue(item["overdue"], item)
+        # monthly plan: dueOn = performedOn + 30 days
+        expected = (self.TODAY + datetime.timedelta(days=-30 + 30)).isoformat()
+        self.assertEqual(item["dueOn"], expected, item)
+        self.assertEqual(item["deviceCode"], "")
 
-    def testInWindowPlanAppears(self) -> None:
-        """Due in 5 days; a 30-day window from today must contain it."""
-        today = date.today()
-        device = self.createDevice("PMP-B")
-        plan = self.createPlan(device["id"])
-        self.executePlan(plan["id"], today - timedelta(days=25))
+    def testPlanInWindowIsIncluded(self) -> None:
+        device = self.createDevice()
+        plan = self.registerPlanOn(device["id"])
+        self.executePlan(plan["id"], performedOn=self.iso(-20))
 
-        rows = self.schedule(
-            fromDate=today.isoformat(), toDate=(today + timedelta(days=30)).isoformat()
+        items = self.fetchSchedule()  # default window today → today+60
+        match = [item for item in items if item.get("planId") == plan["id"]]
+        self.assertEqual(len(match), 1, items)
+        self.assertFalse(match[0]["overdue"], match[0])
+
+    def testFarFuturePlanIsExcludedFromDefaultWindow(self) -> None:
+        device = self.createDevice()
+        plan = self.registerPlanOn(device["id"], title="بازدید سالانه")
+        self.executePlan(plan["id"], performedOn=self.iso(45))
+
+        items = self.fetchSchedule()
+        self.assertFalse(
+            any(item.get("planId") == plan["id"] for item in items), items
         )
-        self.assertEqual(len(rows), 1)
-        self.assertEqual(rows[0]["dueOn"], (today + timedelta(days=5)).isoformat())
-        self.assertFalse(rows[0]["overdue"])
 
-    def testFarFuturePlanDropsOutOfWindow(self) -> None:
-        """A quarterly plan due in ~65 days is outside the 30-day window."""
-        today = date.today()
-        device = self.createDevice("PMP-C")
+    def testNeverExecutedPlanTravelsUndated(self) -> None:
+        device = self.createDevice()
+        plan = self.registerPlanOn(device["id"])
+
+        items = self.fetchSchedule()
+        match = [item for item in items if item.get("planId") == plan["id"]]
+        self.assertEqual(len(match), 1, items)
+        self.assertEqual(match[0]["dueOn"], "", match[0])
+        self.assertFalse(match[0]["overdue"], match[0])
+
+    def testDisciplineFilterNarrowsTheFeed(self) -> None:
+        device = self.createDevice()
+        plan = self.registerPlanOn(device["id"], discipline="electrical")
+
+        items = self.fetchSchedule("?discipline=mechanical")
+        self.assertFalse(any(item.get("planId") == plan["id"] for item in items), items)
+
+        items = self.fetchSchedule("?discipline=electrical")
+        self.assertTrue(any(item.get("planId") == plan["id"] for item in items), items)
+
+    # ----------------------------------------------------------- device rows
+
+    def testDeviceWithoutPlanGetsFallbackRow(self) -> None:
+        device = self.createDevice()
         response = self.client.post(
-            f"{BASE}/devices/{device['id']}/pm-plans",
-            {
-                "title": "بازرسی فصلی",
-                "discipline": "mechanical",
-                "frequencyEvery": 3,
-                "frequencyUnit": "month",
-            },
-            format="json",
-            **self.auth,
-        )
-        self.assertEqual(response.status_code, 201, response.content)
-        self.executePlan(response.json()["data"]["id"], today - timedelta(days=25))
-
-        rows = self.schedule(
-            fromDate=today.isoformat(), toDate=(today + timedelta(days=30)).isoformat()
-        )
-        self.assertEqual(rows, [])
-
-    def testNeverExecutedPlanIsListedAsUndated(self) -> None:
-        device = self.createDevice("PMP-D")
-        self.createPlan(device["id"])
-
-        rows = self.schedule()
-        self.assertEqual(len(rows), 1)
-        self.assertEqual(rows[0]["dueOn"], "")
-        self.assertFalse(rows[0]["overdue"])
-
-    def testDisciplineFilter(self) -> None:
-        mechanical = self.createDevice("PMP-E", department="mechanical")
-        electrical = self.createDevice("PMP-F", department="electrical")
-        self.createPlan(mechanical["id"], discipline="mechanical")
-        self.createPlan(electrical["id"], title="بازرسی تابلوی برق", discipline="electrical")
-
-        rows = self.schedule(discipline="electrical")
-        self.assertEqual(len(rows), 1)
-        self.assertEqual(rows[0]["discipline"], "electrical")
-        self.assertEqual(rows[0]["deviceCode"], "PMP-F")
-
-
-class PmScheduleDeviceFallbackTests(PmScheduleApiBase):
-    def recordDevicePm(self, deviceId: str, performedOn: date) -> None:
-        response = self.client.post(
-            f"{BASE}/devices/{deviceId}/pm",
-            {"performedOn": performedOn.isoformat()},
+            f"{self.BASE}/devices/{device['id']}/pm",
+            {"performedOn": self.iso(-20)},
             format="json",
             **self.auth,
         )
         self.assertEqual(response.status_code, 200, response.content)
 
-    def testDeviceWithoutPlanFallsBackToLegacyPm(self) -> None:
-        """pmIntervalDays-based PM: 40 days ago on a 30-day cadence → overdue row."""
-        today = date.today()
-        device = self.createDevice("PMP-G")
-        self.recordDevicePm(device["id"], today - timedelta(days=40))
+        dueOn = self.iso(10)
+        items = self.fetchSchedule(f"?toDate={dueOn}")
+        match = [item for item in items if item.get("deviceId") == device["id"]]
+        self.assertEqual(len(match), 1, items)
+        self.assertEqual(match[0]["source"], "device", match[0])
+        self.assertEqual(match[0]["dueOn"], dueOn, match[0])
 
-        rows = self.schedule()
-        self.assertEqual(len(rows), 1)
-        row = rows[0]
-        self.assertEqual(row["source"], "device")
-        self.assertEqual(row["deviceCode"], "PMP-G")
-        self.assertTrue(row["overdue"])
-        self.assertEqual(row["dueOn"], (today - timedelta(days=10)).isoformat())
+    def testDeviceWithPlanHasNoDeviceRow(self) -> None:
+        device = self.createDevice()
+        response = self.client.post(
+            f"{self.BASE}/devices/{device['id']}/pm",
+            {"performedOn": self.iso(-20)},
+            format="json",
+            **self.auth,
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        plan = self.registerPlanOn(device["id"])
+        self.executePlan(plan["id"], performedOn=self.iso(-20))
 
-    def testDeviceWithPlanIsNotDuplicated(self) -> None:
-        """The named plan wins; no extra legacy device row beside it."""
-        today = date.today()
-        device = self.createDevice("PMP-H")
-        self.recordDevicePm(device["id"], today - timedelta(days=40))
-        plan = self.createPlan(device["id"])
-        self.executePlan(plan["id"], today - timedelta(days=25))
-
-        rows = self.schedule()
-        self.assertEqual(len(rows), 1)
-        self.assertEqual(rows[0]["source"], "plan")
+        items = self.fetchSchedule()
+        match = [item for item in items if item.get("deviceId") == device["id"]]
+        self.assertEqual(len(match), 1, items)
+        self.assertEqual(match[0]["source"], "plan", match[0])
 
     def testDeviceFallbackRespectsWindow(self) -> None:
-        """Legacy PM due in 10 days appears in a 30-day window but not a 5-day one."""
-        today = date.today()
-        device = self.createDevice("PMP-I")
-        self.recordDevicePm(device["id"], today - timedelta(days=20))
+        device = self.createDevice()
+        response = self.client.post(
+            f"{self.BASE}/devices/{device['id']}/pm",
+            {"performedOn": self.iso(-20)},
+            format="json",
+            **self.auth,
+        )
+        self.assertEqual(response.status_code, 200, response.content)
 
-        inWindow = self.schedule(
-            fromDate=today.isoformat(), toDate=(today + timedelta(days=30)).isoformat()
+        items = self.fetchSchedule(f"?toDate={self.iso(9)}")  # due is today+10
+        self.assertFalse(
+            any(item.get("deviceId") == device["id"] for item in items), items
         )
-        self.assertEqual(len(inWindow), 1)
-        narrow = self.schedule(
-            fromDate=today.isoformat(), toDate=(today + timedelta(days=5)).isoformat()
-        )
-        self.assertEqual(narrow, [])

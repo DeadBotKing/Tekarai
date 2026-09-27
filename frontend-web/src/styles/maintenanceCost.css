@@ -1,0 +1,30 @@
+/* Time-and-cost strip on the maintenance dashboard (Phase 28). */
+
+.dash-cost {
+  margin-bottom: var(--space-4);
+  border-inline-start: 4px solid var(--primary);
+}
+
+.dash-cost__actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.dash-cost__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.dash-cost__empty {
+  margin: var(--space-3) 0 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+@media print {
+  .dash-cost { border-inline-start: none; }
+  .dash-cost__actions { display: none; }
+}

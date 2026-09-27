@@ -6,7 +6,9 @@ import "../styles/tokens.css";
 import "../styles/globals.css";
 import "../styles/maintenanceAttachments.css";
 import "../styles/pmCalendar.css";
+import "../styles/maintenanceCost.css";
 import "../styles/chat.css";
+import "../styles/uiPolish.css";
 
 export function App(): JSX.Element {
   return <BrowserRouter><AppProviders><AppRouter /></AppProviders></BrowserRouter>;

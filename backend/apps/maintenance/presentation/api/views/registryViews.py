@@ -5,6 +5,7 @@ from __future__ import annotations
 import dataclasses
 from typing import Any
 
+from django.http import HttpResponse
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -62,9 +63,13 @@ class RegistryView(APIView):
 # PM schedule calendar (Phase 27)
 # =====================================================================================
 class PmScheduleView(RegistryView):
-    """Cross-device upcoming-PM feed consumed by the maintenance calendar page."""
+    """Cross-device upcoming-PM feed consumed by the maintenance calendar page.
 
-    def get(self, request: Request) -> Response:
+    JSON by default; ``?export=csv|xlsx|pdf`` streams the same rows as a
+    Persian-labelled download (Phase 28).
+    """
+
+    def get(self, request: Request) -> Response | HttpResponse:
         items = container.getPmScheduleUseCase().execute(
             GetPmScheduleQuery(
                 fromDate=str(request.query_params.get("fromDate", "")).strip(),
@@ -72,6 +77,21 @@ class PmScheduleView(RegistryView):
                 discipline=str(request.query_params.get("discipline", "")).strip(),
             )
         )
+        exportFormat = str(request.query_params.get("export", "")).strip().lower()
+        if exportFormat in ("csv", "xlsx", "pdf"):
+            from apps.maintenance.presentation.api.reports.listExporters import (
+                EXPORT_CONTENT_TYPES,
+                buildPmScheduleExport,
+            )
+
+            content = buildPmScheduleExport(items, exportFormat)
+            response = HttpResponse(
+                content, content_type=EXPORT_CONTENT_TYPES[exportFormat]
+            )
+            response["Content-Disposition"] = (
+                f'attachment; filename="pm-schedule.{exportFormat}"'
+            )
+            return response
         return Response(successEnvelope([asDict(item) for item in items]))
 
 

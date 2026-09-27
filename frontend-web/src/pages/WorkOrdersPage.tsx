@@ -5,6 +5,7 @@ import { formatJalali } from "../core/localization/jalali";
 import type { TranslationKey } from "../core/localization/i18n";
 import { PERMISSIONS } from "../core/permissions/permissionContext";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
+import { rowsToCsvBlob, triggerDownload } from "../core/files/downloadUtils";
 import { MaintenanceAttachments } from "../features/maintenance/MaintenanceAttachments";
 import { createMaintenanceService } from "../features/maintenance/maintenanceService";
 import { demoDevices, demoWorkOrders } from "../features/maintenance/maintenanceDemoData";
@@ -159,6 +160,40 @@ export function WorkOrdersPage(): JSX.Element {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(initialFilters.status);
   const [departmentFilter, setDepartmentFilter] = useState(initialFilters.department);
+  const [exporting, setExporting] = useState(false);
+
+  /** Download the full filtered list from the server (demos fall back to CSV). */
+  const exportOrders = async (format: "csv" | "xlsx" | "pdf"): Promise<void> => {
+    setExporting(true);
+    try {
+      const filters = {
+        status: statusFilter === "all" ? "" : statusFilter,
+        department: departmentFilter === "all" ? "" : departmentFilter,
+        search,
+      };
+      if (runtimeConfig.demoMode) {
+        const header = ["عنوان", "نوع", "وضعیت", "واحد", "درخواست‌دهنده", "تکنسین"];
+        const rows = filtered.map((order) => [
+          order.title,
+          t(`cmms.type.${order.orderType}`),
+          t(`cmms.woStatus.${order.status}`),
+          taxonomyLabel(t, "cmms.department.", order.department),
+          order.requestedByName,
+          order.assignedToName,
+        ]);
+        triggerDownload(rowsToCsvBlob([header, ...rows]), "tekarai-work-orders.csv");
+      } else {
+        const usedFormat = format;
+        const blob = await service.downloadWorkOrdersExport(usedFormat, filters);
+        triggerDownload(blob, `tekarai-work-orders.${usedFormat}`);
+      }
+      setToast(t("cmms.export.ready"));
+    } catch {
+      setToast(t("cmms.export.failed"));
+    } finally {
+      setExporting(false);
+    }
+  };
   const [toast, setToast] = useState("");
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -882,6 +917,24 @@ export function WorkOrdersPage(): JSX.Element {
                 }),
               ]}
             />
+            <Button
+              variant="ghost"
+              size="sm"
+              icon="table"
+              disabled={exporting}
+              onClick={() => void exportOrders("xlsx")}
+            >
+              {t("cmms.export.excel")}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon="download"
+              disabled={exporting}
+              onClick={() => void exportOrders("pdf")}
+            >
+              {t("cmms.export.pdf")}
+            </Button>
           </div>
         </div>
         {view === "list" ? (

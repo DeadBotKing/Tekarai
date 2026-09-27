@@ -37,6 +37,7 @@ from apps.maintenance.presentation.api.views.registryViews import (
     PersonnelListView,
     PmPlanDetailView,
     PmPlanExecutionView,
+    PmScheduleView,
     WorkOrderClosureView,
 )
 from apps.maintenance.presentation.api.views.sparePartViews import (
@@ -125,6 +126,7 @@ urlpatterns = [
         DevicePmPlanListView.as_view(),
         name="devicePmPlans",
     ),
+    path("pm-schedule", PmScheduleView.as_view(), name="pmSchedule"),
     path("pm-plans/<uuid:planId>", PmPlanDetailView.as_view(), name="pmPlanDetail"),
     path(
         "pm-plans/<uuid:planId>/executions",

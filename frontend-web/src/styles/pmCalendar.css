@@ -1,0 +1,196 @@
+/* PM schedule calendar (Phase 27) — Jalali month grid. */
+
+.pm-cal__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3, 12px);
+  margin-bottom: var(--space-4, 16px);
+}
+
+.pm-cal__month-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.pm-cal__legend {
+  display: flex;
+  gap: 16px;
+  font-size: 0.8rem;
+  color: var(--text-muted, #6b7280);
+}
+
+.pm-cal__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pm-cal__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent, #2563eb);
+}
+
+.pm-cal__dot--overdue { background: var(--danger, #dc2626); }
+.pm-cal__dot--today { background: var(--warning, #d97706); }
+
+.pm-cal__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.pm-cal__weekday {
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted, #6b7280);
+  padding: 6px 0;
+}
+
+.pm-cal__cell {
+  min-height: 92px;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 8px;
+  padding: 6px;
+  background: var(--surface, #fff);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pm-cal__cell--blank {
+  background: transparent;
+  border-color: transparent;
+}
+
+.pm-cal__cell.is-clickable { cursor: pointer; }
+.pm-cal__cell.is-clickable:hover { border-color: var(--accent, #2563eb); }
+.pm-cal__cell.is-clickable:focus-visible {
+  outline: 2px solid var(--accent, #2563eb);
+  outline-offset: 1px;
+}
+
+.pm-cal__cell--today {
+  border-color: var(--warning, #d97706);
+  box-shadow: inset 0 0 0 1px var(--warning, #d97706);
+}
+
+.pm-cal__day {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.pm-cal__cell--today .pm-cal__day { color: var(--warning, #d97706); }
+
+.pm-cal__events {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow: hidden;
+}
+
+.pm-cal__event {
+  display: block;
+  font-size: 0.7rem;
+  line-height: 1.4;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--accent, #2563eb) 12%, transparent);
+  color: var(--accent, #2563eb);
+  border-inline-start: 3px solid var(--accent, #2563eb);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pm-cal__event--overdue {
+  background: color-mix(in srgb, var(--danger, #dc2626) 12%, transparent);
+  color: var(--danger, #dc2626);
+  border-inline-start-color: var(--danger, #dc2626);
+  font-weight: 600;
+}
+
+.pm-cal__event--today {
+  background: color-mix(in srgb, var(--warning, #d97706) 14%, transparent);
+  color: var(--warning, #d97706);
+  border-inline-start-color: var(--warning, #d97706);
+  font-weight: 600;
+}
+
+.pm-cal__more {
+  font-size: 0.68rem;
+  color: var(--text-muted, #6b7280);
+}
+
+.pm-cal__empty {
+  text-align: center;
+  color: var(--text-muted, #6b7280);
+  padding: 24px 0 8px;
+}
+
+.pm-cal__undated-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0 0 12px;
+}
+
+.pm-cal__undated-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pm-cal__undated-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px dashed var(--border, #e5e7eb);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: var(--surface, #fff);
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.pm-cal__undated-chip:hover { border-color: var(--accent, #2563eb); }
+.pm-cal__undated-chip span { color: var(--text-muted, #6b7280); }
+
+.pm-cal__day-item {
+  border-block-end: 1px solid var(--border, #e5e7eb);
+  padding: 10px 0;
+}
+
+.pm-cal__day-item:last-child { border-block-end: none; }
+
+.pm-cal__day-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pm-cal__day-item p {
+  margin: 6px 0;
+  font-size: 0.85rem;
+}
+
+.pm-cal__day-item-meta {
+  color: var(--text-muted, #6b7280);
+  font-size: 0.78rem;
+}
+
+@media (max-width: 760px) {
+  .pm-cal__cell { min-height: 64px; padding: 4px; }
+  .pm-cal__event { font-size: 0.6rem; padding: 1px 4px; }
+}

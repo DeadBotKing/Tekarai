@@ -12,6 +12,7 @@ import type {
   PartUsageReport,
   PmExecution,
   PmPlan,
+  PmScheduleItem,
   SparePart,
 } from "../../shared/types/domain";
 import type { RegistryService } from "./registryService";
@@ -922,6 +923,87 @@ export const createDemoRegistryService = (): RegistryService => ({
     return clone(specifications);
   },
   listPmPlans: async (deviceId) => clone(profileOf(deviceId).pmPlans),
+  getPmSchedule: async (query = {}) => {
+    // Mirror the server side rule of /maintenance/pm-schedule against the demo
+    // store: active plans (+undated, +all overdue), then legacy device PM only
+    // for devices with no plan, windowed to the requested Jalali month range.
+    const addDays = (iso: string, days: number): string => {
+      const date = new Date(`${iso}T00:00:00`);
+      if (Number.isNaN(date.getTime())) return "";
+      date.setDate(date.getDate() + days);
+      const pad = (value: number): string => String(value).padStart(2, "0");
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    };
+    const now = new Date();
+    const pad = (value: number): string => String(value).padStart(2, "0");
+    const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    const start = query.fromDate || today;
+    const end = query.toDate || addDays(today, 60);
+    const discipline = query.discipline ?? "";
+
+    const items: PmScheduleItem[] = [];
+    const plannedDeviceIds = new Set<string>();
+    const profiles = Object.values(store.profiles);
+    for (const profile of profiles) {
+      for (const plan of profile.pmPlans) {
+        if (!plan.active) continue;
+        plannedDeviceIds.add(profile.device.id);
+        const due = plan.lastExecutedOn && plan.periodDays > 0
+          ? addDays(plan.lastExecutedOn, plan.periodDays)
+          : "";
+        const overdue = Boolean(due) && today > due;
+        if (due && !overdue && !(start <= due && due <= end)) continue;
+        if (discipline && plan.discipline !== discipline) continue;
+        items.push({
+          id: plan.id,
+          source: "plan",
+          planId: plan.id,
+          deviceId: profile.device.id,
+          deviceCode: profile.device.code,
+          deviceName: profile.device.name,
+          title: plan.title,
+          discipline: plan.discipline,
+          responsibleName: plan.responsibleName,
+          estimatedMinutes: plan.estimatedMinutes,
+          periodDays: plan.periodDays,
+          dueOn: due,
+          overdue,
+        });
+      }
+    }
+    for (const profile of profiles) {
+      const device = profile.device;
+      if (plannedDeviceIds.has(device.id)) continue;
+      if (discipline && device.department !== discipline) continue;
+      const due = device.lastPmDate && device.pmIntervalDays > 0
+        ? addDays(device.lastPmDate, device.pmIntervalDays)
+        : "";
+      if (!due) continue;
+      const overdue = today > due;
+      if (!overdue && !(start <= due && due <= end)) continue;
+      items.push({
+        id: `device-${device.id}`,
+        source: "device",
+        planId: "",
+        deviceId: device.id,
+        deviceCode: device.code,
+        deviceName: device.name,
+        title: `PM بازه‌ای هر ${device.pmIntervalDays} روز`,
+        discipline: device.department,
+        responsibleName: "",
+        estimatedMinutes: 0,
+        periodDays: device.pmIntervalDays,
+        dueOn: due,
+        overdue,
+      });
+    }
+    items.sort(
+      (left, right) =>
+        Number(left.overdue ? 0 : 1) - Number(right.overdue ? 0 : 1) ||
+        (left.dueOn || "9999-99-99").localeCompare(right.dueOn || "9999-99-99"),
+    );
+    return clone(items);
+  },
   createPmPlan: async (deviceId, input) => {
     const profile = profileOf(deviceId);
     const plan: PmPlan = {

@@ -24,6 +24,7 @@ import type {
   PmExecution,
   PmFrequencyUnit,
   PmPlan,
+  PmScheduleItem,
   TechnicianStat,
 } from "../../shared/types/domain";
 
@@ -93,6 +94,22 @@ interface PmPlanDto {
   nextDueOn: string;
   overdue: boolean;
   active: boolean;
+}
+
+interface PmScheduleItemDto {
+  id: string;
+  source: "plan" | "device";
+  planId: string;
+  deviceId: string;
+  deviceCode: string;
+  deviceName: string;
+  title: string;
+  discipline: string;
+  responsibleName: string;
+  estimatedMinutes: number;
+  periodDays: number;
+  dueOn: string;
+  overdue: boolean;
 }
 
 interface PmExecutionDto {
@@ -360,6 +377,22 @@ export const toPmPlan = (dto: PmPlanDto): PmPlan => ({
   nextDueOn: text(dto.nextDueOn),
   overdue: Boolean(dto.overdue),
   active: Boolean(dto.active),
+});
+
+export const toPmScheduleItem = (dto: PmScheduleItemDto): PmScheduleItem => ({
+  id: dto.id,
+  source: dto.source,
+  planId: dto.planId,
+  deviceId: dto.deviceId,
+  deviceCode: text(dto.deviceCode),
+  deviceName: text(dto.deviceName),
+  title: text(dto.title),
+  discipline: (text(dto.discipline) || "general") as MaintenanceDepartment,
+  responsibleName: text(dto.responsibleName),
+  estimatedMinutes: num(dto.estimatedMinutes),
+  periodDays: num(dto.periodDays),
+  dueOn: text(dto.dueOn),
+  overdue: Boolean(dto.overdue),
 });
 
 export const toPmExecution = (dto: PmExecutionDto): PmExecution => ({
@@ -732,6 +765,10 @@ export interface RegistryService {
     signal?: AbortSignal,
   ) => Promise<DeviceSpecification[]>;
   listPmPlans: (deviceId: string, signal?: AbortSignal) => Promise<PmPlan[]>;
+  getPmSchedule: (
+    query?: { fromDate?: string; toDate?: string; discipline?: string },
+    signal?: AbortSignal,
+  ) => Promise<PmScheduleItem[]>;
   createPmPlan: (
     deviceId: string,
     input: SavePmPlanInput,
@@ -896,6 +933,17 @@ export const createRegistryService = (api: ApiClient): RegistryService => ({
       signal,
     });
     return dtos.map(toPmPlan);
+  },
+  getPmSchedule: async (query = {}, signal) => {
+    const dtos = await api.get<PmScheduleItemDto[]>(apiEndpoints.maintenance.pmSchedule, {
+      query: {
+        fromDate: query.fromDate,
+        toDate: query.toDate,
+        discipline: query.discipline,
+      },
+      signal,
+    });
+    return dtos.map(toPmScheduleItem);
   },
   createPmPlan: async (deviceId, input, signal) => {
     const dto = await api.post<PmPlanDto>(

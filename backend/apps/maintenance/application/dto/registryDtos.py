@@ -518,3 +518,22 @@ def analyticsDto(analytics: DeviceAnalytics) -> DeviceAnalyticsDto:
             for bucket in analytics.trend
         ],
     )
+
+
+@dataclass(frozen=True)
+class PmScheduleItemDto:
+    """One cell of the PM calendar — a plan row or a legacy device-PM row."""
+
+    id: str
+    source: str  # "plan" | "device"
+    planId: str = ""
+    deviceId: str = ""
+    deviceCode: str = ""
+    deviceName: str = ""
+    title: str = ""
+    discipline: str = ""
+    responsibleName: str = ""
+    estimatedMinutes: int = 0
+    periodDays: int = 0
+    dueOn: str = ""  # empty → never executed / unscheduled
+    overdue: bool = False

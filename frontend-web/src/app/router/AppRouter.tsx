@@ -11,6 +11,7 @@ import { DeviceProfilePage } from "../../pages/DeviceProfilePage";
 import { MaintenanceLocationsPage } from "../../pages/MaintenanceLocationsPage";
 import { MaintenancePersonnelPage } from "../../pages/MaintenancePersonnelPage";
 import { FleetAnalyticsPage } from "../../pages/FleetAnalyticsPage";
+import { MaintenancePmCalendarPage } from "../../pages/MaintenancePmCalendarPage";
 import { MaintenanceReportPage } from "../../pages/MaintenanceReportPage";
 import { DeviceReportPage } from "../../pages/DeviceReportPage";
 import { DeviceTimelinePage } from "../../pages/DeviceTimelinePage";
@@ -45,6 +46,7 @@ export function AppRouter(): JSX.Element {
       <Route path="maintenance/devices/:deviceId/report" element={<DeviceReportPage />} />
       <Route path="maintenance/devices/:deviceId/timeline" element={<DeviceTimelinePage />} />
       <Route path="maintenance/work-orders" element={<WorkOrdersPage />} />
+      <Route path="maintenance/pm-calendar" element={<MaintenancePmCalendarPage />} />
       <Route path="documents" element={<DocumentsPage />} />
       <Route path="organization/employees" element={<OperationsResourcePage />} />
       <Route path="organization/departments" element={<OperationsResourcePage />} />

@@ -412,6 +412,27 @@ export interface PmPlan {
   active: boolean;
 }
 
+/**
+ * One cell of the PM calendar (برنامه‌ی زمان‌بندی PM) — either a named plan row
+ * or a legacy device-level PM for devices that carry no plan. `dueOn` is empty
+ * for never-executed plans (the calendar shows those in an undated strip).
+ */
+export interface PmScheduleItem {
+  id: string;
+  source: "plan" | "device";
+  planId: string;
+  deviceId: string;
+  deviceCode: string;
+  deviceName: string;
+  title: string;
+  discipline: MaintenanceDepartment | "";
+  responsibleName: string;
+  estimatedMinutes: number;
+  periodDays: number;
+  dueOn: string;
+  overdue: boolean;
+}
+
 export interface PmExecution {
   id: string;
   planId: string;

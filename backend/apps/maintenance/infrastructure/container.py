@@ -48,11 +48,11 @@ from apps.maintenance.application.useCases.workOrderUseCases import (
     SubmitWorkOrderUseCase,
     UpdateWorkOrderUseCase,
 )
-from apps.maintenance.infrastructure.repositories.deviceHistoryRepositoryImpl import (
-    DeviceHistoryRepositoryDjango,
-)
 from apps.maintenance.infrastructure.repositories.costReportRepositoryImpl import (
     MaintenanceCostRepositoryDjango,
+)
+from apps.maintenance.infrastructure.repositories.deviceHistoryRepositoryImpl import (
+    DeviceHistoryRepositoryDjango,
 )
 from apps.maintenance.infrastructure.repositories.deviceRepositoryImpl import (
     DeviceRepositoryDjango,
@@ -323,6 +323,9 @@ def getDeviceTimelineUseCase() -> GetDeviceTimelineUseCase:
 
 
 # -- Phase 26: asset registry + analytics -----------------------------------------
+from apps.maintenance.application.useCases.pmScheduleUseCases import (  # noqa: E402
+    GetPmScheduleUseCase,
+)
 from apps.maintenance.application.useCases.registryUseCases import (  # noqa: E402
     DeleteLocationUseCase,
     DeletePersonnelUseCase,
@@ -418,6 +421,10 @@ def deletePmPlanUseCase() -> DeletePmPlanUseCase:
 
 def listPmPlansUseCase() -> ListPmPlansUseCase:
     return ListPmPlansUseCase(**_registryDeps())
+
+
+def getPmScheduleUseCase() -> GetPmScheduleUseCase:
+    return GetPmScheduleUseCase(**_registryDeps())
 
 
 def recordPmExecutionUseCase() -> RecordPmExecutionUseCase:

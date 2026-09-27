@@ -175,6 +175,14 @@ def registerMaintenanceEndpoints() -> None:
             errorCodes=MAINTENANCE_ERRORS,
             filterable=("fromDate", "toDate", "deviceId", "department"),
         ),
+        EndpointSpec(
+            method="GET",
+            path="api/v1/maintenance/pm-schedule",
+            summary="Cross-device upcoming PM feed for the maintenance calendar.",
+            permission="maintenance.device.view",
+            errorCodes=MAINTENANCE_ERRORS,
+            filterable=("fromDate", "toDate", "discipline"),
+        ),
     ]
     for spec in specs:
         registerEndpoint(spec)

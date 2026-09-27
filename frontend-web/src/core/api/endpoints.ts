@@ -32,6 +32,7 @@ export const apiEndpoints = {
     deviceStatus: (id: string) => `maintenance/devices/${id}/status`,
     devicePm: (id: string) => `maintenance/devices/${id}/pm`,
     devicesDuePm: "maintenance/devices/due-pm",
+    pmSchedule: "maintenance/pm-schedule",
     workOrders: "maintenance/work-orders",
     workOrdersGeneratePm: "maintenance/work-orders/generate-pm",
     workOrder: (id: string) => `maintenance/work-orders/${id}`,

@@ -9,6 +9,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.maintenance.application.useCases.pmScheduleUseCases import GetPmScheduleQuery
 from apps.maintenance.application.useCases.registryUseCases import (
     DeleteLocationCommand,
     DeletePersonnelCommand,
@@ -55,6 +56,23 @@ def asDict(dto: Any) -> dict[str, Any]:
 class RegistryView(APIView):
     authentication_classes = [BearerSessionAuthentication]
     permission_classes = [IsAuthenticated]
+
+
+# =====================================================================================
+# PM schedule calendar (Phase 27)
+# =====================================================================================
+class PmScheduleView(RegistryView):
+    """Cross-device upcoming-PM feed consumed by the maintenance calendar page."""
+
+    def get(self, request: Request) -> Response:
+        items = container.getPmScheduleUseCase().execute(
+            GetPmScheduleQuery(
+                fromDate=str(request.query_params.get("fromDate", "")).strip(),
+                toDate=str(request.query_params.get("toDate", "")).strip(),
+                discipline=str(request.query_params.get("discipline", "")).strip(),
+            )
+        )
+        return Response(successEnvelope([asDict(item) for item in items]))
 
 
 # =====================================================================================

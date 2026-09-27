@@ -568,7 +568,7 @@ const en = {
   "cmms.dash.exportCsv": "خروجی CSV",
   // Phase 28 — time-and-cost strip on the maintenance dashboard (زمان و هزینه)
   "cmms.costDash.title": "زمان و هزینه‌ی این ماه",
-  "cmms.costDash.subtitle": "جمع ساعت‌کار و هزینه‌ی نگهداری از اول ماه میلادی جاری",
+  "cmms.costDash.subtitle": "جمع ساعت‌کار و هزینه‌ی نگهداری از ابتدای ماه شمسی جاری",
   "cmms.costDash.totalCost": "هزینه‌ی کل",
   "cmms.costDash.labour": "هزینه‌ی نیروی انسانی",
   "cmms.costDash.parts": "هزینه‌ی قطعات",

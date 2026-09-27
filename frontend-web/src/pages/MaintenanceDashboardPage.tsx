@@ -129,13 +129,14 @@ export function MaintenanceDashboardPage(): JSX.Element {
   const [costReport, setCostReport] = useState<MaintenanceCostReport | null>(null);
   const [costExporting, setCostExporting] = useState(false);
 
-  const monthCostRange = useMemo((): { fromDate: string; toDate: string } => {
+  const monthCostRange = useMemo((): { fromDate: string; toDate: string; jalaliLabel: string } => {
     // First day of the *Jalali* month (the UI's natural period) in ISO form.
     const now = new Date();
     const [jy, jm] = gregorianToJalali(now.getFullYear(), now.getMonth() + 1, now.getDate());
     return {
       fromDate: jalaliPartsToIso(jy, jm, 1),
       toDate: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`,
+      jalaliLabel: `${JALALI_MONTHS[jm - 1]} ${toPersianDigits(jy)}`,
     };
   }, []);
 
@@ -415,7 +416,7 @@ export function MaintenanceDashboardPage(): JSX.Element {
         <Card className="dash-cost dash-actions--noprint" padding="md">
           <CardHeader
             title={t("cmms.costDash.title")}
-            subtitle={t("cmms.costDash.subtitle")}
+            subtitle={`${t("cmms.costDash.subtitle")} — ${monthCostRange.jalaliLabel}`}
             icon="chart"
             action={
               <div className="dash-cost__actions">

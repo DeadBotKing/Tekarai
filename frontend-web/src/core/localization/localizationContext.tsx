@@ -1,7 +1,11 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { localeMeta, translate, type Direction, type Locale, type TranslationKey } from "./i18n";
 
-const LOCALE_KEY = "tekarai.gui.locale.v1";
+// v2: the v1 key was written with the old English default on every profile's
+// first visit (the effect persisted immediately, before the user ever chose
+// anything). Bumping the key invalidates those implicit "en" values so the
+// current Persian-first default reaches existing installs too.
+const LOCALE_KEY = "tekarai.gui.locale.v2";
 
 const initialLocale = (): Locale => {
   try {

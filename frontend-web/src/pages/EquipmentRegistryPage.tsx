@@ -36,6 +36,11 @@ import {
 import { JalaliDatePicker } from "../shared/components/JalaliDatePicker";
 import { taxonomyLabel } from "../core/localization/taxonomyLabel";
 import { CreatableSelect } from "../shared/components/CreatableSelect";
+import { QuickAddSelect } from "../shared/components/QuickAddSelect";
+import {
+  QuickLocationModal,
+  type QuickLocationInput,
+} from "../shared/components/QuickCreateModals";
 import { mergeOptions } from "../features/maintenance/optionCatalog";
 
 const DEVICE_STATUSES: DeviceStatus[] = [
@@ -91,6 +96,7 @@ export function EquipmentRegistryPage(): JSX.Element {
   const [criticalityFilter, setCriticalityFilter] = useState("all");
   const [locationFilter, setLocationFilter] = useState("all");
   const [createOpen, setCreateOpen] = useState(false);
+  const [quickLocationOpen, setQuickLocationOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const [formCode, setFormCode] = useState("");
@@ -134,6 +140,19 @@ export function EquipmentRegistryPage(): JSX.Element {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  /** «➕ افزودن محل جدید…» from the nameplate form's location picker. */
+  const saveQuickLocation = async (input: QuickLocationInput): Promise<string> => {
+    const created = await registry.createLocation({
+      code: input.code,
+      name: input.name,
+      kind: input.kind,
+      note: input.note,
+    });
+    setToast("محل ثبت شد و در فرم انتخاب گردید.");
+    await refresh();
+    return created.id;
+  };
 
   const filtered = useMemo(
     () =>
@@ -529,10 +548,12 @@ export function EquipmentRegistryPage(): JSX.Element {
               current: formCriticality,
             })}
           />
-          <SelectInput
+          <QuickAddSelect
             label={t("registry.nameplate.location")}
             value={formLocationId}
-            onChange={(event) => setFormLocationId(event.target.value)}
+            onChange={setFormLocationId}
+            addLabel="➕ افزودن محل جدید…"
+            onQuickAdd={() => setQuickLocationOpen(true)}
             options={[
               { value: "", label: t("registry.nameplate.noLocation") },
               ...locations.map((location) => ({ value: location.id, label: location.path })),
@@ -616,6 +637,13 @@ export function EquipmentRegistryPage(): JSX.Element {
           onChange={(event) => setFormNotes(event.target.value)}
         />
       </Modal>
+
+      <QuickLocationModal
+        open={quickLocationOpen}
+        onClose={() => setQuickLocationOpen(false)}
+        onSave={saveQuickLocation}
+        onCreated={setFormLocationId}
+      />
 
       {toast && <Toast message={toast} onClose={() => setToast("")} />}
     </div>

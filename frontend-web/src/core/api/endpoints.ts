@@ -69,6 +69,11 @@ export const apiEndpoints = {
     fleetAnalytics: "maintenance/analytics/fleet",
     partUsageReport: (partId: string) => `maintenance/analytics/parts/${partId}`,
     workOrderClosure: (id: string) => `maintenance/work-orders/${id}/closure`,
+    // -- Time & cost tracking (ثبت زمان و هزینه) ------------------------------
+    workOrderLabour: (id: string) => `maintenance/work-orders/${id}/labour`,
+    labourEntry: (id: string) => `maintenance/labour-entries/${id}`,
+    workOrderCostSummary: (id: string) => `maintenance/work-orders/${id}/cost-summary`,
+    maintenanceCostReport: "maintenance/reports/maintenance-costs",
   },
   audit: "platform/audit-events",
   notifications: { list: "notifications", broadcasts: "notifications/broadcasts", unreadCount: "notifications/broadcasts/unread-count", read: (id: string) => `notifications/${id}/read`, broadcastRead: (id: string) => `notifications/broadcasts/${id}/read`, readBulk: "notifications/read-bulk", search: "notifications/search" },

@@ -26,7 +26,8 @@ export type OptionCatalogKey =
   | "device.department"
   | "device.equipmentType"
   | "device.criticality"
-  | "assignment.role";
+  | "assignment.role"
+  | "part.unit";
 
 export interface SelectOption {
   value: string;

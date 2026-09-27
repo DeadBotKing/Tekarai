@@ -136,6 +136,45 @@ def registerMaintenanceEndpoints() -> None:
             idempotent=True,
             requestExample={"target": "inProgress"},
         ),
+        EndpointSpec(
+            method="GET",
+            path="api/v1/maintenance/work-orders/{workOrderId}/labour",
+            summary="List technician labour entries logged on a work order.",
+            permission="maintenance.workorder.view",
+            errorCodes=MAINTENANCE_ERRORS,
+        ),
+        EndpointSpec(
+            method="POST",
+            path="api/v1/maintenance/work-orders/{workOrderId}/labour",
+            summary="Log technician work hours with the hourly rate (idempotent).",
+            permission="maintenance.workorder.logTime",
+            errorCodes=MAINTENANCE_ERRORS,
+            idempotent=True,
+            requestExample={"technicianName": "Reza Ahmadi", "hours": "2.5", "hourlyRate": "450000"},
+        ),
+        EndpointSpec(
+            method="DELETE",
+            path="api/v1/maintenance/labour-entries/{entryId}",
+            summary="Remove a wrongly-logged labour entry (idempotent).",
+            permission="maintenance.workorder.logTime",
+            errorCodes=MAINTENANCE_ERRORS,
+            idempotent=True,
+        ),
+        EndpointSpec(
+            method="GET",
+            path="api/v1/maintenance/work-orders/{workOrderId}/cost-summary",
+            summary="Cost summary of one work order — labour + parts + total.",
+            permission="maintenance.costs.view",
+            errorCodes=MAINTENANCE_ERRORS,
+        ),
+        EndpointSpec(
+            method="GET",
+            path="api/v1/maintenance/reports/maintenance-costs",
+            summary="Maintenance cost report with device/department/technician breakdowns.",
+            permission="maintenance.costs.view",
+            errorCodes=MAINTENANCE_ERRORS,
+            filterable=("fromDate", "toDate", "deviceId", "department"),
+        ),
     ]
     for spec in specs:
         registerEndpoint(spec)

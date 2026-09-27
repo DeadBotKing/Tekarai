@@ -52,6 +52,7 @@ class SparePartListView(IdempotencyMixin, APIView):
                 unit=str(data["unit"]),
                 quantityOnHand=str(data["quantityOnHand"]),
                 minimumStock=str(data["minimumStock"]),
+                unitCost=str(data.get("unitCost", 0)),
             )
         )
         return Response(successEnvelope(dataclasses.asdict(result)), status=201)
@@ -72,6 +73,7 @@ class SparePartDetailView(IdempotencyMixin, APIView):
                 unit=str(data["unit"]),
                 quantityOnHand=str(data["quantityOnHand"]),
                 minimumStock=str(data["minimumStock"]),
+                unitCost=str(data.get("unitCost", 0)),
             )
         )
         return Response(successEnvelope(dataclasses.asdict(result)))

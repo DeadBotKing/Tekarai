@@ -33,6 +33,7 @@ class SparePartRepositoryDjango:
             unit=model.unit,
             quantityOnHand=model.quantityOnHand,
             minimumStock=model.minimumStock,
+            unitCost=model.unitCost,
             createdAt=model.createdAt,
             updatedAt=model.updatedAt,
         )
@@ -48,6 +49,7 @@ class SparePartRepositoryDjango:
             partName=model.partName,
             unit=model.unit,
             quantity=model.quantity,
+            unitCost=model.unitCost,
             note=model.note,
             consumedAt=model.consumedAt,
         )
@@ -60,6 +62,7 @@ class SparePartRepositoryDjango:
         unit: str,
         quantityOnHand: Decimal,
         minimumStock: Decimal,
+        unitCost: Decimal,
     ) -> SparePart:
         try:
             model = SparePartModel.objects.create(
@@ -69,6 +72,7 @@ class SparePartRepositoryDjango:
                 unit=unit.strip() or "عدد",
                 quantityOnHand=quantityOnHand,
                 minimumStock=minimumStock,
+                unitCost=unitCost,
             )
         except IntegrityError as error:
             raise DuplicateBusinessCodeError("Spare-part code already exists.") from error
@@ -82,6 +86,7 @@ class SparePartRepositoryDjango:
         unit: str,
         quantityOnHand: Decimal,
         minimumStock: Decimal,
+        unitCost: Decimal,
     ) -> SparePart:
         with transaction.atomic():
             model = (
@@ -95,9 +100,17 @@ class SparePartRepositoryDjango:
             model.unit = unit.strip() or "عدد"
             model.quantityOnHand = quantityOnHand
             model.minimumStock = minimumStock
+            model.unitCost = unitCost
             model.updatedAt = datetime.now().astimezone()
             model.save(
-                update_fields=["name", "unit", "quantityOnHand", "minimumStock", "updatedAt"]
+                update_fields=[
+                    "name",
+                    "unit",
+                    "quantityOnHand",
+                    "minimumStock",
+                    "unitCost",
+                    "updatedAt",
+                ]
             )
         return self._part(model)
 
@@ -150,10 +163,28 @@ class SparePartRepositoryDjango:
                 partName=part.name,
                 unit=part.unit,
                 quantity=quantity,
+                # Snapshot the current price: later price edits must not
+                # rewrite the maintenance cost history of closed orders.
+                unitCost=part.unitCost,
                 note=note.strip(),
                 consumedAt=consumedAt,
             )
+            self._rollupWorkOrderPartsCost(tenantId, workOrderId)
         return self._usage(usage)
+
+    @staticmethod
+    def _rollupWorkOrderPartsCost(tenantId: uuid.UUID, workOrderId: uuid.UUID) -> None:
+        """Rewrite the work order's cached parts cost from its usage rows."""
+        total = Decimal("0")
+        rows = WorkOrderPartUsageModel.objects.filter(
+            tenantId=tenantId, workOrderId=workOrderId
+        ).values_list("quantity", "unitCost")
+        for quantity, unitCost in rows:
+            total += quantity * unitCost
+        WorkOrderModel.objects.filter(id=workOrderId, tenantId=tenantId).update(
+            partsCost=total.quantize(Decimal("0.01")),
+            updatedAt=datetime.now().astimezone(),
+        )
 
     def listUsage(
         self, tenantId: uuid.UUID, workOrderId: uuid.UUID

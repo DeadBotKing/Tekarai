@@ -28,6 +28,7 @@ class SparePartDto:
     unit: str
     quantityOnHand: str
     minimumStock: str
+    unitCost: str
     lowStock: bool
     createdAt: str
     updatedAt: str = ""
@@ -51,6 +52,8 @@ class WorkOrderPartUsageDto:
     partName: str
     unit: str
     quantity: str
+    unitCost: str
+    totalCost: str
     note: str
     consumedAt: str
 
@@ -68,16 +71,26 @@ def _decimal(value: str, field: str, *, positive: bool = False) -> Decimal:
     try:
         parsed = Decimal(str(value))
     except (InvalidOperation, ValueError) as error:
-        raise ValidationFailedError(
-            "Invalid quantity.", fieldErrors={field: "invalid"}
-        ) from error
+        raise ValidationFailedError("Invalid quantity.", fieldErrors={field: "invalid"}) from error
     if (positive and parsed <= 0) or (not positive and parsed < 0):
         raise ValidationFailedError(
             "Quantity is outside the allowed range.", fieldErrors={field: "invalid"}
         )
-    if parsed.as_tuple().exponent < -3:
+    exponent = parsed.as_tuple().exponent
+    if isinstance(exponent, int) and exponent < -3:
         raise ValidationFailedError(
             "At most three decimal places are allowed.", fieldErrors={field: "precision"}
+        )
+    return parsed
+
+
+def _moneyValue(value: str, field: str) -> Decimal:
+    """Price amounts: non-negative, at most two decimal places."""
+    parsed = _decimal(value, field)
+    exponent = parsed.as_tuple().exponent
+    if isinstance(exponent, int) and exponent < -2:
+        raise ValidationFailedError(
+            "At most two decimal places are allowed.", fieldErrors={field: "precision"}
         )
     return parsed
 
@@ -90,6 +103,7 @@ def _partDto(part: SparePart) -> SparePartDto:
         unit=part.unit,
         quantityOnHand=str(part.quantityOnHand),
         minimumStock=str(part.minimumStock),
+        unitCost=str(part.unitCost),
         lowStock=part.lowStock,
         createdAt=part.createdAt.isoformat(),
         updatedAt=part.updatedAt.isoformat() if part.updatedAt else "",
@@ -105,6 +119,8 @@ def _usageDto(usage: WorkOrderPartUsage) -> WorkOrderPartUsageDto:
         partName=usage.partName,
         unit=usage.unit,
         quantity=str(usage.quantity),
+        unitCost=str(usage.unitCost),
+        totalCost=str(usage.totalCost),
         note=usage.note,
         consumedAt=usage.consumedAt.isoformat(),
     )
@@ -133,6 +149,7 @@ class CreateSparePartUseCase(SparePartUseCaseBase):
             command.unit,
             _decimal(command.quantityOnHand, "quantityOnHand"),
             _decimal(command.minimumStock, "minimumStock"),
+            _moneyValue(command.unitCost, "unitCost"),
         )
         self.audit(AUDIT_CREATE, "SparePart", str(part.id), tenantId, after=_partDto(part).__dict__)
         return _partDto(part)
@@ -152,6 +169,7 @@ class UpdateSparePartUseCase(SparePartUseCaseBase):
             command.unit,
             _decimal(command.quantityOnHand, "quantityOnHand"),
             _decimal(command.minimumStock, "minimumStock"),
+            _moneyValue(command.unitCost, "unitCost"),
         )
         self.audit(AUDIT_UPDATE, "SparePart", str(part.id), tenantId, after=_partDto(part).__dict__)
         return _partDto(part)
@@ -194,8 +212,6 @@ class ListWorkOrderPartUsageUseCase(SparePartUseCaseBase):
     def perform(self, query: ListWorkOrderPartUsageQuery) -> WorkOrderPartUsageListDto:
         items = [
             _usageDto(item)
-            for item in self.repository.listUsage(
-                resolveTenantId(""), uuid.UUID(query.workOrderId)
-            )
+            for item in self.repository.listUsage(resolveTenantId(""), uuid.UUID(query.workOrderId))
         ]
         return WorkOrderPartUsageListDto(items=items, totalCount=len(items))

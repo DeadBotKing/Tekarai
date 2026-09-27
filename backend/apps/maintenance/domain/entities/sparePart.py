@@ -17,6 +17,7 @@ class SparePart:
     unit: str
     quantityOnHand: Decimal
     minimumStock: Decimal
+    unitCost: Decimal
     createdAt: datetime
     updatedAt: datetime | None = None
 
@@ -35,5 +36,11 @@ class WorkOrderPartUsage:
     partName: str
     unit: str
     quantity: Decimal
+    unitCost: Decimal
     note: str
     consumedAt: datetime
+
+    @property
+    def totalCost(self) -> Decimal:
+        """Cost of this consumption — quantity × the price captured at issue time."""
+        return (self.quantity * self.unitCost).quantize(Decimal("0.01"))

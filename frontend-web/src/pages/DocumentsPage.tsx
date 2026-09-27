@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { useApiClient } from "../core/api/apiContext";
 import { triggerDownload } from "../core/files/downloadUtils";
+import { formatJalali } from "../core/localization/jalali";
 import { useLocalization } from "../core/localization/localizationContext";
 import { PERMISSIONS } from "../core/permissions/permissionContext";
 import { createDocumentService, type LibraryDocument } from "../features/documents/documentService";
@@ -107,7 +108,7 @@ export function DocumentsPage(): JSX.Element {
     } },
     { key: "category", label: t("document.category"), accessor: (row: LibraryDocument) => row.category, sortable: true, render: (row: LibraryDocument) => row.category ? <Badge tone="purple">{row.category}</Badge> : <span className="muted-cell">—</span> },
     { key: "uploader", label: t("document.uploader"), accessor: (row: LibraryDocument) => row.uploadedByIdentifier, sortable: true, render: (row: LibraryDocument) => <span>{row.uploadedByIdentifier || "—"}</span> },
-    { key: "uploadedAt", label: t("document.modified"), accessor: (row: LibraryDocument) => row.uploadedAt, sortable: true, render: (row: LibraryDocument) => <span>{new Date(row.uploadedAt).toLocaleString()}</span> },
+    { key: "uploadedAt", label: t("document.modified"), accessor: (row: LibraryDocument) => row.uploadedAt, sortable: true, render: (row: LibraryDocument) => <span>{formatJalali(row.uploadedAt, { withTime: true })}</span> },
     { key: "size", label: t("document.size"), accessor: (row: LibraryDocument) => row.sizeBytes, sortable: true, render: (row: LibraryDocument) => <span>{formatBytes(row.sizeBytes)}</span> },
     { key: "actions", label: t("project.actions"), hideable: false, render: (row: LibraryDocument) => <div className="list-toolbar">
       <Button variant="ghost" size="sm" icon="download" onClick={() => download(row)}>{t("document.download")}</Button>

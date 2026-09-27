@@ -166,7 +166,7 @@ export function MaintenancePmCalendarPage(): JSX.Element {
   };
 
   return (
-    <div className="page" dir="rtl">
+    <div className="page">
       <SectionHeader
         eyebrow={t("nav.maintenance")}
         title={t("cmms.pmCal.title")}
@@ -179,13 +179,13 @@ export function MaintenancePmCalendarPage(): JSX.Element {
             <Button variant="ghost" icon="download" disabled={downloading} onClick={() => void downloadExport("pdf")}>
               {t("cmms.export.pdf")}
             </Button>
-            <Button variant="secondary" icon="chevronRight" onClick={() => setMonth(stepMonth(month, -1))}>
+            <Button variant="secondary" icon="back" onClick={() => setMonth(stepMonth(month, -1))}>
               {t("cmms.pmCal.prevMonth")}
             </Button>
             <Button variant="secondary" icon="calendar" onClick={() => setMonth(currentJalaliMonth())}>
               {t("cmms.pmCal.today")}
             </Button>
-            <Button variant="secondary" icon="chevronLeft" onClick={() => setMonth(stepMonth(month, 1))}>
+            <Button variant="secondary" icon="forward" onClick={() => setMonth(stepMonth(month, 1))}>
               {t("cmms.pmCal.nextMonth")}
             </Button>
           </div>
@@ -340,7 +340,7 @@ export function MaintenancePmCalendarPage(): JSX.Element {
             <Button
               variant="ghost"
               size="sm"
-              icon="arrowRight"
+              icon="forward"
               onClick={() => navigate(`/app/maintenance/devices/${item.deviceId}/profile`)}
             >
               {t("cmms.pmCal.openDevice")}

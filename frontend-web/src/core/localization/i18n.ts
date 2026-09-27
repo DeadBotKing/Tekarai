@@ -1006,6 +1006,9 @@ const en = {
   "admin.invited": "User invited.",
   "admin.actions": "Permissions",
   "admin.loadFailed": "Loading failed.",
+  "admin.usersSubtitle": "Manage people, roles and memberships of this tenant.",
+  "admin.rolesSubtitle": "Permission bundles are evaluated server-side and mirrored for display.",
+  "warehouse.totalStock": "Total stock",
 } as const;
 
 type TranslationMap = Record<keyof typeof en, string>;
@@ -1283,6 +1286,23 @@ const fa: Partial<TranslationMap> = {
   "admin.invited": "کاربر دعوت شد.",
   "admin.actions": "مجوزها",
   "admin.loadFailed": "دریافت ناموفق بود.",
+  "admin.addUser": "افزودن کاربر",
+  "admin.lastActive": "آخرین ورود",
+  "admin.user": "کاربر",
+  "admin.usersSubtitle": "مدیریت افراد، نقش‌ها و عضویت‌های همین مستأجر.",
+  "admin.rolesSubtitle": "بسته‌های مجوز سمت سرور ارزیابی می‌شوند و اینجا برای نمایش منعکس شده‌اند.",
+  "document.category": "دسته‌بندی",
+  "document.modified": "تاریخ بارگذاری",
+  "document.size": "حجم",
+  "document.uploadTitle": "بارگذاری سند",
+  "document.uploaded": "بارگذاری شد.",
+  "header.profile": "حساب کاربری",
+  "header.tenant": "مستأجر",
+  "nav.closeMenu": "بستن منو",
+  "nav.openMenu": "باز کردن منو",
+  "nav.collapse": "جمع کردن",
+  "nav.expand": "باز کردن",
+  "warehouse.totalStock": "کل موجودی",
 };
 
 const de: Partial<TranslationMap> = {

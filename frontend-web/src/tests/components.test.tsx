@@ -25,9 +25,9 @@ describe("DataTable", () => {
   it("sorts, selects and paginates generic rows", () => {
     render(<AppProviders><DataTable columns={[{ key: "name", label: "Name", accessor: (row) => row.name, sortable: true }, { key: "status", label: "Status", accessor: (row) => row.status }]} data={rows} rowKey={(row) => row.id} pageSize={1} /></AppProviders>);
     expect(screen.getByText("Alpha")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: "بعدی" }));
     expect(screen.getByText("Beta")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("checkbox", { name: /select row 2/i }));
-    expect(screen.getByText(/1 selected/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 انتخاب‌شده/)).toBeInTheDocument();
   });
 });

@@ -8,10 +8,10 @@ import { LoginPage } from "../pages/LoginPage";
 describe("accessibility smoke contract", () => {
   it("keeps the sign-in form labelled and keyboard-addressable", () => {
     render(<MemoryRouter><AppProviders><LoginPage /></AppProviders></MemoryRouter>);
-    expect(screen.getByRole("heading", { name: /welcome back/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/tenant code/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/email or username/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /sign in/i })).toHaveAttribute("type", "submit");
+    expect(screen.getByRole("heading", { name: "خوش آمدید" })).toBeInTheDocument();
+    expect(screen.getByLabelText(/کد Tenant/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/ایمیل یا نام کاربری/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/گذرواژه/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ورود" })).toHaveAttribute("type", "submit");
   });
 });

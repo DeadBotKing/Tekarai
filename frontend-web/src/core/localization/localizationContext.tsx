@@ -10,7 +10,9 @@ const initialLocale = (): Locale => {
   } catch {
     // Use the stable default when storage is unavailable.
   }
-  return "en";
+  // Tekarai is a Persian-first CMMS (AD-Net for Iranian maintenance teams):
+  // default to فارسی; untranslated areas fall back to English per key.
+  return "fa";
 };
 
 interface LocalizationContextValue {

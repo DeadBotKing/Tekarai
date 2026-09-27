@@ -148,7 +148,7 @@ export function SparePartsPage(): JSX.Element {
       <div><span>{t("warehouse.totalParts")}</span><strong>{parts.length}</strong></div>
       <div><span>{t("warehouse.lowStock")}</span><strong>{lowCount}</strong></div>
       <div><span>{t("warehouse.stockValue")}</span><strong>{totalValue.toLocaleString()}</strong></div>
-      <div><span>{t("warehouse.currency")}</span><strong>تومان</strong></div>
+      <div><span>{t("warehouse.totalStock")}</span><strong>{parts.reduce((sum, part) => sum + part.quantityOnHand, 0).toLocaleString()}</strong></div>
     </div>
     <Card className="content-card" padding="none">
       <CardHeader title={`${filtered.length} ${t("warehouse.title").toLowerCase()}`} action={<div className="list-toolbar">

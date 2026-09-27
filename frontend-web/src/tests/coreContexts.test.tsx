@@ -17,6 +17,6 @@ describe("application contexts", () => {
   it("applies RTL when the user selects Persian", async () => {
     render(<AppProviders><span>workspace</span></AppProviders>);
     // The provider's public behavior is verified through the document contract in localization tests.
-    expect(document.documentElement.dir).toBe("ltr");
+    expect(document.documentElement.dir).toBe("rtl");
   });
 });

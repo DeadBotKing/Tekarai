@@ -59,11 +59,23 @@ export const parseImportFile = async (file: File): Promise<ImportRow[]> => {
     return parseCsvRows(await file.text());
   }
   if (/\.(xlsx|xls)$/i.test(file.name)) {
-    const xlsx = await import("xlsx");
+    // `/* @vite-ignore */` + indirect specifier: without the optional xlsx
+    // package the dev server must still boot (CSV flow keeps working); only
+    // the Excel branch raises this clear, actionable error.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let xlsx: any;
+    try {
+      const specifier = "xlsx";
+      xlsx = await import(/* @vite-ignore */ specifier);
+    } catch {
+      throw new Error(
+        "برای درون‌ریزی فایل اکسل، پکیج xlsx لازم است — یک‌بار دستور npm install را در پوشه‌ی frontend-web اجرا کنید.",
+      );
+    }
     const workbook = xlsx.read(new Uint8Array(await file.arrayBuffer()), { type: "array" });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = xlsx.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
-    return rows.map((row) => {
+    const rows = xlsx.utils.sheet_to_json(sheet, { defval: "" }) as Record<string, unknown>[];
+    return rows.map((row: Record<string, unknown>) => {
       const mapped: ImportRow = {};
       for (const [header, value] of Object.entries(row)) {
         mapped[canonicalKey(header)] = String(value ?? "").trim();

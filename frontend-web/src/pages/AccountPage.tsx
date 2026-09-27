@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { useApiClient } from "../core/api/apiContext";
+import { formatJalali } from "../core/localization/jalali";
 import { useLocalization } from "../core/localization/localizationContext";
 import { DataTable, type DataTableColumn } from "../shared/components/DataTable";
 import { createSecurityService, type SessionRecord, type UserAccount, type MfaSetupResult } from "../features/security/securityService";
@@ -76,7 +77,7 @@ export function AccountPage(): JSX.Element {
   const sessionColumns = useMemo<DataTableColumn<SessionRecord>[]>(() => [
     { key: "device", label: t("account.sessionDevice"), accessor: (row) => `${row.device || "—"} ${row.userAgent || ""}`.trim(), sortable: true, render: (row) => <span>{row.device || row.userAgent || "—"} {row.current && <Badge tone="success" dot>{t("account.currentSession")}</Badge>}</span> },
     { key: "ip", label: t("account.sessionIp"), accessor: (row) => row.ipAddress, sortable: true },
-    { key: "last", label: t("account.sessionLastActive"), accessor: (row) => row.lastActivityAt, sortable: true, render: (row) => <span>{new Date(row.lastActivityAt).toLocaleString()}</span> },
+    { key: "last", label: t("account.sessionLastActive"), accessor: (row) => row.lastActivityAt, sortable: true, render: (row) => <span>{formatJalali(row.lastActivityAt, { withTime: true })}</span> },
     { key: "action", label: "", hideable: false, render: (row) => row.current ? null : <Button variant="ghost" size="sm" icon="close" onClick={() => { service.revokeSession(row.id).then(() => { setToast(t("account.revoked")); refreshSessions(); }).catch(() => fail("admin.loadFailed")); }}>{t("account.revoke")}</Button> },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [t]);

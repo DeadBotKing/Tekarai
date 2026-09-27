@@ -189,7 +189,7 @@ export function MaintenanceLocationsPage(): JSX.Element {
   );
 
   return (
-    <div className="page" dir="rtl">
+    <div className="page">
       <SectionHeader
         eyebrow={t("nav.maintenance")}
         title={t("registry.location.pageTitle")}
@@ -198,7 +198,7 @@ export function MaintenanceLocationsPage(): JSX.Element {
           <div className="cmms-header-actions">
             <Button
               variant="secondary"
-              icon="arrowRight"
+              icon="back"
               onClick={() => navigate("/app/maintenance/registry")}
             >
               {t("registry.profile.back")}

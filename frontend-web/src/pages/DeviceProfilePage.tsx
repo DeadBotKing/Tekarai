@@ -212,12 +212,12 @@ export function DeviceProfilePage(): JSX.Element {
   if (loading) return <LoadingState label={t("registry.profile.loading")} />;
   if (failed || !profile || !nameplate) {
     return (
-      <div className="page" dir="rtl">
+      <div className="page">
         <EmptyState
           icon="warning"
           title={t("registry.profile.notFound")}
           action={
-            <Button variant="secondary" icon="arrowRight" onClick={() => navigate("/app/maintenance/registry")}>
+            <Button variant="secondary" icon="back" onClick={() => navigate("/app/maintenance/registry")}>
               {t("registry.profile.back")}
             </Button>
           }
@@ -1287,7 +1287,7 @@ export function DeviceProfilePage(): JSX.Element {
   );
 
   return (
-    <div className="page" dir="rtl">
+    <div className="page">
       <SectionHeader
         eyebrow={t("registry.profile.title")}
         title={`${device.code} — ${device.name}`}
@@ -1296,7 +1296,7 @@ export function DeviceProfilePage(): JSX.Element {
           <div className="cmms-header-actions">
             <Button
               variant="secondary"
-              icon="arrowRight"
+              icon="back"
               onClick={() => navigate("/app/maintenance/registry")}
             >
               {t("registry.profile.back")}

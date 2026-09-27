@@ -177,7 +177,7 @@ export function AppShell(): JSX.Element {
           )}
           <IconButton
             className="sidebar__collapse"
-            icon={collapsed ? "chevronRight" : "chevronLeft"}
+            icon={collapsed ? "forward" : "back"}
             label={collapsed ? t("nav.expand") : t("nav.collapse")}
             onClick={() => setCollapsed((value) => !value)}
           />
@@ -325,7 +325,7 @@ export function AppShell(): JSX.Element {
                     <strong>{entity.title}</strong>
                     <small>{entity.kind === "device" ? t("search.devices") : t("search.workOrders")}{entity.subtitle ? ` · ${entity.subtitle}` : ""}</small>
                   </span>
-                  <Icon name="arrowRight" size={15} />
+                  <Icon name="forward" size={15} />
                 </button>
               ))}
             </div>
@@ -355,7 +355,7 @@ export function AppShell(): JSX.Element {
                     <strong>{page.title}</strong>
                     <small>{page.group}</small>
                   </span>
-                  <Icon name="arrowRight" size={15} />
+                  <Icon name="forward" size={15} />
                 </button>
               ))}
             </div>

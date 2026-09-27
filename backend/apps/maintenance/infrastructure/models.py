@@ -157,6 +157,9 @@ class SparePartModel(models.Model):
     unit = models.CharField(max_length=30, default="عدد")
     quantityOnHand = models.DecimalField(max_digits=14, decimal_places=3, default=0)
     minimumStock = models.DecimalField(max_digits=14, decimal_places=3, default=0)
+    # Latest purchase/replacement price per ``unit`` — the consumption rows
+    # snapshot this value so historical costs never drift with price updates.
+    unitCost = models.DecimalField(max_digits=16, decimal_places=2, default=0)
     createdAt = models.DateTimeField(auto_now_add=True, db_index=True)
     updatedAt = models.DateTimeField(null=True, blank=True)
     deletedAt = models.DateTimeField(null=True, blank=True)
@@ -178,6 +181,10 @@ class SparePartModel(models.Model):
                 condition=models.Q(minimumStock__gte=0),
                 name="ck_spare_part_minimum_nonnegative",
             ),
+            models.CheckConstraint(
+                condition=models.Q(unitCost__gte=0),
+                name="ck_spare_part_unit_cost_nonnegative",
+            ),
         ]
 
 
@@ -192,6 +199,8 @@ class WorkOrderPartUsageModel(models.Model):
     partName = models.CharField(max_length=200)
     unit = models.CharField(max_length=30)
     quantity = models.DecimalField(max_digits=14, decimal_places=3)
+    # Price snapshot taken from ``SparePart.unitCost`` at consumption time.
+    unitCost = models.DecimalField(max_digits=16, decimal_places=2, default=0)
     note = models.CharField(max_length=500, blank=True, default="")
     consumedAt = models.DateTimeField(db_index=True)
 
@@ -204,6 +213,42 @@ class WorkOrderPartUsageModel(models.Model):
                 name="ck_work_order_part_usage_positive",
             )
         ]
+
+
+class WorkOrderLabourEntryModel(models.Model):
+    """One logged chunk of technician work on a work order (time & cost).
+
+    Rows are kept individually (not summed into a single counter) so the cost
+    report can answer «کی، چقدر، با چه نرخی» and deleting a mistaken entry
+    only removes its own share from the roll-up on ``WorkOrderModel``.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenantId = models.UUIDField(db_index=True)
+    workOrderId = models.UUIDField(db_index=True)
+    technicianName = models.CharField(max_length=160)
+    hours = models.DecimalField(max_digits=10, decimal_places=2)
+    hourlyRate = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    workedAt = models.DateTimeField(db_index=True)
+    note = models.CharField(max_length=500, blank=True, default="")
+    createdAt = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = "WorkOrderLabourEntry"
+        ordering = ["-workedAt"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(hours__gt=0),
+                name="ck_labour_entry_hours_positive",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(hourlyRate__gte=0),
+                name="ck_labour_entry_rate_nonnegative",
+            ),
+        ]
+
+    def __str__(self) -> str:  # pragma: no cover — debug helper
+        return f"{self.technicianName}:{self.hours}h@{self.workOrderId}"
 
 
 class WorkOrderHistoryModel(models.Model):

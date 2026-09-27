@@ -222,6 +222,7 @@ export interface SparePart {
   unit: string;
   quantityOnHand: number;
   minimumStock: number;
+  unitCost: number;
   lowStock: boolean;
   createdAt: string;
   updatedAt: string;
@@ -235,8 +236,36 @@ export interface WorkOrderPartUsage {
   partName: string;
   unit: string;
   quantity: number;
+  unitCost: number;
+  totalCost: number;
   note: string;
   consumedAt: string;
+}
+
+export interface LabourEntry {
+  id: string;
+  workOrderId: string;
+  technicianName: string;
+  hours: number;
+  hourlyRate: number;
+  totalCost: number;
+  workedAt: string;
+  note: string;
+  createdAt: string;
+}
+
+export interface WorkOrderCostSummary {
+  workOrderId: string;
+  title: string;
+  status: string;
+  deviceId: string;
+  assignedToName: string;
+  labourHours: number;
+  labourCost: number;
+  partsCost: number;
+  totalCost: number;
+  labourEntries: LabourEntry[];
+  partUsages: WorkOrderPartUsage[];
 }
 
 export interface WorkOrder {

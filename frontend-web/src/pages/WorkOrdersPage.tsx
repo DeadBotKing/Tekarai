@@ -9,11 +9,13 @@ import { MaintenanceAttachments } from "../features/maintenance/MaintenanceAttac
 import { createMaintenanceService } from "../features/maintenance/maintenanceService";
 import { demoDevices, demoWorkOrders } from "../features/maintenance/maintenanceDemoData";
 import type {
+  LabourEntry,
   MaintenanceDepartment,
   MaintenanceDevice,
   Priority,
   SparePart,
   WorkOrder,
+  WorkOrderCostSummary,
   WorkOrderPartUsage,
   WorkOrderHistoryEntry,
   WorkOrderStatus,
@@ -116,6 +118,12 @@ const statusLabel = (
 const formatDateTime = (value: string): string =>
   value ? formatJalali(value, { withTime: true }) : "";
 
+const moneyFormatter = new Intl.NumberFormat("fa-IR");
+const hoursFormatter = new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 2 });
+
+const formatMoney = (value: number): string => moneyFormatter.format(Math.round(value));
+const formatHours = (value: number): string => hoursFormatter.format(value);
+
 export function WorkOrdersPage(): JSX.Element {
   const { t } = useLocalization();
   const api = useApiClient();
@@ -175,6 +183,14 @@ export function WorkOrdersPage(): JSX.Element {
   const [consumePartId, setConsumePartId] = useState("");
   const [consumeQuantity, setConsumeQuantity] = useState("1");
   const [consumeNote, setConsumeNote] = useState("");
+  const [partUnitCost, setPartUnitCost] = useState("0");
+  // Time & cost tracking (ثبت زمان و هزینه).
+  const [costSummary, setCostSummary] = useState<WorkOrderCostSummary | null>(null);
+  const [demoLabour, setDemoLabour] = useState<LabourEntry[]>([]);
+  const [labourTechnician, setLabourTechnician] = useState("");
+  const [labourHours, setLabourHours] = useState("1");
+  const [labourRate, setLabourRate] = useState("0");
+  const [labourNote, setLabourNote] = useState("");
 
   const deviceNames = useMemo(
     () => new Map(devices.map((device) => [device.id, `${device.code} — ${device.name}`])),
@@ -231,6 +247,25 @@ export function WorkOrdersPage(): JSX.Element {
       .catch(() => setPartUsage([]));
     return () => controller.abort();
   }, [activeOrder, service]);
+
+  // Cost summary (labour hours/cost + parts cost + total) for the open order.
+  useEffect(() => {
+    if (!activeOrder || runtimeConfig.demoMode) {
+      setCostSummary(null);
+      return;
+    }
+    const controller = new AbortController();
+    service
+      .getWorkOrderCostSummary(activeOrder.id, controller.signal)
+      .then(setCostSummary)
+      .catch(() => setCostSummary(null));
+    return () => controller.abort();
+  }, [activeOrder, service]);
+
+  // Suggest the assigned technician as the default name in the labour form.
+  useEffect(() => {
+    setLabourTechnician(activeOrder?.assignedToName ?? "");
+  }, [activeOrder?.id, activeOrder?.assignedToName]);
 
   const filtered = useMemo(
     () =>
@@ -460,6 +495,7 @@ export function WorkOrdersPage(): JSX.Element {
           unit: partUnit.trim() || "عدد",
           quantityOnHand: Number(partStock),
           minimumStock: Number(partMinimum),
+          unitCost: Number(partUnitCost),
           lowStock: Number(partStock) <= Number(partMinimum),
           createdAt: new Date().toISOString(),
           updatedAt: "",
@@ -477,11 +513,13 @@ export function WorkOrdersPage(): JSX.Element {
         unit: partUnit.trim() || "عدد",
         quantityOnHand: Number(partStock),
         minimumStock: Number(partMinimum),
+        unitCost: Number(partUnitCost),
       });
       setPartCode("");
       setPartName("");
       setPartStock("0");
       setPartMinimum("0");
+      setPartUnitCost("0");
       setToast("قطعه با موفقیت در انبار ثبت شد.");
       await refresh();
     } catch (error) {
@@ -515,6 +553,8 @@ export function WorkOrdersPage(): JSX.Element {
         partName: selectedPart.name,
         unit: selectedPart.unit,
         quantity: requestedQuantity,
+        unitCost: selectedPart.unitCost,
+        totalCost: requestedQuantity * selectedPart.unitCost,
         note: consumeNote.trim(),
         consumedAt: new Date().toISOString(),
       }, ...current]);
@@ -530,12 +570,14 @@ export function WorkOrdersPage(): JSX.Element {
         Number(consumeQuantity),
         consumeNote.trim(),
       );
-      const [usage, inventory] = await Promise.all([
+      const [usage, inventory, summary] = await Promise.all([
         service.listWorkOrderParts(activeOrder.id),
         service.listSpareParts(),
+        service.getWorkOrderCostSummary(activeOrder.id).catch(() => costSummary),
       ]);
       setPartUsage(usage);
       setParts(inventory);
+      setCostSummary(summary);
       setConsumeQuantity("1");
       setConsumeNote("");
       setToast("قطعه مصرفی ثبت و از موجودی انبار کسر شد.");
@@ -544,10 +586,84 @@ export function WorkOrdersPage(): JSX.Element {
     }
   };
 
+  // -- Time & cost tracking (ثبت زمان و هزینه) ---------------------------------
+  const logLabour = async (): Promise<void> => {
+    if (!activeOrder || !labourTechnician.trim() || Number(labourHours) <= 0) return;
+    const hours = Number(labourHours);
+    const rate = Number(labourRate) || 0;
+    if (runtimeConfig.demoMode) {
+      setDemoLabour((current) => [
+        {
+          id: `labour-${Date.now()}`,
+          workOrderId: activeOrder.id,
+          technicianName: labourTechnician.trim(),
+          hours,
+          hourlyRate: rate,
+          totalCost: hours * rate,
+          workedAt: new Date().toISOString(),
+          note: labourNote.trim(),
+          createdAt: new Date().toISOString(),
+        },
+        ...current,
+      ]);
+      setLabourHours("1");
+      setLabourNote("");
+      setToast(t("cmms.cost.logged"));
+      return;
+    }
+    try {
+      await service.logLabourEntry(activeOrder.id, {
+        technicianName: labourTechnician.trim(),
+        hours,
+        hourlyRate: rate,
+        note: labourNote.trim(),
+      });
+      const summary = await service.getWorkOrderCostSummary(activeOrder.id);
+      setCostSummary(summary);
+      setLabourHours("1");
+      setLabourNote("");
+      setToast(t("cmms.cost.logged"));
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : t("cmms.wo.saveFailed"));
+    }
+  };
+
+  const deleteLabour = async (entryId: string): Promise<void> => {
+    if (!activeOrder) return;
+    if (runtimeConfig.demoMode) {
+      setDemoLabour((current) => current.filter((entry) => entry.id !== entryId));
+      setToast(t("cmms.cost.entryDeleted"));
+      return;
+    }
+    try {
+      await service.deleteLabourEntry(entryId);
+      const summary = await service.getWorkOrderCostSummary(activeOrder.id);
+      setCostSummary(summary);
+      setToast(t("cmms.cost.entryDeleted"));
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : t("cmms.wo.saveFailed"));
+    }
+  };
+
   const openCount = orders.filter(
     (order) => order.status !== "completed" && order.status !== "cancelled",
   ).length;
   const inProgressCount = orders.filter((order) => order.status === "inProgress").length;
+
+  // Cost evidence shown in the detail modal: local rows in demo mode,
+  // the server-computed summary otherwise (ثبت زمان و هزینه).
+  const labourEntries: LabourEntry[] = runtimeConfig.demoMode
+    ? demoLabour
+    : (costSummary?.labourEntries ?? []);
+  const labourHoursTotal = runtimeConfig.demoMode
+    ? demoLabour.reduce((total, entry) => total + entry.hours, 0)
+    : (costSummary?.labourHours ?? 0);
+  const labourCostTotal = runtimeConfig.demoMode
+    ? demoLabour.reduce((total, entry) => total + entry.totalCost, 0)
+    : (costSummary?.labourCost ?? 0);
+  const partsCostTotal = runtimeConfig.demoMode
+    ? partUsage.reduce((total, usage) => total + usage.totalCost, 0)
+    : (costSummary?.partsCost ?? 0);
 
   const columns: DataTableColumn<WorkOrder>[] = [
     {
@@ -865,6 +981,7 @@ export function WorkOrdersPage(): JSX.Element {
             <TextInput label="واحد" value={partUnit} onChange={(event) => setPartUnit(event.target.value)} />
             <TextInput label="موجودی اولیه" type="number" min="0" step="0.001" value={partStock} onChange={(event) => setPartStock(event.target.value)} />
             <TextInput label="حداقل موجودی" type="number" min="0" step="0.001" value={partMinimum} onChange={(event) => setPartMinimum(event.target.value)} />
+            <TextInput label={t("cmms.cost.unitPrice")} type="number" min="0" step="1000" value={partUnitCost} onChange={(event) => setPartUnitCost(event.target.value)} />
             <Button variant="primary" icon="plus" onClick={createPart}>ثبت قطعه</Button>
           </div>
         </PermissionGuard>
@@ -1055,6 +1172,109 @@ export function WorkOrdersPage(): JSX.Element {
               )}
             </PermissionGuard>
 
+            {/* زمان و هزینه — ساعت‌کار تکنسین + هزینه‌ی قطعات روی هر درخواست */}
+            <div className="cmms-timeline">
+              <h4 className="cmms-timeline__title">{t("cmms.cost.section")}</h4>
+              <PermissionGuard permission={PERMISSIONS.maintenanceCostsView}>
+                <div className="detail-stats">
+                  <div>
+                    <span>{t("cmms.cost.totalHours")}</span>
+                    <strong>{formatHours(labourHoursTotal)}</strong>
+                  </div>
+                  <div>
+                    <span>{t("cmms.cost.labourCost")}</span>
+                    <strong>{formatMoney(labourCostTotal)}</strong>
+                  </div>
+                  <div>
+                    <span>{t("cmms.cost.partsCost")}</span>
+                    <strong>{formatMoney(partsCostTotal)}</strong>
+                  </div>
+                  <div>
+                    <span>{t("cmms.cost.totalCost")}</span>
+                    <strong>{formatMoney(labourCostTotal + partsCostTotal)}</strong>
+                  </div>
+                </div>
+              </PermissionGuard>
+              <PermissionGuard permission={PERMISSIONS.maintenanceWorkOrderLogTime}>
+                <div className="form-grid form-grid--compact">
+                  <TextInput
+                    label={t("cmms.cost.technician")}
+                    required
+                    value={labourTechnician}
+                    onChange={(event) => setLabourTechnician(event.target.value)}
+                  />
+                  <TextInput
+                    label={t("cmms.cost.hours")}
+                    type="number"
+                    min="0.01"
+                    step="0.25"
+                    value={labourHours}
+                    onChange={(event) => setLabourHours(event.target.value)}
+                  />
+                  <TextInput
+                    label={t("cmms.cost.hourlyRate")}
+                    type="number"
+                    min="0"
+                    step="1000"
+                    value={labourRate}
+                    onChange={(event) => setLabourRate(event.target.value)}
+                  />
+                  <TextInput
+                    label={t("cmms.cost.note")}
+                    value={labourNote}
+                    onChange={(event) => setLabourNote(event.target.value)}
+                  />
+                  <Button
+                    variant="secondary"
+                    icon="clock"
+                    onClick={logLabour}
+                    disabled={!labourTechnician.trim() || Number(labourHours) <= 0}
+                  >
+                    {t("cmms.cost.logTime")}
+                  </Button>
+                </div>
+              </PermissionGuard>
+              {labourEntries.length === 0 ? (
+                <p className="detail-panel__description">{t("cmms.cost.entriesEmpty")}</p>
+              ) : (
+                <ol className="cmms-timeline__list">
+                  {labourEntries.map((entry) => (
+                    <li key={entry.id} className="cmms-timeline__item">
+                      <span className="cmms-timeline__dot" />
+                      <div className="cmms-timeline__body">
+                        <div className="cmms-timeline__head">
+                          <strong>{entry.technicianName}</strong>
+                          <span>
+                            {formatHours(entry.hours)} {t("cmms.cost.hours")}
+                            {entry.hourlyRate > 0 && ` × ${formatMoney(entry.hourlyRate)}`}
+                          </span>
+                        </div>
+                        <div className="cmms-timeline__meta">
+                          <span>{formatDateTime(entry.workedAt)}</span>
+                          {entry.totalCost > 0 && (
+                            <span>
+                              {t("cmms.cost.lineTotal")}: {formatMoney(entry.totalCost)}
+                            </span>
+                          )}
+                          <PermissionGuard permission={PERMISSIONS.maintenanceWorkOrderLogTime}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              icon="xCircle"
+                              onClick={() => void deleteLabour(entry.id)}
+                            >
+                              {t("cmms.cost.deleteEntry")}
+                            </Button>
+                          </PermissionGuard>
+                        </div>
+                        {entry.note && <p className="cmms-timeline__note">{entry.note}</p>}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
+
             <div className="cmms-timeline">
               <h4 className="cmms-timeline__title">قطعات مصرفی</h4>
               <PermissionGuard permission={PERMISSIONS.maintenanceInventoryConsume}>
@@ -1105,6 +1325,16 @@ export function WorkOrdersPage(): JSX.Element {
                         </div>
                         <div className="cmms-timeline__meta">
                           <span>{formatDateTime(usage.consumedAt)}</span>
+                          {usage.unitCost > 0 && (
+                            <span>
+                              {t("cmms.cost.unitPrice")}: {formatMoney(usage.unitCost)}
+                            </span>
+                          )}
+                          {usage.totalCost > 0 && (
+                            <span>
+                              {t("cmms.cost.lineTotal")}: {formatMoney(usage.totalCost)}
+                            </span>
+                          )}
                         </div>
                         {usage.note && <p className="cmms-timeline__note">{usage.note}</p>}
                       </div>

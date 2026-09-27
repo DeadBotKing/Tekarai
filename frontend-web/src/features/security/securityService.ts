@@ -1,51 +1,102 @@
 import { ApiClient } from "../../core/api/apiClient";
 import { apiEndpoints } from "../../core/api/endpoints";
 
-export interface ApiKeyRecord {
+/** Real identity endpoints (Phase 31): users, roles, account & MFA. */
+
+export interface UserAccount {
   id: string;
-  name: string;
-  prefix: string;
-  scopes: string[];
+  tenantId: string;
+  username: string;
+  email: string;
+  displayName: string;
+  status: string;
   createdAt: string;
-  expiresAt: string;
-  revokedAt: string;
-  lastUsedAt: string;
 }
 
-export interface CreatedApiKey {
-  apiKey: ApiKeyRecord;
-  rawKey: string;
+export interface RoleRecord {
+  id: string;
+  code: string;
+  name: string;
+  scopeType: string;
+  actions: string[];
 }
 
 export interface SessionRecord {
   id: string;
+  userId: string;
   issuedAt: string;
   lastActivityAt: string;
   expiresAt: string;
   status: string;
+  ipAddress: string;
+  userAgent: string;
   device: string;
   current: boolean;
 }
 
-export interface MfaSetup {
+export interface MfaSetupResult {
   factorId: string;
   factorType: string;
   secret: string;
   otpauthUrl: string;
 }
 
-export interface MfaConfirmation {
+export interface MfaConfirmedResult {
   factorId: string;
   recoveryCodes: string[];
 }
 
-export const createSecurityService = (api: ApiClient) => ({
-  listApiKeys: (tenantId: string, ownerId: string) => api.get<ApiKeyRecord[]>(apiEndpoints.identity.apiKeys, { query: { tenantId, ownerId } }),
-  createApiKey: (tenantId: string, name: string, ownerId: string) => api.post<CreatedApiKey>(apiEndpoints.identity.apiKeys, { tenantId, name, ownerType: "user", ownerId, scopes: [] }),
-  revokeApiKey: (id: string) => api.delete<{ revoked: boolean }>(apiEndpoints.identity.apiKey(id), { retry: 0 }),
-  listSessions: () => api.get<SessionRecord[]>(apiEndpoints.identity.sessions),
-  revokeAllSessions: (userId: string) => api.post<{ revoked: boolean }>(apiEndpoints.identity.revokeAllSessions, { userId }, { retry: 0 }),
-  setupMfa: () => api.post<MfaSetup>(apiEndpoints.identity.mfaSetup, { factorType: "totp" }),
-  confirmMfa: (factorId: string, code: string) => api.post<MfaConfirmation>(apiEndpoints.identity.mfaConfirm, { factorId, code }),
-  disableMfa: (password: string) => api.post<{ disabled: boolean }>(apiEndpoints.identity.mfaDisable, { password }, { retry: 0 }),
+export interface InviteUserInput {
+  username: string;
+  email: string;
+  password: string;
+  displayName?: string;
+}
+
+export interface SecurityService {
+  listUsers: (search?: string, signal?: AbortSignal) => Promise<UserAccount[]>;
+  inviteUser: (input: InviteUserInput, signal?: AbortSignal) => Promise<UserAccount>;
+  listRoles: (signal?: AbortSignal) => Promise<RoleRecord[]>;
+  me: (signal?: AbortSignal) => Promise<{ user: UserAccount; permissions: string[] }>;
+  changePassword: (currentPassword: string, newPassword: string, signal?: AbortSignal) => Promise<unknown>;
+  listSessions: (signal?: AbortSignal) => Promise<SessionRecord[]>;
+  revokeSession: (sessionId: string, signal?: AbortSignal) => Promise<unknown>;
+  revokeAllSessions: (signal?: AbortSignal) => Promise<unknown>;
+  setupMfa: (signal?: AbortSignal) => Promise<MfaSetupResult>;
+  confirmMfa: (factorId: string, code: string, signal?: AbortSignal) => Promise<MfaConfirmedResult>;
+  disableMfa: (factorId?: string, signal?: AbortSignal) => Promise<unknown>;
+}
+
+const authOptions = { retry: 0 as const };
+
+export const createSecurityService = (api: ApiClient): SecurityService => ({
+  listUsers: async (search = "", signal) => {
+    const all: UserAccount[] = [];
+    for (let page = 1; page <= 200; page += 1) {
+      const batch = await api.get<UserAccount[]>(apiEndpoints.users, {
+        signal,
+        query: { search, page, pageSize: 100 },
+      });
+      all.push(...batch);
+      if (batch.length < 100) break;
+    }
+    return all;
+  },
+  inviteUser: (input, signal) =>
+    api.post<UserAccount>(apiEndpoints.users, input, { signal, ...authOptions }),
+  listRoles: (signal) => api.get<RoleRecord[]>(apiEndpoints.roles, { signal }),
+  me: (signal) => api.get<{ user: UserAccount; permissions: string[] }>(apiEndpoints.auth.me, { signal }),
+  changePassword: (currentPassword, newPassword, signal) =>
+    api.post(apiEndpoints.auth.passwordChange, { currentPassword, newPassword }, { signal, ...authOptions }),
+  listSessions: (signal) => api.get<SessionRecord[]>(apiEndpoints.identity.sessions, { signal }),
+  revokeSession: (sessionId, signal) =>
+    api.delete(`${apiEndpoints.identity.sessions}/${sessionId}`, { signal, ...authOptions }),
+  revokeAllSessions: (signal) =>
+    api.post(apiEndpoints.identity.revokeAllSessions, {}, { signal, ...authOptions }),
+  setupMfa: (signal) =>
+    api.post<MfaSetupResult>(apiEndpoints.identity.mfaSetup, { factorType: "totp" }, { signal, ...authOptions }),
+  confirmMfa: (factorId, code, signal) =>
+    api.post<MfaConfirmedResult>(apiEndpoints.identity.mfaConfirm, { factorId, code }, { signal, ...authOptions }),
+  disableMfa: (factorId, signal) =>
+    api.post(apiEndpoints.identity.mfaDisable, factorId ? { factorId } : {}, { signal, ...authOptions }),
 });

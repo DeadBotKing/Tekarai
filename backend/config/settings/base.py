@@ -107,6 +107,7 @@ INSTALLED_APPS = [
     "apps.projects",
     "apps.tasks",
     "apps.maintenance",
+    "apps.documents",
 ]
 
 # --------------------------------------------------------------------------- #
@@ -688,6 +689,7 @@ MIGRATION_MODULES = {
     "projects": "apps.projects.infrastructure.migrations",
     "tasks": "apps.tasks.infrastructure.migrations",
     "maintenance": "apps.maintenance.infrastructure.migrations",
+    "documents": "apps.documents.infrastructure.migrations",
 }
 
 # Phase 07 §7/§8 — JWT configuration (ADR-022: in-house HS256, stdlib only).

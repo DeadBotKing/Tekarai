@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { navigationConfig, type NavigationItem } from "../app/configuration/navigation";
 import { useAuth } from "../core/auth/authContext";
+import { useApiClient } from "../core/api/apiContext";
+import { createMaintenanceService } from "../features/maintenance/maintenanceService";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { useFeatureFlags } from "../core/flags/featureFlags";
 import { useLocalization } from "../core/localization/localizationContext";
@@ -16,6 +18,17 @@ import { Drawer } from "../shared/components/overlays";
 
 interface PageResult { id: string; title: string; group: string; route: string; icon: IconName }
 interface Crumb { group: string; page: string }
+
+
+interface EntityResult {
+  kind: "device" | "workOrder";
+  id: string;
+  title: string;
+  subtitle: string;
+  route: string;
+}
+
+const OPEN_ORDER_STATUSES = new Set(["submitted", "routed", "assigned", "inProgress", "waitingApproval"]);
 
 export function AppShell(): JSX.Element {
   const { t, locale, cycleLocale } = useLocalization();
@@ -32,6 +45,41 @@ export function AppShell(): JSX.Element {
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [entityResults, setEntityResults] = useState<EntityResult[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  // Live entity search (devices + work orders) while typing — debounced.
+  const api = useApiClient();
+  useEffect(() => {
+    if (runtimeConfig.demoMode) { setEntityResults([]); return; }
+    const query = search.trim();
+    if (query.length < 2) { setEntityResults([]); return; }
+    let cancelled = false;
+    setSearching(true);
+    const timer = window.setTimeout(() => {
+      const client = createMaintenanceService(api);
+      void Promise.allSettled([
+        client.listDevices({ search: query }),
+        client.listWorkOrders({ search: query }),
+      ]).then(([deviceBatch, orderBatch]) => {
+        if (cancelled) return;
+        const deviceRows = deviceBatch.status === "fulfilled"
+          ? (deviceBatch.value as Array<{ id: string; code: string; name: string; department: string }>)
+            .slice(0, 4)
+            .map((device) => ({ kind: "device" as const, id: device.id, title: `${device.code} — ${device.name}`, subtitle: device.department, route: `/app/maintenance/devices/${device.id}/profile` }))
+          : [];
+        const orderRows = orderBatch.status === "fulfilled"
+          ? (orderBatch.value as Array<{ id: string; title: string; status: string }>)
+            .filter((order) => OPEN_ORDER_STATUSES.has(order.status))
+            .slice(0, 4)
+            .map((order) => ({ kind: "workOrder" as const, id: order.id, title: order.title, subtitle: order.status, route: `/app/maintenance/work-orders?search=${encodeURIComponent(query)}`, status: order.status }))
+          : [];
+        setEntityResults([...deviceRows, ...orderRows]);
+        setSearching(false);
+      });
+    }, 350);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [search, api]);
 
   const visibleNavigation = useMemo(
     () =>
@@ -259,7 +307,30 @@ export function AppShell(): JSX.Element {
               onChange={(event) => setSearch(event.target.value)}
             />
           </div>
-          {search && results.length === 0 && (
+          {entityResults.length > 0 && (
+            <div className="global-search__results">
+              {entityResults.map((entity) => (
+                <button
+                  key={`${entity.kind}-${entity.id}`}
+                  type="button"
+                  onClick={() => {
+                    setSearchOpen(false);
+                    navigate(entity.route);
+                  }}
+                >
+                  <span className="global-search__result-icon">
+                    <Icon name={entity.kind === "device" ? "cpu" : "checkSquare"} size={16} />
+                  </span>
+                  <span>
+                    <strong>{entity.title}</strong>
+                    <small>{entity.kind === "device" ? t("search.devices") : t("search.workOrders")}{entity.subtitle ? ` · ${entity.subtitle}` : ""}</small>
+                  </span>
+                  <Icon name="arrowRight" size={15} />
+                </button>
+              ))}
+            </div>
+          )}
+          {search && results.length === 0 && entityResults.length === 0 && !searching && (
             <div className="global-search__empty">
               <Icon name="search" size={22} />
               <strong>{t("common.noResults")}</strong>

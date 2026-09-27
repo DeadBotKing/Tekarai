@@ -5,6 +5,7 @@ export const apiEndpoints = {
   tenants: "tenants",
   users: "users",
   roles: "roles",
+  documents: "documents",
   projects: { list: "projects/", create: "projects/", detail: (id: string) => `projects/${id}`, update: (id: string) => `projects/${id}`, status: (id: string) => `projects/${id}/status` },
   tasks: { list: "tasks/", create: "tasks/", detail: (id: string) => `tasks/${id}`, status: (id: string) => `tasks/${id}/status` },
   communication: {

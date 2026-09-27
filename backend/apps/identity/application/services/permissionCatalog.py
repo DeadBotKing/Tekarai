@@ -85,6 +85,9 @@ ACTIONS: list[tuple[str, str]] = [
     ("maintenance.inventory.consume", "Consume spare parts on maintenance work orders"),
     ("maintenance.attachment.view", "View and download maintenance attachments"),
     ("maintenance.attachment.manage", "Upload and remove maintenance attachments"),
+    ("maintenance.document.view", "Browse and download the tenant document library"),
+    ("maintenance.document.upload", "Upload files into the tenant document library"),
+    ("maintenance.document.manage", "Delete files from the tenant document library"),
 ]
 
 
@@ -106,6 +109,8 @@ _MAINTENANCE_REQUESTER_ACTIONS = [
     "maintenance.workorder.view",
     "maintenance.attachment.view",
     "maintenance.attachment.manage",
+    "maintenance.document.view",
+    "maintenance.document.upload",
 ]
 _MAINTENANCE_TECHNICIAN_ACTIONS = [
     "maintenance.device.list",
@@ -121,6 +126,8 @@ _MAINTENANCE_TECHNICIAN_ACTIONS = [
     "maintenance.inventory.consume",
     "maintenance.attachment.view",
     "maintenance.attachment.manage",
+    "maintenance.document.view",
+    "maintenance.document.upload",
 ]
 _MAINTENANCE_MANAGER_ACTIONS = [
     "maintenance.device.manage",
@@ -140,6 +147,9 @@ _MAINTENANCE_MANAGER_ACTIONS = [
     "maintenance.inventory.consume",
     "maintenance.attachment.view",
     "maintenance.attachment.manage",
+    "maintenance.document.view",
+    "maintenance.document.upload",
+    "maintenance.document.manage",
 ]
 
 ROLE_PRESETS: dict[str, list[str]] = {

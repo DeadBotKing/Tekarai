@@ -42,6 +42,9 @@ urlpatterns = [
                     "maintenance/",
                     include("apps.maintenance.presentation.api.urls.maintenanceRoutes"),
                 ),
+                path(
+                    "", include("apps.documents.presentation.api.urls.documentRoutes")
+                ),
             ]
         ),
     ),

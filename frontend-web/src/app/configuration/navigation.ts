@@ -36,7 +36,7 @@ export const navigationConfig: NavigationItem[] = [
     label: "nav.records",
     icon: "file",
     children: [
-      { id: "documents", label: "nav.documents", icon: "file", route: "/app/documents", permission: PERMISSIONS.documentView },
+      { id: "documents", label: "nav.documents", icon: "file", route: "/app/documents", permission: PERMISSIONS.maintenanceDocumentView },
     ],
   },
   {
@@ -50,6 +50,7 @@ export const navigationConfig: NavigationItem[] = [
       { id: "maintenanceLocations", label: "nav.registryLocations", icon: "building", route: "/app/maintenance/locations", permission: PERMISSIONS.maintenanceDeviceList },
       { id: "maintenancePersonnel", label: "nav.registryPersonnel", icon: "users", route: "/app/maintenance/personnel", permission: PERMISSIONS.maintenanceDeviceList },
       { id: "maintenanceFleet", label: "nav.registryFleet", icon: "chart", route: "/app/maintenance/fleet", permission: PERMISSIONS.maintenanceDeviceList },
+      { id: "maintenanceWarehouse", label: "nav.warehouse", icon: "layers", route: "/app/maintenance/warehouse", permission: PERMISSIONS.maintenanceInventoryView },
       { id: "maintenanceWorkOrders", label: "nav.workOrders", icon: "checkSquare", route: "/app/maintenance/work-orders", permission: PERMISSIONS.maintenanceWorkOrderList },
       { id: "maintenancePmCalendar", label: "nav.pmCalendar", icon: "calendar", route: "/app/maintenance/pm-calendar", permission: PERMISSIONS.maintenanceDeviceList },
       { id: "maintenanceReports", label: "nav.maintenanceReports", icon: "chart", route: "/app/maintenance/reports", permission: PERMISSIONS.maintenanceWorkOrderList },
@@ -78,9 +79,10 @@ export const navigationConfig: NavigationItem[] = [
     label: "nav.administration",
     icon: "shield",
     children: [
-      { id: "users", label: "nav.users", icon: "users", route: "/app/administration/users", permission: PERMISSIONS.userManage },
-      { id: "roles", label: "nav.roles", icon: "key", route: "/app/administration/roles", permission: PERMISSIONS.roleManage },
-      { id: "settings", label: "nav.settings", icon: "settings", route: "/app/settings", permission: PERMISSIONS.settingsManage },
+      { id: "users", label: "nav.users", icon: "users", route: "/app/administration/users", permission: PERMISSIONS.userList },
+      { id: "roles", label: "nav.roles", icon: "key", route: "/app/administration/roles", permission: PERMISSIONS.roleList },
+      { id: "settings", label: "nav.settings", icon: "settings", route: "/app/settings" },
+      { id: "account", label: "nav.account", icon: "user", route: "/app/account" },
       { id: "audit", label: "nav.audit", icon: "activity", route: "/app/administration/audit", permission: PERMISSIONS.auditView },
     ],
   },

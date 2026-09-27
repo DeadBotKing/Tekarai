@@ -37,6 +37,12 @@ export const PERMISSIONS = {
   maintenanceInventoryView: "maintenance.inventory.view",
   maintenanceInventoryManage: "maintenance.inventory.manage",
   maintenanceInventoryConsume: "maintenance.inventory.consume",
+  maintenanceDocumentView: "maintenance.document.view",
+  maintenanceDocumentUpload: "maintenance.document.upload",
+  maintenanceDocumentManage: "maintenance.document.manage",
+  userList: "user.list",
+  userCreate: "user.create",
+  roleList: "role.list",
   maintenanceAttachmentView: "maintenance.attachment.view",
   maintenanceAttachmentManage: "maintenance.attachment.manage",
 } as const;

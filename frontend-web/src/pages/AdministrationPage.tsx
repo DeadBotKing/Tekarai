@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { useApiClient } from "../core/api/apiContext";
 import { apiEndpoints } from "../core/api/endpoints";
+import { createSecurityService } from "../features/security/securityService";
 import { NavLink, useLocation } from "react-router-dom";
 import { useLocalization } from "../core/localization/localizationContext";
 import { PERMISSIONS } from "../core/permissions/permissionContext";
@@ -23,17 +25,61 @@ const users: UserRecord[] = [
 
 export function AdministrationPage(): JSX.Element {
   const { t } = useLocalization();
+  const api = useApiClient();
+  const service = useMemo(() => createSecurityService(api), [api]);
   const location = useLocation();
   const section = location.pathname.split("/").pop() ?? "users";
   const [addUserOpen, setAddUserOpen] = useState(false);
+  const [inviteForm, setInviteForm] = useState({ username: "", email: "", password: "", displayName: "" });
+  const [inviting, setInviting] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const [toast, setToast] = useState("");
+
+  const invite = (): void => {
+    setInviting(true);
+    service.inviteUser(inviteForm)
+      .then(() => { setAddUserOpen(false); setInviteForm({ username: "", email: "", password: "", displayName: "" }); setReloadToken((value) => value + 1); setToast(t("admin.invited")); })
+      .catch(() => setToast(t("admin.inviteFailed")))
+      .finally(() => setInviting(false));
+  };
+
   const nav = [{ id: "users", label: t("admin.users"), icon: "users" as const, path: "/app/administration/users" }, { id: "roles", label: t("admin.roles"), icon: "key" as const, path: "/app/administration/roles" }, { id: "tenants", label: t("admin.tenants"), icon: "building" as const, path: "/app/administration/tenants" }, { id: "audit", label: t("admin.audit"), icon: "activity" as const, path: "/app/administration/audit" }];
-  return <div className="page"><SectionHeader eyebrow={t("nav.administration")} title={t("admin.title")} subtitle={t("admin.subtitle")} actions={<PermissionGuard permission={PERMISSIONS.userManage}><Button variant="primary" icon="plus" onClick={() => setAddUserOpen(true)}>{t("admin.addUser")}</Button></PermissionGuard>} /><div className="admin-layout"><aside className="admin-nav">{nav.map((item) => <NavLink to={item.path} key={item.id} className={({ isActive }) => `admin-nav__item ${isActive ? "is-active" : ""}`}><Icon name={item.icon} size={17} /><span>{item.label}</span><Icon name="chevronRight" size={14} /></NavLink>)}</aside><div className="admin-content">{section === "roles" ? <Roles /> : section === "tenants" ? <Tenants /> : section === "audit" ? <Audit /> : <Users />}</div></div><Modal open={addUserOpen} title={t("admin.addUser")} onClose={() => setAddUserOpen(false)} footer={<><Button variant="secondary" onClick={() => setAddUserOpen(false)}>{t("common.cancel")}</Button><Button variant="primary" onClick={() => { setAddUserOpen(false); setToast("Invitation sent."); }}>{t("common.save")}</Button></>}><div className="form-grid"><TextInput label={t("admin.user")} placeholder="Name" required /><TextInput label="Email" type="email" required /><TextInput label={t("admin.role")} defaultValue="Member" /></div></Modal>{toast && <Toast message={toast} onClose={() => setToast("")} />}</div>;
+  return <div className="page"><SectionHeader eyebrow={t("nav.administration")} title={t("admin.title")} subtitle={t("admin.subtitle")} actions={<PermissionGuard permission={PERMISSIONS.userCreate}><Button variant="primary" icon="plus" onClick={() => setAddUserOpen(true)}>{t("admin.addUser")}</Button></PermissionGuard>} /><div className="admin-layout"><aside className="admin-nav">{nav.map((item) => <NavLink to={item.path} key={item.id} className={({ isActive }) => `admin-nav__item ${isActive ? "is-active" : ""}`}><Icon name={item.icon} size={17} /><span>{item.label}</span><Icon name="chevronRight" size={14} /></NavLink>)}</aside><div className="admin-content">{section === "roles" ? <Roles reloadToken={reloadToken} /> : section === "tenants" ? <Tenants /> : section === "audit" ? <Audit /> : <Users reloadToken={reloadToken} />}</div></div><Modal open={addUserOpen} title={t("admin.addUser")} onClose={() => setAddUserOpen(false)} footer={<><Button variant="secondary" onClick={() => setAddUserOpen(false)}>{t("common.cancel")}</Button><Button variant="primary" disabled={inviting || !inviteForm.username || !inviteForm.email || inviteForm.password.length < 12} onClick={invite}>{inviting ? t("common.loading") : t("common.save")}</Button></>}><div className="form-grid"><TextInput label={t("admin.username")} required value={inviteForm.username} onChange={(event) => setInviteForm({ ...inviteForm, username: event.target.value })} placeholder="ali.rezaei" /><TextInput label={t("account.displayName")} value={inviteForm.displayName} onChange={(event) => setInviteForm({ ...inviteForm, displayName: event.target.value })} /><TextInput label={t("account.email")} type="email" required value={inviteForm.email} onChange={(event) => setInviteForm({ ...inviteForm, email: event.target.value })} /><TextInput label={t("admin.password")} type="password" required hint="≥ 12" value={inviteForm.password} onChange={(event) => setInviteForm({ ...inviteForm, password: event.target.value })} /></div></Modal>{toast && <Toast message={toast} onClose={() => setToast("")} />}</div>;
 }
 
-function Users(): JSX.Element { const { t } = useLocalization(); const columns = useMemo<DataTableColumn<UserRecord>[]>(() => [{ key: "name", label: t("admin.user"), accessor: (row) => `${row.name} ${row.email}`, sortable: true, width: "28%", render: (row) => <div className="person-cell"><Avatar name={row.name} size="sm" tone="purple" /><div><strong>{row.name}</strong><span>{row.email}</span></div></div> }, { key: "role", label: t("admin.role"), accessor: (row) => row.role, sortable: true }, { key: "status", label: t("project.status"), accessor: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> }, { key: "lastActive", label: t("admin.lastActive"), accessor: (row) => row.lastActive }, { key: "access", label: t("admin.access"), accessor: (row) => row.access, render: (row) => <span className="muted-cell">{row.access}</span> }, { key: "action", label: t("project.actions"), hideable: false, render: () => <Button variant="ghost" size="sm" icon="edit">{t("common.edit")}</Button> }], [t]); return <div className="admin-section"><Card padding="none"><CardHeader title={t("admin.users")} subtitle="Manage people, roles and tenant memberships." /><DataTable columns={columns} data={users} rowKey={(row) => row.id} exportName="tekarai-users" /></Card></div>; }
+function Users({ reloadToken = 0 }: { reloadToken?: number }): JSX.Element {
+  const { t } = useLocalization();
+  const api = useApiClient();
+  const service = useMemo(() => createSecurityService(api), [api]);
+  const [items, setItems] = useState<UserRecord[]>(users);
+  const [loading, setLoading] = useState(!runtimeConfig.demoMode);
+  useEffect(() => {
+    if (runtimeConfig.demoMode) return;
+    setLoading(true);
+    service.listUsers()
+      .then((rows) => setItems(rows.map((row) => ({ id: row.id, name: row.displayName || row.username, email: row.email, role: row.username, status: (row.status === "active" ? "active" : row.status === "pending" ? "pending" : "archived") as UserRecord["status"], lastActive: row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "", access: "" }))))
+      .catch(() => setItems([]))
+      .finally(() => setLoading(false));
+  }, [service, reloadToken]);
+  const columns = useMemo<DataTableColumn<UserRecord>[]>(() => [{ key: "name", label: t("admin.user"), accessor: (row) => `${row.name} ${row.email}`, sortable: true, width: "34%", render: (row) => <div className="person-cell"><Avatar name={row.name} size="sm" tone="purple" /><div><strong>{row.name}</strong><span>{row.email}</span></div></div> }, { key: "role", label: t("admin.username"), accessor: (row) => row.role, sortable: true }, { key: "status", label: t("project.status"), accessor: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> }, { key: "lastActive", label: t("admin.lastActive"), accessor: (row) => row.lastActive }], [t]);
+  return <div className="admin-section"><Card padding="none"><CardHeader title={t("admin.users")} subtitle="Manage people, roles and tenant memberships." /><DataTable columns={columns} data={items} rowKey={(row) => row.id} exportName="tekarai-users" empty={{ title: loading ? t("common.loading") : t("admin.loadFailed") }} /></Card></div>;
+}
 
-function Roles(): JSX.Element { const { t } = useLocalization(); const roles = [{ name: "Platform Administrator", members: 2, permissions: 48, scope: "Global" }, { name: "Workspace Manager", members: 6, permissions: 31, scope: "Tenant" }, { name: "Operations Lead", members: 14, permissions: 22, scope: "Tenant" }, { name: "Auditor", members: 3, permissions: 12, scope: "Tenant" }, { name: "Member", members: 223, permissions: 9, scope: "Tenant" }]; return <div className="admin-section"><Card padding="md"><CardHeader title={t("admin.roles")} subtitle="Permission bundles are evaluated server-side and mirrored here for rendering." action={<PermissionGuard permission={PERMISSIONS.roleManage}><Button variant="primary" size="sm" icon="plus">Create role</Button></PermissionGuard>} /><div className="role-list">{roles.map((role) => <div className="role-row" key={role.name}><span className="role-row__icon"><Icon name="key" size={17} /></span><div><strong>{role.name}</strong><span>{role.scope} scope · {role.permissions} permissions</span></div><span className="role-row__members">{role.members} members</span><Button variant="ghost" size="sm" icon="edit">{t("common.edit")}</Button></div>)}</div></Card><Card padding="md"><CardHeader title={t("admin.permissions")} /><div className="permission-matrix">{["project.view", "project.create", "project.update", "task.view", "document.upload", "report.view", "audit.view", "projectIntelligence.analyze"].map((permission) => <div key={permission}><code>{permission}</code><span><i className="status-dot status-dot--green" />Granted to 4 roles</span></div>)}</div></Card></div>; }
+function Roles({ reloadToken = 0 }: { reloadToken?: number }): JSX.Element {
+  const { t } = useLocalization();
+  const api = useApiClient();
+  const service = useMemo(() => createSecurityService(api), [api]);
+  const [roles, setRoles] = useState<{ name: string; code: string; permissions: number; scope: string; actions: string[] }[]>([]);
+  useEffect(() => {
+    if (runtimeConfig.demoMode) { setRoles([]); return; }
+    service.listRoles()
+      .then((rows) => setRoles(rows.map((row) => ({ name: row.name, code: row.code, permissions: row.actions.length, scope: row.scopeType, actions: row.actions }))))
+      .catch(() => setRoles([]));
+  }, [service, reloadToken]);
+  const demoFallback = [{ name: "Platform Administrator", code: "platformAdmin", permissions: 8, scope: "GLOBAL", actions: ["user.create", "user.list", "role.list", "audit.view"] }, { name: "Member", code: "member", permissions: 4, scope: "TENANT", actions: ["project.view", "task.view"] }];
+  const rows = runtimeConfig.demoMode ? demoFallback : roles;
+  return <div className="admin-section"><Card padding="md"><CardHeader title={t("admin.roles")} subtitle="Permission bundles are evaluated server-side and mirrored here for rendering." /><div className="role-list">{rows.map((role) => <div className="role-row" key={role.code}><span className="role-row__icon"><Icon name="key" size={17} /></span><div><strong>{role.name}</strong><span>{role.code} · {role.scope} · {role.permissions} {t("admin.actions")}</span></div></div>)}</div></Card><Card padding="md"><CardHeader title={t("admin.permissions")} /><div className="permission-matrix">{rows.flatMap((role) => role.actions.map((action) => ({ code: role.code, action }))).slice(0, 40).map((item, index) => <div key={`${item.code}-${item.action}-${index}`}><code>{item.action}</code><span><i className="status-dot status-dot--green" />{item.code}</span></div>)}</div></Card></div>;
+}
 
 function Tenants(): JSX.Element { const { t } = useLocalization(); return <div className="admin-section"><Card padding="md"><CardHeader title={t("admin.tenants")} subtitle="Global platform operators can manage tenant lifecycle and isolation." /><div className="tenant-admin-list">{demoTenants.map((tenant) => <div className="tenant-admin-row" key={tenant.id}><span className="tenant-avatar tenant-avatar--large">{tenant.name.slice(0, 1)}</span><div><strong>{tenant.name}</strong><span>{tenant.code} · {tenant.industry}</span></div><Badge tone="success" dot>{tenant.status}</Badge><span>{tenant.members} members</span><Button variant="ghost" size="sm" icon="settings">{t("common.view")}</Button></div>)}</div></Card></div>; }
 

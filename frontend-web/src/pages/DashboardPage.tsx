@@ -29,6 +29,31 @@ const defaultWidgets: WidgetConfig[] = [
 
 const isOpenOrder = (order: WorkOrder): boolean => order.status !== "completed" && order.status !== "cancelled";
 
+const WIDGETS_STORAGE_KEY = "tekarai.dashboard.widgets.v1";
+
+/** Persist the dashboard layout (order + visibility) per browser profile. */
+function loadWidgets(): WidgetConfig[] {
+  try {
+    const raw = window.localStorage.getItem(WIDGETS_STORAGE_KEY);
+    if (!raw) return defaultWidgets;
+    const parsed = JSON.parse(raw) as WidgetConfig[];
+    const validIds = new Set(defaultWidgets.map((widget) => widget.id));
+    const restored = parsed.filter((widget) => validIds.has(widget.id));
+    const missing = defaultWidgets.filter((widget) => !restored.some((item) => item.id === widget.id));
+    return [...restored, ...missing];
+  } catch {
+    return defaultWidgets;
+  }
+}
+
+function saveWidgets(widgets: WidgetConfig[]): void {
+  try {
+    window.localStorage.setItem(WIDGETS_STORAGE_KEY, JSON.stringify(widgets));
+  } catch {
+    // Quota errors (private mode) must never break the dashboard.
+  }
+}
+
 /** Tolerant mapper for /platform/audit-events rows (shape varies by phase). */
 const toActivityItem = (row: Record<string, unknown>, index: number): ActivityItem => ({
   id: String(row.id ?? row.eventId ?? index),
@@ -49,7 +74,11 @@ export function DashboardPage(): JSX.Element {
   const maintenanceService = useMemo(() => createMaintenanceService(api), [api]);
 
   const [customizing, setCustomizing] = useState(false);
-  const [widgets, setWidgets] = useState(defaultWidgets);
+  const [widgets, setWidgets] = useState<WidgetConfig[]>(loadWidgets);
+
+  useEffect(() => {
+    saveWidgets(widgets);
+  }, [widgets]);
 
   // Real server data in live mode; curated demo data when demoMode is on.
   const [projects, setProjects] = useState<Project[]>(runtimeConfig.demoMode ? demoProjects : []);

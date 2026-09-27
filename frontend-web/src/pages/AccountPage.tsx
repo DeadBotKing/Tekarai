@@ -2,14 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { useApiClient } from "../core/api/apiContext";
 import { formatJalali } from "../core/localization/jalali";
-import { useLocalization } from "../core/localization/localizationContext";
+import { faText } from "../core/localization/i18n";
 import { DataTable, type DataTableColumn } from "../shared/components/DataTable";
 import { createSecurityService, type SessionRecord, type UserAccount, type MfaSetupResult } from "../features/security/securityService";
 import { Toast } from "../shared/components/overlays";
 import { Badge, Button, Card, CardHeader, SectionHeader, TextInput } from "../shared/components/primitives";
 
 export function AccountPage(): JSX.Element {
-  const { t } = useLocalization();
+  const t = faText;
   const api = useApiClient();
   const service = useMemo(() => createSecurityService(api), [api]);
 

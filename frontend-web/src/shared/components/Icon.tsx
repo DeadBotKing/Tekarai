@@ -9,8 +9,7 @@ export type IconName =
   | "hash" | "message" | "archive"
   | "minus" | "more" | "moon" | "paperclip" | "plus" | "refresh" | "search" | "send"
   | "settings" | "shield" | "sparkles" | "sun" | "table" | "target" | "upload" | "user"
-  | "users" | "warning" | "xCircle"
-  | "back" | "forward";
+  | "users" | "warning" | "xCircle";
 
 interface IconProps {
   name: IconName;
@@ -20,9 +19,7 @@ interface IconProps {
   style?: CSSProperties;
 }
 
-type GlyphName = Exclude<IconName, "back" | "forward">;
-
-const paths: Record<GlyphName, JSX.Element> = {
+const paths: Record<IconName, JSX.Element> = {
   activity: <><path d="M3 12h4l2-7 4 14 2-7h6" /></>,
   arrowDown: <><path d="M12 5v14M7 14l5 5 5-5" /></>,
   arrowLeft: <><path d="M19 12H5m6-6-6 6 6 6" /></>,
@@ -87,14 +84,6 @@ const paths: Record<GlyphName, JSX.Element> = {
 };
 
 export function Icon({ name, size = 18, className = "", title, style }: IconProps): JSX.Element {
-  // Semantic navigation glyphs: persistently correct in both directions —
-  // «forward» points the way content flows (left in RTL, right in LTR),
-  // «back» points where the user came from.
-  const isRtl = typeof document !== "undefined" && document.documentElement.dir === "rtl";
-  const resolved: GlyphName =
-    name === "forward" ? (isRtl ? "arrowLeft" : "arrowRight")
-    : name === "back" ? (isRtl ? "arrowRight" : "arrowLeft")
-    : name;
   return (
     <svg
       aria-hidden={title ? undefined : true}
@@ -111,7 +100,7 @@ export function Icon({ name, size = 18, className = "", title, style }: IconProp
       viewBox="0 0 24 24"
       width={size}
     >
-      {paths[resolved]}
+      {paths[name]}
     </svg>
   );
 }

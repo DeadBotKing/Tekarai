@@ -229,8 +229,8 @@ export function JalaliDatePicker({
               title="سال بعد"
               onClick={goNextYear}
             >
-              <Icon name="back" size={13} />
-              <Icon name="back" size={13} />
+              <Icon name="chevronRight" size={13} />
+              <Icon name="chevronRight" size={13} />
             </button>
             <button
               type="button"
@@ -239,7 +239,7 @@ export function JalaliDatePicker({
               title="ماه بعد"
               onClick={goNextMonth}
             >
-              <Icon name="back" size={16} />
+              <Icon name="chevronRight" size={16} />
             </button>
             <span className="jdp__title">
               {JALALI_MONTHS[viewMonth - 1]} {toPersianDigits(viewYear)}
@@ -251,7 +251,7 @@ export function JalaliDatePicker({
               title="ماه قبل"
               onClick={goPrevMonth}
             >
-              <Icon name="forward" size={16} />
+              <Icon name="chevronLeft" size={16} />
             </button>
             <button
               type="button"
@@ -260,8 +260,8 @@ export function JalaliDatePicker({
               title="سال قبل"
               onClick={goPrevYear}
             >
-              <Icon name="forward" size={13} />
-              <Icon name="forward" size={13} />
+              <Icon name="chevronLeft" size={13} />
+              <Icon name="chevronLeft" size={13} />
             </button>
           </div>
 

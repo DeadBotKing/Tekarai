@@ -363,7 +363,7 @@ export function EquipmentRegistryPage(): JSX.Element {
   ];
 
   return (
-    <div className="page">
+    <div className="page" dir="rtl">
       <SectionHeader
         eyebrow={t("nav.maintenance")}
         title={t("registry.title")}

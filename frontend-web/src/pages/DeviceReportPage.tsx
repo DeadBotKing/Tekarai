@@ -111,7 +111,7 @@ export function DeviceReportPage(): JSX.Element {
       : 0;
 
   return (
-    <div className="page">
+    <div className="page" dir="rtl">
       <SectionHeader
         eyebrow={t("nav.maintenance")}
         title={
@@ -120,7 +120,7 @@ export function DeviceReportPage(): JSX.Element {
         subtitle={t("cmms.report.subtitle")}
         actions={
           <div className="section-actions dash-actions--noprint">
-            <Button variant="ghost" icon="back" onClick={() => navigate(-1)}>
+            <Button variant="ghost" icon="arrowRight" onClick={() => navigate(-1)}>
               {t("cmms.common.back")}
             </Button>
             <Button

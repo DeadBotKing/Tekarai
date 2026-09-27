@@ -1,11 +1,10 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { localeMeta, translate, type Direction, type Locale, type TranslationKey } from "./i18n";
+import { translate, type Direction, type Locale, type TranslationKey } from "./i18n";
 
-// v2: the v1 key was written with the old English default on every profile's
-// first visit (the effect persisted immediately, before the user ever chose
-// anything). Bumping the key invalidates those implicit "en" values so the
-// current Persian-first default reaches existing installs too.
-const LOCALE_KEY = "tekarai.gui.locale.v2";
+// v4: Persian content is the product default now, while the frame stays
+// LTR no matter what (see `direction` below). Bumping the key drops stale
+// persisted values from the earlier experimental builds.
+const LOCALE_KEY = "tekarai.gui.locale.v4";
 
 const initialLocale = (): Locale => {
   try {
@@ -14,8 +13,7 @@ const initialLocale = (): Locale => {
   } catch {
     // Use the stable default when storage is unavailable.
   }
-  // Tekarai is a Persian-first CMMS (AD-Net for Iranian maintenance teams):
-  // default to فارسی; untranslated areas fall back to English per key.
+  // فارسی برای همه — متن‌ها همه‌جا فارسی‌اند؛ قالب سایت همیشه LTR می‌ماند.
   return "fa";
 };
 
@@ -31,7 +29,10 @@ const LocalizationContext = createContext<LocalizationContextValue | null>(null)
 
 export function LocalizationProvider({ children }: { children: ReactNode }): JSX.Element {
   const [locale, setLocaleState] = useState<Locale>(initialLocale);
-  const direction = localeMeta[locale].direction;
+  // Product rule: the site layout is LTR regardless of the content language
+  // (متن فارسی، قالب چپ‌به‌راست). Pages that historically pin their own
+  // direction keep their explicit dir attribute.
+  const direction: Direction = "ltr";
 
   useEffect(() => {
     const root = document.documentElement;

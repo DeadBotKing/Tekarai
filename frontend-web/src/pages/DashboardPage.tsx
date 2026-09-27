@@ -176,7 +176,7 @@ export function DashboardPage(): JSX.Element {
             <CardHeader
               title={widgetTitle(widget)}
               subtitle={widget.kind === "pulse" ? t("dashboard.projectPulseCaption") : widget.kind === "throughput" ? t("dashboard.taskThroughputCaption") : undefined}
-              action={customizing ? <div className="widget-controls"><button type="button" aria-label="Move widget up" disabled={index === 0} onClick={() => moveWidget(widget.id, -1)}><Icon name="arrowUp" size={14} /></button><button type="button" aria-label="Move widget down" disabled={index === widgets.length - 1} onClick={() => moveWidget(widget.id, 1)}><Icon name="arrowDown" size={14} /></button><button type="button" aria-label="Remove widget" onClick={() => removeWidget(widget.id)}><Icon name="close" size={14} /></button></div> : <button type="button" className="card-kebab" aria-label={t("common.more")}><Icon name="more" size={17} /></button>}
+              action={customizing ? <div className="widget-controls"><button type="button" aria-label="جابه‌جایی کارت به بالا" disabled={index === 0} onClick={() => moveWidget(widget.id, -1)}><Icon name="arrowUp" size={14} /></button><button type="button" aria-label="جابه‌جایی کارت به پایین" disabled={index === widgets.length - 1} onClick={() => moveWidget(widget.id, 1)}><Icon name="arrowDown" size={14} /></button><button type="button" aria-label="حذف کارت" onClick={() => removeWidget(widget.id)}><Icon name="close" size={14} /></button></div> : <button type="button" className="card-kebab" aria-label={t("common.more")}><Icon name="more" size={17} /></button>}
             />
             {widget.kind === "pulse" && (
               projects.length === 0

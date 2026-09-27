@@ -3,9 +3,8 @@ import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { useApiClient } from "../core/api/apiContext";
 import { apiEndpoints } from "../core/api/endpoints";
 import { createSecurityService } from "../features/security/securityService";
-import { formatJalali } from "../core/localization/jalali";
 import { NavLink, useLocation } from "react-router-dom";
-import { useLocalization } from "../core/localization/localizationContext";
+import { faText } from "../core/localization/i18n";
 import { PERMISSIONS } from "../core/permissions/permissionContext";
 import { demoActivity } from "../features/demo/demoData";
 import { demoTenants } from "../core/tenant/tenantContext";
@@ -25,7 +24,7 @@ const users: UserRecord[] = [
 ];
 
 export function AdministrationPage(): JSX.Element {
-  const { t } = useLocalization();
+  const t = faText;
   const api = useApiClient();
   const service = useMemo(() => createSecurityService(api), [api]);
   const location = useLocation();
@@ -45,11 +44,11 @@ export function AdministrationPage(): JSX.Element {
   };
 
   const nav = [{ id: "users", label: t("admin.users"), icon: "users" as const, path: "/app/administration/users" }, { id: "roles", label: t("admin.roles"), icon: "key" as const, path: "/app/administration/roles" }, { id: "tenants", label: t("admin.tenants"), icon: "building" as const, path: "/app/administration/tenants" }, { id: "audit", label: t("admin.audit"), icon: "activity" as const, path: "/app/administration/audit" }];
-  return <div className="page"><SectionHeader eyebrow={t("nav.administration")} title={t("admin.title")} subtitle={t("admin.subtitle")} actions={<PermissionGuard permission={PERMISSIONS.userCreate}><Button variant="primary" icon="plus" onClick={() => setAddUserOpen(true)}>{t("admin.addUser")}</Button></PermissionGuard>} /><div className="admin-layout"><aside className="admin-nav">{nav.map((item) => <NavLink to={item.path} key={item.id} className={({ isActive }) => `admin-nav__item ${isActive ? "is-active" : ""}`}><Icon name={item.icon} size={17} /><span>{item.label}</span><Icon name="forward" size={14} /></NavLink>)}</aside><div className="admin-content">{section === "roles" ? <Roles reloadToken={reloadToken} /> : section === "tenants" ? <Tenants /> : section === "audit" ? <Audit /> : <Users reloadToken={reloadToken} />}</div></div><Modal open={addUserOpen} title={t("admin.addUser")} onClose={() => setAddUserOpen(false)} footer={<><Button variant="secondary" onClick={() => setAddUserOpen(false)}>{t("common.cancel")}</Button><Button variant="primary" disabled={inviting || !inviteForm.username || !inviteForm.email || inviteForm.password.length < 12} onClick={invite}>{inviting ? t("common.loading") : t("common.save")}</Button></>}><div className="form-grid"><TextInput label={t("admin.username")} required value={inviteForm.username} onChange={(event) => setInviteForm({ ...inviteForm, username: event.target.value })} placeholder="ali.rezaei" /><TextInput label={t("account.displayName")} value={inviteForm.displayName} onChange={(event) => setInviteForm({ ...inviteForm, displayName: event.target.value })} /><TextInput label={t("account.email")} type="email" required value={inviteForm.email} onChange={(event) => setInviteForm({ ...inviteForm, email: event.target.value })} /><TextInput label={t("admin.password")} type="password" required hint="≥ 12" value={inviteForm.password} onChange={(event) => setInviteForm({ ...inviteForm, password: event.target.value })} /></div></Modal>{toast && <Toast message={toast} onClose={() => setToast("")} />}</div>;
+  return <div className="page"><SectionHeader eyebrow={t("nav.administration")} title={t("admin.title")} subtitle={t("admin.subtitle")} actions={<PermissionGuard permission={PERMISSIONS.userCreate}><Button variant="primary" icon="plus" onClick={() => setAddUserOpen(true)}>{t("admin.addUser")}</Button></PermissionGuard>} /><div className="admin-layout"><aside className="admin-nav">{nav.map((item) => <NavLink to={item.path} key={item.id} className={({ isActive }) => `admin-nav__item ${isActive ? "is-active" : ""}`}><Icon name={item.icon} size={17} /><span>{item.label}</span><Icon name="chevronRight" size={14} /></NavLink>)}</aside><div className="admin-content">{section === "roles" ? <Roles reloadToken={reloadToken} /> : section === "tenants" ? <Tenants /> : section === "audit" ? <Audit /> : <Users reloadToken={reloadToken} />}</div></div><Modal open={addUserOpen} title={t("admin.addUser")} onClose={() => setAddUserOpen(false)} footer={<><Button variant="secondary" onClick={() => setAddUserOpen(false)}>{t("common.cancel")}</Button><Button variant="primary" disabled={inviting || !inviteForm.username || !inviteForm.email || inviteForm.password.length < 12} onClick={invite}>{inviting ? t("common.loading") : t("common.save")}</Button></>}><div className="form-grid"><TextInput label={t("admin.username")} required value={inviteForm.username} onChange={(event) => setInviteForm({ ...inviteForm, username: event.target.value })} placeholder="ali.rezaei" /><TextInput label={t("account.displayName")} value={inviteForm.displayName} onChange={(event) => setInviteForm({ ...inviteForm, displayName: event.target.value })} /><TextInput label={t("account.email")} type="email" required value={inviteForm.email} onChange={(event) => setInviteForm({ ...inviteForm, email: event.target.value })} /><TextInput label={t("admin.password")} type="password" required hint="≥ 12" value={inviteForm.password} onChange={(event) => setInviteForm({ ...inviteForm, password: event.target.value })} /></div></Modal>{toast && <Toast message={toast} onClose={() => setToast("")} />}</div>;
 }
 
 function Users({ reloadToken = 0 }: { reloadToken?: number }): JSX.Element {
-  const { t } = useLocalization();
+  const t = faText;
   const api = useApiClient();
   const service = useMemo(() => createSecurityService(api), [api]);
   const [items, setItems] = useState<UserRecord[]>(users);
@@ -58,7 +57,7 @@ function Users({ reloadToken = 0 }: { reloadToken?: number }): JSX.Element {
     if (runtimeConfig.demoMode) return;
     setLoading(true);
     service.listUsers()
-      .then((rows) => setItems(rows.map((row) => ({ id: row.id, name: row.displayName || row.username, email: row.email, role: row.username, status: (row.status === "active" ? "active" : row.status === "pending" ? "pending" : "archived") as UserRecord["status"], lastActive: row.createdAt ? formatJalali(row.createdAt, { style: "short" }) : "", access: "" }))))
+      .then((rows) => setItems(rows.map((row) => ({ id: row.id, name: row.displayName || row.username, email: row.email, role: row.username, status: (row.status === "active" ? "active" : row.status === "pending" ? "pending" : "archived") as UserRecord["status"], lastActive: row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "", access: "" }))))
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
   }, [service, reloadToken]);
@@ -67,7 +66,7 @@ function Users({ reloadToken = 0 }: { reloadToken?: number }): JSX.Element {
 }
 
 function Roles({ reloadToken = 0 }: { reloadToken?: number }): JSX.Element {
-  const { t } = useLocalization();
+  const t = faText;
   const api = useApiClient();
   const service = useMemo(() => createSecurityService(api), [api]);
   const [roles, setRoles] = useState<{ name: string; code: string; permissions: number; scope: string; actions: string[] }[]>([]);
@@ -82,10 +81,10 @@ function Roles({ reloadToken = 0 }: { reloadToken?: number }): JSX.Element {
   return <div className="admin-section"><Card padding="md"><CardHeader title={t("admin.roles")} subtitle={t("admin.rolesSubtitle")} /><div className="role-list">{rows.map((role) => <div className="role-row" key={role.code}><span className="role-row__icon"><Icon name="key" size={17} /></span><div><strong>{role.name}</strong><span>{role.code} · {role.scope} · {role.permissions} {t("admin.actions")}</span></div></div>)}</div></Card><Card padding="md"><CardHeader title={t("admin.permissions")} /><div className="permission-matrix">{rows.flatMap((role) => role.actions.map((action) => ({ code: role.code, action }))).slice(0, 40).map((item, index) => <div key={`${item.code}-${item.action}-${index}`}><code>{item.action}</code><span><i className="status-dot status-dot--green" />{item.code}</span></div>)}</div></Card></div>;
 }
 
-function Tenants(): JSX.Element { const { t } = useLocalization(); return <div className="admin-section"><Card padding="md"><CardHeader title={t("admin.tenants")} subtitle="Global platform operators can manage tenant lifecycle and isolation." /><div className="tenant-admin-list">{demoTenants.map((tenant) => <div className="tenant-admin-row" key={tenant.id}><span className="tenant-avatar tenant-avatar--large">{tenant.name.slice(0, 1)}</span><div><strong>{tenant.name}</strong><span>{tenant.code} · {tenant.industry}</span></div><Badge tone="success" dot>{tenant.status}</Badge><span>{tenant.members} members</span><Button variant="ghost" size="sm" icon="settings">{t("common.view")}</Button></div>)}</div></Card></div>; }
+function Tenants(): JSX.Element { const t = faText; return <div className="admin-section"><Card padding="md"><CardHeader title={t("admin.tenants")} subtitle="اپراتورهای سراسری سکو، چرخه‌ی حیات و جداسازی tenantها را مدیریت می‌کنند." /><div className="tenant-admin-list">{demoTenants.map((tenant) => <div className="tenant-admin-row" key={tenant.id}><span className="tenant-avatar tenant-avatar--large">{tenant.name.slice(0, 1)}</span><div><strong>{tenant.name}</strong><span>{tenant.code} · {tenant.industry}</span></div><Badge tone="success" dot>{tenant.status}</Badge><span>{tenant.members} عضو</span><Button variant="ghost" size="sm" icon="settings">{t("common.view")}</Button></div>)}</div></Card></div>; }
 
 function Audit(): JSX.Element {
-  const { t } = useLocalization();
+  const t = faText;
   const api = useApiClient();
   const [items, setItems] = useState<typeof demoActivity>([]);
   const [loading, setLoading] = useState(true);
@@ -102,5 +101,5 @@ function Audit(): JSX.Element {
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
   }, [api]);
-  return <div className="admin-section"><Card padding="md"><CardHeader title={t("admin.audit")} subtitle="Immutable activity records with correlation and tenant context." action={<Button variant="secondary" size="sm" icon="download">{t("common.export")}</Button>} />{loading ? <p>Loading audit events…</p> : <ActivityFeed items={items.length ? items : demoActivity} />}</Card><Card padding="md"><CardHeader title="Audit controls" /><div className="audit-controls"><div><Icon name="shield" size={20} /><strong>Append-only stream</strong><span>Audit records cannot be edited from the GUI.</span></div><div><Icon name="lock" size={20} /><strong>Tenant-scoped</strong><span>Queries require a valid tenant context and audit.view.</span></div><div><Icon name="clock" size={20} /><strong>Retention governed</strong><span>Retention follows platform and tenant policy.</span></div></div></Card></div>;
+  return <div className="admin-section"><Card padding="md"><CardHeader title={t("admin.audit")} subtitle="Immutable activity records with correlation and tenant context." action={<Button variant="secondary" size="sm" icon="download">{t("common.export")}</Button>} />{loading ? <p>Loading audit events…</p> : <ActivityFeed items={items.length ? items : demoActivity} />}</Card><Card padding="md"><CardHeader title="Audit controls" /><div className="audit-controls"><div><Icon name="shield" size={20} /><strong>جریان فقط افزودنی</strong><span>Audit records cannot be edited from the GUI.</span></div><div><Icon name="lock" size={20} /><strong>محدود به tenant</strong><span>Queries require a valid tenant context and audit.view.</span></div><div><Icon name="clock" size={20} /><strong>نگهداری مدیریت‌شده</strong><span>Retention follows platform and tenant policy.</span></div></div></Card></div>;
 }

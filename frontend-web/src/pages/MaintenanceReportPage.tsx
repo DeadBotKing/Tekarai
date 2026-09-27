@@ -148,14 +148,14 @@ export function MaintenanceReportPage(): JSX.Element {
   );
 
   return (
-    <div className="page cmms-report">
+    <div className="page cmms-report" dir="rtl">
       <SectionHeader
         eyebrow={t("nav.maintenance")}
         title="گزارش کلی نگهداری و تعمیرات"
         subtitle="گزارش درخواست‌های کار همه دستگاه‌ها در بازه زمانی انتخابی"
         actions={
           <div className="cmms-header-actions dash-actions--noprint">
-            <Button variant="secondary" icon="forward" onClick={() => navigate("/app/maintenance/devices")}>دستگاه‌ها و PM</Button>
+            <Button variant="secondary" icon="arrowRight" onClick={() => navigate("/app/maintenance/devices")}>دستگاه‌ها و PM</Button>
             <Button variant="primary" icon="file" onClick={() => window.print()}>چاپ / PDF</Button>
           </div>
         }

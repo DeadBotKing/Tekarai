@@ -4,7 +4,7 @@ import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { useApiClient } from "../core/api/apiContext";
 import { triggerDownload } from "../core/files/downloadUtils";
 import { formatJalali } from "../core/localization/jalali";
-import { useLocalization } from "../core/localization/localizationContext";
+import { faText } from "../core/localization/i18n";
 import { PERMISSIONS } from "../core/permissions/permissionContext";
 import { createDocumentService, type LibraryDocument } from "../features/documents/documentService";
 import { DataTable } from "../shared/components/DataTable";
@@ -19,7 +19,7 @@ interface UploadItem { name: string; progress: number; state: "uploading" | "com
 const EXTENSION_COLOR: Record<string, string> = { pdf: "pdf", docx: "docx", xlsx: "xlsx", png: "png", jpg: "png", jpeg: "png" };
 
 export function DocumentsPage(): JSX.Element {
-  const { t } = useLocalization();
+  const t = faText;
   const api = useApiClient();
   const service = useMemo(() => createDocumentService(api), [api]);
   const [searchParams, setSearchParams] = useSearchParams();

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { useApiClient } from "../core/api/apiContext";
-import { useLocalization } from "../core/localization/localizationContext";
+import { faText } from "../core/localization/i18n";
 import { PERMISSIONS } from "../core/permissions/permissionContext";
 import { rowsToCsvBlob, triggerDownload } from "../core/files/downloadUtils";
 import { parseImportFile, toNumber } from "../core/files/importUtils";
@@ -25,7 +25,7 @@ interface PartFormState { code: string; name: string; unit: string; quantityOnHa
 const emptyForm: PartFormState = { code: "", name: "", unit: "عدد", quantityOnHand: "0", minimumStock: "0", unitCost: "0" };
 
 export function SparePartsPage(): JSX.Element {
-  const { t } = useLocalization();
+  const t = faText;
   const api = useApiClient();
   const service = useMemo(() => createMaintenanceService(api), [api]);
   const [parts, setParts] = useState<SparePart[]>(runtimeConfig.demoMode ? demoParts : []);

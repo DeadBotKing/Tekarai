@@ -103,7 +103,7 @@ export function DeviceTimelinePage(): JSX.Element {
   const items = timeline?.items ?? [];
 
   return (
-    <div className="page">
+    <div className="page" dir="rtl">
       <SectionHeader
         eyebrow={t("nav.maintenance")}
         title={
@@ -112,7 +112,7 @@ export function DeviceTimelinePage(): JSX.Element {
         subtitle={t("cmms.timeline.subtitle")}
         actions={
           <div className="section-actions">
-            <Button variant="ghost" icon="back" onClick={() => navigate(-1)}>
+            <Button variant="ghost" icon="arrowRight" onClick={() => navigate(-1)}>
               {t("cmms.common.back")}
             </Button>
             {device && (

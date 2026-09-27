@@ -401,7 +401,7 @@ export function MaintenanceDevicesPage(): JSX.Element {
   ];
 
   return (
-    <div className="page">
+    <div className="page" dir="rtl">
       <SectionHeader
         eyebrow={t("nav.maintenance")}
         title={t("cmms.devices.title")}

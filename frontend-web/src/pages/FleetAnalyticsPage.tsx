@@ -144,7 +144,7 @@ export function FleetAnalyticsPage(): JSX.Element {
   ];
 
   return (
-    <div className="page">
+    <div className="page" dir="rtl">
       <SectionHeader
         eyebrow={t("nav.maintenance")}
         title={t("registry.fleet.title")}
@@ -152,7 +152,7 @@ export function FleetAnalyticsPage(): JSX.Element {
         actions={
           <Button
             variant="secondary"
-            icon="back"
+            icon="arrowRight"
             onClick={() => navigate("/app/maintenance/registry")}
           >
             {t("registry.profile.back")}

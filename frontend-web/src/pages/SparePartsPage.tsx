@@ -135,7 +135,7 @@ export function SparePartsPage(): JSX.Element {
     ...(runtimeConfig.demoMode || undefined ? [{ key: "action" as const, label: t("project.actions"), hideable: false, render: (row: SparePart) => <PermissionGuard permission={PERMISSIONS.maintenanceInventoryManage}><Button variant="ghost" size="sm" icon="edit" onClick={() => openEdit(row)}>{t("common.edit")}</Button></PermissionGuard> }] : []),
   ], [t]);
 
-  return <div className="page">
+  return <div className="page" dir="rtl">
     <SectionHeader eyebrow={t("nav.warehouse")} title={t("warehouse.title")} subtitle={t("warehouse.subtitle")} actions={<>
       <PermissionGuard permission={PERMISSIONS.maintenanceInventoryManage}>
         <Button variant="secondary" icon="upload" onClick={() => { setImportOpen(true); setImportReport(null); }}>{t("warehouse.import")}</Button>

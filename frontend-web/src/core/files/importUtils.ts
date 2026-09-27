@@ -69,7 +69,7 @@ export const parseImportFile = async (file: File): Promise<ImportRow[]> => {
       xlsx = await import(/* @vite-ignore */ specifier);
     } catch {
       throw new Error(
-        "برای درون‌ریزی فایل اکسل، پکیج xlsx لازم است — یک‌بار دستور npm install را در پوشه‌ی frontend-web اجرا کنید.",
+        "برای import فایل اکسل، پکیج xlsx لازم است — یک‌بار دستور npm install را در پوشه‌ی frontend-web اجرا کنید.",
       );
     }
     const workbook = xlsx.read(new Uint8Array(await file.arrayBuffer()), { type: "array" });

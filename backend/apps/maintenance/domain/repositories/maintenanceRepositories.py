@@ -14,10 +14,15 @@ from typing import Protocol, runtime_checkable
 
 from apps.maintenance.domain.entities.device import Device
 from apps.maintenance.domain.entities.deviceHistory import DeviceHistoryEntry
+from apps.maintenance.domain.entities.labourEntry import LabourEntry
 from apps.maintenance.domain.entities.maintenanceAttachment import MaintenanceAttachment
 from apps.maintenance.domain.entities.sparePart import SparePart, WorkOrderPartUsage
 from apps.maintenance.domain.entities.workOrder import WorkOrder
 from apps.maintenance.domain.entities.workOrderHistory import WorkOrderHistoryEntry
+from apps.maintenance.domain.services.maintenanceCosting import (
+    LabourCostReading,
+    WorkOrderCostReading,
+)
 
 
 @dataclass(frozen=True)
@@ -137,6 +142,7 @@ class SparePartRepository(Protocol):
         unit: str,
         quantityOnHand: Decimal,
         minimumStock: Decimal,
+        unitCost: Decimal,
     ) -> SparePart: ...
 
     def update(
@@ -147,6 +153,7 @@ class SparePartRepository(Protocol):
         unit: str,
         quantityOnHand: Decimal,
         minimumStock: Decimal,
+        unitCost: Decimal,
     ) -> SparePart: ...
 
     def list(self, tenantId: uuid.UUID, search: str = "") -> list[SparePart]: ...
@@ -164,6 +171,51 @@ class SparePartRepository(Protocol):
     def listUsage(
         self, tenantId: uuid.UUID, workOrderId: uuid.UUID
     ) -> list[WorkOrderPartUsage]: ...
+
+
+@runtime_checkable
+class LabourEntryRepository(Protocol):
+    """Technician time logs + the cost roll-up they drive on the work order."""
+
+    def log(
+        self,
+        tenantId: uuid.UUID,
+        workOrderId: uuid.UUID,
+        technicianName: str,
+        hours: Decimal,
+        hourlyRate: Decimal,
+        workedAt: datetime,
+        note: str,
+    ) -> LabourEntry: ...
+
+    def listForWorkOrder(
+        self, tenantId: uuid.UUID, workOrderId: uuid.UUID
+    ) -> list[LabourEntry]: ...
+
+    def delete(self, tenantId: uuid.UUID, entryId: uuid.UUID) -> LabourEntry: ...
+
+
+@runtime_checkable
+class MaintenanceCostRepository(Protocol):
+    """Reads the cost facts the maintenance cost report aggregates."""
+
+    def readWorkOrderCosts(
+        self,
+        tenantId: uuid.UUID,
+        fromDate: datetime,
+        toDate: datetime,
+        deviceId: uuid.UUID | None = None,
+        department: str = "",
+    ) -> list[WorkOrderCostReading]: ...
+
+    def readLabourCosts(
+        self,
+        tenantId: uuid.UUID,
+        fromDate: datetime,
+        toDate: datetime,
+        deviceId: uuid.UUID | None = None,
+        department: str = "",
+    ) -> list[LabourCostReading]: ...
 
 
 @runtime_checkable

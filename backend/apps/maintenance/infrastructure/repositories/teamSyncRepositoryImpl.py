@@ -50,7 +50,7 @@ def _recordEntity(model: InspectionRecordModel) -> InspectionRecord:
         id=str(model.id),
         tenantId=uuid.UUID(str(model.tenantId)),
         templateId=str(model.templateId),
-        workOrderId=uuid.UUID(str(model.workOrderId)),
+        workOrderId=(uuid.UUID(str(model.workOrderId)) if model.workOrderId else None),
         deviceId=uuid.UUID(str(model.deviceId)),
         passedChecks=tuple(model.passedChecks or []),
         failedChecks=tuple(model.failedChecks or []),

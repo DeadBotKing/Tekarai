@@ -207,6 +207,23 @@ class InspectionFlowTests(TeamSyncBase):
         )
         self.assertEqual(records.totalCount, 1)
 
+    def test_record_orderless_accepted(self):
+        SaveInspectionTemplateUseCase(repository=self.inspections, **KERNEL_PORTS).execute(
+            SaveInspectionTemplateCommand(id="itpl-orderless", name="عمومی", checks=["x"])
+        )
+        record = SaveInspectionRecordUseCase(repository=self.inspections, **KERNEL_PORTS).execute(
+            SaveInspectionRecordCommand(
+                id="rec-free-1",
+                templateId="itpl-orderless",
+                workOrderId="",
+                deviceId=str(uuid.uuid4()),
+                passedChecks=["x"],
+                failedChecks=[],
+                performedByName="علی",
+            )
+        )
+        self.assertEqual(record.workOrderId, "")
+
     def test_template_delete_flow(self):
         from apps.maintenance.application.commands.teamSyncCommands import DeleteInspectionTemplateCommand
         from apps.maintenance.application.useCases.teamSyncUseCases import DeleteInspectionTemplateUseCase

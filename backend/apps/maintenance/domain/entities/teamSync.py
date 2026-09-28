@@ -36,7 +36,7 @@ class InspectionRecord:
     id: str
     tenantId: uuid.UUID
     templateId: str
-    workOrderId: uuid.UUID
+    workOrderId: uuid.UUID | None
     deviceId: uuid.UUID
     passedChecks: tuple[str, ...]
     failedChecks: tuple[str, ...]

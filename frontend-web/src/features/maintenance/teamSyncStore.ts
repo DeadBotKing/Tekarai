@@ -3,7 +3,7 @@
 // منبع حقیقت است و localStorage یک کش ترمیم‌پذیر می‌ماند.
 import { runtimeConfig } from "../../app/configuration/runtimeConfig";
 import { sessionStore } from "../../core/auth/sessionStore";
-import type { InspectionTemplate } from "./wave1";
+import type { InspectionRecord, InspectionTemplate } from "./wave1";
 import type { PartReservation } from "./wave2";
 
 const TENANT_KEY = "tekarai.gui.tenant.v1";
@@ -125,3 +125,45 @@ export const pushDeleteInspectionTemplate = (id: string): Promise<void> =>
   apiFetch(`maintenance/team/inspection-templates/${id}`, { method: "DELETE" }).then(
     () => undefined,
   );
+
+// ------------------------------------------------------------- inspection records
+
+/** نگاشت DTO بک‌اند به رکورد فرانت */
+const toRecord = (dto: {
+  id: string;
+  templateId: string;
+  deviceId: string;
+  passedChecks: string[];
+  failedChecks: string[];
+  performedByName: string;
+  at: string;
+}): InspectionRecord => ({
+  id: dto.id,
+  templateId: dto.templateId,
+  deviceId: dto.deviceId,
+  deviceCode: "", // کد در گیرنده از روی فهرست دستگاه‌ها بدست می‌آید
+  templateTitle: "",
+  performedByName: dto.performedByName,
+  at: dto.at,
+  passedChecks: dto.passedChecks ?? [],
+  failedChecks: dto.failedChecks ?? [],
+});
+
+export const pullInspectionRecords = (): Promise<InspectionRecord[]> =>
+  apiFetch<Array<Parameters<typeof toRecord>[0]>>(
+    "maintenance/team/inspection-records",
+  ).then((items) => items.map(toRecord));
+
+export const pushInspectionRecord = (record: InspectionRecord): Promise<void> =>
+  apiFetch("maintenance/team/inspection-records", {
+    method: "POST",
+    body: JSON.stringify({
+      id: record.id,
+      templateId: record.templateId,
+      workOrderId: "",
+      deviceId: record.deviceId,
+      passedChecks: record.passedChecks,
+      failedChecks: record.failedChecks,
+      performedByName: record.performedByName,
+    }),
+  }).then(() => undefined);

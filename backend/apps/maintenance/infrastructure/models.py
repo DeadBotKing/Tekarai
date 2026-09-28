@@ -592,7 +592,7 @@ class InspectionRecordModel(models.Model):
     id = models.CharField(max_length=64, primary_key=True)
     tenantId = models.UUIDField(db_index=True)
     templateId = models.CharField(max_length=64, db_index=True)
-    workOrderId = models.UUIDField(db_index=True)
+    workOrderId = models.UUIDField(db_index=True, null=True, blank=True)
     deviceId = models.UUIDField(db_index=True)
     passedChecks = models.JSONField(default=list)
     failedChecks = models.JSONField(default=list)

@@ -51,7 +51,7 @@ class Migration(migrations.Migration):
                 ("id", models.CharField(max_length=64, primary_key=True, serialize=False)),
                 ("tenantId", models.UUIDField(db_index=True)),
                 ("templateId", models.CharField(db_index=True, max_length=64)),
-                ("workOrderId", models.UUIDField(db_index=True)),
+                ("workOrderId", models.UUIDField(blank=True, db_index=True, null=True)),
                 ("deviceId", models.UUIDField(db_index=True)),
                 ("passedChecks", models.JSONField(default=list)),
                 ("failedChecks", models.JSONField(default=list)),

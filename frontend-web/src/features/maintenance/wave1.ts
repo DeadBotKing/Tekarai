@@ -238,3 +238,45 @@ export const buildInspectionWorkOrderDraft = (
   ].join("\n"),
   priority: failed.length >= 3 ? "high" : "normal",
 });
+
+/* --------------------------- سابقه‌ی اجرای بازرسی (تیمی) --------------------------- */
+
+export interface InspectionRecord {
+  id: string;
+  templateId: string;
+  templateTitle: string;
+  deviceId: string;
+  deviceCode: string;
+  at: string; // ISO
+  performedByName: string;
+  passedChecks: string[];
+  failedChecks: string[];
+}
+
+/** تشکیل رکورد از روی قالب + وضعیت تیک‌ها — فانکشن خالص و قابل آزمون. */
+export const buildInspectionRecord = (
+  id: string,
+  template: InspectionTemplate,
+  runItems: InspectionRunItem[],
+  deviceId: string,
+  deviceCode: string,
+  performedByName: string,
+  at: string = new Date().toISOString(),
+): InspectionRecord => {
+  const failed = failedTemplateItems(template, runItems).map((item) => item.text);
+  const failedSet = new Set(failed);
+  return {
+    id,
+    templateId: template.id,
+    templateTitle: template.title,
+    deviceId,
+    deviceCode,
+    at,
+    performedByName,
+    failedChecks: failed,
+    passedChecks: template.items
+      .map((item) => item.text)
+      .filter((text) => !failedSet.has(text)),
+  };
+};
+

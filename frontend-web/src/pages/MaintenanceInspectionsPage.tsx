@@ -5,8 +5,10 @@ import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { createMaintenanceService } from "../features/maintenance/maintenanceService";
 import { demoDevices } from "../features/maintenance/maintenanceDemoData";
 import {
+  buildInspectionRecord,
   buildInspectionWorkOrderDraft,
   failedTemplateItems,
+  type InspectionRecord,
   type InspectionRunItem,
   type InspectionTemplate,
 } from "../features/maintenance/wave1";
@@ -15,8 +17,15 @@ import {
   listInspectionTemplates,
   newTemplateId,
   saveInspectionTemplate,
-syncInspectionTemplatesFromServer,
+  syncInspectionTemplatesFromServer,
 } from "../features/maintenance/inspectionsStore";
+import {
+  listInspectionRecords,
+  newRecordId,
+  saveInspectionRecord,
+  syncInspectionRecordsFromServer,
+} from "../features/maintenance/inspectionRecordsStore";
+import { sessionStore } from "../core/auth/sessionStore";
 import type { MaintenanceDevice } from "../shared/types/domain";
 import { DataTable, type DataTableColumn } from "../shared/components/DataTable";
 import { Modal, Toast } from "../shared/components/overlays";
@@ -47,6 +56,8 @@ export default function MaintenanceInspectionsPage(): JSX.Element {
   const [runItems, setRunItems] = useState<InspectionRunItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState("");
+  const [records, setRecords] = useState<InspectionRecord[]>(() => listInspectionRecords());
+  const [detailRecord, setDetailRecord] = useState<InspectionRecord | null>(null);
 
   useEffect(() => {
     if (runtimeConfig.demoMode) return;
@@ -61,6 +72,12 @@ export default function MaintenanceInspectionsPage(): JSX.Element {
       if (ok) refreshTemplates();
     });
   }, [refreshTemplates]);
+
+  useEffect(() => {
+    void syncInspectionRecordsFromServer().then((ok) => {
+      if (ok) setRecords(listInspectionRecords());
+    });
+  }, []);
 
   const openRun = (template: InspectionTemplate): void => {
     setRunTemplate(template);
@@ -89,6 +106,20 @@ export default function MaintenanceInspectionsPage(): JSX.Element {
     if (!runTemplate) return;
     const failed = failedTemplateItems(runTemplate, runItems);
     const device = devices.find((item) => item.id === runDeviceId);
+    // رکورد بازرسی همیشه ثبت می‌شود — مدرک مسئولیت همین‌جاست
+    if (device) {
+      saveInspectionRecord(
+        buildInspectionRecord(
+          newRecordId(),
+          runTemplate,
+          runItems,
+          device.id,
+          device.code,
+          sessionStore.get()?.user.displayName ?? sessionStore.get()?.user.email ?? "",
+        ),
+      );
+      setRecords(listInspectionRecords());
+    }
     setSaving(true);
     try {
       if (failed.length && device) {
@@ -141,6 +172,51 @@ export default function MaintenanceInspectionsPage(): JSX.Element {
     [devices],
   );
 
+  /** رکوردهای کشیده از سرور عنوان/کد ندارند؛ در رندر از روی منابع محلی تکمیل می‌شود. */
+  const historyColumns: DataTableColumn<InspectionRecord>[] = useMemo(() => {
+    const titleOf = (record: InspectionRecord): string =>
+      record.templateTitle ||
+      templates.find((item) => item.id === record.templateId)?.title ||
+      record.templateId;
+    const codeOf = (record: InspectionRecord): string =>
+      record.deviceCode || devices.find((item) => item.id === record.deviceId)?.code || "";
+    return [
+      {
+        key: "at",
+        label: t("cmms.wave1.colDate"),
+        accessor: (row) => row.at,
+        render: (row) => {
+          const date = new Date(row.at);
+          return Number.isNaN(date.getTime())
+            ? row.at
+            : `${date.toLocaleDateString("fa-IR")} ${date.toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" })}`;
+        },
+      },
+      { key: "template", label: t("cmms.wave1.colTitle"), accessor: titleOf },
+      { key: "device", label: t("cmms.wave1.colScope"), accessor: (row) => codeOf(row) || "—" },
+      { key: "by", label: t("cmms.wave1.colInspector"), accessor: (row) => row.performedByName || "—" },
+      {
+        key: "result",
+        label: t("project.status"),
+        render: (row) =>
+          row.failedChecks.length ? (
+            <Badge tone="danger" dot>{t("cmms.wave1.resultNok").replace("{n}", String(row.failedChecks.length))}</Badge>
+          ) : (
+            <Badge tone="success" dot>{t("cmms.wave1.resultOk").replace("{n}", String(row.passedChecks.length))}</Badge>
+          ),
+      },
+      {
+        key: "detail",
+        label: t("project.actions"),
+        render: (row) => (
+          <Button variant="ghost" size="sm" icon="search" onClick={() => setDetailRecord(row)}>
+            {t("cmms.wave1.recordDetail")}
+          </Button>
+        ),
+      },
+    ];
+  }, [devices, templates]);
+
   const failedCount = runTemplate ? failedTemplateItems(runTemplate, runItems).length : 0;
 
   return (
@@ -162,6 +238,19 @@ export default function MaintenanceInspectionsPage(): JSX.Element {
           rowKey={(row) => row.id}
           exportName="tekarai-inspections"
           empty={{ title: t("cmms.wave1.empty") }}
+        />
+      </Card>
+
+      <Card padding="none">
+        <div className="card__header" style={{ padding: "14px 16px" }}>
+          <strong>{t("cmms.wave1.recordHistory")}</strong>
+        </div>
+        <DataTable
+          columns={historyColumns}
+          data={[...records].sort((a, b) => b.at.localeCompare(a.at))}
+          rowKey={(row) => row.id}
+          exportName="tekarai-inspection-history"
+          empty={{ title: t("cmms.wave1.recordEmpty") }}
         />
       </Card>
 
@@ -264,6 +353,22 @@ export default function MaintenanceInspectionsPage(): JSX.Element {
         </div>
         {failedCount > 0 && (
           <p className="muted-cell">⚠ {t("cmms.wave1.failNotice").replace("{count}", String(failedCount))}</p>
+        )}
+      </Modal>
+      <Modal
+        open={Boolean(detailRecord)}
+        title={detailRecord ? `${t("cmms.wave1.recordDetail")} — ${detailRecord.templateTitle || detailRecord.templateId}` : ""}
+        onClose={() => setDetailRecord(null)}
+      >
+        {detailRecord && (
+          <div className="form-grid">
+            {detailRecord.passedChecks.map((text) => (
+              <div className="inspection-item" key={`ok-${text}`}><Badge tone="success" dot>{text}</Badge></div>
+            ))}
+            {detailRecord.failedChecks.map((text) => (
+              <div className="inspection-item" key={`nok-${text}`}><Badge tone="danger" dot>{text}</Badge></div>
+            ))}
+          </div>
         )}
       </Modal>
       {toast && <Toast message={toast} onClose={() => setToast("")} />}

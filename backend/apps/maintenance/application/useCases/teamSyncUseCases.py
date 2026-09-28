@@ -116,7 +116,7 @@ def _recordDto(record: InspectionRecord) -> InspectionRecordDto:
     return InspectionRecordDto(
         id=record.id,
         templateId=record.templateId,
-        workOrderId=str(record.workOrderId),
+        workOrderId=str(record.workOrderId) if record.workOrderId else "",
         deviceId=str(record.deviceId),
         passedChecks=list(record.passedChecks),
         failedChecks=list(record.failedChecks),
@@ -276,7 +276,7 @@ class SaveInspectionRecordUseCase(InspectionUseCaseBase):
                 id=command.id,
                 tenantId=tenantId,
                 templateId=command.templateId,
-                workOrderId=_uuid(command.workOrderId, "workOrderId"),
+                workOrderId=(_uuid(command.workOrderId, "workOrderId") if command.workOrderId else None),
                 deviceId=_uuid(command.deviceId, "deviceId"),
                 passedChecks=tuple(command.passedChecks),
                 failedChecks=tuple(command.failedChecks),

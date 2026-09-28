@@ -27,22 +27,6 @@ import { taxonomyLabel } from "../core/localization/taxonomyLabel";
 import { CreatableSelect } from "../shared/components/CreatableSelect";
 import { mergeOptions } from "../features/maintenance/optionCatalog";
 import { buildDeviceTree, type DeviceTreeNode } from "../features/maintenance/wave1";
-import {
-  METER_KINDS,
-  latestReading,
-  isMeterAlarmed,
-  usagePmDue,
-  usagePmRemaining,
-  meterKindMeta,
-  type MeterKind,
-} from "../features/maintenance/wave2";
-import {
-  addMeterReading,
-  getMeterConfig,
-  listMeterReadings,
-  newId,
-  saveMeterConfig,
-} from "../features/maintenance/wave2Store";
 
 const DEVICE_STATUSES: DeviceStatus[] = [
   "operational",
@@ -83,13 +67,6 @@ export function MaintenanceDevicesPage(): JSX.Element {
   const service = useMemo(() => createMaintenanceService(api), [api]);
   const [viewMode, setViewMode] = useState<"list" | "tree">("list");
   const [treeOrders, setTreeOrders] = useState<Pick<WorkOrder, "id" | "deviceId" | "status" | "slaDueAt">[]>([]);
-  const [meterDevice, setMeterDevice] = useState<MaintenanceDevice | null>(null);
-  const [meterKind, setMeterKind] = useState<MeterKind>("hours");
-  const [meterValue, setMeterValue] = useState("");
-  const [meterNote, setMeterNote] = useState("");
-  const [meterPmInterval, setMeterPmInterval] = useState("500");
-  const [meterPmLast, setMeterPmLast] = useState("0");
-  const [, setMeterTick] = useState(0);
   const [devices, setDevices] = useState<MaintenanceDevice[]>(
     runtimeConfig.demoMode ? demoDevices : [],
   );
@@ -362,12 +339,6 @@ export function MaintenanceDevicesPage(): JSX.Element {
         ),
     },
     {
-      key: "meters",
-      label: t("cmms.wave2.meter.title"),
-      accessor: () => "",
-      render: (row) => deviceMeterCell(row),
-    },
-    {
       key: "actions",
       label: "",
       accessor: () => "",
@@ -431,51 +402,6 @@ export function MaintenanceDevicesPage(): JSX.Element {
       ),
     },
   ];
-
-  const openMeters = (device: MaintenanceDevice): void => {
-    const config = getMeterConfig(device.id);
-    setMeterDevice(device);
-    setMeterValue("");
-    setMeterNote("");
-    setMeterPmInterval(String(config.intervalHours));
-    setMeterPmLast(String(config.lastPmHoursAt));
-  };
-
-  const saveMeter = (): void => {
-    if (!meterDevice || meterValue === "") return;
-    addMeterReading({
-      id: newId("mt"),
-      deviceId: meterDevice.id,
-      kind: meterKind,
-      value: Number(meterValue),
-      at: new Date().toISOString(),
-      note: meterNote.trim(),
-    });
-    setMeterTick((tick) => tick + 1);
-    setToast?.(t("cmms.wave2.meter.saved") as string);
-  };
-
-  const deviceMeterCell = (device: MaintenanceDevice): JSX.Element => {
-    void getMeterConfig; // populates state on open
-    void setMeterTick;
-    const hours = latestReading(listMeterReadings(device.id), device.id, "hours");
-    const config = getMeterConfig(device.id);
-    const due = usagePmDue(hours?.value, config.lastPmHoursAt, config.intervalHours);
-    const remaining = usagePmRemaining(hours?.value, config.lastPmHoursAt, config.intervalHours);
-    return (
-      <div className="section-actions">
-        <span className="muted-cell">{hours ? `${hours.value} ساعت` : "—"}</span>
-        {due ? (
-          <Badge tone="warning" dot>{t("cmms.wave2.meter.usageDue")}</Badge>
-        ) : remaining != null ? (
-          <Badge tone="neutral" dot>{t("cmms.wave2.meter.remaining").replace("{hours}", String(remaining))}</Badge>
-        ) : null}
-        <Button variant="ghost" size="sm" icon="settings" onClick={() => openMeters(device)}>
-          {t("cmms.wave2.meter.add")}
-        </Button>
-      </div>
-    );
-  };
 
   const deviceTree = useMemo(() => buildDeviceTree(devices, treeOrders), [devices, treeOrders]);
 
@@ -777,56 +703,6 @@ export function MaintenanceDevicesPage(): JSX.Element {
         )}
       </Modal>
 
-      <Modal
-        open={Boolean(meterDevice)}
-        title={`${t("cmms.wave2.meter.title")} — ${meterDevice?.code ?? ""}`}
-        onClose={() => setMeterDevice(null)}
-        footer={
-          <Button variant="secondary" onClick={() => setMeterDevice(null)}>
-            {t("cmms.common.close")}
-          </Button>
-        }
-      >
-        <div className="form-grid">
-          <SelectInput
-            label={t("cmms.wave2.meter.kind")}
-            value={meterKind}
-            onChange={(event) => setMeterKind(event.target.value as MeterKind)}
-            options={METER_KINDS.map((meta) => ({ value: meta.kind, label: `${meta.title} (${meta.unit})` }))}
-          />
-          <TextInput label={t("cmms.wave2.meter.value")} type="number" required value={meterValue} onChange={(event) => setMeterValue(event.target.value)} />
-          <TextInput label={t("cmms.wave2.meter.note")} value={meterNote} onChange={(event) => setMeterNote(event.target.value)} />
-          <Button variant="primary" disabled={meterValue === ""} onClick={saveMeter}>{t("common.save")}</Button>
-        </div>
-        {(() => {
-          if (!meterDevice) return null;
-          const readings = listMeterReadings(meterDevice.id).slice(-5).reverse();
-          return readings.length ? (
-            <div className="reorder-list" style={{ marginTop: 8 }}>
-              {readings.map((reading) => {
-                const meta = meterKindMeta(reading.kind);
-                const alarmed = isMeterAlarmed(reading);
-                return (
-                  <div key={reading.id} className="inspection-item">
-                    <span><Icon name="clock" size={13} /> <strong>{meta.title}</strong>: {reading.value} {meta.unit}</span>
-                    <div className="section-actions">
-                      {alarmed && <Badge tone="danger" dot>{t("cmms.wave2.meter.alarm")}</Badge>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : <p className="muted-cell">{t("cmms.wave2.meter.empty")}</p>;
-        })()}
-        <p className="muted-cell" style={{ marginTop: 10 }}><strong>{t("cmms.wave2.meter.config")}</strong></p>
-        <div className="form-grid">
-          <TextInput label={t("cmms.wave2.meter.lastPmHours")} type="number" value={meterPmLast} onChange={(event) => setMeterPmLast(event.target.value)} />
-          <TextInput label={t("cmms.wave2.meter.pmInterval")} type="number" value={meterPmInterval} onChange={(event) => setMeterPmInterval(event.target.value)} />
-          <Button variant="secondary" onClick={() => { if (meterDevice) saveMeterConfig({ deviceId: meterDevice.id, lastPmHoursAt: Number(meterPmLast) || 0, intervalHours: Number(meterPmInterval) || 500 }); setMeterTick((tick) => tick + 1); }}>
-            {t("cmms.wave2.meter.configSaved")}
-          </Button>
-        </div>
-      </Modal>
       {toast && <Toast message={toast} onClose={() => setToast("")} />}
     </div>
   );

@@ -4,25 +4,15 @@ import { useApiClient } from "../core/api/apiContext";
 import { faText } from "../core/localization/i18n";
 import { PERMISSIONS } from "../core/permissions/permissionContext";
 import { rowsToCsvBlob, triggerDownload } from "../core/files/downloadUtils";
-import { formatJalali } from "../core/localization/jalali";
 import { parseImportFile, toNumber } from "../core/files/importUtils";
 import { createMaintenanceService } from "../features/maintenance/maintenanceService";
 import { buildReorderSuggestions } from "../features/maintenance/wave1";
-import { activeReservedForPart, availableStock, buildProformas, priceChanged } from "../features/maintenance/wave2";
-import {
-  addPriceHistory,
-  getPartSupplierMap,
-  listPriceHistory,
-  listReservations,
-  listSuppliers,
-  newId,
-  saveSupplier,
-  setPartSupplier,
-} from "../features/maintenance/wave2Store";
+import { activeReservedForPart, availableStock } from "../features/maintenance/wave2";
+import { listReservations } from "../features/maintenance/wave2Store";
 import type { SparePart } from "../shared/types/domain";
 import { DataTable, type DataTableColumn } from "../shared/components/DataTable";
 import { Modal, Toast } from "../shared/components/overlays";
-import { Badge, Button, Card, CardHeader, PermissionGuard, SectionHeader, SelectInput, TextInput } from "../shared/components/primitives";
+import { Badge, Button, Card, CardHeader, PermissionGuard, SectionHeader, TextInput } from "../shared/components/primitives";
 import { Icon } from "../shared/components/Icon";
 
 export const demoParts: SparePart[] = [
@@ -47,10 +37,6 @@ export function SparePartsPage(): JSX.Element {
   const [loading, setLoading] = useState(!runtimeConfig.demoMode);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<SparePart | null>(null);
-  const [formSupplierId, setFormSupplierId] = useState("");
-  const [supplierDraft, setSupplierDraft] = useState({ name: "", phone: "" });
-  const [suppliers, setSuppliers] = useState(() => listSuppliers());
-  const [proformaOpen, setProformaOpen] = useState(false);
   const [form, setForm] = useState<PartFormState>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -83,11 +69,10 @@ export function SparePartsPage(): JSX.Element {
   const lowCount = parts.filter(lowStock).length;
   const totalValue = parts.reduce((sum, part) => sum + part.quantityOnHand * part.unitCost, 0);
 
-  const openCreate = (): void => { setEditing(null); setForm(emptyForm); setFormSupplierId(""); setModalOpen(true); };
+  const openCreate = (): void => { setEditing(null); setForm(emptyForm); setModalOpen(true); };
   const openEdit = (part: SparePart): void => {
     setEditing(part);
     setForm({ code: part.code, name: part.name, unit: part.unit, quantityOnHand: String(part.quantityOnHand), minimumStock: String(part.minimumStock), unitCost: String(part.unitCost) });
-    setFormSupplierId(getPartSupplierMap()[part.code] ?? "");
     setModalOpen(true);
   };
 
@@ -100,11 +85,6 @@ export function SparePartsPage(): JSX.Element {
       minimumStock: toNumber(form.minimumStock),
       unitCost: toNumber(form.unitCost),
     };
-    // تاریخچه قیمت (همیشه، قبل از ذخیره)
-    if (editing && priceChanged(editing.unitCost, payload.unitCost)) {
-      addPriceHistory({ partCode: editing.code, oldPrice: editing.unitCost, newPrice: payload.unitCost, at: new Date().toISOString() });
-    }
-    if (form.code.trim()) setPartSupplier(form.code.trim(), formSupplierId);
     if (runtimeConfig.demoMode) {
       if (editing) setParts((current) => current.map((part) => part.id === editing.id ? { ...part, ...payload } : part));
       else setParts((current) => [{ id: `sp-${Date.now()}`, code: form.code.trim(), lowStock: payload.quantityOnHand < payload.minimumStock, createdAt: "", updatedAt: "", ...payload }, ...current]);
@@ -184,7 +164,7 @@ export function SparePartsPage(): JSX.Element {
       if (!suggestions.length) return null;
       return (
         <Card className="content-card" padding="md">
-          <CardHeader title={t("cmms.wave1.reorderTitle")} subtitle={t("cmms.wave1.reorderSubtitle")} icon="warning" action={<Button variant="secondary" size="sm" icon="download" onClick={() => setProformaOpen(true)}>{t("cmms.wave2.proforma.title")}</Button>} />
+          <CardHeader title={t("cmms.wave1.reorderTitle")} subtitle={t("cmms.wave1.reorderSubtitle")} icon="warning" />
           <div className="reorder-list">
             {suggestions.map((item) => (
               <div className="inspection-item" key={item.partCode}>
@@ -218,59 +198,6 @@ export function SparePartsPage(): JSX.Element {
         <TextInput label={t("warehouse.stock")} type="number" value={form.quantityOnHand} onChange={(event) => setForm({ ...form, quantityOnHand: event.target.value })} />
         <TextInput label={t("warehouse.minimum")} type="number" value={form.minimumStock} onChange={(event) => setForm({ ...form, minimumStock: event.target.value })} />
         <TextInput label={t("warehouse.unitCost")} type="number" value={form.unitCost} onChange={(event) => setForm({ ...form, unitCost: event.target.value })} />
-        <SelectInput
-          label={t("cmms.wave2.supplier.title")}
-          value={formSupplierId}
-          onChange={(event) => setFormSupplierId(event.target.value)}
-          options={[
-            { value: "", label: t("cmms.wave2.supplier.none") },
-            ...suppliers.map((supplier) => ({ value: supplier.id, label: supplier.name })),
-          ]}
-        />
-        <div className="form-grid" style={{ gridColumn: "1 / -1" }}>
-          <TextInput
-            label={t("cmms.wave2.supplier.new")}
-            placeholder={t("cmms.wave2.supplier.name")}
-            value={supplierDraft.name}
-            onChange={(event) => setSupplierDraft((draft) => ({ ...draft, name: event.target.value }))}
-          />
-          <TextInput
-            label=""
-            placeholder={t("cmms.wave2.supplier.phone")}
-            value={supplierDraft.phone}
-            onChange={(event) => setSupplierDraft((draft) => ({ ...draft, phone: event.target.value }))}
-          />
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={!supplierDraft.name.trim()}
-            onClick={() => {
-              const supplier = { id: newId("sup"), name: supplierDraft.name.trim(), phone: supplierDraft.phone.trim(), email: "" };
-              saveSupplier(supplier);
-              setSuppliers(listSuppliers());
-              setFormSupplierId(supplier.id);
-              setSupplierDraft({ name: "", phone: "" });
-              setToast(t("cmms.wave2.supplier.saved"));
-            }}
-          >
-            {t("common.save")}
-          </Button>
-        </div>
-        {editing && (() => {
-          const history = listPriceHistory(editing.code);
-          if (!history.length) return <p className="muted-cell" style={{ gridColumn: "1 / -1" }}>{t("cmms.wave2.price.empty")}</p>;
-          return (
-            <div style={{ gridColumn: "1 / -1" }}>
-              <p className="muted-cell"><strong>{t("cmms.wave2.price.history")}</strong></p>
-              {history.slice(0, 4).map((entry, index) => (
-                <div className="inspection-item" key={index}>
-                  <span>{formatJalali(entry.at, { style: "short" })}</span>
-                  <span>{entry.oldPrice.toLocaleString()} ← {entry.newPrice.toLocaleString()}</span>
-                </div>
-              ))}
-            </div>
-          );
-        })()}
       </div>
     </Modal>
     <Modal open={importOpen} title={t("warehouse.importTitle")} onClose={() => setImportOpen(false)} footer={<Button variant="primary" onClick={() => setImportOpen(false)}>{t("common.close")}</Button>}>
@@ -284,47 +211,6 @@ export function SparePartsPage(): JSX.Element {
         <Badge tone="success" dot>{t("warehouse.importCreated").replace("{count}", String(importReport.created))}</Badge>
         {importReport.errors.slice(0, 5).map((error) => <Badge key={error} tone="warning" dot>{error}</Badge>)}
       </div>}
-    </Modal>
-    <Modal open={proformaOpen} title={t("cmms.wave2.proforma.title")} onClose={() => setProformaOpen(false)} footer={<Button variant="primary" onClick={() => setProformaOpen(false)}>{t("common.close")}</Button>}>
-      {(() => {
-        const map = getPartSupplierMap();
-        const supplierMap = Object.fromEntries(suppliers.map((supplier) => [supplier.id, supplier]));
-        const proformas = buildProformas(
-          buildReorderSuggestions(parts).map((suggestion) => ({
-            ...suggestion,
-            unitCost: parts.find((part) => part.code === suggestion.partCode)?.unitCost ?? 0,
-            supplierId: map[suggestion.partCode],
-          })),
-          supplierMap,
-        );
-        if (!proformas.length) return <p className="muted-cell">{t("cmms.wave1.reorderEmpty")}</p>;
-        return (
-          <>
-            {proformas.map((proforma) => (
-              <div key={proforma.supplierName} style={{ marginBottom: 12 }}>
-                <p className="muted-cell"><strong>{t("cmms.wave2.supplier.title")}: {proforma.supplierName}</strong> — {t("cmms.wave2.proforma.total").replace("{amount}", proforma.grandTotal.toLocaleString())}</p>
-                {proforma.lines.map((line) => (
-                  <div className="inspection-item" key={`${proforma.supplierName}-${line.partCode}`}>
-                    <span><strong>{line.partCode}</strong> — {line.partName}</span>
-                    <span>{line.quantity} {line.unit} × {line.unitCost.toLocaleString()} = {line.lineTotal.toLocaleString()}</span>
-                  </div>
-                ))}
-              </div>
-            ))}
-            <Button
-              variant="secondary"
-              icon="download"
-              onClick={() => {
-                const rows = [["supplier", "partCode", "partName", "qty", "unitCost", "lineTotal"]];
-                for (const proforma of proformas) for (const line of proforma.lines) rows.push([proforma.supplierName, line.partCode, line.partName, String(line.quantity), String(line.unitCost), String(line.lineTotal)]);
-                triggerDownload(rowsToCsvBlob(rows), "purchase-proforma.csv");
-              }}
-            >
-              {t("cmms.wave2.proforma.export")}
-            </Button>
-          </>
-        );
-      })()}
     </Modal>
     {toast && <Toast message={toast} onClose={() => setToast("")} />}
   </div>;

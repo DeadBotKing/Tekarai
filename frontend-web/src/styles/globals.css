@@ -351,17 +351,18 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .layout-compact .widget-grid { gap: 12px; }
 
 /* نمودارها کوچک‌تر */
-.layout-compact .chart > svg { height: 138px; }
-.layout-compact .chart--bar { height: 148px; }
-.layout-compact .bars { height: 122px; padding: 7px 2px 0; }
-.layout-compact .chart__labels { padding-top: 5px; font-size: 8px; }
+.layout-compact .chart > svg { height: 118px; }
+.layout-compact .chart--bar { height: 126px; }
+.layout-compact .bars { height: 96px; padding: 5px 2px 0; }
+.layout-compact .chart__labels { padding-top: 4px; font-size: 8px; }
 .layout-compact .bar-column__value, .layout-compact .bar-column__label { font-size: 8px; }
-.layout-compact .bar { width: min(22px, 58%); border-radius: 4px 4px 0 0; }
+.layout-compact .bar { width: min(18px, 52%); border-radius: 5px 5px 2px 2px; min-height: 4px; }
 .layout-compact .donut { --donut-shrink: 1; }
-.layout-compact .donut__center strong { font-size: 18px; }
+.layout-compact .donut__center strong { font-size: 17px; }
 .layout-compact .donut__center span { font-size: 9px; }
-.layout-compact .trend-legend, .layout-compact .dash-priority-legend { margin-top: 9px; }
-.layout-compact .health-widget { min-height: 118px; gap: 20px; }
+.layout-compact .trend-legend, .layout-compact .dash-priority-legend { margin-top: 8px; }
+.layout-compact .health-widget { min-height: 104px; gap: 18px; }
+.layout-compact .dash-chart-empty { min-height: 110px; }
 .layout-compact .pulse-row { gap: 14px; }
 .layout-compact .project-pulse, .layout-compact .dash-department-list { gap: 10px; }
 
@@ -380,6 +381,58 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 /* گزارشنامه‌ی هفتگی/جداول کاستوم — فشرده */
 .layout-compact .weekly-report-summary .card strong { font-size: 13px; }
-.layout-compact .weekly-report-table th, .layout-compact .weekly-report-table td { padding: 6px 12px !important; font-size: 10.5px !important; }
 .layout-compact .weekly-report-device__header { padding: 10px 16px !important; }
 .layout-compact .breakdown-sheet__table td { padding: 5px 9px; font-size: 11px; }
+
+/* ---------- یک‌دست‌سازی همه‌ی جدول‌ها (درخواست مدیر — همه یک‌اندازه) ---------- */
+.layout-compact :is(.data-table, .weekly-report-table, .cmms-report__table) th {
+  padding: 8px 11px !important;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border) !important;
+  font-size: 9px !important;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-align: start;
+  white-space: nowrap;
+}
+.layout-compact :is(.data-table, .weekly-report-table, .cmms-report__table) td {
+  padding: 8px 11px !important;
+  color: var(--text);
+  border-bottom: 1px solid var(--border) !important;
+  font-size: 10.5px !important;
+  vertical-align: middle;
+}
+.layout-compact :is(.data-table, .weekly-report-table) th:first-child,
+.layout-compact :is(.data-table, .weekly-report-table) td:first-child { padding-inline-start: 16px !important; }
+.layout-compact :is(.data-table, .weekly-report-table) th:last-child,
+.layout-compact :is(.data-table, .weekly-report-table) td:last-child { padding-inline-end: 16px !important; }
+.layout-compact :is(.weekly-report-table, .cmms-report__table) tbody tr:hover td { background: color-mix(in srgb, var(--primary-soft) 42%, transparent); }
+
+/* ---------- زیباسازی گرافیک‌ها (گرادیان، گوشه‌های نرم، سایه‌ی ملایم) ---------- */
+.bar { background: var(--bar-fill, var(--primary)); }
+.bar { background: linear-gradient(180deg, color-mix(in srgb, var(--bar-fill, var(--primary)) 68%, #fff) 0%, var(--bar-fill, var(--primary)) 100%); box-shadow: inset 0 -6px 10px rgb(0 0 0 / .05); }
+.bar-column:hover .bar { box-shadow: 0 6px 14px color-mix(in srgb, var(--bar-fill, var(--primary)) 30%, transparent), inset 0 -6px 10px rgb(0 0 0 / .05); }
+.chart__grid { stroke: color-mix(in srgb, var(--border) 62%, transparent); }
+.layout-compact .dashboard-widget, .layout-compact .metric-card, .layout-compact .content-card { border-radius: 14px; }
+.layout-compact .dashboard-widget.card--padding-md { padding: 14px 16px 16px; }
+.layout-compact .dashboard-widget .card__header { margin-bottom: 10px; }
+.layout-compact .card__heading-icon { width: 28px; height: 28px; border-radius: 7px; }
+
+/* ---------- قاب آبی برند دور کادرها به‌عنوان جداکننده (درخواست مدیر) ---------- */
+:root {
+  --frame-border: color-mix(in srgb, var(--primary) 38%, var(--border));
+  --frame-shadow: 0 1px 2px rgb(40 120 255 / .08), 0 8px 24px rgb(40 120 255 / .12);
+  --frame-shadow-hover: 0 2px 5px rgb(40 120 255 / .13), 0 16px 36px rgb(40 120 255 / .18);
+}
+:root[data-theme="dark"] {
+  --frame-border: color-mix(in srgb, var(--primary) 46%, var(--border));
+  --frame-shadow: 0 1px 2px rgb(24 90 230 / .22), 0 10px 28px rgb(15 60 180 / .30);
+  --frame-shadow-hover: 0 2px 5px rgb(24 90 230 / .30), 0 16px 38px rgb(15 70 210 / .38);
+}
+.card { border-color: var(--frame-border); box-shadow: var(--frame-shadow); }
+.card:hover { box-shadow: var(--frame-shadow-hover); }
+@media print {
+  .card { border-color: #bbb !important; box-shadow: none !important; }
+}

@@ -1,4 +1,4 @@
-import { useId, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useId, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from "react";
 
 interface ChartProps {
   data: number[];
@@ -22,7 +22,7 @@ const pointsFor = (data: number[], width: number, height: number, padding = 12):
 };
 
 export function LineChart({ data, labels = [], color = "#2878ff", height = 180, ariaLabel, showAxis = true }: ChartProps): JSX.Element {
-  const gradientId = useId();
+  const gradientId = useId().replace(/:/g, "");
   const points = pointsFor(data, 560, height);
   const area = data.length ? `12,${height - 12} ${points} 548,${height - 12}` : "";
   return <div className="chart" role="img" aria-label={ariaLabel}><svg viewBox={`0 0 560 ${height}`} preserveAspectRatio="none"><defs><linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor={color} stopOpacity=".24" /><stop offset="1" stopColor={color} stopOpacity="0" /></linearGradient></defs>{showAxis && [0, 1, 2, 3].map((line) => <line key={line} x1="12" x2="548" y1={12 + line * ((height - 24) / 3)} y2={12 + line * ((height - 24) / 3)} className="chart__grid" />)}<polygon points={area} fill={`url(#${gradientId})`} /><polyline points={points} fill="none" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />{data.map((value, index) => { const coordinate = points.split(" ")[index]?.split(","); return coordinate ? <circle key={`${value}-${index}`} cx={coordinate[0]} cy={coordinate[1]} fill="var(--surface-1)" r="4" stroke={color} strokeWidth="2" /> : null; })}</svg>{labels.length > 0 && <div className="chart__labels">{labels.map((label) => <span key={label}>{label}</span>)}</div>}</div>;
@@ -33,7 +33,7 @@ export function BarChart({ data, labels = [], color = "#2878ff", ariaLabel, onBa
   return <div className="chart chart--bar" role="img" aria-label={ariaLabel}><div className="bars">{data.map((value, index) => {
     const fill = barColors?.[index] ?? color;
     const clickable = Boolean(onBarClick);
-    return <div className={`bar-column${clickable ? " bar-column--clickable" : ""}`} key={`${labels[index] ?? index}`} {...(clickable ? { role: "button", tabIndex: 0, onClick: () => onBarClick?.(index), onKeyDown: (event: ReactKeyboardEvent) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onBarClick?.(index); } }, "aria-label": `${labels[index] ?? index}: ${value}` } : {})}><span className="bar-column__value">{value}</span><div className="bar" style={{ height: `${Math.max(5, (value / max) * 100)}%`, background: fill }} /><span className="bar-column__label">{labels[index] ?? index + 1}</span></div>;
+    return <div className={`bar-column${clickable ? " bar-column--clickable" : ""}`} key={`${labels[index] ?? index}`} {...(clickable ? { role: "button", tabIndex: 0, onClick: () => onBarClick?.(index), onKeyDown: (event: ReactKeyboardEvent) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onBarClick?.(index); } }, "aria-label": `${labels[index] ?? index}: ${value}` } : {})}><span className="bar-column__value">{value}</span><div className="bar" style={{ height: `${Math.max(5, (value / max) * 100)}%`, "--bar-fill": fill } as CSSProperties} /><span className="bar-column__label">{labels[index] ?? index + 1}</span></div>;
   })}</div></div>;
 }
 
@@ -57,6 +57,7 @@ export interface TrendSeries {
 // Multi-series line chart on a shared vertical scale. Used by the maintenance
 // dashboard to overlay "submitted" vs "completed" work orders over time.
 export function TrendChart({ series, labels = [], height = 200, ariaLabel }: { series: TrendSeries[]; labels?: string[]; height?: number; ariaLabel: string }): JSX.Element {
+  const gradientId = useId().replace(/:/g, "");
   const width = 560;
   const padding = 14;
   const allValues = series.flatMap((entry) => entry.data);
@@ -72,7 +73,20 @@ export function TrendChart({ series, labels = [], height = 200, ariaLabel }: { s
       .join(" ");
   return <div className="chart" role="img" aria-label={ariaLabel}>
     <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+      <defs>
+        {series.map((entry, seriesIndex) => (
+          <linearGradient key={`${gradientId}-${seriesIndex}`} id={`${gradientId}-${seriesIndex}`} x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0" stopColor={entry.color} stopOpacity=".16" />
+            <stop offset="1" stopColor={entry.color} stopOpacity="0" />
+          </linearGradient>
+        ))}
+      </defs>
       {[0, 1, 2, 3].map((line) => <line key={line} x1={padding} x2={width - padding} y1={padding + line * ((height - padding * 2) / 3)} y2={padding + line * ((height - padding * 2) / 3)} className="chart__grid" />)}
+      {series.map((entry, seriesIndex) => {
+        if (entry.data.length === 0) return null;
+        const area = `${padding},${height - padding} ${toPoints(entry.data)} ${width - padding},${height - padding}`;
+        return <polygon key={`area-${entry.label}`} points={area} fill={`url(#${gradientId}-${seriesIndex})`} />;
+      })}
       {series.map((entry) => <polyline key={entry.label} points={toPoints(entry.data)} fill="none" stroke={entry.color} strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />)}
       {series.map((entry) => entry.data.map((_value, index) => {
         const coordinate = toPoints(entry.data).split(" ")[index]?.split(",");

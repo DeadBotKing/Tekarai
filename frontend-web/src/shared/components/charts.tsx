@@ -98,3 +98,63 @@ export function TrendChart({ series, labels = [], height = 200, ariaLabel }: { s
   </div>;
 }
 
+
+export interface PieSlice {
+  label: string;
+  value: number;
+  color: string;
+}
+
+// Multi-slice donut for share-of-total comparison within a single window
+// (e.g. submitted vs completed vs cancelled in the selected range).
+export function PieChart({ slices, size = 146, ariaLabel, centerLabel }: { slices: PieSlice[]; size?: number; ariaLabel: string; centerLabel?: string }): JSX.Element {
+  const radius = 40;
+  const circumference = 2 * Math.PI * radius;
+  const total = slices.reduce((sum, slice) => sum + Math.max(0, slice.value), 0);
+  const positiveCount = slices.filter((slice) => slice.value > 0).length;
+  const gap = positiveCount > 1 ? 1.2 : 0;
+  let accumulated = 0;
+  const segments = total > 0
+    ? slices.filter((slice) => slice.value > 0).map((slice) => {
+        const length = (slice.value / total) * circumference;
+        const segment = { ...slice, dash: Math.max(length - gap, 0.4), offset: accumulated };
+        accumulated += length;
+        return segment;
+      })
+    : [];
+  return (
+    <div className="pie-chart" role="img" aria-label={ariaLabel}>
+      <div className="pie-chart__ring" style={{ width: size, height: size }}>
+        <svg viewBox="0 0 100 100">
+          <circle className="pie-chart__track" cx="50" cy="50" r={radius} />
+          {segments.map((segment) => (
+            <circle
+              key={segment.label}
+              cx="50"
+              cy="50"
+              r={radius}
+              fill="none"
+              stroke={segment.color}
+              strokeWidth="13"
+              strokeDasharray={`${segment.dash} ${circumference - segment.dash}`}
+              strokeDashoffset={circumference * 0.25 - segment.offset}
+            />
+          ))}
+        </svg>
+        <div className="pie-chart__center">
+          <strong>{total}</strong>
+          {centerLabel ? <span>{centerLabel}</span> : null}
+        </div>
+      </div>
+      <div className="pie-chart__legend">
+        {slices.map((slice) => (
+          <span key={slice.label}>
+            <i className="legend-dot" style={{ background: slice.color }} />
+            {slice.label}
+            <strong>{slice.value}</strong>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}

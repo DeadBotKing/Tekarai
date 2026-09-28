@@ -22,7 +22,7 @@ import type {
   WorkOrder,
   WorkOrderStatus,
 } from "../shared/types/domain";
-import { BarChart, DonutChart, TrendChart } from "../shared/components/charts";
+import { BarChart, DonutChart, PieChart, TrendChart } from "../shared/components/charts";
 import { Icon } from "../shared/components/Icon";
 import { taxonomyLabel } from "../core/localization/taxonomyLabel";
 import {
@@ -123,6 +123,7 @@ export function MaintenanceDashboardPage(): JSX.Element {
   const api = useApiClient();
   const navigate = useNavigate();
   const service = useMemo(() => createMaintenanceService(api), [api]);
+  const [trendView, setTrendView] = useState<"pie" | "trend">("pie");
   const [orders, setOrders] = useState<WorkOrder[]>(
     runtimeConfig.demoMode ? demoWorkOrders : [],
   );
@@ -598,9 +599,29 @@ export function MaintenanceDashboardPage(): JSX.Element {
               title={t("cmms.dash.trend")}
               subtitle={t("cmms.dash.trendCaption")}
               icon="activity"
+              action={
+                <div className="segmented-control">
+                  <button type="button" className={trendView === "pie" ? "is-active" : ""} onClick={() => setTrendView("pie")}>
+                    {t("cmms.dash.viewPie")}
+                  </button>
+                  <button type="button" className={trendView === "trend" ? "is-active" : ""} onClick={() => setTrendView("trend")}>
+                    {t("cmms.dash.viewTrend")}
+                  </button>
+                </div>
+              }
             />
             {stats.total === 0 ? (
               <div className="dash-chart-empty">{t("cmms.dash.rangeEmpty")}</div>
+            ) : trendView === "pie" ? (
+              <PieChart
+                ariaLabel={t("cmms.dash.trend")}
+                centerLabel={t("cmms.dash.pieCenter")}
+                slices={[
+                  { label: t("cmms.woStatus.completed"), value: stats.completed, color: "#22c55e" },
+                  { label: t("cmms.dash.legendOpen"), value: stats.open, color: accentHex },
+                  { label: t("cmms.woStatus.cancelled"), value: stats.cancelled, color: "#e6a23c" },
+                ]}
+              />
             ) : (
               <TrendChart
                 series={[

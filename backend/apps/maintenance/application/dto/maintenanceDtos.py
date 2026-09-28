@@ -99,6 +99,20 @@ class WorkOrderDto:
     closedAt: str = ""
     slaDueAt: str = ""
     overdue: bool = False
+    failureType: str = ""
+    failedComponent: str = ""
+    failureSymptom: str = ""
+    rootCause: str = ""
+    actionTaken: str = ""
+    repeatFailure: bool = False
+    failureReportedAt: str = ""
+    repairStartedAt: str = ""
+    repairFinishedAt: str = ""
+    returnedToServiceAt: str = ""
+    downtimeMinutes: int = 0
+    labourHours: str = "0"
+    labourCost: str = "0"
+    partsCost: str = "0"
 
 
 @dataclass(frozen=True)
@@ -236,6 +250,20 @@ def workOrderDtoFromDomain(order: WorkOrder, now: datetime | None = None) -> Wor
         closedAt=order.closedAt.isoformat() if order.closedAt else "",
         slaDueAt=dueAt.isoformat() if dueAt else "",
         overdue=order.isOverdue(referenceNow),
+        failureType=order.failureType,
+        failedComponent=order.failedComponent,
+        failureSymptom=order.failureSymptom,
+        rootCause=order.rootCause,
+        actionTaken=order.actionTaken,
+        repeatFailure=order.repeatFailure,
+        failureReportedAt=order.failureReportedAt.isoformat() if order.failureReportedAt else "",
+        repairStartedAt=order.repairStartedAt.isoformat() if order.repairStartedAt else "",
+        repairFinishedAt=order.repairFinishedAt.isoformat() if order.repairFinishedAt else "",
+        returnedToServiceAt=order.returnedToServiceAt.isoformat() if order.returnedToServiceAt else "",
+        downtimeMinutes=order.downtimeMinutes,
+        labourHours=str(order.labourHours),
+        labourCost=str(order.labourCost),
+        partsCost=str(order.partsCost),
     )
 
 

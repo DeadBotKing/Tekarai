@@ -8,9 +8,9 @@ import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { rowsToCsvBlob, triggerDownload } from "../core/files/downloadUtils";
 import { MaintenanceAttachments } from "../features/maintenance/MaintenanceAttachments";
 import { createMaintenanceService } from "../features/maintenance/maintenanceService";
-import { FAILURE_TREE, formatFailureNote } from "../features/maintenance/wave1";
 import { reservationsForOrder } from "../features/maintenance/wave2";
 import { closeReservation, listReservations, newId, saveReservation, syncReservationsFromServer } from "../features/maintenance/wave2Store";
+import { FAILURE_TREE, formatFailureNote } from "../features/maintenance/wave1";
 import { demoDevices, demoWorkOrders } from "../features/maintenance/maintenanceDemoData";
 import type {
   LabourEntry,
@@ -40,6 +40,7 @@ import {
   TextArea,
   TextInput,
 } from "../shared/components/primitives";
+import { JalaliDatePicker } from "../shared/components/JalaliDatePicker";
 import { Icon } from "../shared/components/Icon";
 import { taxonomyLabel } from "../core/localization/taxonomyLabel";
 import { CreatableSelect } from "../shared/components/CreatableSelect";
@@ -223,6 +224,78 @@ export function WorkOrdersPage(): JSX.Element {
   const [reservePartCode, setReservePartCode] = useState("");
   const [reserveQty, setReserveQty] = useState("1");
   const [, setReservationsTick] = useState(0);
+
+
+  // --- گزارشنامه‌ی خرابی هنگام اتمام خرابی‌ها (موج سوم) ---
+  interface CompleteForm {
+    reasonCode: string;
+    failureSymptom: string;
+    rootCause: string;
+    actionTaken: string;
+    repeatFailure: boolean;
+    repairDate: string;
+    downtimeMinutes: string;
+    labourHours: string;
+    labourCost: string;
+    partsCost: string;
+    resolutionNote: string;
+  }
+  const emptyCompleteForm: CompleteForm = {
+    reasonCode: "", failureSymptom: "", rootCause: "", actionTaken: "",
+    repeatFailure: false, repairDate: "", downtimeMinutes: "",
+    labourHours: "", labourCost: "", partsCost: "", resolutionNote: "",
+  };
+  const [completeOrder, setCompleteOrder] = useState<WorkOrder | null>(null);
+  const [reportOrder, setReportOrder] = useState<WorkOrder | null>(null);
+  const [completeForm, setCompleteForm] = useState<CompleteForm>(emptyCompleteForm);
+  const setCompleteField = <K extends keyof CompleteForm>(key: K, value: CompleteForm[K]): void =>
+    setCompleteForm((current) => ({ ...current, [key]: value }));
+
+  const openCompleteModal = (order: WorkOrder): void => {
+    setCompleteForm({
+      ...emptyCompleteForm,
+      resolutionNote: order.resolutionNote ?? "",
+      repairDate: new Date().toISOString().slice(0, 10),
+    });
+    setCompleteOrder(order);
+  };
+
+  const submitCompletion = async (): Promise<void> => {
+    if (!completeOrder) return;
+    const [categoryCode = ""] = completeForm.reasonCode.split("-");
+    const taggedNote = completeForm.reasonCode
+      ? formatFailureNote(categoryCode, completeForm.reasonCode, completeForm.resolutionNote)
+      : completeForm.resolutionNote.trim();
+    const order = completeOrder;
+    setCompleteOrder(null);
+    if (runtimeConfig.demoMode) {
+      setOrders((current) =>
+        current.map((item) =>
+          item.id === order.id ? { ...item, status: "completed", resolutionNote: taggedNote } : item,
+        ),
+      );
+      setToast(t("cmms.wo.statusSuccess"));
+      return;
+    }
+    try {
+      await service.recordWorkOrderClosure(order.id, {
+        failureSymptom: completeForm.failureSymptom.trim(),
+        rootCause: completeForm.rootCause.trim(),
+        actionTaken: completeForm.actionTaken.trim(),
+        repeatFailure: completeForm.repeatFailure,
+        repairFinishedAt: completeForm.repairDate || "",
+        downtimeMinutes: Number(completeForm.downtimeMinutes) || 0,
+        labourHours: completeForm.labourHours || "0",
+        labourCost: completeForm.labourCost || "0",
+        partsCost: completeForm.partsCost || "0",
+      });
+      await service.changeWorkOrderStatus(order.id, "completed", taggedNote);
+      setToast(t("cmms.wo.statusSuccess"));
+      await refresh();
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : t("cmms.wo.saveFailed"));
+    }
+  };
 
   // هم‌گام‌سازی تیمی: رزروهای سرور را در باز شدن صفحه بکشیم
   useEffect(() => {
@@ -785,6 +858,12 @@ export function WorkOrdersPage(): JSX.Element {
     ? partUsage.reduce((total, usage) => total + usage.totalCost, 0)
     : (costSummary?.partsCost ?? 0);
 
+  /** برچسب «کد/علت خرابی» از روی یادداشت موج ۱ — پیشوند ساخت‌یافته. */
+  const breakdownSymptom = (note: string): string => {
+    const match = /کد\/علت خرابی: \[([^\]]+)\]/.exec(note ?? "");
+    return match ? match[1] : "";
+  };
+
   const columns: DataTableColumn<WorkOrder>[] = [
     {
       key: "title",
@@ -1220,6 +1299,13 @@ export function WorkOrdersPage(): JSX.Element {
                 {t("cmms.wo.resolution")}: {activeOrder.resolutionNote}
               </p>
             )}
+            {activeOrder.status === "completed" && activeOrder.orderType === "corrective" && (
+              <div className="cmms-transition-row">
+                <Button variant="secondary" size="sm" icon="download" onClick={() => { setReportOrder(activeOrder); setActiveOrder(null); }}>
+                  چاپ گزارشنامه‌ی خرابی
+                </Button>
+              </div>
+            )}
             <div className="detail-panel__description" style={{ marginTop: 12 }}>
               <strong>{t("cmms.wave2.reserve.title")}</strong>
             </div>
@@ -1377,6 +1463,11 @@ export function WorkOrdersPage(): JSX.Element {
                       size="sm"
                       onClick={() => {
                         const current = activeOrder;
+                        if (target === "completed" && current.orderType === "corrective") {
+                          openCompleteModal(current);
+                          setActiveOrder(null);
+                          return;
+                        }
                         setActiveOrder(null);
                         void changeStatus(current, target);
                       }}
@@ -1684,6 +1775,122 @@ export function WorkOrdersPage(): JSX.Element {
         onCreated={setConsumePartId}
       />
 
+      <Modal
+        open={Boolean(completeOrder)}
+        title={`تکمیل و بستن — گزارشنامه‌ی خرابی${completeOrder ? ` (${completeOrder.title})` : ""}`}
+        onClose={() => setCompleteOrder(null)}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setCompleteOrder(null)}>{t("cmms.common.cancel")}</Button>
+            <Button variant="primary" icon="check" onClick={() => void submitCompletion()}>ثبت گزارشنامه و بستن</Button>
+          </>
+        }
+      >
+        <div className="form-grid form-grid--two">
+          <SelectInput
+            label="نوع و علت خرابی (کد موج ۱)"
+            value={completeForm.reasonCode}
+            onChange={(event) => setCompleteField("reasonCode", event.target.value)}
+            options={[
+              { value: "", label: "— بدون کد —" },
+              ...FAILURE_TREE.map((category) => ({
+                value: category.code,
+                label: category.title,
+              })),
+              ...FAILURE_TREE.flatMap((category) =>
+                category.reasons.map((reason) => ({
+                  value: reason.code,
+                  label: `${category.title} / ${reason.title}`,
+                })),
+              ),
+            ]}
+          />
+          <SelectInput
+            label="خرابی تکراری بود؟"
+            value={completeForm.repeatFailure ? "yes" : "no"}
+            onChange={(event) => setCompleteField("repeatFailure", event.target.value === "yes")}
+            options={[
+              { value: "no", label: "خیر" },
+              { value: "yes", label: "بله — دفعه‌ی قبلی هم به همین علت بود" },
+            ]}
+          />
+          <TextArea
+            label="علائم ظاهرشده (صدا، دود، لرزش، توقف…)"
+            value={completeForm.failureSymptom}
+            onChange={(event) => setCompleteField("failureSymptom", event.target.value)}
+            rows={2}
+          />
+          <TextArea
+            label="علت ریشه‌ای (تشخیص تکنسین)"
+            value={completeForm.rootCause}
+            onChange={(event) => setCompleteField("rootCause", event.target.value)}
+            rows={2}
+          />
+          <TextArea
+            label="اقدام انجام‌شده (تعمیر/تعویض)"
+            value={completeForm.actionTaken}
+            onChange={(event) => setCompleteField("actionTaken", event.target.value)}
+            rows={2}
+          />
+          <JalaliDatePicker
+            label="تاریخ اتمام تعمیر"
+            value={completeForm.repairDate}
+            onChange={(value) => setCompleteField("repairDate", value)}
+          />
+          <div className="form-grid form-grid--two">
+            <TextInput label="توقف (دقیقه)" type="number" value={completeForm.downtimeMinutes} onChange={(event) => setCompleteField("downtimeMinutes", event.target.value)} />
+            <TextInput label="ساعت تعمیر" type="number" value={completeForm.labourHours} onChange={(event) => setCompleteField("labourHours", event.target.value)} />
+            <TextInput label="هزینه‌ی دستمزد (ریال)" type="number" value={completeForm.labourCost} onChange={(event) => setCompleteField("labourCost", event.target.value)} />
+            <TextInput label="هزینه‌ی قطعات (ریال)" type="number" value={completeForm.partsCost} onChange={(event) => setCompleteField("partsCost", event.target.value)} />
+          </div>
+          <TextArea
+            label={t("cmms.wo.resolution")}
+            value={completeForm.resolutionNote}
+            onChange={(event) => setCompleteField("resolutionNote", event.target.value)}
+            rows={2}
+          />
+        </div>
+      </Modal>
+
+      {reportOrder && (
+        <Modal
+          open
+          title={`گزارشنامه‌ی رسمی خرابی — ${reportOrder.title}`}
+          onClose={() => setReportOrder(null)}
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setReportOrder(null)}>{t("cmms.common.close")}</Button>
+              <Button variant="primary" icon="download" onClick={() => window.print()}>چاپ گزارشنامه</Button>
+            </>
+          }
+        >
+          <div className="breakdown-sheet" id="breakdown-sheet">
+            <h2 className="breakdown-sheet__title">گزارشنامه‌ی خرابی (CMMS)</h2>
+            <table className="breakdown-sheet__table">
+              <tbody>
+                <tr><td>عنوان اقدام</td><td>{reportOrder.title}</td></tr>
+                <tr><td>کد درخواست کار</td><td>{reportOrder.id.slice(0, 8).toUpperCase()}</td></tr>
+                <tr><td>تاریخ ثبت</td><td>{reportOrder.createdAt ? (() => { const d = new Date(reportOrder.createdAt); return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("fa-IR"); })() : "—"}</td></tr>
+                <tr><td>نوع / وضعیت</td><td>{reportOrder.orderType === "corrective" ? "خرابی (اصلاحی)" : reportOrder.orderType} / {reportOrder.status}</td></tr>
+                <tr><td>کد و علت خرابی</td><td>{reportOrder.failureType || breakdownSymptom(reportOrder.resolutionNote) || "—"}</td></tr>
+                <tr><td>علائم</td><td>{reportOrder.failureSymptom || "—"}</td></tr>
+                <tr><td>علت ریشه‌ای</td><td>{reportOrder.rootCause || "—"}</td></tr>
+                <tr><td>اقدام انجام‌شده</td><td>{reportOrder.actionTaken || reportOrder.resolutionNote || "—"}</td></tr>
+                <tr><td>اتمام تعمیر / توقف</td><td>{`${reportOrder.repairFinishedAt ? reportOrder.repairFinishedAt.slice(0, 10) : "—"}${reportOrder.downtimeMinutes ? ` — ${reportOrder.downtimeMinutes.toLocaleString()} دقیقه توقف` : ""}`}</td></tr>
+                <tr><td>ساعت و هزینه</td><td>{`${(reportOrder.labourHours ?? 0).toLocaleString()} ساعت / دستمزد ${(reportOrder.labourCost ?? 0).toLocaleString()} + قطعات ${(reportOrder.partsCost ?? 0).toLocaleString()} ریال`}</td></tr>
+                <tr><td>تکنسین</td><td>{reportOrder.assignedToName || "—"}</td></tr>
+                <tr><td>خروج از ابتدای گزارشنامه</td><td> </td></tr>
+              </tbody>
+            </table>
+            <div className="breakdown-sheet__signature">
+              <div>امضای تعمیرکار: ______________</div>
+              <div>امضای سرپرست تعمیرات: ______________</div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {toast && <Toast message={toast} onClose={() => setToast("")} />}
       {toast && <Toast message={toast} onClose={() => setToast("")} />}
     </div>
   );

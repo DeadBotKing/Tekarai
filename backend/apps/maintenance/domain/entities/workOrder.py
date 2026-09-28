@@ -10,6 +10,7 @@ the workflow stays predictable (BR-WO-001).
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal
 from datetime import datetime
 from typing import Any
 
@@ -58,6 +59,20 @@ class WorkOrder(AggregateRoot):
         updatedAt: datetime | None = None,
         closedAt: datetime | None = None,
         deletedAt: datetime | None = None,
+        failureType: str = "",
+        failedComponent: str = "",
+        failureSymptom: str = "",
+        rootCause: str = "",
+        actionTaken: str = "",
+        repeatFailure: bool = False,
+        failureReportedAt: datetime | None = None,
+        repairStartedAt: datetime | None = None,
+        repairFinishedAt: datetime | None = None,
+        returnedToServiceAt: datetime | None = None,
+        downtimeMinutes: int = 0,
+        labourHours: Decimal = Decimal("0"),
+        labourCost: Decimal = Decimal("0"),
+        partsCost: Decimal = Decimal("0"),
     ) -> None:
         super().__init__(id)
         self.tenantId = tenantId
@@ -75,6 +90,20 @@ class WorkOrder(AggregateRoot):
         self.updatedAt = updatedAt
         self.closedAt = closedAt
         self.deletedAt = deletedAt
+        self.failureType = failureType
+        self.failedComponent = failedComponent
+        self.failureSymptom = failureSymptom
+        self.rootCause = rootCause
+        self.actionTaken = actionTaken
+        self.repeatFailure = repeatFailure
+        self.failureReportedAt = failureReportedAt
+        self.repairStartedAt = repairStartedAt
+        self.repairFinishedAt = repairFinishedAt
+        self.returnedToServiceAt = returnedToServiceAt
+        self.downtimeMinutes = downtimeMinutes
+        self.labourHours = labourHours
+        self.labourCost = labourCost
+        self.partsCost = partsCost
 
     @staticmethod
     def submit(

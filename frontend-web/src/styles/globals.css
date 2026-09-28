@@ -315,3 +315,26 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .nav-item--sub { min-height: 33px; padding-inline-start: 34px; color: var(--sidebar-muted); font-size: 11px; font-weight: 600; }
 .nav-item--sub:hover { color: #fff; }
 .nav-item--sub.is-active { color: #fff; background: rgb(255 255 255 / .08); }
+
+/* ---------- برگه‌ی چاپ گزارشنامه + گزارش هفتگی ---------- */
+.weekly-report-summary { margin-bottom: 16px; }
+.weekly-report-summary .card { display: flex; flex-direction: column; gap: 4px; }
+.weekly-report-summary .card span { font-size: 11px; color: var(--muted); }
+.weekly-report-summary .card strong { font-size: 16px; }
+.weekly-report-device { break-inside: avoid; }
+.weekly-report-device th, .weekly-report-device td { border-bottom: none; }
+.breakdown-sheet { direction: rtl; }
+.breakdown-sheet__title { margin: 0 0 10px; font-size: 16px; font-weight: 800; text-align: center; }
+.breakdown-sheet__table { width: 100%; border-collapse: collapse; }
+.breakdown-sheet__table td { padding: 7px 10px; border: 1px solid var(--border); font-size: 12px; }
+.breakdown-sheet__table td:first-child { width: 30%; color: var(--muted); font-weight: 700; }
+.breakdown-sheet__signature { display: flex; justify-content: space-between; gap: 24px; margin-top: 18px; padding-top: 12px; border-top: 1px dashed var(--border); font-size: 12px; }
+
+@media print {
+  .no-print, .sidebar, .topbar, .sidebar-backdrop, .mobile-menu-button { display: none !important; }
+  .app-shell { display: block !important; }
+  .app-shell__main { margin: 0 !important; }
+  .page { padding: 0 !important; }
+  .weekly-report-device__meta .badge { border: 1px solid #666; }
+  @page { size: A4; margin: 12mm; }
+}

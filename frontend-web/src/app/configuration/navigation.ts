@@ -45,6 +45,7 @@ export const navigationConfig: NavigationItem[] = [
     icon: "cpu",
     children: [
       { id: "maintenanceDashboard", label: "nav.maintenanceDashboard", icon: "chart", route: "/app/maintenance/dashboard", permission: PERMISSIONS.maintenanceWorkOrderList },
+      { id: "maintenanceWarehouse", label: "nav.warehouse", icon: "layers", route: "/app/maintenance/warehouse", permission: PERMISSIONS.maintenanceInventoryView },
       {
         id: "maintenanceAssets",
         label: "nav.cmmsAssets",
@@ -66,7 +67,6 @@ export const navigationConfig: NavigationItem[] = [
           { id: "maintenanceWorkOrders", label: "nav.workOrders", icon: "checkSquare", route: "/app/maintenance/work-orders", permission: PERMISSIONS.maintenanceWorkOrderList },
           { id: "maintenanceInspections", label: "nav.inspections", icon: "checkSquare", route: "/app/maintenance/inspections", permission: PERMISSIONS.maintenanceWorkOrderList },
           { id: "maintenancePmCalendar", label: "nav.pmCalendar", icon: "calendar", route: "/app/maintenance/pm-calendar", permission: PERMISSIONS.maintenanceDeviceList },
-          { id: "maintenanceWarehouse", label: "nav.warehouse", icon: "layers", route: "/app/maintenance/warehouse", permission: PERMISSIONS.maintenanceInventoryView },
         ],
       },
       {
@@ -77,6 +77,7 @@ export const navigationConfig: NavigationItem[] = [
         children: [
           { id: "maintenanceFleet", label: "nav.registryFleet", icon: "chart", route: "/app/maintenance/fleet", permission: PERMISSIONS.maintenanceDeviceList },
           { id: "maintenanceReports", label: "nav.maintenanceReports", icon: "chart", route: "/app/maintenance/reports", permission: PERMISSIONS.maintenanceWorkOrderList },
+          { id: "maintenanceWorkReport", label: "nav.workReport", icon: "download", route: "/app/maintenance/work-report", permission: PERMISSIONS.maintenanceWorkOrderList },
         ],
       },
     ],

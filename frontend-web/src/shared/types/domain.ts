@@ -310,7 +310,21 @@ export interface WorkOrder {
   createdAt: string;
   closedAt: string;
   slaDueAt?: string;
-  overdue?: boolean;
+  overdue?: boolean;  // -- Phase 26 closure facts (گزارشنامه‌ی خرابی) — فقط برای کارهای بسته‌شده پر می‌شود
+  failureType?: string;
+  failedComponent?: string;
+  failureSymptom?: string;
+  rootCause?: string;
+  actionTaken?: string;
+  repeatFailure?: boolean;
+  failureReportedAt?: string;
+  repairStartedAt?: string;
+  repairFinishedAt?: string;
+  returnedToServiceAt?: string;
+  downtimeMinutes?: number;
+  labourHours?: number;
+  labourCost?: number;
+  partsCost?: number;
 }
 
 // -- Phase 26: equipment registry -------------------------------------------------

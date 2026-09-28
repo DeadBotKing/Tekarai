@@ -55,7 +55,20 @@ interface WorkOrderDto {
   createdAt: string;
   closedAt: string;
   slaDueAt: string;
-  overdue: boolean;
+  overdue: boolean;  failureType: string;
+  failedComponent: string;
+  failureSymptom: string;
+  rootCause: string;
+  actionTaken: string;
+  repeatFailure: boolean;
+  failureReportedAt: string;
+  repairStartedAt: string;
+  repairFinishedAt: string;
+  returnedToServiceAt: string;
+  downtimeMinutes: number;
+  labourHours: string;
+  labourCost: string;
+  partsCost: string;
 }
 
 interface MaintenanceAttachmentDto {
@@ -253,6 +266,20 @@ const toWorkOrder = (dto: WorkOrderDto): WorkOrder => ({
   closedAt: dto.closedAt ?? "",
   slaDueAt: dto.slaDueAt ?? "",
   overdue: Boolean(dto.overdue),
+  failureType: dto.failureType ?? undefined,
+  failedComponent: dto.failedComponent ?? undefined,
+  failureSymptom: dto.failureSymptom ?? undefined,
+  rootCause: dto.rootCause ?? undefined,
+  actionTaken: dto.actionTaken ?? undefined,
+  repeatFailure: dto.repeatFailure ?? undefined,
+  failureReportedAt: dto.failureReportedAt ?? undefined,
+  repairStartedAt: dto.repairStartedAt ?? undefined,
+  repairFinishedAt: dto.repairFinishedAt ?? undefined,
+  returnedToServiceAt: dto.returnedToServiceAt ?? undefined,
+  downtimeMinutes: dto.downtimeMinutes ?? undefined,
+  labourHours: dto.labourHours ? Number(dto.labourHours) : undefined,
+  labourCost: dto.labourCost ? Number(dto.labourCost) : undefined,
+  partsCost: dto.partsCost ? Number(dto.partsCost) : undefined,
 });
 
 const toSparePart = (dto: SparePartDto): SparePart => ({
@@ -434,6 +461,11 @@ export interface MaintenanceService {
     signal?: AbortSignal,
   ) => Promise<SparePart>;
   listWorkOrderParts: (id: string, signal?: AbortSignal) => Promise<WorkOrderPartUsage[]>;
+  recordWorkOrderClosure: (
+    id: string,
+    values: Record<string, string | number | boolean>,
+    signal?: AbortSignal,
+  ) => Promise<void>;
   consumeSparePart: (
     workOrderId: string,
     partId: string,
@@ -594,6 +626,9 @@ export const createMaintenanceService = (api: ApiClient): MaintenanceService => 
       { signal, retry: 0 },
     );
     return toSparePart(dto);
+  },
+  recordWorkOrderClosure: async (id, values, signal) => {
+    await api.patch(apiEndpoints.maintenance.workOrderClosure(id), values, { signal, retry: 0 });
   },
   listWorkOrderParts: async (id, signal) => {
     const dtos = await api.get<WorkOrderPartUsageDto[]>(

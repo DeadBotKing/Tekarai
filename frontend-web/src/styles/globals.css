@@ -423,13 +423,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 /* ---------- قاب آبی برند دور کادرها به‌عنوان جداکننده (درخواست مدیر) ---------- */
 :root {
   --frame-border: color-mix(in srgb, var(--primary) 38%, var(--border));
-  --frame-shadow: 0 1px 2px rgb(40 120 255 / .08), 0 8px 24px rgb(40 120 255 / .12);
-  --frame-shadow-hover: 0 2px 5px rgb(40 120 255 / .13), 0 16px 36px rgb(40 120 255 / .18);
+  --frame-shadow: 0 1px 2px rgb(var(--primary-rgb, 40 120 255) / .08), 0 8px 24px rgb(var(--primary-rgb, 40 120 255) / .12);
+  --frame-shadow-hover: 0 2px 5px rgb(var(--primary-rgb, 40 120 255) / .13), 0 16px 36px rgb(var(--primary-rgb, 40 120 255) / .18);
 }
 :root[data-theme="dark"] {
   --frame-border: color-mix(in srgb, var(--primary) 46%, var(--border));
-  --frame-shadow: 0 1px 2px rgb(24 90 230 / .22), 0 10px 28px rgb(15 60 180 / .30);
-  --frame-shadow-hover: 0 2px 5px rgb(24 90 230 / .30), 0 16px 38px rgb(15 70 210 / .38);
+  --frame-shadow: 0 1px 2px rgb(var(--primary-rgb, 24 90 230) / .22), 0 10px 28px rgb(var(--primary-rgb, 15 60 180) / .30);
+  --frame-shadow-hover: 0 2px 5px rgb(var(--primary-rgb, 24 90 230) / .30), 0 16px 38px rgb(var(--primary-rgb, 15 70 210) / .38);
 }
 .card { border-color: var(--frame-border); box-shadow: var(--frame-shadow); }
 .card:hover { box-shadow: var(--frame-shadow-hover); }
@@ -439,10 +439,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 /* ---------- کارت‌های آمار رنگی (درخواست مدیر — رنگی‌رنگی در همه‌ی بخش‌ها) ---------- */
 /* هر metric-card بر اساس tone خودش گرادیان رنگی می‌گیرد؛ متن و آیکن سفید */
-.metric-card--blue   { background: linear-gradient(140deg, #3d92ff 0%, #1c63e6 100%); border-color: transparent; box-shadow: 0 2px 6px rgb(24 92 230 / .18), 0 10px 26px rgb(24 92 230 / .22); }
+.metric-card--blue   { background: linear-gradient(140deg, var(--c1-a, #3d92ff) 0%, var(--c1-b, #1c63e6) 100%); border-color: transparent; box-shadow: 0 2px 6px rgb(var(--primary-rgb, 24 92 230) / .18), 0 10px 26px rgb(var(--primary-rgb, 24 92 230) / .22); }
 .metric-card--green  { background: linear-gradient(140deg, #2ecb8f 0%, #0c9a64 100%); border-color: transparent; box-shadow: 0 2px 6px rgb(12 154 100 / .18), 0 10px 26px rgb(12 154 100 / .22); }
 .metric-card--purple { background: linear-gradient(140deg, #a07bff 0%, #7446e8 100%); border-color: transparent; box-shadow: 0 2px 6px rgb(116 70 232 / .18), 0 10px 26px rgb(116 70 232 / .24); }
-.metric-card--amber  { background: linear-gradient(140deg, #f7b04c 0%, #dd7f0a 100%); border-color: transparent; box-shadow: 0 2px 6px rgb(224 138 18 / .18), 0 10px 26px rgb(224 138 18 / .22); }
+.metric-card--amber  { background: linear-gradient(140deg, #f472b6 0%, #db2777 100%); border-color: transparent; box-shadow: 0 2px 6px rgb(219 39 119 / .18), 0 10px 26px rgb(219 39 119 / .22); }
 
 .metric-card--blue .metric-card__value, .metric-card--blue .metric-card__label,
 .metric-card--green .metric-card__value, .metric-card--green .metric-card__label,
@@ -470,17 +470,17 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 
 /* هاور: سایه‌ی هم‌رنگ عمیق‌تر + بلندشدن ملایم */
-.metric-card--blue:hover   { box-shadow: 0 4px 10px rgb(24 92 230 / .24), 0 18px 38px rgb(24 92 230 / .30); transform: translateY(-2px); }
+.metric-card--blue:hover   { box-shadow: 0 4px 10px rgb(var(--primary-rgb, 24 92 230) / .24), 0 18px 38px rgb(var(--primary-rgb, 24 92 230) / .30); transform: translateY(-2px); }
 .metric-card--green:hover  { box-shadow: 0 4px 10px rgb(12 154 100 / .24), 0 18px 38px rgb(12 154 100 / .30); transform: translateY(-2px); }
 .metric-card--purple:hover { box-shadow: 0 4px 10px rgb(116 70 232 / .26), 0 18px 38px rgb(116 70 232 / .32); transform: translateY(-2px); }
-.metric-card--amber:hover  { box-shadow: 0 4px 10px rgb(224 138 18 / .24), 0 18px 38px rgb(224 138 18 / .30); transform: translateY(-2px); }
+.metric-card--amber:hover  { box-shadow: 0 4px 10px rgb(219 39 119 / .24), 0 18px 38px rgb(219 39 119 / .30); transform: translateY(-2px); }
 
 /* کارت‌های کوچک فایل/انبار (کل اقلام، کمبود موجودی، ارزش انبار، …) — چهار رنگ چرخشی */
 .file-stats > div { border-color: transparent; }
 .file-stats > div span { color: rgb(255 255 255 / .85); }
 .file-stats > div strong { color: #fff; }
-.file-stats > div:nth-child(1) { background: linear-gradient(140deg, #3d92ff 0%, #1c63e6 100%); box-shadow: 0 2px 6px rgb(24 92 230 / .18), 0 10px 26px rgb(24 92 230 / .22); }
-.file-stats > div:nth-child(2) { background: linear-gradient(140deg, #f7b04c 0%, #dd7f0a 100%); box-shadow: 0 2px 6px rgb(224 138 18 / .18), 0 10px 26px rgb(224 138 18 / .22); }
+.file-stats > div:nth-child(1) { background: linear-gradient(140deg, var(--c1-a, #3d92ff) 0%, var(--c1-b, #1c63e6) 100%); box-shadow: 0 2px 6px rgb(var(--primary-rgb, 24 92 230) / .18), 0 10px 26px rgb(var(--primary-rgb, 24 92 230) / .22); }
+.file-stats > div:nth-child(2) { background: linear-gradient(140deg, #f472b6 0%, #db2777 100%); box-shadow: 0 2px 6px rgb(219 39 119 / .18), 0 10px 26px rgb(219 39 119 / .22); }
 .file-stats > div:nth-child(3) { background: linear-gradient(140deg, #2ecb8f 0%, #0c9a64 100%); box-shadow: 0 2px 6px rgb(12 154 100 / .18), 0 10px 26px rgb(12 154 100 / .22); }
 .file-stats > div:nth-child(4) { background: linear-gradient(140deg, #a07bff 0%, #7446e8 100%); box-shadow: 0 2px 6px rgb(116 70 232 / .18), 0 10px 26px rgb(116 70 232 / .24); }
 
@@ -495,3 +495,31 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .file-stats > div { background: #fff !important; box-shadow: none !important; border: 1px solid #bbb !important; }
   .file-stats > div span, .file-stats > div strong { color: #000 !important; }
 }
+
+/* ---------- تم رنگی سایت (accent) — انتخاب رنگ اصلی برای همه‌ی بخش‌ها ---------- */
+:root { --primary-rgb: 40 120 255; --c1-a: #3d92ff; --c1-b: #1c63e6; }
+:root[data-accent="green"]  { --primary: #0c9a64; --primary-strong: #0a7a50; --primary-soft: #e4f5ee; --info: #0c9a64; --primary-rgb: 12 154 100; --c1-a: #2ecb8f; --c1-b: #0c9a64; }
+:root[data-accent="purple"] { --primary: #7446e8; --primary-strong: #5f37cf; --primary-soft: #f0ebfd; --info: #7446e8; --primary-rgb: 116 70 232; --c1-a: #a07bff; --c1-b: #7446e8; }
+:root[data-accent="teal"]   { --primary: #0d9488; --primary-strong: #0b756c; --primary-soft: #e0f4f2; --info: #0d9488; --primary-rgb: 13 148 136; --c1-a: #2dd4bf; --c1-b: #0d9488; }
+:root[data-accent="rose"]   { --primary: #db2777; --primary-strong: #b21e63; --primary-soft: #fce8f1; --info: #db2777; --primary-rgb: 219 39 119; --c1-a: #f472b6; --c1-b: #db2777; }
+:root[data-theme="dark"][data-accent="green"]  { --primary-soft: #12382b; --info-soft: #12382b; }
+:root[data-theme="dark"][data-accent="purple"] { --primary-soft: #2a2144; --info-soft: #2a2144; }
+:root[data-theme="dark"][data-accent="teal"]   { --primary-soft: #103a36; --info-soft: #103a36; }
+:root[data-theme="dark"][data-accent="rose"]   { --primary-soft: #411b2c; --info-soft: #411b2c; }
+
+/* سایه‌ها و حلقه‌های فوکوس از رنگ تم پیروی می‌کنند */
+.button--primary { box-shadow: 0 5px 12px rgb(var(--primary-rgb, 40 120 255) / .17); }
+.button--primary:hover:not(:disabled) { box-shadow: 0 7px 18px rgb(var(--primary-rgb, 40 120 255) / .23); }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline-color: rgb(var(--primary-rgb, 40 120 255) / .32); }
+.spinner { border-color: rgb(var(--primary-rgb, 40 120 255) / .18); border-top-color: var(--primary); }
+.field__control input:focus, .field__control select:focus, .field textarea:focus { box-shadow: 0 0 0 3px rgb(var(--primary-rgb, 40 120 255) / .1); }
+
+/* سواچ‌های انتخاب رنگ تم */
+.accent-swatches { display: flex; align-items: center; gap: 9px; }
+.accent-swatch { display: inline-grid; place-items: center; width: 26px; height: 26px; padding: 0; color: #fff; border: 2px solid var(--surface-1); border-radius: 50%; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; }
+.accent-swatch:hover { transform: scale(1.12); }
+.accent-swatch.is-active { box-shadow: 0 0 0 2px var(--surface-1), 0 0 0 4px var(--primary); }
+.accent-swatch:focus-visible { outline-offset: 3px; }
+.accent-menu-wrap { position: relative; }
+.accent-menu { position: absolute; z-index: var(--z-dropdown); inset-block-start: calc(100% + 8px); inset-inline-end: 0; display: flex; flex-direction: column; gap: 8px; min-width: 148px; padding: 11px 12px; background: var(--surface-1); border: 1px solid var(--frame-border, var(--border)); border-radius: 12px; box-shadow: var(--frame-shadow, var(--shadow-md)); }
+.accent-menu__label { color: var(--text-muted); font-size: 10px; font-weight: 800; }

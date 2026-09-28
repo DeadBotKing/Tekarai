@@ -14,6 +14,7 @@ import { useTenant } from "../core/tenant/tenantContext";
 import { useTheme } from "../core/theme/themeContext";
 import { Icon, type IconName } from "../shared/components/Icon";
 import { Avatar, IconButton } from "../shared/components/primitives";
+import { AccentSwatches } from "../shared/components/AccentSwatches";
 import { Drawer } from "../shared/components/overlays";
 
 interface PageResult { id: string; title: string; group: string; route: string; icon: IconName }
@@ -44,7 +45,25 @@ export function AppShell(): JSX.Element {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [accentOpen, setAccentOpen] = useState(false);
   const [search, setSearch] = useState("");
+
+  // Close the accent picker on outside click / Escape.
+  useEffect(() => {
+    if (!accentOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!(event.target as HTMLElement).closest(".accent-menu-wrap")) setAccentOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setAccentOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [accentOpen]);
   const [entityResults, setEntityResults] = useState<EntityResult[]>([]);
   const [searching, setSearching] = useState(false);
 
@@ -249,6 +268,15 @@ export function AppShell(): JSX.Element {
                 <Icon name="chevronDown" size={14} />
               </div>
             )}
+            <div className="accent-menu-wrap">
+              <IconButton icon="sparkles" label={t("header.accent")} onClick={() => setAccentOpen((open) => !open)} />
+              {accentOpen && (
+                <div className="accent-menu" role="menu" aria-label={t("header.accent")}>
+                  <span className="accent-menu__label">{t("settings.accent")}</span>
+                  <AccentSwatches />
+                </div>
+              )}
+            </div>
             <IconButton icon={theme === "light" ? "moon" : "sun"} label={t("header.theme")} onClick={toggleTheme} />
             <button type="button" className="language-button" aria-label={t("header.language")} onClick={cycleLocale}>
               {localeMeta[locale].nativeLabel}

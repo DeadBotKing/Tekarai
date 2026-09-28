@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApiClient } from "../core/api/apiContext";
 import { useLocalization } from "../core/localization/localizationContext";
+import { useTheme } from "../core/theme/themeContext";
 import { JALALI_MONTHS, gregorianToJalali, jalaliPartsToIso, toPersianDigits } from "../core/localization/jalali";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import {
@@ -118,6 +119,7 @@ const formatMoney = (value: number): string => {
 
 export function MaintenanceDashboardPage(): JSX.Element {
   const { t } = useLocalization();
+  const { accentHex } = useTheme();
   const api = useApiClient();
   const navigate = useNavigate();
   const service = useMemo(() => createMaintenanceService(api), [api]);
@@ -605,7 +607,7 @@ export function MaintenanceDashboardPage(): JSX.Element {
                   {
                     label: t("cmms.dash.trendSubmitted"),
                     data: trend.submitted,
-                    color: "#2878ff",
+                    color: accentHex,
                   },
                   {
                     label: t("cmms.dash.trendCompleted"),
@@ -651,7 +653,7 @@ export function MaintenanceDashboardPage(): JSX.Element {
             <BarChart
               data={stats.byStatus}
               labels={OPEN_STATUSES.map((status) => t(`cmms.woStatus.${status}`))}
-              color="#2878ff"
+              color={accentHex}
               ariaLabel={t("cmms.dash.byStatus")}
               onBarClick={(index) => goToOrders({ status: OPEN_STATUSES[index] })}
             />

@@ -4,6 +4,7 @@ import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { useApiClient } from "../core/api/apiContext";
 import { formatJalali } from "../core/localization/jalali";
 import { useLocalization } from "../core/localization/localizationContext";
+import { useTheme } from "../core/theme/themeContext";
 import { createMaintenanceService } from "../features/maintenance/maintenanceService";
 import { demoDevices, demoWorkOrders } from "../features/maintenance/maintenanceDemoData";
 import type { MaintenanceDevice, WorkOrder, WorkOrderStatus } from "../shared/types/domain";
@@ -29,6 +30,7 @@ const dateOnly = (value: string): string => value.slice(0, 10);
 
 export function MaintenanceReportPage(): JSX.Element {
   const { t } = useLocalization();
+  const { accentHex } = useTheme();
   const navigate = useNavigate();
   const api = useApiClient();
   const service = useMemo(() => createMaintenanceService(api), [api]);
@@ -188,7 +190,7 @@ export function MaintenanceReportPage(): JSX.Element {
         <BarChart
           data={byStatus}
           labels={STATUS_ORDER.map((status) => t(`cmms.woStatus.${status}`))}
-          color="#2878ff"
+          color={accentHex}
           ariaLabel="توزیع وضعیت درخواست‌های کار همه دستگاه‌ها"
         />
       </Card>

@@ -147,7 +147,7 @@ export function Avatar({ name, size = "md", tone = "blue", src }: { name: string
 }
 
 export function MetricCard({ label, value, trend, trendLabel, icon, tone = "blue" }: { label: string; value: string | number; trend?: string; trendLabel?: string; icon: IconName; tone?: "blue" | "green" | "purple" | "amber" }): JSX.Element {
-  return <Card className="metric-card" padding="md">
+  return <Card className={`metric-card metric-card--${tone}`} padding="md">
     <div className="metric-card__top"><span className={`metric-card__icon metric-card__icon--${tone}`}><Icon name={icon} size={19} /></span>{trend && <span className={`metric-card__trend ${trend.startsWith("-") ? "is-negative" : ""}`}><Icon name={trend.startsWith("-") ? "arrowDown" : "arrowUp"} size={13} />{trend}</span>}</div>
     <div className="metric-card__value">{value}</div>
     <div className="metric-card__label">{label}</div>

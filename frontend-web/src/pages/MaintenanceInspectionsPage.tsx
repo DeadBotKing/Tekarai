@@ -15,6 +15,7 @@ import {
   listInspectionTemplates,
   newTemplateId,
   saveInspectionTemplate,
+syncInspectionTemplatesFromServer,
 } from "../features/maintenance/inspectionsStore";
 import type { MaintenanceDevice } from "../shared/types/domain";
 import { DataTable, type DataTableColumn } from "../shared/components/DataTable";
@@ -53,6 +54,13 @@ export default function MaintenanceInspectionsPage(): JSX.Element {
   }, [service]);
 
   const refreshTemplates = useCallback((): void => setTemplates(listInspectionTemplates()), []);
+
+  // هم‌گام‌سازی تیمی: قالب‌ها از سرور تازه شوند (در دمو/آفلاین مثل قبل محلی می‌ماند)
+  useEffect(() => {
+    void syncInspectionTemplatesFromServer().then((ok) => {
+      if (ok) refreshTemplates();
+    });
+  }, [refreshTemplates]);
 
   const openRun = (template: InspectionTemplate): void => {
     setRunTemplate(template);

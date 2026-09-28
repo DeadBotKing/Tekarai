@@ -40,6 +40,14 @@ from apps.maintenance.presentation.api.views.registryViews import (
     PmScheduleView,
     WorkOrderClosureView,
 )
+from apps.maintenance.presentation.api.views.teamSyncViews import (
+    TeamInspectionRecordListView,
+    TeamInspectionTemplateCommitView,
+    TeamInspectionTemplateDetailView,
+    TeamInspectionTemplateListView,
+    TeamReservationDetailView,
+    TeamReservationListView,
+)
 from apps.maintenance.presentation.api.views.sparePartViews import (
     SparePartDetailView,
     SparePartListView,
@@ -246,4 +254,27 @@ urlpatterns = [
         MaintenanceAttachmentDetailView.as_view(),
         name="maintenanceAttachmentDetail",
     ),
+    # Team sync (موج دوم) — رزرو قطعات و چک‌لیست‌های تیمی
+    path("team/reservations", TeamReservationListView.as_view(), name="teamReservationList"),
+    path(
+        "team/reservations/<str:reservationId>",
+        TeamReservationDetailView.as_view(),
+        name="teamReservationDetail",
+    ),
+    path(
+        "team/inspection-templates",
+        TeamInspectionTemplateListView.as_view(),
+        name="teamInspectionTemplateList",
+    ),
+    path(
+        "team/inspection-templates/<str:templateId>",
+        TeamInspectionTemplateDetailView.as_view(),
+        name="teamInspectionTemplateDetail",
+    ),
+    path(
+        "team/inspection-templates/<str:templateId>/commit",
+        TeamInspectionTemplateCommitView.as_view(),
+        name="teamInspectionTemplateCommit",
+    ),
+    path("team/inspection-records", TeamInspectionRecordListView.as_view(), name="teamInspectionRecordList"),
 ]

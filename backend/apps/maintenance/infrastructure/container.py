@@ -465,3 +465,74 @@ def updateDeviceNameplateUseCase() -> UpdateDeviceNameplateUseCase:
 
 def recordClosureDetailsUseCase() -> RecordClosureDetailsUseCase:
     return RecordClosureDetailsUseCase(**_registryDeps())
+
+
+# -- Team sync (رزرو قطعات + چک‌لیست‌های تیمی) -------------------------------------
+def partReservationRepository() -> "PartReservationRepositoryImpl":
+    from apps.maintenance.infrastructure.repositories.teamSyncRepositoryImpl import (
+        PartReservationRepositoryImpl,
+    )
+
+    return PartReservationRepositoryImpl()
+
+
+def inspectionSyncRepository() -> "InspectionSyncRepositoryImpl":
+    from apps.maintenance.infrastructure.repositories.teamSyncRepositoryImpl import (
+        InspectionSyncRepositoryImpl,
+    )
+
+    return InspectionSyncRepositoryImpl()
+
+
+def listReservationsUseCase() -> "ListReservationsUseCase":
+    from apps.maintenance.application.useCases.teamSyncUseCases import ListReservationsUseCase
+
+    return ListReservationsUseCase(repository=partReservationRepository(), **_kernelPorts())
+
+
+def saveReservationUseCase() -> "SaveReservationUseCase":
+    from apps.maintenance.application.useCases.teamSyncUseCases import SaveReservationUseCase
+
+    return SaveReservationUseCase(repository=partReservationRepository(), **_kernelPorts())
+
+
+def closeReservationUseCase() -> "CloseReservationUseCase":
+    from apps.maintenance.application.useCases.teamSyncUseCases import CloseReservationUseCase
+
+    return CloseReservationUseCase(repository=partReservationRepository(), **_kernelPorts())
+
+
+def listInspectionTemplatesUseCase() -> "ListInspectionTemplatesUseCase":
+    from apps.maintenance.application.useCases.teamSyncUseCases import ListInspectionTemplatesUseCase
+
+    return ListInspectionTemplatesUseCase(repository=inspectionSyncRepository(), **_kernelPorts())
+
+
+def saveInspectionTemplateUseCase() -> "SaveInspectionTemplateUseCase":
+    from apps.maintenance.application.useCases.teamSyncUseCases import SaveInspectionTemplateUseCase
+
+    return SaveInspectionTemplateUseCase(repository=inspectionSyncRepository(), **_kernelPorts())
+
+
+def commitInspectionTemplateUseCase() -> "CommitInspectionTemplateUseCase":
+    from apps.maintenance.application.useCases.teamSyncUseCases import CommitInspectionTemplateUseCase
+
+    return CommitInspectionTemplateUseCase(repository=inspectionSyncRepository(), **_kernelPorts())
+
+
+def listInspectionRecordsUseCase() -> "ListInspectionRecordsUseCase":
+    from apps.maintenance.application.useCases.teamSyncUseCases import ListInspectionRecordsUseCase
+
+    return ListInspectionRecordsUseCase(repository=inspectionSyncRepository(), **_kernelPorts())
+
+
+def saveInspectionRecordUseCase() -> "SaveInspectionRecordUseCase":
+    from apps.maintenance.application.useCases.teamSyncUseCases import SaveInspectionRecordUseCase
+
+    return SaveInspectionRecordUseCase(repository=inspectionSyncRepository(), **_kernelPorts())
+
+
+def deleteInspectionTemplateUseCase() -> "DeleteInspectionTemplateUseCase":
+    from apps.maintenance.application.useCases.teamSyncUseCases import DeleteInspectionTemplateUseCase
+
+    return DeleteInspectionTemplateUseCase(repository=inspectionSyncRepository(), **_kernelPorts())

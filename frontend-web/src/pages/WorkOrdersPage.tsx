@@ -10,7 +10,7 @@ import { MaintenanceAttachments } from "../features/maintenance/MaintenanceAttac
 import { createMaintenanceService } from "../features/maintenance/maintenanceService";
 import { FAILURE_TREE, formatFailureNote } from "../features/maintenance/wave1";
 import { reservationsForOrder } from "../features/maintenance/wave2";
-import { closeReservation, listReservations, newId, saveReservation } from "../features/maintenance/wave2Store";
+import { closeReservation, listReservations, newId, saveReservation, syncReservationsFromServer } from "../features/maintenance/wave2Store";
 import { demoDevices, demoWorkOrders } from "../features/maintenance/maintenanceDemoData";
 import type {
   LabourEntry,
@@ -223,6 +223,13 @@ export function WorkOrdersPage(): JSX.Element {
   const [reservePartCode, setReservePartCode] = useState("");
   const [reserveQty, setReserveQty] = useState("1");
   const [, setReservationsTick] = useState(0);
+
+  // هم‌گام‌سازی تیمی: رزروهای سرور را در باز شدن صفحه بکشیم
+  useEffect(() => {
+    void syncReservationsFromServer().then((ok) => {
+      if (ok) setReservationsTick((tick) => tick + 1);
+    });
+  }, []);
   const [history, setHistory] = useState<WorkOrderHistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [parts, setParts] = useState<SparePart[]>([]);

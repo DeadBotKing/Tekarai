@@ -8,7 +8,7 @@ import { parseImportFile, toNumber } from "../core/files/importUtils";
 import { createMaintenanceService } from "../features/maintenance/maintenanceService";
 import { buildReorderSuggestions } from "../features/maintenance/wave1";
 import { activeReservedForPart, availableStock } from "../features/maintenance/wave2";
-import { listReservations } from "../features/maintenance/wave2Store";
+import { listReservations, syncReservationsFromServer } from "../features/maintenance/wave2Store";
 import type { SparePart } from "../shared/types/domain";
 import { DataTable, type DataTableColumn } from "../shared/components/DataTable";
 import { Modal, Toast } from "../shared/components/overlays";
@@ -31,6 +31,8 @@ export function SparePartsPage(): JSX.Element {
   const t = faText;
   const api = useApiClient();
   const service = useMemo(() => createMaintenanceService(api), [api]);
+  const [reservationsTick, setReservationsTick] = useState(0);
+
   const [parts, setParts] = useState<SparePart[]>(runtimeConfig.demoMode ? demoParts : []);
   const [search, setSearch] = useState("");
   const [lowOnly, setLowOnly] = useState(false);
@@ -127,6 +129,12 @@ export function SparePartsPage(): JSX.Element {
     if (!runtimeConfig.demoMode) refresh();
   };
 
+  // هم‌گام‌سازی تیمی رزروها از سرور در باز شدن صفحه
+  useEffect(() => {
+    void syncReservationsFromServer().then((ok) => {
+      if (ok) setReservationsTick((tick) => tick + 1);
+    });
+  }, []);
   const columns = useMemo<DataTableColumn<SparePart>[]>(() => [
     { key: "code", label: t("registry.code"), accessor: (row) => row.code, sortable: true, width: "14%", render: (row) => <strong>{row.code}</strong> },
     { key: "name", label: t("registry.name"), accessor: (row) => row.name, sortable: true },
@@ -142,7 +150,7 @@ export function SparePartsPage(): JSX.Element {
         const available = availableStock(row.quantityOnHand, reserved);
         return <Badge tone={available <= 0 ? "danger" : "neutral"}>{available} {row.unit}</Badge>;
       } },
-  ], [t]);
+  ], [t, reservationsTick]);
 
   return <div className="page" dir="rtl">
     <SectionHeader eyebrow={t("nav.warehouse")} title={t("warehouse.title")} subtitle={t("warehouse.subtitle")} actions={<>

@@ -543,3 +543,62 @@ class DeviceAssignmentModel(models.Model):
                 name="ck_device_assignment_role",
             )
         ]
+
+
+class PartReservationModel(models.Model):
+    """رزرو قطعه روی درخواست کار — قابل هم‌گام‌سازی بین همه‌ی اعضای تیم."""
+
+    # شناسه‌ی رشته‌ای: سمت فرانت با پیشوند rsv- ساخته می‌شود تا حالت آفلاین
+    # (localStorage) و حالت آنلاین (پایگاه‌داده) از همین هویت استفاده کنند.
+    id = models.CharField(max_length=64, primary_key=True)
+    tenantId = models.UUIDField(db_index=True)
+    workOrderId = models.UUIDField(db_index=True)
+    partCode = models.CharField(max_length=60, db_index=True)
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    status = models.CharField(max_length=16, default="active", db_index=True)  # active/consumed/released
+    reservedByName = models.CharField(max_length=160, blank=True, default="")
+    createdAt = models.DateTimeField(auto_now_add=True, db_index=True)
+    updatedAt = models.DateTimeField(null=True, blank=True)
+    closedAt = models.DateTimeField(null=True, blank=True)
+    deletedAt = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "PartReservation"
+        ordering = ["-createdAt"]
+
+
+class InspectionTemplateModel(models.Model):
+    """قالب چک‌لیست بازرسی — تیمی و مشترک بین تکنسین‌ها."""
+
+    id = models.CharField(max_length=64, primary_key=True)
+    tenantId = models.UUIDField(db_index=True)
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True, default="")
+    deviceCode = models.CharField(max_length=60, blank=True, default="")
+    checks = models.JSONField(default=list)
+    isCommitted = models.BooleanField(default=False)
+    createdAt = models.DateTimeField(auto_now_add=True, db_index=True)
+    updatedAt = models.DateTimeField(null=True, blank=True)
+    deletedAt = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "InspectionTemplate"
+        ordering = ["name"]
+
+
+class InspectionRecordModel(models.Model):
+    """سابقه‌ی اجرای چک‌لیست روی یک درخواست کار."""
+
+    id = models.CharField(max_length=64, primary_key=True)
+    tenantId = models.UUIDField(db_index=True)
+    templateId = models.CharField(max_length=64, db_index=True)
+    workOrderId = models.UUIDField(db_index=True)
+    deviceId = models.UUIDField(db_index=True)
+    passedChecks = models.JSONField(default=list)
+    failedChecks = models.JSONField(default=list)
+    performedByName = models.CharField(max_length=160, blank=True, default="")
+    createdAt = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = "InspectionRecord"
+        ordering = ["-createdAt"]

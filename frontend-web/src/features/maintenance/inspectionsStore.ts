@@ -1,5 +1,10 @@
-// ذخیره‌ی قالب‌ها وأجراهای چک‌لیست بازرسی — مرورگر-محور، با fallback داده‌ی نمونه.
+// ذخیره‌ی قالب‌های چک‌لیست بازرسی — هم‌گام با بک‌اند (تیمی) + fallback محلی مرورگر.
 import type { InspectionTemplate } from "./wave1";
+import {
+  pushDeleteInspectionTemplate,
+  pushInspectionTemplate,
+  pullInspectionTemplates,
+} from "./teamSyncStore";
 
 const KEY = "tekarai.cmms.inspections.v1";
 
@@ -17,7 +22,7 @@ const SEED: InspectionTemplate[] = [
   },
 ];
 
-const read = (): InspectionTemplate[] => {
+const readLocal = (): InspectionTemplate[] => {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return SEED;
@@ -28,7 +33,7 @@ const read = (): InspectionTemplate[] => {
   }
 };
 
-const write = (templates: InspectionTemplate[]): void => {
+const writeLocal = (templates: InspectionTemplate[]): void => {
   try {
     localStorage.setItem(KEY, JSON.stringify(templates));
   } catch {
@@ -36,17 +41,39 @@ const write = (templates: InspectionTemplate[]): void => {
   }
 };
 
-export const listInspectionTemplates = (): InspectionTemplate[] => read();
+let serverTemplates: InspectionTemplate[] | null = null;
+
+export const listInspectionTemplates = (): InspectionTemplate[] => serverTemplates ?? readLocal();
+
+const mirrorAll = (templates: InspectionTemplate[]): void => {
+  if (serverTemplates !== null) serverTemplates = templates;
+  writeLocal(templates);
+};
 
 export const saveInspectionTemplate = (template: InspectionTemplate): void => {
-  const templates = read().filter((item) => item.id !== template.id);
-  templates.push(template);
-  write(templates);
+  mirrorAll([
+    ...listInspectionTemplates().filter((item) => item.id !== template.id),
+    template,
+  ]);
+  void pushInspectionTemplate(template).catch(() => undefined);
 };
 
 export const deleteInspectionTemplate = (id: string): void => {
-  write(read().filter((item) => item.id !== id));
+  mirrorAll(listInspectionTemplates().filter((item) => item.id !== id));
+  void pushDeleteInspectionTemplate(id).catch(() => undefined);
 };
 
 export const newTemplateId = (): string =>
   `insp-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e4).toString(36)}`;
+
+/** کشیدن همه‌ی قالب‌های تیمی از بک‌اند و بازنویسی کش محلی. */
+export const syncInspectionTemplatesFromServer = async (): Promise<boolean> => {
+  try {
+    const templates = await pullInspectionTemplates();
+    serverTemplates = templates;
+    writeLocal(templates);
+    return true;
+  } catch {
+    return false;
+  }
+};

@@ -234,3 +234,44 @@ class DeviceHistoryRepository(Protocol):
     def listForDevice(
         self, tenantId: uuid.UUID, deviceId: uuid.UUID
     ) -> list[DeviceHistoryEntry]: ...
+
+
+from apps.maintenance.domain.entities.teamSync import (
+    InspectionRecord,
+    InspectionTemplate,
+    PartReservation,
+)
+
+
+class PartReservationRepository(Protocol):
+    def listForTenant(self, tenantId: uuid.UUID, workOrderId: uuid.UUID | None = None) -> list[PartReservation]:
+        ...
+
+    def upsert(self, reservation: PartReservation) -> PartReservation:
+        ...
+
+    def close(self, tenantId: uuid.UUID, reservationId: str, status: str, closedAt: datetime) -> PartReservation | None:
+        ...
+
+
+class InspectionSyncRepository(Protocol):
+    def listTemplates(self, tenantId: uuid.UUID) -> list[InspectionTemplate]:
+        ...
+
+    def upsertTemplate(self, template: InspectionTemplate) -> InspectionTemplate:
+        ...
+
+    def commitTemplate(self, tenantId: uuid.UUID, templateId: str) -> InspectionTemplate | None:
+        ...
+
+    def createRecord(self, record: InspectionRecord) -> InspectionRecord:
+        ...
+
+    def listRecords(self, tenantId: uuid.UUID, workOrderId: uuid.UUID | None = None) -> list[InspectionRecord]:
+        ...
+
+    def getTemplate(self, tenantId: uuid.UUID, templateId: str) -> InspectionTemplate | None:
+        ...
+
+    def deleteTemplate(self, tenantId: uuid.UUID, templateId: str) -> bool:
+        ...

@@ -338,3 +338,48 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .weekly-report-device__meta .badge { border: 1px solid #666; }
   @page { size: A4; margin: 12mm; }
 }
+
+
+/* ---------- حالت فشرده‌ی نمای (small جداول و نمودارها — درخواست مدیر) ---------- */
+.layout-compact .metric-card { min-height: 108px; }
+.layout-compact .metric-card__top { margin-bottom: 0; }
+.layout-compact .metric-card__icon { width: 29px; height: 29px; border-radius: 7px; }
+.layout-compact .metric-card__value { margin-top: 9px; font-size: 21px; }
+.layout-compact .metric-card__label { font-size: 11px; }
+.layout-compact .metric-card__hint { font-size: 9px; }
+.layout-compact .metric-grid { gap: 9px; }
+.layout-compact .widget-grid { gap: 12px; }
+
+/* نمودارها کوچک‌تر */
+.layout-compact .chart > svg { height: 138px; }
+.layout-compact .chart--bar { height: 148px; }
+.layout-compact .bars { height: 122px; padding: 7px 2px 0; }
+.layout-compact .chart__labels { padding-top: 5px; font-size: 8px; }
+.layout-compact .bar-column__value, .layout-compact .bar-column__label { font-size: 8px; }
+.layout-compact .bar { width: min(22px, 58%); border-radius: 4px 4px 0 0; }
+.layout-compact .donut { --donut-shrink: 1; }
+.layout-compact .donut__center strong { font-size: 18px; }
+.layout-compact .donut__center span { font-size: 9px; }
+.layout-compact .trend-legend, .layout-compact .dash-priority-legend { margin-top: 9px; }
+.layout-compact .health-widget { min-height: 118px; gap: 20px; }
+.layout-compact .pulse-row { gap: 14px; }
+.layout-compact .project-pulse, .layout-compact .dash-department-list { gap: 10px; }
+
+/* جداول فشرده‌تر */
+.layout-compact .data-table th { padding: 8px 11px; font-size: 9px; }
+.layout-compact .data-table td { padding: 8px 11px; font-size: 10.5px; }
+.layout-compact .table-toolbar { padding: 9px 18px; }
+.layout-compact .table-pagination { padding: 8px 18px; }
+.layout-compact .project-cell__icon, .layout-compact .document-cell__icon, .layout-compact .report-cell__icon { width: 28px; height: 28px; border-radius: 7px; }
+.layout-compact .project-cell__icon--large { width: 36px; height: 36px; }
+
+/* واکنش‌گرا موبایل: از همان فضای آزاد بیشتر استفاده شود */
+@media (max-width: 980px) {
+  .layout-compact .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* گزارشنامه‌ی هفتگی/جداول کاستوم — فشرده */
+.layout-compact .weekly-report-summary .card strong { font-size: 13px; }
+.layout-compact .weekly-report-table th, .layout-compact .weekly-report-table td { padding: 6px 12px !important; font-size: 10.5px !important; }
+.layout-compact .weekly-report-device__header { padding: 10px 16px !important; }
+.layout-compact .breakdown-sheet__table td { padding: 5px 9px; font-size: 11px; }

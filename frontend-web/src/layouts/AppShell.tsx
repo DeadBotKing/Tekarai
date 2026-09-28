@@ -149,6 +149,12 @@ export function AppShell(): JSX.Element {
   };
   const currentPath = location.pathname;
 
+  // حالت فشرده‌ی نمای — جداول/نمودارها مرتب‌تر (می‌توان با حذف این کلاس به حالت قبل برگشت)
+  useEffect(() => {
+    document.body.classList.add("layout-compact");
+    return () => document.body.classList.remove("layout-compact");
+  }, []);
+
   // Ctrl/⌘+K opens the page search anywhere in the app.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {

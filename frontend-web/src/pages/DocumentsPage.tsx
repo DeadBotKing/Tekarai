@@ -13,6 +13,10 @@ import { Modal, Toast } from "../shared/components/overlays";
 import { Badge, Button, Card, CardHeader, PermissionGuard, SectionHeader, SelectInput, TextInput } from "../shared/components/primitives";
 import { Icon } from "../shared/components/Icon";
 import { demoDocuments } from "../features/demo/demoData";
+import { nextDocumentVersion } from "../features/maintenance/wave2";
+import { getDocumentMeta, listDocumentMeta, saveDocumentMeta } from "../features/maintenance/wave2Store";
+import { createMaintenanceService } from "../features/maintenance/maintenanceService";
+import { demoDevices } from "../features/maintenance/maintenanceDemoData";
 
 interface UploadItem { name: string; progress: number; state: "uploading" | "complete" | "error"; }
 
@@ -29,6 +33,16 @@ export function DocumentsPage(): JSX.Element {
   const [category, setCategory] = useState("all");
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadCategory, setUploadCategory] = useState("");
+  const [versionDoc, setVersionDoc] = useState<LibraryDocument | null>(null);
+  const [versionNote, setVersionNote] = useState("");
+  const [linkDeviceCode, setLinkDeviceCode] = useState("");
+  const [, setMetaTick] = useState(0);
+  const maintenanceService = useMemo(() => createMaintenanceService(api), [api]);
+  const [docDevices, setDocDevices] = useState<{ id: string; code: string; name: string }[]>(runtimeConfig.demoMode ? demoDevices : []);
+  useEffect(() => {
+    if (runtimeConfig.demoMode) return;
+    maintenanceService.listDevices({}).then(setDocDevices).catch(() => setDocDevices([]));
+  }, [maintenanceService]);
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const [selected, setSelected] = useState<LibraryDocument | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<LibraryDocument | null>(null);
@@ -104,13 +118,15 @@ export function DocumentsPage(): JSX.Element {
     { key: "name", label: t("document.title"), accessor: (row: LibraryDocument) => row.name, sortable: true, width: "34%", render: (row: LibraryDocument) => {
       const ext = row.name.split(".").pop()?.toLowerCase() ?? "";
       const iconClass = EXTENSION_COLOR[ext] ?? "txt";
-      return <div className="document-cell"><span className={`document-cell__icon document-cell__icon--${iconClass}`}><Icon name="file" size={18} /></span><div><strong>{row.name}</strong><span>{row.contentType || ext.toUpperCase()}</span></div></div>;
+      const meta = listDocumentMeta().find((entry) => entry.documentId === row.id);
+      return <div className="document-cell"><span className={`document-cell__icon document-cell__icon--${iconClass}`}><Icon name="file" size={18} /></span><div><strong>{row.name}</strong><span>{row.contentType || ext.toUpperCase()}{meta ? ` · ${t("cmms.wave2.doc.version").replace("{n}", String(meta.currentVersion))}${meta.deviceCode ? ` · ${meta.deviceCode}` : ""}` : ""}</span></div></div>;
     } },
     { key: "category", label: t("document.category"), accessor: (row: LibraryDocument) => row.category, sortable: true, render: (row: LibraryDocument) => row.category ? <Badge tone="purple">{row.category}</Badge> : <span className="muted-cell">—</span> },
     { key: "uploader", label: t("document.uploader"), accessor: (row: LibraryDocument) => row.uploadedByIdentifier, sortable: true, render: (row: LibraryDocument) => <span>{row.uploadedByIdentifier || "—"}</span> },
     { key: "uploadedAt", label: t("document.modified"), accessor: (row: LibraryDocument) => row.uploadedAt, sortable: true, render: (row: LibraryDocument) => <span>{formatJalali(row.uploadedAt, { withTime: true })}</span> },
     { key: "size", label: t("document.size"), accessor: (row: LibraryDocument) => row.sizeBytes, sortable: true, render: (row: LibraryDocument) => <span>{formatBytes(row.sizeBytes)}</span> },
     { key: "actions", label: t("project.actions"), hideable: false, render: (row: LibraryDocument) => <div className="list-toolbar">
+      <Button variant="ghost" size="sm" icon="clock" onClick={() => { setVersionDoc(row); const meta = getDocumentMeta(row.id); setLinkDeviceCode(meta?.deviceCode ?? ""); setVersionNote(""); }}>{t("cmms.wave2.doc.versions")}</Button>
       <Button variant="ghost" size="sm" icon="download" onClick={() => download(row)}>{t("document.download")}</Button>
       <PermissionGuard permission={PERMISSIONS.maintenanceDocumentManage}>
         <Button variant="ghost" size="sm" icon="close" onClick={() => setConfirmDelete(row)}>{t("document.delete")}</Button>
@@ -142,6 +158,65 @@ export function DocumentsPage(): JSX.Element {
       <Button variant="primary" onClick={remove}>{t("document.delete")}</Button>
     </>}><p>{t("document.deleteConfirm")}</p><p><strong>{confirmDelete?.name}</strong></p></Modal>
     {selected && <Modal open title={t("document.title")} onClose={() => setSelected(null)}><DocumentViewer document={selected as never} onClose={() => setSelected(null)} /></Modal>}
+    <Modal open={Boolean(versionDoc)} title={`${t("cmms.wave2.doc.versions")} — ${versionDoc?.name ?? ""}`} onClose={() => setVersionDoc(null)} footer={<Button variant="primary" onClick={() => setVersionDoc(null)}>{t("common.close")}</Button>}>
+      {(() => {
+        if (!versionDoc) return null;
+        const meta = getDocumentMeta(versionDoc.id);
+        return (
+          <>
+            <SelectInput
+              label={t("cmms.wave2.doc.device")}
+              value={linkDeviceCode}
+              onChange={(event) => {
+                setLinkDeviceCode(event.target.value);
+                const current = getDocumentMeta(versionDoc.id);
+                saveDocumentMeta({
+                  documentId: versionDoc.id,
+                  currentVersion: current?.currentVersion ?? 1,
+                  deviceCode: event.target.value,
+                  history: current?.history ?? [],
+                });
+                setMetaTick((tick) => tick + 1);
+              }}
+              options={[
+                { value: "", label: t("cmms.wave2.doc.noDevice") },
+                ...docDevices.map((device) => ({ value: device.code, label: `${device.code} — ${device.name}` })),
+              ]}
+            />
+            <div className="form-grid">
+              <TextInput label={t("cmms.wave2.doc.note")} value={versionNote} onChange={(event) => setVersionNote(event.target.value)} />
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  const current = getDocumentMeta(versionDoc.id);
+                  const next = nextDocumentVersion(
+                    current ? { ...current, deviceCode: linkDeviceCode } : undefined,
+                    { at: new Date().toISOString(), sizeLabel: `${versionDoc.sizeBytes} B`, note: versionNote.trim() || t("cmms.wave2.doc.newVersion") },
+                  );
+                  saveDocumentMeta({ ...next, documentId: versionDoc.id });
+                  setVersionNote("");
+                  setMetaTick((tick) => tick + 1);
+                  setToast(t("cmms.wave2.doc.saved"));
+                }}
+              >
+                {t("cmms.wave2.doc.newVersion")}
+              </Button>
+            </div>
+            {(meta?.history.length ?? 0) > 0 ? (
+              <div className="reorder-list">
+                {[...(meta?.history ?? [])].reverse().map((entry) => (
+                  <div className="inspection-item" key={entry.version}>
+                    <span><Badge tone="purple">{t("cmms.wave2.doc.version").replace("{n}", String(entry.version))}</Badge> {entry.note}</span>
+                    <span className="muted-cell">{formatJalali(entry.at, { withTime: true })}</span>
+                  </div>
+                ))}
+              </div>
+            ) : <p className="muted-cell">{t("cmms.wave2.price.empty")}</p>}
+          </>
+        );
+      })()}
+    </Modal>
     {toast && <Toast message={toast} onClose={() => setToast("")} />}
   </div>;
 }

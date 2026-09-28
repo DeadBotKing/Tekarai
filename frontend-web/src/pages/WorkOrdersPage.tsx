@@ -9,6 +9,8 @@ import { rowsToCsvBlob, triggerDownload } from "../core/files/downloadUtils";
 import { MaintenanceAttachments } from "../features/maintenance/MaintenanceAttachments";
 import { createMaintenanceService } from "../features/maintenance/maintenanceService";
 import { FAILURE_TREE, formatFailureNote } from "../features/maintenance/wave1";
+import { reservationsForOrder } from "../features/maintenance/wave2";
+import { closeReservation, listReservations, newId, saveReservation } from "../features/maintenance/wave2Store";
 import { demoDevices, demoWorkOrders } from "../features/maintenance/maintenanceDemoData";
 import type {
   LabourEntry,
@@ -218,6 +220,9 @@ export function WorkOrdersPage(): JSX.Element {
   const [decisionNote, setDecisionNote] = useState("");
   const [failureCategory, setFailureCategory] = useState("");
   const [failureReason, setFailureReason] = useState("");
+  const [reservePartCode, setReservePartCode] = useState("");
+  const [reserveQty, setReserveQty] = useState("1");
+  const [, setReservationsTick] = useState(0);
   const [history, setHistory] = useState<WorkOrderHistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [parts, setParts] = useState<SparePart[]>([]);
@@ -1208,6 +1213,70 @@ export function WorkOrdersPage(): JSX.Element {
                 {t("cmms.wo.resolution")}: {activeOrder.resolutionNote}
               </p>
             )}
+            <div className="detail-panel__description" style={{ marginTop: 12 }}>
+              <strong>{t("cmms.wave2.reserve.title")}</strong>
+            </div>
+            <div className="list-toolbar" style={{ marginBottom: 8 }}>
+              <SelectInput
+                aria-label={t("cmms.wave2.reserve.pick")}
+                value={reservePartCode}
+                onChange={(event) => setReservePartCode(event.target.value)}
+                options={[
+                  { value: "", label: t("cmms.wave2.reserve.pick") },
+                  ...parts.map((part) => ({ value: part.code, label: `${part.code} — ${part.name} (موجودی ${part.quantityOnHand} ${part.unit})` })),
+                ]}
+              />
+              <TextInput
+                label=""
+                aria-label={t("cmms.wave2.reserve.qty")}
+                type="number"
+                value={reserveQty}
+                onChange={(event) => setReserveQty(event.target.value)}
+              />
+              <Button
+                variant="primary"
+                size="sm"
+                icon="plus"
+                disabled={!reservePartCode || !(parseInt(reserveQty, 10) > 0)}
+                onClick={() => {
+                  saveReservation({
+                    id: newId("rsv"),
+                    orderId: activeOrder.id,
+                    partCode: reservePartCode,
+                    quantity: parseInt(reserveQty, 10),
+                    status: "active",
+                    at: new Date().toISOString(),
+                  });
+                  setReservationsTick((tick) => tick + 1);
+                  setReservePartCode("");
+                  setReserveQty("1");
+                  setToast(t("cmms.wave2.reserve.saved"));
+                }}
+              >
+                {t("cmms.wave2.reserve.add")}
+              </Button>
+            </div>
+            {(() => {
+              const active = reservationsForOrder(listReservations(), activeOrder.id);
+              if (!active.length) return <p className="muted-cell">{t("cmms.wave2.reserve.none")}</p>;
+              return (
+                <div className="reorder-list" style={{ marginBottom: 8 }}>
+                  {active.map((reservation) => (
+                    <div className="inspection-item" key={reservation.id}>
+                      <span><Icon name="layers" size={14} /> <strong>{reservation.partCode}</strong> × {reservation.quantity}</span>
+                      <div className="section-actions">
+                        <Button variant="ghost" size="sm" icon="refresh" onClick={() => { closeReservation(reservation.id, "released"); setReservationsTick((tick) => tick + 1); setToast(t("cmms.wave2.reserve.released")); }}>
+                          {t("cmms.wave2.reserve.release")}
+                        </Button>
+                        <Button variant="ghost" size="sm" icon="check" onClick={() => { closeReservation(reservation.id, "consumed"); setReservationsTick((tick) => tick + 1); setToast(t("cmms.wave2.reserve.consumed")); }}>
+                          {t("cmms.wave2.reserve.consume")}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
 
             <PermissionGuard permission={PERMISSIONS.maintenanceAttachmentView}>
               <MaintenanceAttachments

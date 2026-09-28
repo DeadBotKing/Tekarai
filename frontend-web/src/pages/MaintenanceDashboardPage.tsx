@@ -358,7 +358,7 @@ export function MaintenanceDashboardPage(): JSX.Element {
   }, [rangedOrders, range, t]);
 
   return (
-    <div className="page page--dashboard">
+    <div className="page page--dashboard" dir="rtl">
       <SectionHeader
         eyebrow={t("nav.maintenance")}
         title={t("cmms.dash.title")}

@@ -82,33 +82,33 @@ export function AppShell(): JSX.Element {
   }, [search, api]);
 
   const visibleNavigation = useMemo(
-    () =>
-      navigationConfig
-        .map((group) => ({
-          ...group,
-          children: group.children?.filter(
-            (item) => (!item.permission || has(item.permission)) && (!item.featureFlag || isEnabled(item.featureFlag)),
-          ),
-        }))
-        .filter((group) => (group.children?.length ?? 0) > 0 && (!group.featureFlag || isEnabled(group.featureFlag))),
+    () => filterNavigationItems(navigationConfig, has, isEnabled).filter((group) => (group.children?.length ?? 0) > 0),
     [has, isEnabled],
   );
+
+  const allFlatItems = useMemo(() => {
+    const out: Array<{ item: NavigationItem; group: NavigationItem }> = [];
+    const walk = (nodes: NavigationItem[] | undefined, group: NavigationItem): void => {
+      nodes?.forEach((node) => {
+        if (node.route) out.push({ item: node, group });
+        walk(node.children, group);
+      });
+    };
+    visibleNavigation.forEach((group) => walk(group.children, group));
+    return out;
+  }, [visibleNavigation]);
 
   // Real global search: navigate between actual pages of the app (permission-aware).
   const allPages = useMemo<PageResult[]>(
     () =>
-      visibleNavigation.flatMap((group) =>
-        (group.children ?? [])
-          .filter((item) => item.route)
-          .map((item) => ({
-            id: item.id,
-            title: t(item.label),
-            group: t(group.label),
-            route: item.route ?? "/app/dashboard",
-            icon: item.icon,
-          })),
-      ),
-    [visibleNavigation, t],
+      allFlatItems.map(({ item, group }) => ({
+        id: item.id,
+        title: t(item.label),
+        group: t(group.label),
+        route: item.route ?? "/app/dashboard",
+        icon: item.icon,
+      })),
+    [allFlatItems, t],
   );
 
   const results = useMemo<PageResult[]>(() => {
@@ -121,14 +121,12 @@ export function AppShell(): JSX.Element {
 
   const crumb = useMemo<Crumb>(() => {
     let best: { item: NavigationItem; group: NavigationItem } | null = null;
-    for (const group of visibleNavigation) {
-      for (const item of group.children ?? []) {
-        if (!item.route) continue;
-        const match =
-          currentRoute(location.pathname) === item.route ||
-          currentRoute(location.pathname).startsWith(`${item.route}/`);
-        if (match && (!best || item.route.length > (best.item.route?.length ?? 0))) best = { item, group };
-      }
+    for (const { item, group } of allFlatItems) {
+      if (!item.route) continue;
+      const match =
+        currentRoute(location.pathname) === item.route ||
+        currentRoute(location.pathname).startsWith(`${item.route}/`);
+      if (match && (!best || item.route.length > (best.item.route?.length ?? 0))) best = { item, group };
     }
     return best
       ? { group: t(best.group.label), page: t(best.item.label) }
@@ -380,6 +378,20 @@ function currentRoute(pathname: string): string {
   return pathname.replace(/\/+$/, "");
 }
 
+const filterNavigationItems = (
+  items: NavigationItem[] | undefined,
+  has: (permission: string) => boolean,
+  isEnabled: (flag: string) => boolean,
+): NavigationItem[] =>
+  (items ?? [])
+    .map((item) => ({ ...item, children: filterNavigationItems(item.children, has, isEnabled) }))
+    .filter((item) => {
+      if (item.permission && !has(item.permission)) return false;
+      if (item.featureFlag && !isEnabled(item.featureFlag)) return false;
+      return Boolean(item.route) || Boolean(item.children?.length);
+    })
+    .map((item) => ({ ...item, children: item.children?.length ? item.children : undefined }));
+
 function NavItem({
   item,
   collapsed,
@@ -392,14 +404,67 @@ function NavItem({
   onNavigate: () => void;
 }): JSX.Element {
   const { t } = useLocalization();
-  const route = item.route ?? "/app/dashboard";
-  const active = currentRoute(activePath) === route || (route !== "/app/dashboard" && currentRoute(activePath).startsWith(`${route}/`));
+  const children = item.children?.filter((child) => child.route) ?? [];
+  const hasSub = children.length > 0;
+  const route = item.route ?? children[0]?.route ?? "/app/dashboard";
+  const normalizedPath = currentRoute(activePath);
+  const selfActive = normalizedPath === route || (route !== "/app/dashboard" && normalizedPath.startsWith(`${route}/`));
+  const childActive =
+    hasSub &&
+    children.some((child) => {
+      const childRoute = child.route ?? "";
+      return normalizedPath === childRoute || normalizedPath.startsWith(`${childRoute}/`);
+    });
+  const [open, setOpen] = useState(childActive);
+  const childActiveRef = childActive;
+  useEffect(() => {
+    if (childActiveRef) setOpen(true);
+  }, [childActiveRef]);
+
+  if (!hasSub) {
+    return (
+      <NavLink to={route} className={`nav-item ${selfActive ? "is-active" : ""}`} onClick={onNavigate} title={collapsed ? t(item.label) : undefined}>
+        <Icon name={item.icon as IconName} size={17} />
+        <span>{!collapsed && t(item.label)}</span>
+        {!collapsed && item.badge && <span className="nav-item__badge">{item.badge}</span>}
+      </NavLink>
+    );
+  }
+
+  if (collapsed) {
+    const firstChild = children[0];
+    return (
+      <NavLink to={firstChild.route ?? route} className={`nav-item ${childActive ? "is-active" : ""}`} onClick={onNavigate} title={t(item.label)}>
+        <Icon name={item.icon as IconName} size={17} />
+      </NavLink>
+    );
+  }
+
   return (
-    <NavLink to={route} className={`nav-item ${active ? "is-active" : ""}`} onClick={onNavigate} title={collapsed ? t(item.label) : undefined}>
-      <Icon name={item.icon as IconName} size={17} />
-      <span>{!collapsed && t(item.label)}</span>
-      {!collapsed && item.badge && <span className="nav-item__badge">{item.badge}</span>}
-    </NavLink>
+    <div className="nav-item-group">
+      <button
+        type="button"
+        className={`nav-item nav-item--parent ${childActive ? "is-active" : ""} ${open ? "is-open" : ""}`}
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        aria-label={t(item.label)}
+      >
+        <Icon name={item.icon as IconName} size={17} />
+        <span>{t(item.label)}</span>
+        <Icon name="chevronUp" size={12} className="nav-item__chevron" />
+      </button>
+      {open &&
+        children.map((child) => {
+          const childRoute = child.route ?? route;
+          const active = normalizedPath === childRoute || normalizedPath.startsWith(`${childRoute}/`);
+          return (
+            <NavLink key={child.id} to={childRoute} className={`nav-item nav-item--sub ${active ? "is-active" : ""}`} onClick={onNavigate}>
+              <Icon name={child.icon as IconName} size={15} />
+              <span>{t(child.label)}</span>
+            </NavLink>
+          );
+        })}
+    </div>
   );
 }
 

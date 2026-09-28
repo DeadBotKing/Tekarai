@@ -307,3 +307,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .creatable-select__action:hover { color: var(--text-strong, #1b2130); background: var(--surface-3, #e9ebf2); }
 .creatable-select__action--confirm { color: #fff; background: var(--primary, #2878ff); border-color: var(--primary, #2878ff); }
 .creatable-select__action--confirm:hover { background: var(--primary-strong, #1f63d8); }
+
+/* ---------- منوی تودرتو (زیر‌مجموعه‌های نگهداری) ---------- */
+.nav-item.nav-item--parent { width: 100%; background: transparent; border: 0; cursor: pointer; text-align: start; font-family: inherit; }
+.nav-item__chevron { flex: 0 0 auto; margin-inline-start: auto; color: var(--sidebar-muted); transition: transform .18s ease; }
+.nav-item--parent.is-open .nav-item__chevron { transform: rotate(180deg); }
+.nav-item--sub { min-height: 33px; padding-inline-start: 34px; color: var(--sidebar-muted); font-size: 11px; font-weight: 600; }
+.nav-item--sub:hover { color: #fff; }
+.nav-item--sub.is-active { color: #fff; background: rgb(255 255 255 / .08); }

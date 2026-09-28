@@ -416,7 +416,7 @@ export function EquipmentRegistryPage(): JSX.Element {
           icon="settings"
           tone="amber"
         />
-        <MetricCard label={t("registry.metric.pmDue")} value={dueCount} icon="warning" tone="amber" />
+        <MetricCard label={t("registry.metric.pmDue")} value={dueCount} icon="warning" tone="orange" />
       </div>
 
       <Card className="content-card" padding="md">

@@ -265,7 +265,7 @@ export function DeviceReportPage(): JSX.Element {
               label={t("cmms.report.overdueOrders")}
               value={summary?.overdueOrders ?? 0}
               icon="warning"
-              tone="amber"
+              tone="orange"
             />
             <MetricCard
               label={t("cmms.report.mttr")}

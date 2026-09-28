@@ -6,13 +6,14 @@ import { PERMISSIONS } from "../core/permissions/permissionContext";
 import { rowsToCsvBlob, triggerDownload } from "../core/files/downloadUtils";
 import { parseImportFile, toNumber } from "../core/files/importUtils";
 import { createMaintenanceService } from "../features/maintenance/maintenanceService";
+import { buildReorderSuggestions } from "../features/maintenance/wave1";
 import type { SparePart } from "../shared/types/domain";
 import { DataTable, type DataTableColumn } from "../shared/components/DataTable";
 import { Modal, Toast } from "../shared/components/overlays";
 import { Badge, Button, Card, CardHeader, PermissionGuard, SectionHeader, TextInput } from "../shared/components/primitives";
 import { Icon } from "../shared/components/Icon";
 
-const demoParts: SparePart[] = [
+export const demoParts: SparePart[] = [
   { id: "sp-1", code: "SAL-4021", name: "بلبرینگ 6204", unit: "عدد", quantityOnHand: 42, minimumStock: 20, unitCost: 185_000, lowStock: false, createdAt: "1405/05/12", updatedAt: "" },
   { id: "sp-2", code: "BLT-1180", name: "تسمه V118", unit: "عدد", quantityOnHand: 6, minimumStock: 10, unitCost: 320_000, lowStock: true, createdAt: "1405/05/12", updatedAt: "" },
   { id: "sp-3", code: "FLT-2200", name: "فیلتر روغن هیدرولیک", unit: "عدد", quantityOnHand: 15, minimumStock: 8, unitCost: 610_000, lowStock: false, createdAt: "1405/05/13", updatedAt: "" },
@@ -150,6 +151,27 @@ export function SparePartsPage(): JSX.Element {
       <div><span>{t("warehouse.stockValue")}</span><strong>{totalValue.toLocaleString()}</strong></div>
       <div><span>{t("warehouse.totalStock")}</span><strong>{parts.reduce((sum, part) => sum + part.quantityOnHand, 0).toLocaleString()}</strong></div>
     </div>
+    {(() => {
+      const suggestions = buildReorderSuggestions(parts);
+      if (!suggestions.length) return null;
+      return (
+        <Card className="content-card" padding="md">
+          <CardHeader title={t("cmms.wave1.reorderTitle")} subtitle={t("cmms.wave1.reorderSubtitle")} icon="warning" />
+          <div className="reorder-list">
+            {suggestions.map((item) => (
+              <div className="inspection-item" key={item.partCode}>
+                <span><Icon name="layers" size={14} /> <strong>{item.partCode}</strong> — {item.partName}</span>
+                <div className="section-actions">
+                  <Badge tone="danger" dot>{t("warehouse.stock")}: {item.quantityOnHand} {item.unit}</Badge>
+                  <Badge tone="neutral" dot>{t("warehouse.minimum")}: {item.minimumStock}</Badge>
+                  <Badge tone="warning" dot>{t("cmms.wave1.colSuggested")}: {item.suggestedOrder} {item.unit}</Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      );
+    })()}
     <Card className="content-card" padding="none">
       <CardHeader title={`${filtered.length} ${t("warehouse.title").toLowerCase()}`} action={<div className="list-toolbar">
         <div className="search-box"><Icon name="search" size={16} /><input value={search} aria-label={t("warehouse.search")} placeholder={t("warehouse.search")} onChange={(event) => setSearch(event.target.value)} /></div>

@@ -10,10 +10,14 @@ import {
 } from "../features/maintenance/maintenanceService";
 import { triggerDownload } from "../core/files/downloadUtils";
 import { demoDevices, demoWorkOrders } from "../features/maintenance/maintenanceDemoData";
+import { formatJalali } from "../core/localization/jalali";
+import { slaBreachedOrders, buildReorderSuggestions } from "../features/maintenance/wave1";
+import { demoParts } from "./SparePartsPage";
 import type {
   MaintenanceDepartment,
   MaintenanceDevice,
   Priority,
+  SparePart,
   WorkOrder,
   WorkOrderStatus,
 } from "../shared/types/domain";
@@ -120,6 +124,7 @@ export function MaintenanceDashboardPage(): JSX.Element {
   const [orders, setOrders] = useState<WorkOrder[]>(
     runtimeConfig.demoMode ? demoWorkOrders : [],
   );
+  const [parts, setParts] = useState<SparePart[]>(runtimeConfig.demoMode ? demoParts : []);
   const [devices, setDevices] = useState<MaintenanceDevice[]>(
     runtimeConfig.demoMode ? demoDevices : [],
   );
@@ -147,6 +152,11 @@ export function MaintenanceDashboardPage(): JSX.Element {
       .then(setCostReport)
       .catch(() => setCostReport(null));
   }, [service, monthCostRange]);
+
+  useEffect(() => {
+    if (runtimeConfig.demoMode) return;
+    service.listSpareParts("").then(setParts).catch(() => setParts([]));
+  }, [service]);
 
   const downloadCostReport = async (format: "csv" | "xlsx" | "pdf"): Promise<void> => {
     if (runtimeConfig.demoMode) return;
@@ -412,6 +422,46 @@ export function MaintenanceDashboardPage(): JSX.Element {
         </div>
       </div>
 
+      {(() => {
+        const breaches = slaBreachedOrders(orders);
+        if (!breaches.length) return null;
+        return (
+          <Card padding="md" className="dash-cost">
+            <div className="inspection-item">
+              <span><Icon name="warning" size={16} /> <strong>{t("cmms.wave1.slaTitle")}</strong></span>
+              <Badge tone="danger" dot>{t("cmms.wave1.slaBanner").replace("{count}", String(breaches.length))}</Badge>
+            </div>
+            <div className="reorder-list">
+              {breaches.slice(0, 5).map((order) => (
+                <div className="inspection-item" key={order.id}>
+                  <span><Icon name="clock" size={13} /> <strong>{order.title}</strong></span>
+                  <Badge tone="warning" dot>{t("cmms.wo.slaDue")}: {formatJalali(order.slaDueAt ?? "", { withTime: true })}</Badge>
+                </div>
+              ))}
+            </div>
+          </Card>
+        );
+      })()}
+      {(() => {
+        const suggestions = buildReorderSuggestions(parts);
+        if (!suggestions.length) return null;
+        return (
+          <Card padding="md">
+            <CardHeader title={t("cmms.wave1.reorderTitle")} subtitle={t("cmms.wave1.reorderSubtitle")} icon="warning" />
+            <div className="reorder-list">
+              {suggestions.slice(0, 4).map((item) => (
+                <div className="inspection-item" key={item.partCode}>
+                  <span><Icon name="layers" size={14} /> <strong>{item.partCode}</strong> — {item.partName}</span>
+                  <div className="section-actions">
+                    <Badge tone="danger" dot>{item.quantityOnHand} / حداقل {item.minimumStock}</Badge>
+                    <Badge tone="warning" dot>{t("cmms.wave1.colSuggested")}: {item.suggestedOrder} {item.unit}</Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        );
+      })()}
       {!runtimeConfig.demoMode && (
         <Card className="dash-cost dash-actions--noprint" padding="md">
           <CardHeader

@@ -6,8 +6,8 @@ import { PERMISSIONS } from "../core/permissions/permissionContext";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { MaintenanceAttachments } from "../features/maintenance/MaintenanceAttachments";
 import { createMaintenanceService } from "../features/maintenance/maintenanceService";
-import { demoDevices } from "../features/maintenance/maintenanceDemoData";
-import type { DeviceStatus, MaintenanceDepartment, MaintenanceDevice } from "../shared/types/domain";
+import { demoDevices, demoWorkOrders } from "../features/maintenance/maintenanceDemoData";
+import type { DeviceStatus, MaintenanceDepartment, MaintenanceDevice, WorkOrder } from "../shared/types/domain";
 import { DataTable, type DataTableColumn } from "../shared/components/DataTable";
 import { Modal, Toast } from "../shared/components/overlays";
 import {
@@ -26,6 +26,7 @@ import { formatJalali, todayIso } from "../core/localization/jalali";
 import { taxonomyLabel } from "../core/localization/taxonomyLabel";
 import { CreatableSelect } from "../shared/components/CreatableSelect";
 import { mergeOptions } from "../features/maintenance/optionCatalog";
+import { buildDeviceTree, type DeviceTreeNode } from "../features/maintenance/wave1";
 
 const DEVICE_STATUSES: DeviceStatus[] = [
   "operational",
@@ -64,6 +65,8 @@ export function MaintenanceDevicesPage(): JSX.Element {
   const navigate = useNavigate();
   const api = useApiClient();
   const service = useMemo(() => createMaintenanceService(api), [api]);
+  const [viewMode, setViewMode] = useState<"list" | "tree">("list");
+  const [treeOrders, setTreeOrders] = useState<Pick<WorkOrder, "id" | "deviceId" | "status" | "slaDueAt">[]>([]);
   const [devices, setDevices] = useState<MaintenanceDevice[]>(
     runtimeConfig.demoMode ? demoDevices : [],
   );
@@ -400,6 +403,8 @@ export function MaintenanceDevicesPage(): JSX.Element {
     },
   ];
 
+  const deviceTree = useMemo(() => buildDeviceTree(devices, treeOrders), [devices, treeOrders]);
+
   return (
     <div className="page" dir="rtl">
       <SectionHeader
@@ -408,6 +413,19 @@ export function MaintenanceDevicesPage(): JSX.Element {
         subtitle={t("cmms.devices.subtitle")}
         actions={
           <div className="cmms-header-actions">
+            <Button
+              variant="secondary"
+              icon="grid"
+              onClick={() => {
+                if (viewMode === "list" && !treeOrders.length) {
+                  if (runtimeConfig.demoMode) setTreeOrders(demoWorkOrders);
+                  else service.listWorkOrders().then(setTreeOrders).catch(() => setTreeOrders([]));
+                }
+                setViewMode((current) => (current === "list" ? "tree" : "list"));
+              }}
+            >
+              {viewMode === "list" ? "نمای درخت" : "نمای فهرست"}
+            </Button>
             <PermissionGuard permission={PERMISSIONS.maintenanceWorkOrderList}>
               <Button
                 variant="secondary"
@@ -459,6 +477,12 @@ export function MaintenanceDevicesPage(): JSX.Element {
         </div>
       </Card>
 
+      {viewMode === "tree" ? (
+        <Card className="content-card" padding="md">
+          <h3>{t("cmms.wave1.treeTitle")}</h3>
+          <DeviceTreeView nodes={deviceTree} depth={0} />
+        </Card>
+      ) : (
       <Card className="content-card" padding="none">
         <div className="view-toolbar">
           <div className="list-toolbar">
@@ -508,6 +532,7 @@ export function MaintenanceDevicesPage(): JSX.Element {
           exportName="tekarai-devices"
         />
       </Card>
+      )}
 
       <Modal
         open={Boolean(attachmentDevice)}
@@ -680,5 +705,32 @@ export function MaintenanceDevicesPage(): JSX.Element {
 
       {toast && <Toast message={toast} onClose={() => setToast("")} />}
     </div>
+  );
+}
+
+
+function DeviceTreeView({ nodes, depth }: { nodes: DeviceTreeNode[]; depth: number }): JSX.Element {
+  return (
+    <>
+      {nodes.map((node) => (
+        <div key={`${node.key}-${depth}`}>
+          <div className="inspection-item" style={{ paddingInlineStart: depth * 20 }}>
+            <span>
+              <Icon name={node.children.length ? "folder" : "grid"} size={14} /> <strong>{node.label}</strong>
+            </span>
+            <div className="section-actions">
+              {node.devices.length > 0 && <Badge tone="neutral" dot>{node.devices.length} دستگاه</Badge>}
+              {node.openWorkOrders > 0 && <Badge tone="warning" dot>{node.openWorkOrders} درخواست باز</Badge>}
+            </div>
+          </div>
+          {node.devices.map((device) => (
+            <div key={device.id} className="inspection-item" style={{ paddingInlineStart: depth * 20 + 24 }}>
+              <span><Icon name="cpu" size={13} /> {device.code} — {device.name}</span>
+            </div>
+          ))}
+          {node.children.length > 0 && <DeviceTreeView nodes={node.children} depth={depth + 1} />}
+        </div>
+      ))}
+    </>
   );
 }

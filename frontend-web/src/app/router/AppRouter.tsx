@@ -6,6 +6,7 @@ import { ProjectsPage } from "../../pages/ProjectsPage";
 import { TasksPage } from "../../pages/TasksPage";
 import { MaintenanceDashboardPage } from "../../pages/MaintenanceDashboardPage";
 import { MaintenanceDevicesPage } from "../../pages/MaintenanceDevicesPage";
+import MaintenanceInspectionsPage from "../../pages/MaintenanceInspectionsPage";
 import { EquipmentRegistryPage } from "../../pages/EquipmentRegistryPage";
 import { DeviceProfilePage } from "../../pages/DeviceProfilePage";
 import { MaintenanceLocationsPage } from "../../pages/MaintenanceLocationsPage";
@@ -48,6 +49,7 @@ export function AppRouter(): JSX.Element {
       <Route path="maintenance/work-orders" element={<WorkOrdersPage />} />
       <Route path="maintenance/warehouse" element={<SparePartsPage />} />
       <Route path="account" element={<AccountPage />} />
+      <Route path="maintenance/inspections" element={<MaintenanceInspectionsPage />} />
       <Route path="maintenance/pm-calendar" element={<MaintenancePmCalendarPage />} />
       <Route path="documents" element={<DocumentsPage />} />
       <Route path="intelligence" element={<IntelligencePage />} />

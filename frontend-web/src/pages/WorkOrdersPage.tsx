@@ -8,6 +8,7 @@ import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { rowsToCsvBlob, triggerDownload } from "../core/files/downloadUtils";
 import { MaintenanceAttachments } from "../features/maintenance/MaintenanceAttachments";
 import { createMaintenanceService } from "../features/maintenance/maintenanceService";
+import { FAILURE_TREE, formatFailureNote } from "../features/maintenance/wave1";
 import { demoDevices, demoWorkOrders } from "../features/maintenance/maintenanceDemoData";
 import type {
   LabourEntry,
@@ -215,6 +216,8 @@ export function WorkOrdersPage(): JSX.Element {
   const [approveOrder, setApproveOrder] = useState<WorkOrder | null>(null);
   const [rejectOrder, setRejectOrder] = useState<WorkOrder | null>(null);
   const [decisionNote, setDecisionNote] = useState("");
+  const [failureCategory, setFailureCategory] = useState("");
+  const [failureReason, setFailureReason] = useState("");
   const [history, setHistory] = useState<WorkOrderHistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [parts, setParts] = useState<SparePart[]>([]);
@@ -494,7 +497,10 @@ export function WorkOrdersPage(): JSX.Element {
       return;
     }
     try {
-      await service.approveWorkOrder(approveOrder.id, decisionNote.trim());
+      await service.approveWorkOrder(
+        approveOrder.id,
+        formatFailureNote(failureCategory, failureReason, decisionNote),
+      );
       setApproveOrder(null);
       setDecisionNote("");
       setToast(t("cmms.wo.approveSuccess"));
@@ -1535,6 +1541,27 @@ export function WorkOrdersPage(): JSX.Element {
         }
       >
         <p className="detail-panel__description">{t("cmms.wo.approveHelp")}</p>
+        <p className="muted-cell">{t("cmms.wave1.failureOptional")}</p>
+        <SelectInput
+          label={t("cmms.wave1.failureCategory")}
+          value={failureCategory}
+          onChange={(event) => { setFailureCategory(event.target.value); setFailureReason(""); }}
+          options={[
+            { value: "", label: "—" },
+            ...FAILURE_TREE.map((category) => ({ value: category.code, label: category.title })),
+          ]}
+        />
+        {failureCategory && (
+          <SelectInput
+            label={t("cmms.wave1.failureReason")}
+            value={failureReason}
+            onChange={(event) => setFailureReason(event.target.value)}
+            options={[
+              { value: "", label: "—" },
+              ...(FAILURE_TREE.find((category) => category.code === failureCategory)?.reasons ?? []).map((reason) => ({ value: reason.code, label: reason.title })),
+            ]}
+          />
+        )}
         <TextArea
           label={t("cmms.wo.decisionNote")}
           value={decisionNote}

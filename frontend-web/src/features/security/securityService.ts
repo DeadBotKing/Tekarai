@@ -57,6 +57,9 @@ export interface SecurityService {
   listUsers: (search?: string, signal?: AbortSignal) => Promise<UserAccount[]>;
   inviteUser: (input: InviteUserInput, signal?: AbortSignal) => Promise<UserAccount>;
   listRoles: (signal?: AbortSignal) => Promise<RoleRecord[]>;
+  createRole: (input: { code: string; name: string; scopeType: string; actions: string[] }, signal?: AbortSignal) => Promise<RoleRecord>;
+  updateRole: (roleId: string, input: { name: string; actions: string[] }, signal?: AbortSignal) => Promise<RoleRecord>;
+  assignRole: (userId: string, roleId: string, tenantId?: string, signal?: AbortSignal) => Promise<unknown>;
   me: (signal?: AbortSignal) => Promise<{ user: UserAccount; permissions: string[] }>;
   changePassword: (currentPassword: string, newPassword: string, signal?: AbortSignal) => Promise<unknown>;
   listSessions: (signal?: AbortSignal) => Promise<SessionRecord[]>;
@@ -85,6 +88,9 @@ export const createSecurityService = (api: ApiClient): SecurityService => ({
   inviteUser: (input, signal) =>
     api.post<UserAccount>(apiEndpoints.users, input, { signal, ...authOptions }),
   listRoles: (signal) => api.get<RoleRecord[]>(apiEndpoints.roles, { signal }),
+  createRole: (input, signal) => api.post<RoleRecord>(apiEndpoints.roles, input, { signal, ...authOptions }),
+  updateRole: (roleId, input, signal) => api.patch<RoleRecord>(`${apiEndpoints.roles}/${roleId}`, input, { signal, ...authOptions }),
+  assignRole: (userId, roleId, tenantId, signal) => api.post(`users/${userId}/roles`, { roleId, ...(tenantId ? { tenantId } : {}) }, { signal, ...authOptions }),
   me: (signal) => api.get<{ user: UserAccount; permissions: string[] }>(apiEndpoints.auth.me, { signal }),
   changePassword: (currentPassword, newPassword, signal) =>
     api.post(apiEndpoints.auth.passwordChange, { currentPassword, newPassword }, { signal, ...authOptions }),

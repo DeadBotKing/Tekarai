@@ -499,7 +499,7 @@ class ProcurementDashboardView(Base):
                 {
                     "suppliers": SupplierModel.objects.filter(tenantId=t, status="active").count(),
                     "openRequisitions": PurchaseRequisitionModel.objects.filter(
-                        tenantId=t, status__in=["submitted", "approved"]
+                        tenantId=t, status__in=["draft", "submitted", "approved"]
                     ).count(),
                     "openPurchaseOrders": PurchaseOrderModel.objects.filter(
                         tenantId=t, status__in=["submitted", "approved", "partiallyReceived"]
@@ -514,3 +514,29 @@ class ProcurementDashboardView(Base):
                 }
             )
         )
+
+class ApprovalHistoryView(Base):
+    """Immutable approval trail for requisitions and purchase orders."""
+    def get(self, request, documentType, documentId):
+        if documentType not in {"requisition", "purchaseOrder"}:
+            return Response(successEnvelope({"error": "unknown document type"}), status=400)
+        items = ProcurementApprovalModel.objects.filter(tenantId=tenant(), documentType=documentType, documentId=documentId)
+        return Response(successEnvelope([row(item) for item in items]))
+
+
+class ProcurementSupplierPerformanceView(Base):
+    """Supplier delivery and purchasing summary for the current tenant."""
+    def get(self, request):
+        t = tenant()
+        result = []
+        for supplier in SupplierModel.objects.filter(tenantId=t, status="active"):
+            orders = list(PurchaseOrderModel.objects.filter(tenantId=t, supplierId=supplier.id))
+            received = [x for x in orders if x.status == "received"]
+            on_time = sum(1 for x in received if not x.expectedDate or x.updatedAt.date() <= x.expectedDate)
+            result.append({
+                "supplierId": str(supplier.id), "supplierName": supplier.name,
+                "orders": len(orders), "receivedOrders": len(received),
+                "onTimeOrders": on_time, "onTimeRate": round((on_time / len(received)) * 100, 1) if received else 0,
+                "averageLeadTimeDays": supplier.defaultLeadTimeDays,
+            })
+        return Response(successEnvelope(result))

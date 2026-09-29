@@ -12,10 +12,14 @@ from .views import (
     SupplierDetailView,
     SupplierListView,
     SupplierPartsView,
+    ApprovalHistoryView,
+    ProcurementSupplierPerformanceView,
 )
 
 urlpatterns = [
     path("dashboard", ProcurementDashboardView.as_view()),
+    path("approval-history/<str:documentType>/<uuid:documentId>", ApprovalHistoryView.as_view()),
+    path("supplier-performance", ProcurementSupplierPerformanceView.as_view()),
     path("suppliers", SupplierListView.as_view()),
     path("suppliers/<uuid:supplierId>", SupplierDetailView.as_view()),
     path("suppliers/<uuid:supplierId>/parts", SupplierPartsView.as_view()),

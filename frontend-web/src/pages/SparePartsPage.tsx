@@ -10,6 +10,9 @@ import { buildReorderSuggestions } from "../features/maintenance/wave1";
 import { activeReservedForPart, availableStock } from "../features/maintenance/wave2";
 import { listReservations, syncReservationsFromServer } from "../features/maintenance/wave2Store";
 import type { PartTransaction, PartTransactionType, SparePart } from "../shared/types/domain";
+import { PART_UNITS } from "../shared/types/domain";
+import { CreatableSelect } from "../shared/components/CreatableSelect";
+import { mergeOptions } from "../features/maintenance/optionCatalog";
 import { DataTable, type DataTableColumn } from "../shared/components/DataTable";
 import { Modal, Toast } from "../shared/components/overlays";
 import { Badge, Button, Card, CardHeader, PermissionGuard, SectionHeader, SelectInput, TextInput } from "../shared/components/primitives";
@@ -276,7 +279,16 @@ export function SparePartsPage(): JSX.Element {
       <div className="form-grid">
         {!editing && <TextInput label={t("registry.code")} required value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value })} placeholder="SAL-4021" />}
         <TextInput label={t("registry.name")} required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
-        <TextInput label={t("warehouse.unit")} value={form.unit} onChange={(event) => setForm({ ...form, unit: event.target.value })} />
+        <CreatableSelect
+          label={t("warehouse.unit")}
+          required
+          value={form.unit}
+          onChange={(value) => setForm({ ...form, unit: value })}
+          catalogKey="part.unit"
+          canonical={PART_UNITS}
+          addLabel="➕ افزودن واحد جدید…"
+          options={mergeOptions({ canonical: PART_UNITS, translate: (value) => value, catalogKey: "part.unit", current: form.unit })}
+        />
         <TextInput label={t("warehouse.stock")} type="number" value={form.quantityOnHand} onChange={(event) => setForm({ ...form, quantityOnHand: event.target.value })} />
         <TextInput label={t("warehouse.minimum")} type="number" value={form.minimumStock} onChange={(event) => setForm({ ...form, minimumStock: event.target.value })} />
         <TextInput label={t("warehouse.unitCost")} type="number" value={form.unitCost} onChange={(event) => setForm({ ...form, unitCost: event.target.value })} />

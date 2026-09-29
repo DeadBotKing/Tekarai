@@ -330,3 +330,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   body.printing-qr-label .qr-label { position: fixed; inset: 0; margin: auto; width: 76mm; break-inside: avoid; }
   body.printing-qr-label .qr-label__canvas { width: 42mm !important; height: auto !important; }
 }
+
+/* Role permission editor */
+.permission-checklist { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; max-height:360px; overflow:auto; margin-top:16px; padding:12px; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius-sm); }
+.permission-checklist .checkbox-label { display:flex; align-items:center; gap:8px; min-width:0; padding:7px; }
+.permission-checklist code { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; direction:ltr; text-align:left; }
+@media (max-width:600px) { .permission-checklist { grid-template-columns:1fr; } }

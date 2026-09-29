@@ -1,0 +1,106 @@
+/* Procurement workspace — Persian RTL alignment. */
+.procurement-page {
+  direction: rtl;
+  text-align: right;
+}
+
+.procurement-page .section-header,
+.procurement-page .section-header__content,
+.procurement-page .section-header__heading,
+.procurement-page .section-header h1,
+.procurement-page .section-header p,
+.procurement-page .section-header .eyebrow {
+  text-align: right;
+}
+
+.procurement-page .section-header__actions {
+  justify-content: flex-start;
+  direction: rtl;
+}
+
+.procurement-page > .segmented-control {
+  direction: rtl;
+  justify-content: flex-start;
+  align-self: flex-start;
+  margin-bottom: 18px;
+}
+
+.procurement-page > .segmented-control button {
+  text-align: right;
+}
+
+.procurement-page .stats-grid {
+  direction: rtl;
+}
+
+.procurement-page .stats-grid > .card,
+.procurement-page .stats-grid > .card strong,
+.procurement-page .stats-grid > .card span {
+  text-align: right;
+}
+
+.procurement-page .card {
+  direction: rtl;
+  text-align: right;
+}
+
+.procurement-page .card__header {
+  direction: rtl;
+  justify-content: flex-start;
+  text-align: right;
+}
+
+.procurement-page .card__header > div,
+.procurement-page .card__header h2,
+.procurement-page .card__header p,
+.procurement-page .card__header span {
+  text-align: right;
+}
+
+.procurement-page .card__header h2 {
+  width: 100%;
+}
+
+.procurement-page .data-table {
+  direction: rtl;
+}
+
+.procurement-page .data-table th,
+.procurement-page .data-table td {
+  text-align: right;
+}
+
+.procurement-page .data-table .data-table__check {
+  text-align: center;
+}
+
+.procurement-page .data-table .sort-button {
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+}
+
+.procurement-page .modal,
+.procurement-page .modal__header,
+.procurement-page .modal__body,
+.procurement-page .modal__footer {
+  direction: rtl;
+  text-align: right;
+}
+
+.procurement-page .modal__footer {
+  justify-content: flex-start;
+}
+
+.procurement-page .form-grid,
+.procurement-page .form-grid label,
+.procurement-page .form-grid input,
+.procurement-page .form-grid select,
+.procurement-page .form-grid textarea {
+  direction: rtl;
+  text-align: right;
+}
+
+.procurement-page .form-grid input[type="number"] {
+  direction: ltr;
+  text-align: right;
+}

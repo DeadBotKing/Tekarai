@@ -40,6 +40,12 @@ from apps.maintenance.presentation.api.views.registryViews import (
     PmScheduleView,
     WorkOrderClosureView,
 )
+from apps.maintenance.presentation.api.views.sparePartViews import (
+    PartTransactionsView,
+    SparePartDetailView,
+    SparePartListView,
+    WorkOrderPartUsageView,
+)
 from apps.maintenance.presentation.api.views.teamSyncViews import (
     TeamInspectionRecordListView,
     TeamInspectionTemplateCommitView,
@@ -47,11 +53,6 @@ from apps.maintenance.presentation.api.views.teamSyncViews import (
     TeamInspectionTemplateListView,
     TeamReservationDetailView,
     TeamReservationListView,
-)
-from apps.maintenance.presentation.api.views.sparePartViews import (
-    SparePartDetailView,
-    SparePartListView,
-    WorkOrderPartUsageView,
 )
 from apps.maintenance.presentation.api.views.timeCostViews import (
     LabourEntryDetailView,
@@ -171,6 +172,11 @@ urlpatterns = [
     # Spare-parts warehouse.
     path("spare-parts", SparePartListView.as_view(), name="sparePartList"),
     path("spare-parts/<uuid:partId>", SparePartDetailView.as_view(), name="sparePartDetail"),
+    path(
+        "spare-parts/<uuid:partId>/transactions",
+        PartTransactionsView.as_view(),
+        name="partTransactions",
+    ),
     # Work orders — static "generate-pm" path precedes the uuid capture.
     path("work-orders", WorkOrderListView.as_view(), name="workOrderList"),
     path(

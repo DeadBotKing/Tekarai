@@ -132,8 +132,73 @@ class RetentionRunView(APIView):
         return Response(successEnvelope(result), status=200)
 
 
+class AttachmentUploadView(APIView):
+    """بارگذاری واقعی فایل رسانه‌ی چت (عکس/ویس) — فایل در MEDIA_ROOT با کلید
+    سازگار با policy ذخیره می‌شود و metadata معتبر برای sendMessage برمی‌گردد."""
+
+    permission_classes = [IsAuthenticated]
+
+    MAX_BYTES = 15 * 1024 * 1024
+    ALLOWED_PREFIXES = ("image/", "audio/", "video/")
+
+    def post(self, request: Request) -> Response:
+        import hashlib
+        import mimetypes
+        import os
+        import uuid
+
+        from django.conf import settings
+        from django.core.files.base import ContentFile
+        from django.core.files.storage import default_storage
+
+        from apps.communication.application.useCases.conversationUseCases import actorOf
+        from apps.sharedKernel.domain.errors import ValidationFailedError
+
+        upload = request.FILES.get("file")
+        if upload is None:
+            raise ValidationFailedError(
+                "هیچ فایلی ارسال نشده است.", fieldErrors={"file": "required"}
+            )
+        mime_type = (getattr(upload, "content_type", "") or "application/octet-stream").lower()
+        if not any(mime_type.startswith(prefix) for prefix in self.ALLOWED_PREFIXES):
+            raise ValidationFailedError(
+                "فقط فایل‌های تصویری، صوتی و ویدیویی پذیرفته می‌شوند.",
+                fieldErrors={"file": mime_type},
+            )
+        data = upload.read()
+        if not data:
+            raise ValidationFailedError("فایل خالی است.", fieldErrors={"file": "empty"})
+        if len(data) > self.MAX_BYTES:
+            raise ValidationFailedError(
+                "حجم فایل بیش از حد مجاز است.", fieldErrors={"file": "too-large"}
+            )
+        _sender_id, tenant_id = actorOf()
+        extension = os.path.splitext(getattr(upload, "name", "") or "")[1].lower()[:10]
+        if not extension:
+            extension = mimetypes.guess_extension(mime_type) or ".bin"
+        storage_key = f"communication/{tenant_id}/{uuid.uuid4().hex}{extension}"
+        default_storage.save(storage_key, ContentFile(data))
+        checksum = hashlib.sha256(data).hexdigest()
+        base = request.build_absolute_uri("/").rstrip("/")
+        media_prefix = settings.MEDIA_URL.lstrip("/")
+        return Response(
+            successEnvelope(
+                {
+                    "storageKey": storage_key,
+                    "fileName": getattr(upload, "name", "") or "file",
+                    "mimeType": mime_type,
+                    "sizeBytes": len(data),
+                    "checksum": checksum,
+                    "url": f"{base}/{media_prefix}{storage_key}",
+                }
+            ),
+            status=201,
+        )
+
+
 __all__ = [
     "AttachmentPreflightView",
+    "AttachmentUploadView",
     "MessageForwardView",
     "OfflineSyncView",
     "RetentionRunView",

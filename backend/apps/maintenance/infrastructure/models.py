@@ -602,3 +602,42 @@ class InspectionRecordModel(models.Model):
     class Meta:
         db_table = "InspectionRecord"
         ordering = ["-createdAt"]
+
+
+class PartTransactionModel(models.Model):
+    """دفتر تراکنش انبار — ردی نامتغیر برای هر ورود/خروج/برگشت/تعدیل."""
+
+    TRANSACTION_TYPES = (
+        ("RECEIPT", "رسید"),
+        ("ISSUE", "حواله"),
+        ("RETURN", "برگشت"),
+        ("ADJUSTMENT", "تعدیل"),
+    )
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenantId = models.UUIDField(db_index=True)
+    partId = models.UUIDField(db_index=True)
+    partCode = models.CharField(max_length=60)
+    partName = models.CharField(max_length=200)
+    unit = models.CharField(max_length=30, default="عدد")
+    transactionType = models.CharField(max_length=12, choices=TRANSACTION_TYPES)
+    quantity = models.DecimalField(max_digits=14, decimal_places=3)
+    balanceAfter = models.DecimalField(max_digits=14, decimal_places=3)
+    note = models.CharField(max_length=500, blank=True, default="")
+    reference = models.CharField(max_length=120, blank=True, default="")
+    actorId = models.UUIDField(null=True, blank=True)
+    createdAt = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = "PartTransaction"
+        ordering = ["-createdAt"]
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(quantity=0),
+                name="ck_part_transaction_nonzero_quantity",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(balanceAfter__gte=0),
+                name="ck_part_transaction_nonnegative_balance",
+            ),
+        ]

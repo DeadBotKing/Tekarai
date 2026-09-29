@@ -255,6 +255,31 @@ export interface SparePart {
   updatedAt: string;
 }
 
+export type PartTransactionType = "RECEIPT" | "ISSUE" | "RETURN" | "ADJUSTMENT";
+
+export interface PartTransaction {
+  id: string;
+  partId: string;
+  partCode: string;
+  partName: string;
+  unit: string;
+  transactionType: PartTransactionType;
+  typeLabel: string;
+  quantity: number;
+  balanceAfter: number;
+  note: string;
+  reference: string;
+  actorId: string;
+  createdAt: string;
+}
+
+export interface RecordPartTransactionInput {
+  transactionType: PartTransactionType;
+  quantity: number;
+  note?: string;
+  reference?: string;
+}
+
 export interface WorkOrderPartUsage {
   id: string;
   workOrderId: string;
@@ -716,6 +741,18 @@ export interface MessageReaction {
   userId: string;
 }
 
+export interface ChatAttachment {
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  checksum?: string;
+  storageKey?: string;
+  scanStatus?: string;
+  classification?: "PUBLIC" | "INTERNAL" | "CONFIDENTIAL" | "RESTRICTED";
+  /** نمایش‌دهنده‌ی نقطه‌ی دسترسی رسانه (URL یا documentRef بک‌اند) */
+  documentRef?: string;
+}
+
 export interface ChatMessage {
   id: string;
   conversationId: string;
@@ -730,6 +767,7 @@ export interface ChatMessage {
   pending?: boolean;
   failed?: boolean;
   reactions: MessageReaction[];
+  attachments?: ChatAttachment[];
 }
 
 export interface ChatDirectoryUser {
@@ -740,6 +778,8 @@ export interface ChatDirectoryUser {
 
 export interface SendMessageInput {
   body: string;
+  messageType?: "TEXT" | "IMAGE" | "AUDIO" | "FILE";
+  attachments?: ChatAttachment[];
   replyToId?: string;
   clientRequestId?: string;
 }

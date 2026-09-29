@@ -5,6 +5,7 @@ import { useLocalization } from "../core/localization/localizationContext";
 import { PERMISSIONS } from "../core/permissions/permissionContext";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { MaintenanceAttachments } from "../features/maintenance/MaintenanceAttachments";
+import { DeviceScanModal } from "../features/maintenance/DeviceScanModal";
 import { createMaintenanceService } from "../features/maintenance/maintenanceService";
 import { demoDevices, demoWorkOrders } from "../features/maintenance/maintenanceDemoData";
 import type { DeviceStatus, MaintenanceDepartment, MaintenanceDevice, WorkOrder } from "../shared/types/domain";
@@ -78,6 +79,7 @@ export function MaintenanceDevicesPage(): JSX.Element {
   const [pmFrom, setPmFrom] = useState("");
   const [pmTo, setPmTo] = useState("");
   const [toast, setToast] = useState("");
+  const [scanOpen, setScanOpen] = useState(false);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editDevice, setEditDevice] = useState<MaintenanceDevice | null>(null);
@@ -426,6 +428,9 @@ export function MaintenanceDevicesPage(): JSX.Element {
             >
               {viewMode === "list" ? "نمای درخت" : "نمای فهرست"}
             </Button>
+            <Button variant="secondary" icon="target" onClick={() => setScanOpen(true)}>
+              اسکن QR تجهیز
+            </Button>
             <PermissionGuard permission={PERMISSIONS.maintenanceWorkOrderList}>
               <Button
                 variant="secondary"
@@ -703,6 +708,7 @@ export function MaintenanceDevicesPage(): JSX.Element {
         )}
       </Modal>
 
+      <DeviceScanModal open={scanOpen} onClose={() => setScanOpen(false)} />
       {toast && <Toast message={toast} onClose={() => setToast("")} />}
     </div>
   );

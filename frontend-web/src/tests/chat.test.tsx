@@ -196,7 +196,7 @@ describe("chat page", () => {
 
     const composer = await screen.findByLabelText("پیام خود را بنویسید…");
     fireEvent.change(composer, { target: { value: "گزارش امروز ارسال شد" } });
-    fireEvent.click(screen.getByRole("button", { name: /ارسال/ }));
+    fireEvent.click(screen.getByRole("button", { name: "ارسال" }));
 
     await waitFor(() =>
       expect(screen.getAllByText("گزارش امروز ارسال شد").length).toBeGreaterThan(0),

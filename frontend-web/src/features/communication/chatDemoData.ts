@@ -85,7 +85,28 @@ const seedStore = (): ChatStore => {
     },
   ];
 
+  // «گفتگوی عمومی» — هر کاربری که عضو سامانه شود به‌صورت خودکار عضو این گروه است.
+  conversations.push({
+    id: "conv-general",
+    type: "GROUP",
+    name: "گفتگوی عمومی",
+    description: "همه‌ی اعضای سازمان — عضویت خودکار",
+    topic: "",
+    visibility: "PUBLIC",
+    isActive: true,
+    archivedAt: "",
+    createdAt: iso(10080),
+    lastMessageAt: iso(500),
+    lastMessagePreview: "به گفتگوی عمومی خوش آمدید.",
+    unreadCount: 0,
+  });
+
   const participantRows: [string, string, ParticipantRole][] = [
+    ...demoDirectory.map((user, index): [string, string, ParticipantRole] => [
+      "conv-general",
+      user.id,
+      index === 0 ? "OWNER" : "MEMBER",
+    ]),
     ["conv-1", "user-self", "OWNER"],
     ["conv-1", "user-2", "ADMIN"],
     ["conv-1", "user-3", "MEMBER"],
@@ -118,6 +139,7 @@ const seedStore = (): ChatStore => {
     ["conv-1", "user-5", "قطعهٔ یدکی از انبار تحویل گرفته شد.", 12, ""],
     ["conv-2", "user-2", "گزارش لرزش پمپ P-101 را فرستادم.", 95, ""],
     ["conv-3", "user-4", "چک‌لیست PM هیدرولیک این هفته منتشر شد.", 240, ""],
+    ["conv-general", "user-self", "به گفتگوی عمومی خوش آمدید — همه‌ی اعضا اینجا هستند.", 500, ""],
   ];
 
   const messages: ChatMessage[] = rows.map(([conversationId, senderId, body, minutes, replyTo], index) => ({
@@ -144,13 +166,55 @@ const load = (): ChatStore => {
     if (!raw) return seedStore();
     const parsed = JSON.parse(raw) as ChatStore;
     if (!Array.isArray(parsed.conversations) || !Array.isArray(parsed.messages)) return seedStore();
-    return parsed;
+    return reconcileWithDirectory(parsed);
   } catch {
     return seedStore();
   }
 };
 
 let store: ChatStore = load();
+
+/** گروه عمومی + عضویت خودکار تمام کاربران شناخته‌شده — برای استورهای قدیمی */
+const GENERAL_CONVERSATION: Conversation = {
+  id: "conv-general",
+  type: "GROUP",
+  name: "گفتگوی عمومی",
+  description: "همه‌ی اعضای سازمان — عضویت خودکار",
+  topic: "",
+  visibility: "PUBLIC",
+  isActive: true,
+  archivedAt: "",
+  createdAt: new Date().toISOString(),
+  lastMessageAt: "",
+  lastMessagePreview: "",
+  unreadCount: 0,
+};
+
+const reconcileWithDirectory = (store: ChatStore): ChatStore => {
+  if (!store.conversations.some((row) => row.id === GENERAL_CONVERSATION.id)) {
+    store.conversations = [GENERAL_CONVERSATION, ...store.conversations];
+  }
+  const existing = new Set(
+    store.participants
+      .filter((row) => row.conversationId === GENERAL_CONVERSATION.id && row.isActive)
+      .map((row) => row.userId),
+  );
+  demoDirectory.forEach((user) => {
+    if (existing.has(user.id)) return;
+    store.participants.push({
+      id: `part-general-${user.id}`,
+      conversationId: GENERAL_CONVERSATION.id,
+      userId: user.id,
+      displayName: user.displayName,
+      role: user.id === DEMO_SELF_ID ? "OWNER" : "MEMBER",
+      joinedAt: new Date().toISOString(),
+      leftAt: "",
+      isMuted: false,
+      isActive: true,
+    });
+  });
+  return store;
+};
 
 const persist = (): void => {
   if (typeof window === "undefined") return;
@@ -267,16 +331,22 @@ export const createDemoChatService = (): ChatService => ({
       conversationId,
       senderId: DEMO_SELF_ID,
       senderName: nameOf(DEMO_SELF_ID),
-      messageType: "TEXT",
+      messageType: input.messageType ?? "TEXT",
       body: input.body,
       createdAt: new Date().toISOString(),
       replyToId: input.replyToId ?? "",
       editedAt: "",
       deleted: false,
       reactions: [],
+      ...(input.attachments && input.attachments.length > 0 ? { attachments: input.attachments } : {}),
     };
     store.messages = [...store.messages, created];
-    touchConversation(conversationId, input.body);
+    const previewLabel = created.messageType === "IMAGE"
+      ? "📷 عکس"
+      : created.messageType === "AUDIO"
+        ? "🎤 پیام صوتی"
+        : input.body;
+    touchConversation(conversationId, previewLabel);
     persist();
     return clone(created);
   },

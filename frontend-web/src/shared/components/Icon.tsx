@@ -7,7 +7,7 @@ export type IconName =
   | "copy" | "cpu" | "download" | "edit" | "external" | "file" | "filePlus" | "filter"
   | "folder" | "grid" | "home" | "key" | "layers" | "lightbulb" | "link" | "lock" | "logout" | "menu"
   | "hash" | "message" | "archive"
-  | "minus" | "more" | "moon" | "paperclip" | "plus" | "refresh" | "search" | "send"
+  | "mic" | "minus" | "more" | "moon" | "paperclip" | "plus" | "refresh" | "search" | "send"
   | "settings" | "shield" | "sparkles" | "sun" | "table" | "target" | "upload" | "user"
   | "users" | "warning" | "xCircle";
 
@@ -61,6 +61,7 @@ const paths: Record<IconName, JSX.Element> = {
   menu: <><path d="M4 6h16M4 12h16M4 18h16" /></>,
   minus: <path d="M5 12h14" />,
   more: <><circle cx="5" cy="12" r="1" fill="currentColor" /><circle cx="12" cy="12" r="1" fill="currentColor" /><circle cx="19" cy="12" r="1" fill="currentColor" /></>,
+  mic: <><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></>,
   moon: <path d="M20 15.3A8 8 0 0 1 8.7 4 8 8 0 1 0 20 15.3z" />,
   paperclip: <path d="m21 11-8.5 8.5a5 5 0 0 1-7-7L14 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L15 7" />,
   plus: <path d="M12 5v14M5 12h14" />,

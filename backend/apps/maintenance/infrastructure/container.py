@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from apps.maintenance.application.useCases.alertScanUseCases import (
+    RunMaintenanceAlertScanUseCase,
+)
 from apps.maintenance.application.useCases.deviceUseCases import (
     ChangeDeviceStatusUseCase,
     GetDeviceTimelineUseCase,
@@ -22,8 +25,10 @@ from apps.maintenance.application.useCases.maintenanceAttachmentUseCases import 
 from apps.maintenance.application.useCases.sparePartUseCases import (
     ConsumeSparePartUseCase,
     CreateSparePartUseCase,
+    ListPartTransactionsUseCase,
     ListSparePartsUseCase,
     ListWorkOrderPartUsageUseCase,
+    RecordPartTransactionUseCase,
     UpdateSparePartUseCase,
 )
 from apps.maintenance.application.useCases.timeCostUseCases import (
@@ -166,6 +171,14 @@ def sendPmRemindersUseCase() -> SendPmRemindersUseCase:
     return SendPmRemindersUseCase(**_deviceDeps())
 
 
+def runMaintenanceAlertScanUseCase() -> RunMaintenanceAlertScanUseCase:
+    return RunMaintenanceAlertScanUseCase(
+        workOrderRepository=workOrderRepository(),
+        sparePartRepository=sparePartRepository(),
+        **_kernelPorts(),
+    )
+
+
 # -- Maintenance attachments -----------------------------------------------------
 def uploadMaintenanceAttachmentUseCase() -> UploadMaintenanceAttachmentUseCase:
     return UploadMaintenanceAttachmentUseCase(
@@ -202,6 +215,14 @@ def updateSparePartUseCase() -> UpdateSparePartUseCase:
 
 def listSparePartsUseCase() -> ListSparePartsUseCase:
     return ListSparePartsUseCase(repository=sparePartRepository(), **_kernelPorts())
+
+
+def recordPartTransactionUseCase() -> RecordPartTransactionUseCase:
+    return RecordPartTransactionUseCase(repository=sparePartRepository(), **_kernelPorts())
+
+
+def listPartTransactionsUseCase() -> ListPartTransactionsUseCase:
+    return ListPartTransactionsUseCase(repository=sparePartRepository(), **_kernelPorts())
 
 
 def consumeSparePartUseCase() -> ConsumeSparePartUseCase:
@@ -503,7 +524,9 @@ def closeReservationUseCase() -> "CloseReservationUseCase":
 
 
 def listInspectionTemplatesUseCase() -> "ListInspectionTemplatesUseCase":
-    from apps.maintenance.application.useCases.teamSyncUseCases import ListInspectionTemplatesUseCase
+    from apps.maintenance.application.useCases.teamSyncUseCases import (
+        ListInspectionTemplatesUseCase,
+    )
 
     return ListInspectionTemplatesUseCase(repository=inspectionSyncRepository(), **_kernelPorts())
 
@@ -515,7 +538,9 @@ def saveInspectionTemplateUseCase() -> "SaveInspectionTemplateUseCase":
 
 
 def commitInspectionTemplateUseCase() -> "CommitInspectionTemplateUseCase":
-    from apps.maintenance.application.useCases.teamSyncUseCases import CommitInspectionTemplateUseCase
+    from apps.maintenance.application.useCases.teamSyncUseCases import (
+        CommitInspectionTemplateUseCase,
+    )
 
     return CommitInspectionTemplateUseCase(repository=inspectionSyncRepository(), **_kernelPorts())
 
@@ -533,6 +558,8 @@ def saveInspectionRecordUseCase() -> "SaveInspectionRecordUseCase":
 
 
 def deleteInspectionTemplateUseCase() -> "DeleteInspectionTemplateUseCase":
-    from apps.maintenance.application.useCases.teamSyncUseCases import DeleteInspectionTemplateUseCase
+    from apps.maintenance.application.useCases.teamSyncUseCases import (
+        DeleteInspectionTemplateUseCase,
+    )
 
     return DeleteInspectionTemplateUseCase(repository=inspectionSyncRepository(), **_kernelPorts())

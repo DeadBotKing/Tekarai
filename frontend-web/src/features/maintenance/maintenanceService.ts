@@ -22,6 +22,9 @@ import type {
   WorkOrderHistoryEntry,
   WorkOrderStatus,
   WorkOrderType,
+  PartTransaction,
+  PartTransactionType,
+  RecordPartTransactionInput
 } from "../../shared/types/domain";
 
 /** Wire shape of a device DTO returned by /api/v1/maintenance/devices (Phase 21). */
@@ -94,6 +97,22 @@ interface SparePartDto {
   lowStock: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+interface PartTransactionDto {
+  id: string;
+  partId: string;
+  partCode: string;
+  partName: string;
+  unit: string;
+  transactionType: PartTransactionType;
+  typeLabel: string;
+  quantity: string;
+  balanceAfter: string;
+  note: string;
+  reference: string;
+  actorId: string;
+  createdAt: string;
 }
 
 interface WorkOrderPartUsageDto {
@@ -295,6 +314,22 @@ const toSparePart = (dto: SparePartDto): SparePart => ({
   updatedAt: dto.updatedAt ?? "",
 });
 
+const toPartTransaction = (dto: PartTransactionDto): PartTransaction => ({
+  id: dto.id,
+  partId: dto.partId,
+  partCode: dto.partCode,
+  partName: dto.partName,
+  unit: dto.unit,
+  transactionType: dto.transactionType,
+  typeLabel: dto.typeLabel,
+  quantity: Number(dto.quantity),
+  balanceAfter: Number(dto.balanceAfter),
+  note: dto.note ?? "",
+  reference: dto.reference ?? "",
+  actorId: dto.actorId ?? "",
+  createdAt: dto.createdAt ?? "",
+});
+
 const toPartUsage = (dto: WorkOrderPartUsageDto): WorkOrderPartUsage => ({
   id: dto.id,
   workOrderId: dto.workOrderId,
@@ -460,6 +495,12 @@ export interface MaintenanceService {
     input: Omit<CreateSparePartInput, "code">,
     signal?: AbortSignal,
   ) => Promise<SparePart>;
+  listPartTransactions: (partId: string, signal?: AbortSignal) => Promise<PartTransaction[]>;
+  recordPartTransaction: (
+    partId: string,
+    input: RecordPartTransactionInput,
+    signal?: AbortSignal,
+  ) => Promise<PartTransaction>;
   listWorkOrderParts: (id: string, signal?: AbortSignal) => Promise<WorkOrderPartUsage[]>;
   recordWorkOrderClosure: (
     id: string,
@@ -626,6 +667,26 @@ export const createMaintenanceService = (api: ApiClient): MaintenanceService => 
       { signal, retry: 0 },
     );
     return toSparePart(dto);
+  },
+  listPartTransactions: async (partId, signal) => {
+    const dtos = await api.get<PartTransactionDto[]>(
+      apiEndpoints.maintenance.partTransactions(partId),
+      { signal },
+    );
+    return dtos.map(toPartTransaction);
+  },
+  recordPartTransaction: async (partId, input, signal) => {
+    const dto = await api.post<PartTransactionDto>(
+      apiEndpoints.maintenance.partTransactions(partId),
+      {
+        transactionType: input.transactionType,
+        quantity: String(input.quantity),
+        note: input.note ?? "",
+        reference: input.reference ?? "",
+      },
+      { signal, retry: 0 },
+    );
+    return toPartTransaction(dto);
   },
   recordWorkOrderClosure: async (id, values, signal) => {
     await api.patch(apiEndpoints.maintenance.workOrderClosure(id), values, { signal, retry: 0 });

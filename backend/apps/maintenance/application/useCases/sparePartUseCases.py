@@ -9,14 +9,29 @@ from decimal import Decimal, InvalidOperation
 from apps.maintenance.application.commands.sparePartCommands import (
     ConsumeSparePartCommand,
     CreateSparePartCommand,
+    ListPartTransactionsQuery,
     ListSparePartsQuery,
     ListWorkOrderPartUsageQuery,
+    RecordPartTransactionCommand,
     UpdateSparePartCommand,
 )
 from apps.maintenance.application.services.tenantResolver import resolveTenantId
-from apps.maintenance.domain.entities.sparePart import SparePart, WorkOrderPartUsage
+from apps.maintenance.domain.entities.sparePart import (
+    PART_TRANSACTION_ADJUSTMENT,
+    PART_TRANSACTION_ISSUE,
+    PART_TRANSACTION_RECEIPT,
+    PART_TRANSACTION_TYPES,
+    PartTransaction,
+    SparePart,
+    WorkOrderPartUsage,
+)
 from apps.maintenance.domain.repositories.maintenanceRepositories import SparePartRepository
-from apps.sharedKernel.application.useCase import AUDIT_CREATE, AUDIT_UPDATE, UseCase
+from apps.sharedKernel.application.requestContext import currentContext
+from apps.sharedKernel.application.useCase import (
+    AUDIT_CREATE,
+    AUDIT_UPDATE,
+    UseCase,
+)
 from apps.sharedKernel.domain.errors import ValidationFailedError
 
 
@@ -215,3 +230,113 @@ class ListWorkOrderPartUsageUseCase(SparePartUseCaseBase):
             for item in self.repository.listUsage(resolveTenantId(""), uuid.UUID(query.workOrderId))
         ]
         return WorkOrderPartUsageListDto(items=items, totalCount=len(items))
+
+
+# ---------- دفتر تراکنش انبار ----------
+
+_TRANSACTION_FA = {
+    PART_TRANSACTION_RECEIPT: "رسید",
+    PART_TRANSACTION_ISSUE: "حواله",
+    "RETURN": "برگشت",
+    PART_TRANSACTION_ADJUSTMENT: "تعدیل",
+}
+
+
+@dataclass(frozen=True)
+class PartTransactionDto:
+    id: str
+    partId: str
+    partCode: str
+    partName: str
+    unit: str
+    transactionType: str
+    typeLabel: str
+    quantity: str
+    balanceAfter: str
+    note: str
+    reference: str
+    actorId: str
+    createdAt: str
+
+
+@dataclass(frozen=True)
+class PartTransactionListDto:
+    items: list[PartTransactionDto] = field(default_factory=list)
+    totalCount: int = 0
+
+    def asMeta(self) -> dict[str, object]:
+        return {"totalCount": self.totalCount}
+
+
+def _transactionDto(row: PartTransaction) -> PartTransactionDto:
+    return PartTransactionDto(
+        id=str(row.id),
+        partId=str(row.partId),
+        partCode=row.partCode,
+        partName=row.partName,
+        unit=row.unit,
+        transactionType=row.transactionType,
+        typeLabel=_TRANSACTION_FA.get(row.transactionType, row.transactionType),
+        quantity=str(row.quantity),
+        balanceAfter=str(row.balanceAfter),
+        note=row.note,
+        reference=row.reference,
+        actorId=str(row.actorId) if row.actorId else "",
+        createdAt=row.createdAt.isoformat(),
+    )
+
+
+class RecordPartTransactionUseCase(SparePartUseCaseBase):
+    """رسید/حواله/برگشت/تعدیل — ثبت در دفتر و به‌روزرسانی اتمیک موجودی."""
+
+    requiredAction = "maintenance.inventory.manage"
+
+    def perform(self, command: RecordPartTransactionCommand) -> PartTransactionDto:
+        tenantId = resolveTenantId("")
+        transactionType = command.transactionType.upper().strip()
+        if transactionType not in PART_TRANSACTION_TYPES:
+            raise ValidationFailedError(
+                "نوع تراکنش نامعتبر است.", fieldErrors={"transactionType": "invalid"}
+            )
+        amount = _decimal(command.quantity, "quantity")
+        if amount == 0:
+            raise ValidationFailedError(
+                "مقدار تراکنش نمی‌تواند صفر باشد.", fieldErrors={"quantity": "invalid"}
+            )
+        # علامت از نوع تراکنش مشتق می‌شود؛ کاربر فقط قدرمطلق را می‌فرستد.
+        # تعدیل (انبارگردانی) تنها نوعی است که علامت‌دار پذیرفته می‌شود.
+        if transactionType == PART_TRANSACTION_ISSUE:
+            signed = -abs(amount)
+        elif transactionType == PART_TRANSACTION_ADJUSTMENT:
+            signed = amount
+        else:
+            signed = abs(amount)
+        actorId = uuid.UUID(currentContext().actorId) if currentContext().actorId else None
+        row = self.repository.recordTransaction(
+            tenantId,
+            uuid.UUID(command.partId),
+            transactionType,
+            signed,
+            command.note.strip(),
+            command.reference.strip(),
+            actorId,
+            self.clock.nowUtc(),
+        )
+        self.audit(
+            AUDIT_CREATE,
+            "PartTransaction",
+            str(row.id),
+            tenantId,
+            after=_transactionDto(row).__dict__,
+        )
+        return _transactionDto(row)
+
+
+class ListPartTransactionsUseCase(SparePartUseCaseBase):
+    requiredAction = "maintenance.inventory.view"
+
+    def perform(self, query: ListPartTransactionsQuery) -> PartTransactionListDto:
+        tenantId = resolveTenantId("")
+        partId = uuid.UUID(query.partId) if query.partId.strip() else None
+        items = [_transactionDto(row) for row in self.repository.listTransactions(tenantId, partId)]
+        return PartTransactionListDto(items=items, totalCount=len(items))

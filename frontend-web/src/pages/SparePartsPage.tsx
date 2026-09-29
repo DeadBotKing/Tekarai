@@ -9,10 +9,10 @@ import { createMaintenanceService } from "../features/maintenance/maintenanceSer
 import { buildReorderSuggestions } from "../features/maintenance/wave1";
 import { activeReservedForPart, availableStock } from "../features/maintenance/wave2";
 import { listReservations, syncReservationsFromServer } from "../features/maintenance/wave2Store";
-import type { SparePart } from "../shared/types/domain";
+import type { PartTransaction, PartTransactionType, SparePart } from "../shared/types/domain";
 import { DataTable, type DataTableColumn } from "../shared/components/DataTable";
 import { Modal, Toast } from "../shared/components/overlays";
-import { Badge, Button, Card, CardHeader, PermissionGuard, SectionHeader, TextInput } from "../shared/components/primitives";
+import { Badge, Button, Card, CardHeader, PermissionGuard, SectionHeader, SelectInput, TextInput } from "../shared/components/primitives";
 import { Icon } from "../shared/components/Icon";
 
 export const demoParts: SparePart[] = [
@@ -26,6 +26,22 @@ export const demoParts: SparePart[] = [
 
 interface PartFormState { code: string; name: string; unit: string; quantityOnHand: string; minimumStock: string; unitCost: string; }
 const emptyForm: PartFormState = { code: "", name: "", unit: "عدد", quantityOnHand: "0", minimumStock: "0", unitCost: "0" };
+
+interface TxFormState { transactionType: PartTransactionType; quantity: string; reference: string; note: string; }
+const emptyTxForm: TxFormState = { transactionType: "RECEIPT", quantity: "", reference: "", note: "" };
+
+/** دفتر نمایشی هر قطعه: دو ردیف منسجم که به موجودی فعلی می‌رسد. */
+export function seedDemoLedger(part: SparePart): PartTransaction[] {
+  const received: PartTransaction = { id: `${part.id}-t1`, partId: part.id, partCode: part.code, partName: part.name, unit: part.unit, transactionType: "RECEIPT", typeLabel: "رسید", quantity: part.quantityOnHand + 2, balanceAfter: part.quantityOnHand + 2, note: "موجودی اولیه", reference: "رسید ابتدایی", actorId: "", createdAt: part.createdAt };
+  const counted: PartTransaction = { id: `${part.id}-t2`, partId: part.id, partCode: part.code, partName: part.name, unit: part.unit, transactionType: "ADJUSTMENT", typeLabel: "تعدیل", quantity: -2, balanceAfter: part.quantityOnHand, note: "انبارگردانی", reference: "", actorId: "", createdAt: part.createdAt };
+  return [counted, received];
+}
+
+export function signedQuantity(type: PartTransactionType, amount: number): number {
+  if (type === "ISSUE") return -Math.abs(amount);
+  if (type === "ADJUSTMENT") return amount;
+  return Math.abs(amount);
+}
 
 export function SparePartsPage(): JSX.Element {
   const t = faText;
@@ -45,6 +61,11 @@ export function SparePartsPage(): JSX.Element {
   const [importReport, setImportReport] = useState<{ created: number; errors: string[] } | null>(null);
   const [toast, setToast] = useState("");
   const fileInput = useRef<HTMLInputElement | null>(null);
+  const [ledgerPart, setLedgerPart] = useState<SparePart | null>(null);
+  const [ledgerRows, setLedgerRows] = useState<PartTransaction[]>([]);
+  const [ledgerLoading, setLedgerLoading] = useState(false);
+  const [txForm, setTxForm] = useState<TxFormState>(emptyTxForm);
+  const [txSaving, setTxSaving] = useState(false);
 
   const refresh = (searchText = search): void => {
     if (runtimeConfig.demoMode) return;
@@ -102,6 +123,57 @@ export function SparePartsPage(): JSX.Element {
       .finally(() => setSaving(false));
   };
 
+  const openLedger = (part: SparePart): void => {
+    setLedgerPart(part); setTxForm(emptyTxForm);
+    if (runtimeConfig.demoMode) { setLedgerRows(seedDemoLedger(part)); setLedgerLoading(false); return; }
+    setLedgerLoading(true);
+    service.listPartTransactions(part.id)
+      .then(setLedgerRows)
+      .catch(() => setToast(t("warehouse.loadFailed")))
+      .finally(() => setLedgerLoading(false));
+  };
+
+  const submitTransaction = (): void => {
+    if (!ledgerPart) return;
+    const amount = Number(txForm.quantity);
+    if (!Number.isFinite(amount) || amount === 0) return;
+    setTxSaving(true);
+    const signed = signedQuantity(txForm.transactionType, amount);
+    const refreshParts = (): void => setParts((current) => current.map((row) => {
+      if (row.id !== ledgerPart.id) return row;
+      const quantityOnHand = row.quantityOnHand + signed;
+      return { ...row, quantityOnHand, lowStock: quantityOnHand < row.minimumStock };
+    }));
+    if (runtimeConfig.demoMode) {
+      const balanceAfter = ledgerPart.quantityOnHand + signed;
+      if (balanceAfter < 0) { setTxSaving(false); setToast(t("warehouse.ledgerFailed")); return; }
+      const row: PartTransaction = {
+        id: `tx-${Date.now()}`, partId: ledgerPart.id, partCode: ledgerPart.code, partName: ledgerPart.name, unit: ledgerPart.unit,
+        transactionType: txForm.transactionType, typeLabel: t(`warehouse.ledger${txForm.transactionType === "RECEIPT" ? "Receipt" : txForm.transactionType === "ISSUE" ? "Issue" : txForm.transactionType === "RETURN" ? "Return" : "Adjustment"}` as Parameters<typeof t>[0]),
+        quantity: signed, balanceAfter,
+        note: txForm.note.trim(), reference: txForm.reference.trim(), actorId: "",
+        createdAt: new Date().toISOString().slice(0, 10),
+      };
+      setLedgerRows((current) => [row, ...current]);
+      refreshParts(); setLedgerPart({ ...ledgerPart, quantityOnHand: balanceAfter });
+      setTxForm(emptyTxForm); setTxSaving(false); setToast(t("warehouse.ledgerSaved"));
+      return;
+    }
+    service.recordPartTransaction(ledgerPart.id, {
+      transactionType: txForm.transactionType,
+      quantity: txForm.transactionType === "ADJUSTMENT" ? amount : Math.abs(amount),
+      note: txForm.note.trim(),
+      reference: txForm.reference.trim(),
+    })
+      .then((row) => {
+        setLedgerRows((current) => [row, ...current]);
+        refresh(); setLedgerPart({ ...ledgerPart, quantityOnHand: row.balanceAfter });
+        setTxForm(emptyTxForm); setToast(t("warehouse.ledgerSaved"));
+      })
+      .catch(() => setToast(t("warehouse.ledgerFailed")))
+      .finally(() => setTxSaving(false));
+  };
+
   const downloadTemplate = (): void => {
     const rows = [["code", "name", "unit", "quantityOnHand", "minimumStock", "unitCost"], ["SAL-4021", "بلبرینگ 6204", "عدد", "42", "20", "185000"]];
     triggerDownload(rowsToCsvBlob(rows), "spare-parts-import-template.csv");
@@ -143,7 +215,9 @@ export function SparePartsPage(): JSX.Element {
     { key: "minimumStock", label: t("warehouse.minimum"), accessor: (row) => row.minimumStock, sortable: true, width: "12%" },
     { key: "unitCost", label: t("warehouse.unitCost"), accessor: (row) => row.unitCost, sortable: true, width: "14%", render: (row) => `${row.unitCost.toLocaleString()} ${t("warehouse.currency")}` },
     { key: "state", label: t("project.status"), accessor: (row) => (lowStock(row) ? "low" : "ok"), sortable: true, width: "12%", render: (row) => lowStock(row) ? <Badge tone="warning" dot>{t("warehouse.lowStock")}</Badge> : <Badge tone="success" dot>{t("warehouse.inStock")}</Badge> },
-    ...(runtimeConfig.demoMode || undefined ? [{ key: "action" as const, label: t("project.actions"), hideable: false, render: (row: SparePart) => <PermissionGuard permission={PERMISSIONS.maintenanceInventoryManage}><Button variant="ghost" size="sm" icon="edit" onClick={() => openEdit(row)}>{t("common.edit")}</Button></PermissionGuard> }] : []),
+    ...(runtimeConfig.demoMode || undefined ? [{ key: "action" as const, label: t("project.actions"), hideable: false, render: (row: SparePart) => <span className="row-actions"><PermissionGuard permission={PERMISSIONS.maintenanceInventoryManage}><Button variant="ghost" size="sm" icon="edit" onClick={() => openEdit(row)}>{t("common.edit")}</Button></PermissionGuard>
+      <Button variant="ghost" size="sm" icon="book" title={t("warehouse.ledger")} onClick={() => openLedger(row)} aria-label={`${t("warehouse.ledger")} ${row.code}`}> </Button>
+    </span> }] : []),
     { key: "reserved", label: t("warehouse.reserved"), accessor: (row) => activeReservedForPart(listReservations(), row.code) || "" },
     { key: "available", label: t("warehouse.available"), render: (row) => {
         const reserved = activeReservedForPart(listReservations(), row.code);
@@ -207,6 +281,49 @@ export function SparePartsPage(): JSX.Element {
         <TextInput label={t("warehouse.minimum")} type="number" value={form.minimumStock} onChange={(event) => setForm({ ...form, minimumStock: event.target.value })} />
         <TextInput label={t("warehouse.unitCost")} type="number" value={form.unitCost} onChange={(event) => setForm({ ...form, unitCost: event.target.value })} />
       </div>
+    </Modal>
+    <Modal open={Boolean(ledgerPart)} wide title={`${t("warehouse.ledger")} — ${ledgerPart?.code ?? ""}`} onClose={() => setLedgerPart(null)} footer={<Button variant="primary" onClick={() => setLedgerPart(null)}>{t("common.close")}</Button>}>
+      {ledgerPart && <div className="ledger" dir="rtl">
+        <p className="muted-cell">{t("warehouse.ledgerHint")} · <strong>{ledgerPart.name}</strong> — {t("warehouse.stock")}: <strong>{ledgerPart.quantityOnHand.toLocaleString()} {ledgerPart.unit}</strong></p>
+        <PermissionGuard permission={PERMISSIONS.maintenanceInventoryManage}>
+          <form className="ledger-form" onSubmit={(event) => { event.preventDefault(); submitTransaction(); }}>
+            <SelectInput label={t("warehouse.ledgerType")} value={txForm.transactionType} onChange={(event) => setTxForm({ ...txForm, transactionType: event.target.value as PartTransactionType })} options={[
+              { value: "RECEIPT", label: t("warehouse.ledgerReceipt") },
+              { value: "ISSUE", label: t("warehouse.ledgerIssue") },
+              { value: "RETURN", label: t("warehouse.ledgerReturn") },
+              { value: "ADJUSTMENT", label: t("warehouse.ledgerAdjustment") },
+            ]} />
+            <TextInput label={`${t("warehouse.ledgerQuantity")} (${ledgerPart.unit})`} type="number" step="any" required value={txForm.quantity} onChange={(event) => setTxForm({ ...txForm, quantity: event.target.value })} />
+            <TextInput label={t("warehouse.ledgerReference")} value={txForm.reference} onChange={(event) => setTxForm({ ...txForm, reference: event.target.value })} />
+            <TextInput label={t("warehouse.ledgerNote")} value={txForm.note} onChange={(event) => setTxForm({ ...txForm, note: event.target.value })} />
+            <div className="ledger-form__action"><Button variant="primary" size="sm" icon="plus" type="submit" disabled={txSaving || !Number(txForm.quantity)}>{t("warehouse.ledgerNew")}</Button></div>
+          </form>
+        </PermissionGuard>
+        {ledgerLoading ? <p className="muted-cell">{t("common.loading")}</p> : ledgerRows.length === 0 ? (
+          <p className="muted-cell">{t("warehouse.ledgerEmpty")}</p>
+        ) : (
+          <div className="table-scroll"><table className="data-table ledger-table">
+            <thead><tr>
+              <th>{t("warehouse.ledgerType")}</th>
+              <th>{t("warehouse.ledgerQuantity")}</th>
+              <th>{t("warehouse.ledgerBalance")}</th>
+              <th>{t("warehouse.ledgerReference")}</th>
+              <th>{t("warehouse.ledgerNote")}</th>
+              <th>{t("warehouse.ledgerDate")}</th>
+            </tr></thead>
+            <tbody>
+              {ledgerRows.map((row) => <tr key={row.id}>
+                <td><Badge tone={row.quantity >= 0 ? "success" : "warning"} dot>{row.typeLabel}</Badge></td>
+                <td><strong dir="ltr">{row.quantity > 0 ? `+${row.quantity.toLocaleString()}` : row.quantity.toLocaleString()}</strong> <span className="muted-cell">{row.unit}</span></td>
+                <td><strong>{row.balanceAfter.toLocaleString()}</strong> <span className="muted-cell">{row.unit}</span></td>
+                <td className="muted-cell">{row.reference || "—"}</td>
+                <td className="muted-cell">{row.note || "—"}</td>
+                <td className="muted-cell">{row.createdAt.slice(0, 10)}</td>
+              </tr>)}
+            </tbody>
+          </table></div>
+        )}
+      </div>}
     </Modal>
     <Modal open={importOpen} title={t("warehouse.importTitle")} onClose={() => setImportOpen(false)} footer={<Button variant="primary" onClick={() => setImportOpen(false)}>{t("common.close")}</Button>}>
       <p className="muted-cell">{t("warehouse.importHint")}</p>

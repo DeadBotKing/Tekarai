@@ -9,6 +9,7 @@ from django.db.models import Q
 
 from apps.maintenance.domain.entities.workOrder import WorkOrder
 from apps.maintenance.domain.repositories.maintenanceRepositories import (
+    WorkOrderAlertRow,
     WorkOrderFilters,
     WorkOrderPage,
 )
@@ -190,3 +191,22 @@ class WorkOrderRepositoryDjango:
             labourCost=model.labourCost,
             partsCost=model.partsCost,
         )
+
+    def listAlertRows(self, tenantId: uuid.UUID) -> list[WorkOrderAlertRow]:
+        rows = WorkOrderModel.objects.filter(
+            tenantId=tenantId, deletedAt__isnull=True
+        ).order_by("-createdAt")[:500]
+        return [
+            WorkOrderAlertRow(
+                id=model.id,
+                deviceId=model.deviceId,
+                tenantId=model.tenantId,
+                title=model.title,
+                status=model.status,
+                priority=model.priority,
+                department=model.department,
+                createdAt=model.createdAt,
+            )
+            for model in rows
+        ]
+

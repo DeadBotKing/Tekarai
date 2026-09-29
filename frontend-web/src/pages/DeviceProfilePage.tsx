@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import QRCode from "qrcode";
 import { useNavigate, useParams } from "react-router-dom";
 import { useApiClient } from "../core/api/apiContext";
 import { useLocalization } from "../core/localization/localizationContext";
@@ -49,6 +50,7 @@ import {
 } from "../shared/components/primitives";
 import { Icon } from "../shared/components/Icon";
 import { JalaliDatePicker } from "../shared/components/JalaliDatePicker";
+import { deviceProfilePath, deviceQrPayload } from "../features/maintenance/deviceQr";
 import { formatJalali, todayIso } from "../core/localization/jalali";
 import { taxonomyLabel } from "../core/localization/taxonomyLabel";
 import { CreatableSelect } from "../shared/components/CreatableSelect";
@@ -121,6 +123,8 @@ export function DeviceProfilePage(): JSX.Element {
   const [failed, setFailed] = useState(false);
   const [tab, setTab] = useState<TabId>("nameplate");
   const [toast, setToast] = useState("");
+  const [qrOpen, setQrOpen] = useState(false);
+  const qrCanvas = useRef<HTMLCanvasElement | null>(null);
   const [saving, setSaving] = useState(false);
 
   const [nameplate, setNameplate] = useState<DeviceNameplate | null>(null);
@@ -208,6 +212,18 @@ export function DeviceProfilePage(): JSX.Element {
       active = false;
     };
   }, [maintenance]);
+
+  // QR باید قبل از خروجی زودهنگام (loading/failed) ثبت شود تا ترتیب هوک‌ها ثابت بماند.
+  const qrDeviceId = profile?.device.id ?? "";
+  useEffect(() => {
+    if (!qrOpen || !qrCanvas.current || !qrDeviceId) return;
+    void QRCode.toCanvas(qrCanvas.current, deviceQrPayload(qrDeviceId), {
+      width: 196,
+      margin: 1,
+      errorCorrectionLevel: "M",
+      color: { dark: "#101828", light: "#ffffff" },
+    });
+  }, [qrOpen, qrDeviceId]);
 
   if (loading) return <LoadingState label={t("registry.profile.loading")} />;
   if (failed || !profile || !nameplate) {
@@ -462,6 +478,12 @@ export function DeviceProfilePage(): JSX.Element {
     } finally {
       setSaving(false);
     }
+  };
+
+  const printQrLabel = (): void => {
+    document.body.classList.add("printing-qr-label");
+    window.print();
+    window.setTimeout(() => document.body.classList.remove("printing-qr-label"), 200);
   };
 
   const plansByDiscipline = (discipline: MaintenanceDepartment): PmPlan[] =>
@@ -1308,6 +1330,9 @@ export function DeviceProfilePage(): JSX.Element {
             >
               {t("cmms.timeline.action")}
             </Button>
+            <Button variant="secondary" icon="grid" onClick={() => setQrOpen(true)}>
+              {t("registry.qr.button")}
+            </Button>
           </div>
         }
       />
@@ -1570,6 +1595,34 @@ export function DeviceProfilePage(): JSX.Element {
         onSave={saveQuickPart}
         onCreated={setBomPartId}
       />
+
+      <Modal
+        open={qrOpen}
+        title={t("registry.qr.title")}
+        onClose={() => setQrOpen(false)}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setQrOpen(false)}>
+              {t("common.close")}
+            </Button>
+            <Button variant="primary" icon="file" onClick={printQrLabel}>
+              {t("registry.qr.print")}
+            </Button>
+          </>
+        }
+      >
+        <div className="qr-label-wrap" dir="rtl">
+          <div className="qr-label">
+            <div className="qr-label__head">
+              <strong>{device.code}</strong>
+              <span>{device.name}</span>
+            </div>
+            <canvas ref={qrCanvas} className="qr-label__canvas" aria-label={t("registry.qr.title")} />
+            <small dir="ltr">{deviceProfilePath(device.id)}</small>
+          </div>
+          <p className="muted-cell">{t("registry.qr.hint")}</p>
+        </div>
+      </Modal>
 
       {toast && <Toast message={toast} onClose={() => setToast("")} />}
     </div>

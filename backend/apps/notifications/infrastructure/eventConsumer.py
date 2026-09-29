@@ -149,6 +149,35 @@ DEFAULT_EVENT_ROUTES: dict[str, dict[str, Any]] = {
         },
         "sourceType": "MAINTENANCE",
     },
+    # -- Scheduled maintenance alerts (checkMaintenanceAlerts scan) -----------
+    # Overdue open work orders (BR-WO-SLA) and low-stock rows carry weekly
+    # deterministic eventIds, so daily cron re-runs stay duplicate-free.
+    "workOrderOverdue": {
+        "notificationType": "maintenance.workOrderOverdue",
+        "category": "MAINTENANCE",
+        "priority": "URGENT",
+        "templateKey": "maintenance.workOrderOverdue",
+        "title": "درخواست کار از SLA گذشته است",
+        "body": "یک درخواست کار باز از موعد تعیین‌شده‌ی اولویت خود فراتر رفته و نیازمند تشدید است.",
+        "recipientSpec": {
+            "type": "ROLE",
+            "value": ["maintenanceManager"],
+        },
+        "sourceType": "MAINTENANCE",
+    },
+    "sparePartLowStock": {
+        "notificationType": "maintenance.lowStock",
+        "category": "MAINTENANCE",
+        "priority": "NORMAL",
+        "templateKey": "maintenance.lowStock",
+        "title": "موجودی قطعه به حداقل رسید",
+        "body": "موجودی یک قطعه‌ی انبار در حداقل یا کمتر است؛ لطفاً برای تأمین آن اقدام کنید.",
+        "recipientSpec": {
+            "type": "ROLE",
+            "value": ["maintenanceManager", "maintenanceTechnician"],
+        },
+        "sourceType": "MAINTENANCE",
+    },
     "devicePmOverdue": {
         "notificationType": "maintenance.pmOverdue",
         "category": "MAINTENANCE",

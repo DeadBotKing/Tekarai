@@ -109,3 +109,15 @@ class ApproveWorkOrderCommand(Command):
 class RejectWorkOrderCommand(Command):
     workOrderId: str
     note: str = ""
+
+
+@dataclass(frozen=True)
+class RunMaintenanceAlertScanCommand(Command):
+    """Scheduled alert scan — overdue open work orders (BR-WO-SLA) and
+    low-stock spare parts. Emits ``workOrderOverdue`` / ``sparePartLowStock``
+    domain events for the notification engine; events carry deterministic
+    weekly ``eventId`` values so re-runs de-duplicate (§29)."""
+
+    tenantId: str = ""
+    includeLowStock: bool = True
+    includeWorkOrders: bool = True

@@ -176,3 +176,21 @@ class CostReportQuerySerializer(serializers.Serializer):
     export = serializers.ChoiceField(
         choices=("json", "csv", "xlsx", "pdf"), required=False, default="json"
     )
+
+
+class RecordPartTransactionSerializer(serializers.Serializer):
+    transactionType = serializers.ChoiceField(
+        choices=["RECEIPT", "ISSUE", "RETURN", "ADJUSTMENT"]
+    )
+    # برای تعدیل (انبارگردانی) مقدار علامت‌دار مجاز است؛ بقیه فقط مثبت.
+    quantity = serializers.DecimalField(max_digits=14, decimal_places=3)
+    note = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
+    reference = serializers.CharField(max_length=120, required=False, allow_blank=True, default="")
+
+    def validate_quantity(self, value):
+        transaction_type = (self.initial_data or {}).get("transactionType", "")
+        if value == 0:
+            raise serializers.ValidationError("مقدار تراکنش نمی‌تواند صفر باشد.")
+        if transaction_type != "ADJUSTMENT" and value < 0:
+            raise serializers.ValidationError("مقدار باید مثبت باشد.")
+        return value

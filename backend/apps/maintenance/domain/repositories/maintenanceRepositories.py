@@ -65,6 +65,22 @@ class WorkOrderPage:
     totalCount: int
 
 
+@dataclass(frozen=True)
+class WorkOrderAlertRow:
+    """Flat row read by the scheduled alert scan — intentionally NOT the
+    WorkOrder aggregate: legacy rows (old vocabularies) must not break an
+    ops cron job; the scan only reads raw status/priority strings."""
+
+    id: uuid.UUID
+    deviceId: uuid.UUID
+    tenantId: uuid.UUID
+    title: str
+    status: str
+    priority: str
+    department: str
+    createdAt: datetime
+
+
 @runtime_checkable
 class DeviceRepository(Protocol):
     def create(self, device: Device) -> None: ...
@@ -99,6 +115,8 @@ class WorkOrderRepository(Protocol):
     def countOpenByAssignee(self, tenantId: uuid.UUID, department: str) -> dict[str, int]: ...
 
     def list(self, filters: WorkOrderFilters) -> WorkOrderPage: ...
+
+    def listAlertRows(self, tenantId: uuid.UUID) -> list[WorkOrderAlertRow]: ...
 
 
 @runtime_checkable
@@ -157,6 +175,22 @@ class SparePartRepository(Protocol):
     ) -> SparePart: ...
 
     def list(self, tenantId: uuid.UUID, search: str = "") -> list[SparePart]: ...
+
+    def getById(self, tenantId: uuid.UUID, partId: uuid.UUID) -> SparePart: ...
+
+    def recordTransaction(
+        self,
+        tenantId: uuid.UUID,
+        partId: uuid.UUID,
+        transactionType: str,
+        quantity: Decimal,
+        note: str,
+        reference: str,
+        actorId: uuid.UUID | None,
+        at,
+    ): ...
+
+    def listTransactions(self, tenantId: uuid.UUID, partId: uuid.UUID | None = None) -> list: ...
 
     def consume(
         self,

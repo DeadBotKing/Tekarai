@@ -65,6 +65,7 @@ from apps.communication.presentation.api.views.phase11Views import (
 )
 from apps.communication.presentation.api.views.phase14Views import (
     AttachmentPreflightView,
+    AttachmentUploadView,
     MessageForwardView,
     OfflineSyncView,
     RetentionRunView,
@@ -138,6 +139,9 @@ urlpatterns = [
     path("search", UnifiedSearchView.as_view(), name="commUnifiedSearch"),
     path(
         "attachments/preflight", AttachmentPreflightView.as_view(), name="commAttachmentPreflight"
+    ),
+    path(
+        "attachments/upload", AttachmentUploadView.as_view(), name="commAttachmentUpload"
     ),
     path("sync", OfflineSyncView.as_view(), name="commOfflineSync"),
     path("retention/runs", RetentionRunView.as_view(), name="commRetentionRun"),

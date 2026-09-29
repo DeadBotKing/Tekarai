@@ -11,14 +11,17 @@ from rest_framework.views import APIView
 from apps.maintenance.application.commands.sparePartCommands import (
     ConsumeSparePartCommand,
     CreateSparePartCommand,
+    ListPartTransactionsQuery,
     ListSparePartsQuery,
     ListWorkOrderPartUsageQuery,
+    RecordPartTransactionCommand,
     UpdateSparePartCommand,
 )
 from apps.maintenance.infrastructure import container
 from apps.maintenance.presentation.api.serializers.maintenanceSerializers import (
     ConsumeSparePartSerializer,
     CreateSparePartSerializer,
+    RecordPartTransactionSerializer,
     UpdateSparePartSerializer,
 )
 from apps.sharedKernel.presentation.api.authentication import BearerSessionAuthentication
@@ -103,6 +106,38 @@ class WorkOrderPartUsageView(IdempotencyMixin, APIView):
                 partId=str(data["partId"]),
                 quantity=str(data["quantity"]),
                 note=str(data["note"]),
+            )
+        )
+        return Response(successEnvelope(dataclasses.asdict(result)), status=201)
+
+
+class PartTransactionsView(IdempotencyMixin, APIView):
+    """دفتر تراکنش یک قطعه — GET برای نمایش دفتر، POST برای ثبت تراکنش جدید."""
+
+    authentication_classes = [BearerSessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request: Request, partId: str) -> Response:
+        result = container.listPartTransactionsUseCase().execute(
+            ListPartTransactionsQuery(partId=str(partId))
+        )
+        return Response(
+            successEnvelope(
+                [dataclasses.asdict(item) for item in result.items], meta=result.asMeta()
+            )
+        )
+
+    def post(self, request: Request, partId: str) -> Response:
+        serializer = RecordPartTransactionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        result = container.recordPartTransactionUseCase().execute(
+            RecordPartTransactionCommand(
+                partId=str(partId),
+                transactionType=str(data["transactionType"]),
+                quantity=str(data["quantity"]),
+                note=str(data.get("note", "")),
+                reference=str(data.get("reference", "")),
             )
         )
         return Response(successEnvelope(dataclasses.asdict(result)), status=201)

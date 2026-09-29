@@ -44,3 +44,40 @@ class WorkOrderPartUsage:
     def totalCost(self) -> Decimal:
         """Cost of this consumption — quantity × the price captured at issue time."""
         return (self.quantity * self.unitCost).quantize(Decimal("0.01"))
+
+
+# --- Part transaction ledger (دفتر تراکنش انبار) ---------------------------
+PART_TRANSACTION_RECEIPT = "RECEIPT"   # رسید — ورود کالا
+PART_TRANSACTION_ISSUE = "ISSUE"       # حواله — خروج کالا
+PART_TRANSACTION_RETURN = "RETURN"     # برگشت — بازگشت کالا
+PART_TRANSACTION_ADJUSTMENT = "ADJUSTMENT"  # تعدیل / انبارگردانی (علامت‌دار)
+PART_TRANSACTION_TYPES = (
+    PART_TRANSACTION_RECEIPT,
+    PART_TRANSACTION_ISSUE,
+    PART_TRANSACTION_RETURN,
+    PART_TRANSACTION_ADJUSTMENT,
+)
+
+
+@dataclass(frozen=True)
+class PartTransaction:
+    """Immutable ledger row — مقدار ``quantity`` علامت‌دار است.
+
+    RECEIPT/RETURN همیشه مثبت، ISSUE همیشه منفی و ADJUSTMENT علامت‌دار.
+    ``balanceAfter`` موجودی لحظه‌ی بعد از ثبت تراکنش است تا دفتر بدون محاسبه‌ی
+    مجدد قابل خواندن باشد.
+    """
+
+    id: uuid.UUID
+    tenantId: uuid.UUID
+    partId: uuid.UUID
+    partCode: str
+    partName: str
+    unit: str
+    transactionType: str
+    quantity: Decimal
+    balanceAfter: Decimal
+    note: str
+    reference: str
+    actorId: uuid.UUID | None
+    createdAt: datetime

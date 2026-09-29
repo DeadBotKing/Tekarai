@@ -41,3 +41,17 @@ class ListSparePartsQuery(Query):
 @dataclass(frozen=True)
 class ListWorkOrderPartUsageQuery(Query):
     workOrderId: str
+
+
+@dataclass(frozen=True)
+class RecordPartTransactionCommand(Command):
+    partId: str
+    transactionType: str
+    quantity: str
+    note: str = ""
+    reference: str = ""
+
+
+@dataclass(frozen=True)
+class ListPartTransactionsQuery(Query):
+    partId: str = ""

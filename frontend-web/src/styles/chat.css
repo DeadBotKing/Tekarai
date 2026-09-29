@@ -463,3 +463,20 @@
     max-height: 40vh;
   }
 }
+
+/* ---------- رسانه‌ی چت: عکس و پیام صوتی ---------- */
+.chat-bubble-media { display: block; padding: 0; margin: 0 0 6px; overflow: hidden; background: transparent; border: 0; border-radius: 10px; cursor: zoom-in; max-width: 260px; }
+.chat-bubble-media img { display: block; width: 100%; max-height: 220px; object-fit: cover; border-radius: 10px; }
+.chat-bubble-audio { display: block; width: 240px; max-width: 100%; height: 38px; margin-bottom: 4px; }
+.chat-bubble-audio::-webkit-media-controls-panel { background: transparent; }
+.chat-bubble-caption { margin: 2px 0 0; }
+.chat-message.is-mine .chat-bubble-audio { color-scheme: dark; }
+
+.chat-media-chip { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 7px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; font-size: 11px; color: var(--text-muted); }
+.chat-media-chip__label { flex: 1 1 auto; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.chat-media-chip__thumb { width: 34px; height: 34px; flex: 0 0 auto; object-fit: cover; border-radius: 7px; border: 1px solid var(--border); }
+.chat-media-chip__audio { width: 190px; max-width: 45%; height: 30px; }
+.chat-media-chip--recording { border-color: rgb(230 91 104 / .4); background: var(--danger-soft); }
+.chat-rec-dot { width: 9px; height: 9px; flex: 0 0 auto; border-radius: 50%; background: var(--danger); animation: chat-rec-pulse 1.1s ease-in-out infinite; }
+@keyframes chat-rec-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .45; transform: scale(.8); } }
+.chat-mic--live { color: var(--danger) !important; background: var(--danger-soft) !important; }

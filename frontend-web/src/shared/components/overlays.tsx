@@ -3,7 +3,7 @@ import { Button, IconButton } from "./primitives";
 import { Icon } from "./Icon";
 import { useLocalization } from "../../core/localization/localizationContext";
 
-export function Modal({ open, title, description, onClose, children, footer }: { open: boolean; title: string; description?: string; onClose: () => void; children: ReactNode; footer?: ReactNode }): JSX.Element | null {
+export function Modal({ open, title, description, onClose, children, footer, wide = false }: { open: boolean; title: string; description?: string; onClose: () => void; children: ReactNode; footer?: ReactNode; wide?: boolean }): JSX.Element | null {
   const { t } = useLocalization();
   useEffect(() => {
     if (!open) return;
@@ -15,7 +15,7 @@ export function Modal({ open, title, description, onClose, children, footer }: {
   }, [onClose, open]);
   if (!open) return null;
   return <div className="overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <section className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <section className={wide ? "modal modal--wide" : "modal"} role="dialog" aria-modal="true" aria-labelledby="modal-title">
       <header className="modal__header"><div><h2 id="modal-title">{title}</h2>{description && <p>{description}</p>}</div><IconButton icon="close" label={t("common.close")} onClick={onClose} /></header>
       <div className="modal__body">{children}</div>
       {footer && <footer className="modal__footer">{footer}</footer>}

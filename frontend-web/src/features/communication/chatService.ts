@@ -1,6 +1,7 @@
 import type { ApiClient } from "../../core/api/apiClient";
 import { apiEndpoints } from "../../core/api/endpoints";
 import type {
+  ChatAttachment,
   ChatDirectoryUser,
   ChatMessage,
   Conversation,
@@ -54,6 +55,16 @@ interface MessageWire {
   deletedAt?: string;
   deleted?: boolean;
   reactions?: { userId?: string; reaction?: string }[];
+  attachments?: {
+    fileName?: string;
+    mimeType?: string;
+    sizeBytes?: number;
+    checksum?: string;
+    storageKey?: string;
+    scanStatus?: string;
+    classification?: string;
+    documentRef?: string;
+  }[];
 }
 
 interface UserWire {
@@ -107,7 +118,29 @@ export const toMessage = (wire: MessageWire): ChatMessage => ({
       userId: item.userId ?? "",
     }),
   ),
+  attachments: (wire.attachments ?? []).map(
+    (item): ChatAttachment => ({
+      fileName: item.fileName ?? "file",
+      mimeType: item.mimeType ?? "application/octet-stream",
+      sizeBytes: item.sizeBytes ?? 0,
+      checksum: item.checksum ?? "",
+      storageKey: item.storageKey ?? "",
+      scanStatus: item.scanStatus ?? "",
+      classification: (item.classification ?? "INTERNAL") as ChatAttachment["classification"],
+      documentRef: item.documentRef ?? "",
+    }),
+  ),
 });
+
+/** پاسخ نقطه‌ی آپلود attachment — سرو شده توسط AttachmentUploadView بک‌اند. */
+export interface AttachmentUploadResult {
+  storageKey: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  checksum: string;
+  url: string;
+}
 
 export interface ChatService {
   listConversations(includeArchived?: boolean): Promise<Conversation[]>;
@@ -129,6 +162,8 @@ export interface ChatService {
   markRead(conversationId: string, uptoMessageId: string): Promise<void>;
   searchMessages(term: string): Promise<ChatMessage[]>;
   listDirectory(search?: string): Promise<ChatDirectoryUser[]>;
+  /** حالت زنده: آپلود فایل عکس/ویس به MEDIA بک‌اند و دریافت metadata معتبر. */
+  uploadAttachment?(file: File): Promise<AttachmentUploadResult>;
 }
 
 /** Live implementation — talks to the Phase 8/10/14 communication API. */
@@ -182,7 +217,21 @@ export function createChatService(api: ApiClient): ChatService {
     async sendMessage(conversationId, input) {
       const wire = await api.post<MessageWire>(endpoints.conversationMessages(conversationId), {
         body: input.body,
-        messageType: "TEXT",
+        messageType: input.messageType ?? "TEXT",
+        ...(input.attachments && input.attachments.length > 0
+          ? {
+              attachments: input.attachments.map((item) => ({
+                fileName: item.fileName,
+                mimeType: item.mimeType,
+                sizeBytes: item.sizeBytes,
+                checksum: item.checksum,
+                storageKey: item.storageKey,
+                scanStatus: item.scanStatus ?? "CLEAN",
+                classification: item.classification ?? "INTERNAL",
+                ...(item.documentRef ? { documentRef: item.documentRef } : {}),
+              })),
+            }
+          : {}),
         ...(input.replyToId ? { replyToId: input.replyToId } : {}),
         ...(input.clientRequestId ? { clientRequestId: input.clientRequestId } : {}),
       });
@@ -209,6 +258,9 @@ export function createChatService(api: ApiClient): ChatService {
         `${endpoints.messageSearch}?q=${encodeURIComponent(term)}`,
       );
       return (rows ?? []).map(toMessage);
+    },
+    async uploadAttachment(file) {
+      return api.upload<AttachmentUploadResult>(endpoints.attachmentUpload, file, { fieldName: "file" });
     },
     async listDirectory(search = "") {
       const query = search ? `?search=${encodeURIComponent(search)}&pageSize=50` : "?pageSize=50";

@@ -300,3 +300,33 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 @media print {
   .section-header__eyebrow::before { background: #000; }
 }
+
+/* Part transaction ledger modal */
+.modal--wide { width: min(880px, 100%); }
+.ledger { display: flex; flex-direction: column; gap: 13px; }
+.ledger-form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 11px; align-items: end; }
+.ledger-form__action { display: flex; align-items: center; }
+.ledger-table { min-width: 640px; }
+
+/* Equipment QR label + scan */
+.qr-label-wrap { display: flex; flex-direction: column; align-items: center; gap: 13px; }
+.qr-label { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 320px; max-width: 100%; padding: 18px 16px 14px; background: #fff; color: #101828; border: 2px dashed #98a2b3; border-radius: 12px; }
+.qr-label__head { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.qr-label__head strong { font-size: 16px; letter-spacing: .02em; }
+.qr-label__head span { color: #475467; font-size: 11px; }
+.qr-label__canvas { display: block; }
+.qr-label small { color: #667085; font-size: 8.5px; direction: ltr; word-break: break-all; text-align: center; }
+.scan-panel { display: flex; flex-direction: column; gap: 13px; }
+.scan-panel__camera { display: grid; place-items: center; overflow: hidden; min-height: 200px; background: #000; border-radius: 10px; }
+.scan-panel__camera video { width: 100%; max-height: 260px; }
+.scan-panel__camera--idle { background: var(--surface-2); padding: 28px 14px; text-align: center; }
+.scan-panel__message { margin: 0; color: var(--warning, #b54708); font-size: 11px; }
+.scan-panel__manual { display: flex; align-items: flex-end; gap: 10px; }
+.scan-panel__manual .field { flex: 1; }
+@media print {
+  body.printing-qr-label * { visibility: hidden !important; }
+  body.printing-qr-label .qr-label,
+  body.printing-qr-label .qr-label * { visibility: visible !important; }
+  body.printing-qr-label .qr-label { position: fixed; inset: 0; margin: auto; width: 76mm; break-inside: avoid; }
+  body.printing-qr-label .qr-label__canvas { width: 42mm !important; height: auto !important; }
+}

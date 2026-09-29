@@ -25,6 +25,7 @@ export const apiEndpoints = {
     message: (id: string) => `communication/messages/${id}`,
     messageReactions: (id: string) => `communication/messages/${id}/reactions`,
     messageSearch: "communication/messages/search",
+    attachmentUpload: "communication/attachments/upload",
     presence: "communication/presence",
   },
   maintenance: {
@@ -45,6 +46,7 @@ export const apiEndpoints = {
     workOrderHistory: (id: string) => `maintenance/work-orders/${id}/history`,
     spareParts: "maintenance/spare-parts",
     sparePart: (id: string) => `maintenance/spare-parts/${id}`,
+    partTransactions: (id: string) => `maintenance/spare-parts/${id}/transactions`,
     workOrderParts: (id: string) => `maintenance/work-orders/${id}/parts`,
     deviceAttachments: (id: string) => `maintenance/devices/${id}/attachments`,
     workOrderAttachments: (id: string) => `maintenance/work-orders/${id}/attachments`,

@@ -9,8 +9,13 @@ from decimal import Decimal
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 
-from apps.maintenance.domain.entities.sparePart import SparePart, WorkOrderPartUsage
+from apps.maintenance.domain.entities.sparePart import (
+    PartTransaction,
+    SparePart,
+    WorkOrderPartUsage,
+)
 from apps.maintenance.infrastructure.models import (
+    PartTransactionModel,
     SparePartModel,
     WorkOrderModel,
     WorkOrderPartUsageModel,
@@ -19,6 +24,7 @@ from apps.sharedKernel.domain.errors import (
     ConflictError,
     DuplicateBusinessCodeError,
     EntityNotFoundError,
+    ValidationFailedError,
 )
 
 
@@ -197,3 +203,85 @@ class SparePartRepositoryDjango:
             tenantId=tenantId, workOrderId=workOrderId
         ).order_by("-consumedAt")
         return [self._usage(item) for item in rows]
+
+
+    # ---------- دفتر تراکنش انبار ----------
+
+    @staticmethod
+    def _transaction(model: PartTransactionModel) -> PartTransaction:
+        return PartTransaction(
+            id=model.id,
+            tenantId=model.tenantId,
+            partId=model.partId,
+            partCode=model.partCode,
+            partName=model.partName,
+            unit=model.unit,
+            transactionType=model.transactionType,
+            quantity=model.quantity,
+            balanceAfter=model.balanceAfter,
+            note=model.note,
+            reference=model.reference,
+            actorId=model.actorId,
+            createdAt=model.createdAt,
+        )
+
+    def getById(self, tenantId: uuid.UUID, partId: uuid.UUID) -> SparePart:
+        model = SparePartModel.objects.filter(
+            tenantId=tenantId, id=partId, deletedAt__isnull=True
+        ).first()
+        if model is None:
+            raise EntityNotFoundError("Spare part not found.")
+        return self._part(model)
+
+    def recordTransaction(
+        self,
+        tenantId: uuid.UUID,
+        partId: uuid.UUID,
+        transactionType: str,
+        quantity: Decimal,
+        note: str,
+        reference: str,
+        actorId: uuid.UUID | None,
+        at: datetime,
+    ) -> PartTransaction:
+        """ثبت اتمیک تراکنش — موجودی با قفل سطر به‌روز می‌شود تا دو ثبت هم‌زمان
+        هرگز موجودی منفی یا مانده‌ی نادرست نسازند."""
+        with transaction.atomic():
+            part = (
+                SparePartModel.objects.select_for_update()
+                .filter(tenantId=tenantId, id=partId, deletedAt__isnull=True)
+                .first()
+            )
+            if part is None:
+                raise EntityNotFoundError("Spare part not found.")
+            balance = part.quantityOnHand + quantity
+            if balance < 0:
+                raise ValidationFailedError(
+                    "موجودی برای این تراکنش کافی نیست.",
+                    fieldErrors={"quantity": "insufficient-stock"},
+                )
+            part.quantityOnHand = balance
+            part.updatedAt = at
+            part.save(update_fields=["quantityOnHand", "updatedAt"])
+            model = PartTransactionModel.objects.create(
+                tenantId=tenantId,
+                partId=part.id,
+                partCode=part.code,
+                partName=part.name,
+                unit=part.unit,
+                transactionType=transactionType,
+                quantity=quantity,
+                balanceAfter=balance,
+                note=note,
+                reference=reference,
+                actorId=actorId,
+            )
+        return self._transaction(model)
+
+    def listTransactions(
+        self, tenantId: uuid.UUID, partId: uuid.UUID | None = None
+    ) -> list[PartTransaction]:
+        rows = PartTransactionModel.objects.filter(tenantId=tenantId)
+        if partId is not None:
+            rows = rows.filter(partId=partId)
+        return [self._transaction(model) for model in rows[:400]]

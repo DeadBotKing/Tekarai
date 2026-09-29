@@ -6,6 +6,7 @@ import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { createChatService } from "../features/communication/chatService";
 import { createDemoChatService, DEMO_SELF_ID } from "../features/communication/chatDemoData";
 import { useChatRealtime } from "../features/communication/useChatRealtime";
+import { VoiceRecorder, blobToDataUrl, blobToFile, formatClock, prepareImage } from "../features/communication/chatMedia";
 import {
   CONVERSATION_TYPES,
   PARTICIPANT_ROLES,
@@ -43,6 +44,20 @@ const timeLabel = (iso: string): string => {
   if (Number.isNaN(date.getTime())) return "";
   return new Intl.DateTimeFormat("fa-IR", { hour: "2-digit", minute: "2-digit" }).format(date);
 };
+
+/** منبع رسانه‌ی پیام (IMAGE/AUDIO): ترجیحاً URL ضمیمه، وگرنه dataURL بدنه (حالت دمو) */
+const mediaSrcOf = (message: ChatMessage): string => {
+  const fromAttachment = message.attachments?.[0]?.documentRef ?? "";
+  if (fromAttachment) return fromAttachment;
+  return message.body.startsWith("data:") ? message.body : "";
+};
+
+/** کپشن خوانا — بدنه‌ی dataURL هرگز به‌عنوان متن نمایش داده نمی‌شود */
+const mediaCaptionOf = (message: ChatMessage): string =>
+  message.body.startsWith("data:") ? "" : message.body;
+
+const isMediaMessage = (message: ChatMessage): boolean =>
+  message.messageType === "IMAGE" || message.messageType === "AUDIO";
 
 const dayLabel = (iso: string): string => {
   if (!iso) return "";
@@ -251,7 +266,184 @@ export function ChatPage(): JSX.Element {
     [directory, participants, selfId, session?.user.displayName],
   );
 
+  // ---- رسانه: عکس و ویس ----
+  const [stagedImage, setStagedImage] = useState<{ dataUrl: string; file: File; fileName: string; sizeBytes: number } | null>(null);
+  const [stagedVoice, setStagedVoice] = useState<{ dataUrl: string; blob: Blob; mimeType: string; seconds: number } | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [recordSeconds, setRecordSeconds] = useState(0);
+  const recorderRef = useRef<VoiceRecorder | null>(null);
+  const recordTimerRef = useRef<number | null>(null);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
+
+  const stopRecordTimer = (): void => {
+    if (recordTimerRef.current !== null) {
+      window.clearInterval(recordTimerRef.current);
+      recordTimerRef.current = null;
+    }
+  };
+
+  useEffect(() => () => {
+    stopRecordTimer();
+    recorderRef.current?.cancel();
+  }, []);
+
+  const handlePickImage = (): void => imageInputRef.current?.click();
+
+  const handleImageChosen = async (file: File | null): Promise<void> => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      notify(t("chat.error.imageRead"), "error");
+      return;
+    }
+    try {
+      setStagedVoice(null);
+      if (runtimeConfig.demoMode) {
+        // دمو: برای ماندگاری در localStorage عکس کوچک می‌شود
+        const prepared = await prepareImage(file);
+        setStagedImage({ dataUrl: prepared.dataUrl, file, fileName: file.name || t("chat.imageMessage"), sizeBytes: prepared.sizeBytes });
+      } else {
+        setStagedImage({ dataUrl: await blobToDataUrl(file), file, fileName: file.name || t("chat.imageMessage"), sizeBytes: file.size });
+      }
+    } catch {
+      notify(t("chat.error.imageRead"), "error");
+    }
+  };
+
+  const startRecording = async (): Promise<void> => {
+    if (recording) return;
+    try {
+      const recorder = new VoiceRecorder();
+      await recorder.start();
+      recorderRef.current = recorder;
+      setRecordSeconds(0);
+      setRecording(true);
+      recordTimerRef.current = window.setInterval(() => {
+        setRecordSeconds((seconds) => seconds + 1);
+      }, 1000);
+    } catch {
+      notify(t("chat.error.micDenied"), "error");
+    }
+  };
+
+  const finishRecording = async (): Promise<void> => {
+    const recorder = recorderRef.current;
+    if (!recorder) return;
+    stopRecordTimer();
+    setRecording(false);
+    recorderRef.current = null;
+    try {
+      const result = await recorder.stop();
+      const dataUrl = await blobToDataUrl(result.blob);
+      setStagedImage(null);
+      setStagedVoice({ dataUrl, blob: result.blob, mimeType: result.mimeType, seconds: result.seconds });
+    } catch {
+      notify(t("chat.error.micDenied"), "error");
+    }
+  };
+
+  const cancelRecording = (): void => {
+    stopRecordTimer();
+    setRecording(false);
+    setRecordSeconds(0);
+    recorderRef.current?.cancel();
+    recorderRef.current = null;
+  };
+
+  const deliverStagedMedia = async (
+    kind: "IMAGE" | "AUDIO",
+    localUrl: string,
+    file: File,
+    fileName: string,
+    sizeBytes: number,
+  ): Promise<void> => {
+    if (!activeId) return;
+    const caption = draft.trim();
+    const fallbackLabel = kind === "IMAGE" ? t("chat.imageMessage") : t("chat.voiceMessage");
+    const clientRequestId = `c-${Date.now()}-${kind}`;
+    const optimistic: ChatMessage = {
+      id: clientRequestId,
+      conversationId: activeId,
+      senderId: selfId,
+      senderName: session?.user.displayName ?? "",
+      messageType: kind,
+      body: runtimeConfig.demoMode ? localUrl : caption || fileName || fallbackLabel,
+      createdAt: new Date().toISOString(),
+      replyToId: replyTo?.id ?? "",
+      editedAt: "",
+      deleted: false,
+      pending: true,
+      reactions: [],
+      attachments: [{
+        fileName: fileName || fallbackLabel,
+        mimeType: file.type || (kind === "IMAGE" ? "image/jpeg" : "audio/webm"),
+        sizeBytes,
+        documentRef: localUrl,
+      }],
+    };
+    setMessages((current) => [...current, optimistic]);
+    setDraft("");
+    setReplyTo(null);
+    setStagedImage(null);
+    setStagedVoice(null);
+    try {
+      let body = optimistic.body;
+      let attachments = optimistic.attachments;
+      if (!runtimeConfig.demoMode) {
+        if (!chat.uploadAttachment) throw new Error("upload-unavailable");
+        const uploaded = await chat.uploadAttachment(file);
+        attachments = [{
+          fileName: uploaded.fileName,
+          mimeType: uploaded.mimeType,
+          sizeBytes: uploaded.sizeBytes,
+          checksum: uploaded.checksum,
+          storageKey: uploaded.storageKey,
+          scanStatus: "CLEAN",
+          classification: "INTERNAL",
+          documentRef: uploaded.url,
+        }];
+        body = caption || uploaded.fileName || fallbackLabel;
+      }
+      const saved = await chat.sendMessage(activeId, {
+        body,
+        messageType: kind,
+        attachments,
+        replyToId: replyTo?.id,
+        clientRequestId,
+      });
+      setMessages((current) => current.map((item) => (item.id === clientRequestId ? saved : item)));
+      const previewLabel = kind === "IMAGE" ? `📷 ${t("chat.imageMessage")}` : `🎤 ${t("chat.voiceMessage")}`;
+      setConversations((current) =>
+        current.map((item) =>
+          item.id === activeId
+            ? { ...item, lastMessagePreview: previewLabel, lastMessageAt: saved.createdAt }
+            : item,
+        ),
+      );
+    } catch {
+      setMessages((current) =>
+        current.map((item) =>
+          item.id === clientRequestId ? { ...item, pending: false, failed: true } : item,
+        ),
+      );
+      notify(t("chat.error.uploadFailed"), "error");
+    }
+  };
+
   const handleSend = async (): Promise<void> => {
+    if (stagedImage) {
+      void deliverStagedMedia("IMAGE", stagedImage.dataUrl, stagedImage.file, stagedImage.fileName, stagedImage.sizeBytes);
+      return;
+    }
+    if (stagedVoice) {
+      void deliverStagedMedia(
+        "AUDIO",
+        stagedVoice.dataUrl,
+        blobToFile(stagedVoice.blob, `voice-${Date.now()}.webm`, stagedVoice.mimeType),
+        t("chat.voiceMessage"),
+        stagedVoice.blob.size,
+      );
+      return;
+    }
     const body = draft.trim();
     if (!body || !activeId) return;
     const clientRequestId = `c-${Date.now()}`;
@@ -674,7 +866,24 @@ export function ChatPage(): JSX.Element {
                               {message.deleted ? (
                                 <em>{t("chat.deleted")}</em>
                               ) : (
-                                <p>{message.body}</p>
+                                <>
+                                  {message.messageType === "IMAGE" && mediaSrcOf(message) ? (
+                                    <button
+                                      type="button"
+                                      className="chat-bubble-media"
+                                      onClick={() => window.open(mediaSrcOf(message), "_blank", "noopener,noreferrer")}
+                                      aria-label={t("chat.imageMessage")}
+                                    >
+                                      <img src={mediaSrcOf(message)} alt={t("chat.imageMessage")} loading="lazy" />
+                                    </button>
+                                  ) : null}
+                                  {message.messageType === "AUDIO" && mediaSrcOf(message) ? (
+                                    <audio className="chat-bubble-audio" controls preload="metadata" src={mediaSrcOf(message)} aria-label={t("chat.voiceMessage")} />
+                                  ) : null}
+                                  {isMediaMessage(message)
+                                    ? (mediaCaptionOf(message) ? <p className="chat-bubble-caption">{mediaCaptionOf(message)}</p> : null)
+                                    : <p>{message.body}</p>}
+                                </>
                               )}
                               <span className="chat-bubble-meta">
                                 <span className="chat-time">{timeLabel(message.createdAt)}</span>
@@ -771,7 +980,38 @@ export function ChatPage(): JSX.Element {
                     <IconButton icon="close" label={t("common.cancel")} onClick={() => setReplyTo(null)} />
                   </div>
                 ) : null}
+                {stagedImage ? (
+                  <div className="chat-media-chip">
+                    <img className="chat-media-chip__thumb" src={stagedImage.dataUrl} alt="" />
+                    <span className="chat-media-chip__label">{t("chat.mediaStaged")} {stagedImage.fileName}</span>
+                    <IconButton icon="close" label={t("common.cancel")} size="sm" onClick={() => setStagedImage(null)} />
+                  </div>
+                ) : null}
+                {stagedVoice ? (
+                  <div className="chat-media-chip">
+                    <Icon name="mic" size={15} />
+                    <span className="chat-media-chip__label">{t("chat.mediaStaged")} {t("chat.voiceMessage")} · {formatClock(stagedVoice.seconds)}</span>
+                    <audio className="chat-media-chip__audio" controls preload="metadata" src={stagedVoice.dataUrl} aria-label={t("chat.voiceMessage")} />
+                    <IconButton icon="close" label={t("common.cancel")} size="sm" onClick={() => setStagedVoice(null)} />
+                  </div>
+                ) : null}
+                {recording ? (
+                  <div className="chat-media-chip chat-media-chip--recording">
+                    <span className="chat-rec-dot" aria-hidden="true" />
+                    <span className="chat-media-chip__label">{t("chat.recording")} {formatClock(recordSeconds)}</span>
+                    <Button variant="ghost" size="sm" icon="close" onClick={cancelRecording}>{t("chat.discardRecording")}</Button>
+                    <Button variant="secondary" size="sm" icon="check" onClick={() => void finishRecording()}>{t("chat.stopRecording")}</Button>
+                  </div>
+                ) : null}
                 <div className="chat-composer-row">
+                  <IconButton icon="paperclip" label={t("chat.attachImage")} onClick={handlePickImage} disabled={recording} />
+                  <IconButton
+                    icon="mic"
+                    label={t("chat.attachVoice")}
+                    className={recording ? "chat-mic--live" : ""}
+                    onClick={() => { if (recording) { void finishRecording(); } else { void startRecording(); } }}
+                    disabled={!VoiceRecorder.isSupported()}
+                  />
                   <TextArea
                     label=""
                     rows={2}
@@ -786,9 +1026,19 @@ export function ChatPage(): JSX.Element {
                       }
                     }}
                   />
-                  <Button icon="send" onClick={() => void handleSend()} disabled={!draft.trim()}>
+                  <Button icon="send" onClick={() => void handleSend()} disabled={!draft.trim() && !stagedImage && !stagedVoice}>
                     {t("chat.send")}
                   </Button>
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={(event) => {
+                      void handleImageChosen(event.target.files?.[0] ?? null);
+                      event.target.value = "";
+                    }}
+                  />
                 </div>
               </footer>
             </>

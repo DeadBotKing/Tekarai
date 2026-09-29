@@ -88,6 +88,15 @@ ACTIONS: list[tuple[str, str]] = [
     ("maintenance.document.view", "Browse and download the tenant document library"),
     ("maintenance.document.upload", "Upload files into the tenant document library"),
     ("maintenance.document.manage", "Delete files from the tenant document library"),
+    ("procurement.supplier.view", "View suppliers and supplier part prices"),
+    ("procurement.supplier.manage", "Create and manage suppliers and quotes"),
+    ("procurement.requisition.create", "Create purchase requisitions"),
+    ("procurement.requisition.approve", "Approve or reject purchase requisitions"),
+    ("procurement.purchaseOrder.create", "Create purchase orders"),
+    ("procurement.purchaseOrder.approve", "Approve or cancel purchase orders"),
+    ("procurement.receipt.post", "Post goods receipts into inventory"),
+    ("procurement.return.post", "Post supplier returns"),
+    ("procurement.invoice.manage", "Record and manage supplier invoices"),
 ]
 
 
@@ -129,6 +138,18 @@ _MAINTENANCE_TECHNICIAN_ACTIONS = [
     "maintenance.document.view",
     "maintenance.document.upload",
 ]
+_PROCUREMENT_MANAGER_ACTIONS = [
+    "procurement.supplier.view",
+    "procurement.supplier.manage",
+    "procurement.requisition.create",
+    "procurement.requisition.approve",
+    "procurement.purchaseOrder.create",
+    "procurement.purchaseOrder.approve",
+    "procurement.receipt.post",
+    "procurement.return.post",
+    "procurement.invoice.manage",
+]
+
 _MAINTENANCE_MANAGER_ACTIONS = [
     "maintenance.device.manage",
     "maintenance.device.list",
@@ -199,6 +220,7 @@ ROLE_PRESETS: dict[str, list[str]] = {
         "task.list",
         "task.update",
         *_MAINTENANCE_MANAGER_ACTIONS,
+        *_PROCUREMENT_MANAGER_ACTIONS,
     ],
     MEMBER_ROLE: [
         "user.view",
@@ -215,8 +237,11 @@ ROLE_PRESETS: dict[str, list[str]] = {
         "task.create",
         "task.update",
         *_MAINTENANCE_REQUESTER_ACTIONS,
+        "procurement.supplier.view",
+        "procurement.requisition.create",
     ],
     MAINTENANCE_REQUESTER_ROLE: list(_MAINTENANCE_REQUESTER_ACTIONS),
     MAINTENANCE_TECHNICIAN_ROLE: list(_MAINTENANCE_TECHNICIAN_ACTIONS),
-    MAINTENANCE_MANAGER_ROLE: list(_MAINTENANCE_MANAGER_ACTIONS),
+    MAINTENANCE_MANAGER_ROLE: list(_MAINTENANCE_MANAGER_ACTIONS)
+    + list(_PROCUREMENT_MANAGER_ACTIONS),
 }

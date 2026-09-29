@@ -941,6 +941,7 @@ const en = {
 
   // Phase 31 — spare-parts warehouse, real documents, account & search.
   "nav.warehouse": "Warehouse",
+  "nav.procurement": "Procurement",
   "warehouse.title": "Spare-parts warehouse",
   "warehouse.subtitle": "Live stock levels, minimums and consumption-ready pricing.",
   "warehouse.addPart": "Add part",
@@ -1317,6 +1318,7 @@ const fa: Partial<TranslationMap> = {
   "footer.version": "پلتفرم Tekarai نسخه ۰.۱۹.۰",
 
   "nav.warehouse": "انبار قطعات",
+  "nav.procurement": "تدارکات و خرید",
   "nav.account": "حساب و امنیت",
   "warehouse.title": "انبار قطعات یدکی",
   "warehouse.subtitle": "موجودی واقعی انبار، حداقل‌ها و قیمت واحد آماده‌ی مصرف در دستور کار.",

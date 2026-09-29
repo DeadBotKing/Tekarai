@@ -45,8 +45,10 @@ urlpatterns = [
                     include("apps.maintenance.presentation.api.urls.maintenanceRoutes"),
                 ),
                 path(
-                    "", include("apps.documents.presentation.api.urls.documentRoutes")
+                    "procurement/",
+                    include("apps.procurement.presentation.api.urls"),
                 ),
+                path("", include("apps.documents.presentation.api.urls.documentRoutes")),
             ]
         ),
     ),

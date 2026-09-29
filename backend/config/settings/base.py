@@ -107,6 +107,7 @@ INSTALLED_APPS = [
     "apps.projects",
     "apps.tasks",
     "apps.maintenance",
+    "apps.procurement",
     "apps.documents",
 ]
 
@@ -689,6 +690,7 @@ MIGRATION_MODULES = {
     "projects": "apps.projects.infrastructure.migrations",
     "tasks": "apps.tasks.infrastructure.migrations",
     "maintenance": "apps.maintenance.infrastructure.migrations",
+    "procurement": "apps.procurement.infrastructure.migrations",
     "documents": "apps.documents.infrastructure.migrations",
 }
 

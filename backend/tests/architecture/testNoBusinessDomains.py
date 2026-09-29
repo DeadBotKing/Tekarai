@@ -30,6 +30,9 @@ OPENED_CONTEXTS = {
     "projects": "Phase 18b (Workspace Delivery — Projects)",
     "tasks": "Phase 18b (Workspace Delivery — Tasks)",
     "maintenance": "Phase 21 (Maintenance / CMMS)",
+    "documents": "Phase 31 (Tenant Document Library)",
+    "procurement": "Phase 32 (Procurement and Purchasing)",
+    "analytics": "MetricReading delivery (Reporting / Analytics)",
 }
 
 #: Bounded contexts from the approved domain map — still not opened.
@@ -43,11 +46,9 @@ FORBIDDEN_APP_DIRECTORIES = {
     "asset",
     "devices",
     "device",
-    "documents",
     "document",
     "workflow",
     "reporting",
-    "analytics",
     "integration",
     "platformcore",
 }
@@ -175,6 +176,10 @@ class ContextOpeningRegisterTests(SimpleTestCase):
             "apps.tasks",
             # Phase 21: Maintenance / CMMS context.
             "apps.maintenance",
+            # Delivered supporting contexts.
+            "apps.documents",
+            "apps.procurement",
+            "apps.analytics",
         }
         unexpectedApps = sorted(set(settings.INSTALLED_APPS) - allowedApps)
         self.assertEqual(

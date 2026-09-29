@@ -45,6 +45,10 @@ urlpatterns = [
                     include("apps.maintenance.presentation.api.urls.maintenanceRoutes"),
                 ),
                 path(
+                    "analytics/",
+                    include("apps.analytics.presentation.api.urls.metricRoutes"),
+                ),
+                path(
                     "procurement/",
                     include("apps.procurement.presentation.api.urls"),
                 ),

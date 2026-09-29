@@ -262,6 +262,9 @@ class DomainPurityStillHoldsTests(SimpleTestCase):
             "projects",
             "tasks",
             "maintenance",
+            "documents",
+            "procurement",
+            "analytics",
         }
         entries = {
             entry.name

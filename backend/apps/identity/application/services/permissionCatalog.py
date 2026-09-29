@@ -58,6 +58,11 @@ ACTIONS: list[tuple[str, str]] = [
     ("learning.deploy", "Deploy, advance canaries and roll back artifacts"),
     ("learning.feedback", "Record sourced human/system/business feedback"),
     ("learning.monitor", "Record metrics and detect production drift"),
+    # -- Reporting/Analytics MetricReading platform -------------------------
+    ("analytics.metricDefinition.view", "View tenant metric definitions"),
+    ("analytics.metricDefinition.manage", "Create and govern metric definitions"),
+    ("analytics.metricReading.view", "Query tenant metric readings and summaries"),
+    ("analytics.metricReading.record", "Ingest immutable metric readings"),
     # -- Phase 18b workspace delivery (projects & tasks) --------------------
     ("project.create", "Create projects inside the tenant"),
     ("project.view", "View project details"),
@@ -108,6 +113,21 @@ MEMBER_ROLE = "member"
 MAINTENANCE_REQUESTER_ROLE = "maintenanceRequester"
 MAINTENANCE_TECHNICIAN_ROLE = "maintenanceTechnician"
 MAINTENANCE_MANAGER_ROLE = "maintenanceManager"
+
+# Reusable Analytics permission bundles. Definitions are governed by admins;
+# operations clients can ingest and all authenticated business roles may read.
+_ANALYTICS_READER_ACTIONS = [
+    "analytics.metricDefinition.view",
+    "analytics.metricReading.view",
+]
+_ANALYTICS_WRITER_ACTIONS = [
+    *_ANALYTICS_READER_ACTIONS,
+    "analytics.metricReading.record",
+]
+_ANALYTICS_MANAGER_ACTIONS = [
+    *_ANALYTICS_WRITER_ACTIONS,
+    "analytics.metricDefinition.manage",
+]
 
 # Reusable maintenance permission bundles.
 _MAINTENANCE_REQUESTER_ACTIONS = [
@@ -211,6 +231,7 @@ ROLE_PRESETS: dict[str, list[str]] = {
         "learning.deploy",
         "learning.feedback",
         "learning.monitor",
+        *_ANALYTICS_MANAGER_ACTIONS,
         "project.create",
         "project.view",
         "project.list",
@@ -230,6 +251,7 @@ ROLE_PRESETS: dict[str, list[str]] = {
         "learning.view",
         "learning.observe",
         "learning.feedback",
+        *_ANALYTICS_READER_ACTIONS,
         "project.view",
         "project.list",
         "task.view",
@@ -240,8 +262,11 @@ ROLE_PRESETS: dict[str, list[str]] = {
         "procurement.supplier.view",
         "procurement.requisition.create",
     ],
-    MAINTENANCE_REQUESTER_ROLE: list(_MAINTENANCE_REQUESTER_ACTIONS),
-    MAINTENANCE_TECHNICIAN_ROLE: list(_MAINTENANCE_TECHNICIAN_ACTIONS),
+    MAINTENANCE_REQUESTER_ROLE: list(_MAINTENANCE_REQUESTER_ACTIONS)
+    + list(_ANALYTICS_READER_ACTIONS),
+    MAINTENANCE_TECHNICIAN_ROLE: list(_MAINTENANCE_TECHNICIAN_ACTIONS)
+    + list(_ANALYTICS_WRITER_ACTIONS),
     MAINTENANCE_MANAGER_ROLE: list(_MAINTENANCE_MANAGER_ACTIONS)
-    + list(_PROCUREMENT_MANAGER_ACTIONS),
+    + list(_PROCUREMENT_MANAGER_ACTIONS)
+    + list(_ANALYTICS_MANAGER_ACTIONS),
 }

@@ -107,6 +107,7 @@ INSTALLED_APPS = [
     "apps.projects",
     "apps.tasks",
     "apps.maintenance",
+    "apps.analytics",
     "apps.procurement",
     "apps.documents",
 ]
@@ -248,6 +249,10 @@ API_RATE_LIMIT_POLICIES: dict[str, tuple[int, int]] = {
     "project-intelligence:snapshot": (10, 60),
     "project-intelligence:analyze": (10, 60),
     "project-intelligence:context": (30, 60),
+    # Reporting/Analytics MetricReading ingestion. Single-point ingestion is
+    # intentionally generous for agents; larger payloads use the bounded batch API.
+    "analytics:metricIngest": (1200, 60),
+    "analytics:metricBatchIngest": (120, 60),
 }
 
 # Session lifetime (ADR-019 opaque tokens; refresh rotates within this TTL).
@@ -690,6 +695,7 @@ MIGRATION_MODULES = {
     "projects": "apps.projects.infrastructure.migrations",
     "tasks": "apps.tasks.infrastructure.migrations",
     "maintenance": "apps.maintenance.infrastructure.migrations",
+    "analytics": "apps.analytics.infrastructure.migrations",
     "procurement": "apps.procurement.infrastructure.migrations",
     "documents": "apps.documents.infrastructure.migrations",
 }

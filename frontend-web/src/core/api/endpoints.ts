@@ -8,6 +8,14 @@ export const apiEndpoints = {
   documents: "documents",
   projects: { list: "projects/", create: "projects/", detail: (id: string) => `projects/${id}`, update: (id: string) => `projects/${id}`, status: (id: string) => `projects/${id}/status` },
   tasks: { list: "tasks/", create: "tasks/", detail: (id: string) => `tasks/${id}`, status: (id: string) => `tasks/${id}/status` },
+  analytics: {
+    metricDefinitions: "analytics/metric-definitions",
+    metricDefinition: (id: string) => `analytics/metric-definitions/${id}`,
+    metricReadings: "analytics/metric-readings",
+    metricReading: (id: string) => `analytics/metric-readings/${id}`,
+    metricReadingBatch: "analytics/metric-readings/batch",
+    metricReadingSummary: "analytics/metric-readings/summary",
+  },
   communication: {
     conversations: "communication/conversations",
     conversation: (id: string) => `communication/conversations/${id}`,

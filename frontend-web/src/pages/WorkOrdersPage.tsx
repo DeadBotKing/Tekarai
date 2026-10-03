@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useApiClient } from "../core/api/apiContext";
 import { useLocalization } from "../core/localization/localizationContext";
 import { formatJalali } from "../core/localization/jalali";
@@ -52,6 +53,11 @@ import {
   type QuickPartInput,
 } from "../shared/components/QuickCreateModals";
 import { mergeOptions } from "../features/maintenance/optionCatalog";
+import { useOptionalOffline } from "../core/offline/offlineContext";
+import { isConnectivityFailure } from "../core/offline/offlineActions";
+import { WorkTimerPanel } from "../features/maintenance/WorkTimerPanel";
+import { ScannerModal } from "../features/scanning/ScannerModal";
+import { QrLabelModal } from "../features/scanning/QrLabelModal";
 
 const WO_STATUSES: WorkOrderStatus[] = [
   "submitted",
@@ -308,6 +314,13 @@ export function WorkOrdersPage(): JSX.Element {
   const [parts, setParts] = useState<SparePart[]>([]);
   const [partUsage, setPartUsage] = useState<WorkOrderPartUsage[]>([]);
   const [inventoryOpen, setInventoryOpen] = useState(false);
+  // اسکن و برچسب: تکنسین برگه‌ی سفارش کار را اسکن می‌کند تا همین‌جا باز شود.
+  const [scanOpen, setScanOpen] = useState(false);
+  const [qrOrder, setQrOrder] = useState<WorkOrder | null>(null);
+  // کار بدون اینترنت: آخرین فهرست خوانده‌شده و زمان آن.
+  const offline = useOptionalOffline();
+  const [staleSince, setStaleSince] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
   const [partCode, setPartCode] = useState("");
   const [partName, setPartName] = useState("");
   const [partUnit, setPartUnit] = useState("عدد");
@@ -341,10 +354,27 @@ export function WorkOrdersPage(): JSX.Element {
       setOrders(woList);
       setDevices(deviceList);
       setParts(partList);
-    } catch {
-      /* keep last known state */
+      setStaleSince("");
+      // Keep a copy for the basement: these three lists are everything a
+      // technician needs to keep working without a signal.
+      await offline?.queue.cacheRead("maintenance:workOrders", woList);
+      await offline?.queue.cacheRead("maintenance:devices", deviceList);
+      await offline?.queue.cacheRead("maintenance:spareParts", partList);
+    } catch (error) {
+      if (!offline || !isConnectivityFailure(error)) return;
+      const [cachedOrders, cachedDevices, cachedParts] = await Promise.all([
+        offline.queue.readCached<WorkOrder[]>("maintenance:workOrders"),
+        offline.queue.readCached<MaintenanceDevice[]>("maintenance:devices"),
+        offline.queue.readCached<SparePart[]>("maintenance:spareParts"),
+      ]);
+      if (!cachedOrders) return;
+      setOrders(cachedOrders.payload);
+      if (cachedDevices) setDevices(cachedDevices.payload);
+      if (cachedParts) setParts(cachedParts.payload);
+      // Never let a cached list look live — people act on what they read.
+      setStaleSince(cachedOrders.cachedAt);
     }
-  }, [service]);
+  }, [offline, service]);
   useEffect(() => {
     void refresh();
   }, [refresh]);
@@ -399,6 +429,19 @@ export function WorkOrdersPage(): JSX.Element {
   useEffect(() => {
     setLabourTechnician(activeOrder?.assignedToName ?? "");
   }, [activeOrder?.id, activeOrder?.assignedToName]);
+
+  // ?focus=<id> — where a scanned work-order label lands, whether it was
+  // opened from inside the app or by the phone's camera app.
+  const focusId = searchParams.get("focus") ?? "";
+  useEffect(() => {
+    if (!focusId) return;
+    const found = orders.find((order) => order.id === focusId);
+    if (!found) return;
+    setActiveOrder(found);
+    const next = new URLSearchParams(searchParams);
+    next.delete("focus");
+    setSearchParams(next, { replace: true });
+  }, [focusId, orders, searchParams, setSearchParams]);
 
   const filtered = useMemo(
     () =>
@@ -550,6 +593,21 @@ export function WorkOrdersPage(): JSX.Element {
       setToast(t("cmms.wo.statusSuccess"));
       await refresh();
     } catch (error) {
+      // A refusal (wrong transition, no permission) is shown as-is; only a
+      // connectivity failure is queued, with the status applied locally so
+      // the board matches what the technician just did.
+      if (offline && isConnectivityFailure(error)) {
+        await offline.enqueue({
+          kind: "workOrder.status",
+          payload: { workOrderId: order.id, target },
+          label: `${order.title} → ${t(`cmms.woStatus.${target}`)}`,
+        });
+        setOrders((current) =>
+          current.map((item) => (item.id === order.id ? { ...item, status: target } : item)),
+        );
+        setToast(t("offline.queuedGeneric"));
+        return;
+      }
       setToast(error instanceof Error ? error.message : t("cmms.wo.saveFailed"));
     }
   };
@@ -779,6 +837,16 @@ export function WorkOrdersPage(): JSX.Element {
     }
   };
 
+  /** Re-pull the labour/cost totals after the server changed them. */
+  const refreshCostSummary = useCallback(async (): Promise<void> => {
+    if (!activeOrder || runtimeConfig.demoMode) return;
+    try {
+      setCostSummary(await service.getWorkOrderCostSummary(activeOrder.id));
+    } catch {
+      /* keep the previous totals rather than blanking the panel */
+    }
+  }, [activeOrder, service]);
+
   // -- Time & cost tracking (ثبت زمان و هزینه) ---------------------------------
   const logLabour = async (): Promise<void> => {
     if (!activeOrder || !labourTechnician.trim() || Number(labourHours) <= 0) return;
@@ -941,6 +1009,10 @@ export function WorkOrdersPage(): JSX.Element {
         title={t("cmms.wo.title")}
         subtitle={t("cmms.wo.subtitle")}
         actions={
+          <div className="cmms-header-actions">
+            <Button variant="secondary" icon="search" onClick={() => setScanOpen(true)}>
+              {t("scan.button")}
+            </Button>
           <PermissionGuard permission={PERMISSIONS.maintenanceWorkOrderCreate}>
             <div className="cmms-header-actions">
               <Button variant="secondary" icon="layers" onClick={() => setInventoryOpen(true)}>
@@ -954,8 +1026,16 @@ export function WorkOrdersPage(): JSX.Element {
               </Button>
             </div>
           </PermissionGuard>
+          </div>
         }
       />
+
+      {staleSince && (
+        <p className="offline-stale-note">
+          <Icon name="cloud" size={15} />
+          {t("offline.staleData", { at: formatDateTime(staleSince) })}
+        </p>
+      )}
 
       <div className="metric-grid">
         <MetricCard label={t("cmms.metric.openWo")} value={openCount} icon="checkSquare" tone="amber" />
@@ -1479,6 +1559,29 @@ export function WorkOrdersPage(): JSX.Element {
               )}
             </PermissionGuard>
 
+            {/* تایمر کار — زمان واقعی حضور تکنسین، نه حدس پایان شیفت */}
+            <PermissionGuard permission={PERMISSIONS.maintenanceWorkOrderLogTime}>
+              <WorkTimerPanel
+                workOrderId={activeOrder.id}
+                technicianName={activeOrder.assignedToName || labourTechnician}
+                onToast={(message) => setToast(message)}
+                onLabourRecorded={() => {
+                  void refreshCostSummary();
+                }}
+              />
+            </PermissionGuard>
+
+            <div className="cmms-transition-row">
+              <Button
+                variant="secondary"
+                size="sm"
+                icon="grid"
+                onClick={() => setQrOrder(activeOrder)}
+              >
+                {t("qr.workOrder")}
+              </Button>
+            </div>
+
             {/* زمان و هزینه — ساعت‌کار تکنسین + هزینه‌ی قطعات روی هر درخواست */}
             <div className="cmms-timeline">
               <h4 className="cmms-timeline__title">{t("cmms.cost.section")}</h4>
@@ -1760,6 +1863,35 @@ export function WorkOrdersPage(): JSX.Element {
           autoFocus
         />
       </Modal>
+
+      <ScannerModal
+        open={scanOpen}
+        onClose={() => setScanOpen(false)}
+        onResolved={(result) => {
+          // A scanned work order opens right here; anything else navigates.
+          if (result.kind !== "workOrder") return undefined;
+          const found = orders.find((order) => order.id === result.id);
+          if (found) {
+            setActiveOrder(found);
+            return undefined;
+          }
+          void refresh();
+          setToast(result.title || t("scan.notFound"));
+          return undefined;
+        }}
+      />
+
+      {qrOrder && (
+        <QrLabelModal
+          open={Boolean(qrOrder)}
+          onClose={() => setQrOrder(null)}
+          kind="workOrder"
+          targetId={qrOrder.id}
+          title={t("qr.workOrder")}
+          caption={qrOrder.title}
+          subtitle={deviceNames.get(qrOrder.deviceId) ?? ""}
+        />
+      )}
 
       <QuickDeviceModal
         open={quickDeviceOpen}

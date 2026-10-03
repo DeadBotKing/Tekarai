@@ -14,6 +14,7 @@ import { useTenant } from "../core/tenant/tenantContext";
 import { useTheme } from "../core/theme/themeContext";
 import { Icon, type IconName } from "../shared/components/Icon";
 import { Avatar, IconButton } from "../shared/components/primitives";
+import { OfflineIndicator } from "../shared/components/OfflineIndicator";
 import { AccentSwatches } from "../shared/components/AccentSwatches";
 import { Drawer } from "../shared/components/overlays";
 
@@ -249,6 +250,7 @@ export function AppShell(): JSX.Element {
             </div>
           </div>
           <div className="topbar__actions">
+            <OfflineIndicator />
             <button type="button" className="global-search-trigger" onClick={openSearch}>
               <Icon name="search" size={17} />
               <span>{t("header.search")}</span>

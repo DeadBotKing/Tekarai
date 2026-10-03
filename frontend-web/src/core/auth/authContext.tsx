@@ -4,6 +4,7 @@ import type { TokenPair } from "../api/apiTypes";
 import { sessionStore, type StoredSession, type UserSession } from "./sessionStore";
 import { demoLogin, demoLogout } from "../../features/demo/demoData";
 import { useApiClient } from "../api/apiContext";
+import { clearCachedApiResponses } from "../offline/registerServiceWorker";
 
 interface LoginCredentials {
   tenantCode: string;
@@ -74,6 +75,9 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
       sessionStore.clear();
       setSession(null);
       setIsLoading(false);
+      // Offline reads are cached by the service worker; a shared phone must
+      // not show the next technician the previous one's work orders.
+      clearCachedApiResponses();
     }
   }, [api]);
 

@@ -19,6 +19,9 @@ from apps.maintenance.domain.entities.maintenanceAttachment import MaintenanceAt
 from apps.maintenance.domain.entities.sparePart import SparePart, WorkOrderPartUsage
 from apps.maintenance.domain.entities.workOrder import WorkOrder
 from apps.maintenance.domain.entities.workOrderHistory import WorkOrderHistoryEntry
+from apps.maintenance.domain.entities.workTimer import WorkTimer
+from apps.maintenance.domain.services.scanCodeRules import ScanIntent
+from apps.maintenance.domain.valueObjects.fieldOpsTypes import ScanTarget
 from apps.maintenance.domain.services.maintenanceCosting import (
     LabourCostReading,
     WorkOrderCostReading,
@@ -453,3 +456,87 @@ class MeterReadingRepository(Protocol):
         self, tenantId: uuid.UUID, readingId: uuid.UUID, correctionId: uuid.UUID
     ) -> bool:
         ...
+
+
+# =====================================================================================
+# Field operations — timers, scanning, offline sync
+# =====================================================================================
+@runtime_checkable
+class WorkTimerRepository(Protocol):
+    """Technician stopwatches. Starting one must be serialised per technician.
+
+    ``startExclusive`` does the check and the insert under one lock: two taps
+    on «شروع» from a phone with a flaky connection must not create two
+    running spans that later bill the same hour twice.
+    """
+
+    def startExclusive(self, timer: WorkTimer) -> WorkTimer: ...
+
+    def getById(self, tenantId: uuid.UUID, timerId: uuid.UUID) -> WorkTimer | None: ...
+
+    def runningFor(
+        self, tenantId: uuid.UUID, workOrderId: uuid.UUID, technicianName: str
+    ) -> WorkTimer | None: ...
+
+    def listRunning(
+        self, tenantId: uuid.UUID, technicianName: str = ""
+    ) -> list[WorkTimer]: ...
+
+    def listForWorkOrder(
+        self, tenantId: uuid.UUID, workOrderId: uuid.UUID
+    ) -> list[WorkTimer]: ...
+
+    def stop(self, timer: WorkTimer) -> WorkTimer: ...
+
+    def discard(self, tenantId: uuid.UUID, timerId: uuid.UUID) -> WorkTimer: ...
+
+
+@dataclass(frozen=True)
+class SyncLedgerEntry:
+    """What the server remembers about one replayed client operation."""
+
+    clientRequestId: str
+    kind: str
+    status: str
+    resultId: str
+    resultPayload: dict[str, object]
+    errorCode: str
+    errorMessage: str
+    receivedAt: datetime
+
+
+@runtime_checkable
+class OfflineSyncLedger(Protocol):
+    """Durable record of client operations, keyed by ``clientRequestId``.
+
+    Durability is the whole point: the cache-backed idempotency store used by
+    online POSTs cannot survive the days an offline queue may wait.
+    """
+
+    def find(self, tenantId: uuid.UUID, clientRequestId: str) -> SyncLedgerEntry | None: ...
+
+    def remember(
+        self,
+        tenantId: uuid.UUID,
+        clientRequestId: str,
+        kind: str,
+        status: str,
+        *,
+        resultId: str = "",
+        resultPayload: dict[str, object] | None = None,
+        errorCode: str = "",
+        errorMessage: str = "",
+        actorName: str = "",
+        capturedAt: datetime | None = None,
+        receivedAt: datetime,
+        deviceLabel: str = "",
+    ) -> SyncLedgerEntry: ...
+
+    def recent(self, tenantId: uuid.UUID, limit: int = 50) -> list[SyncLedgerEntry]: ...
+
+
+@runtime_checkable
+class ScanResolutionRepository(Protocol):
+    """Resolves a scanned code to the one thing in this tenant it can mean."""
+
+    def resolve(self, tenantId: uuid.UUID, intent: ScanIntent) -> ScanTarget | None: ...

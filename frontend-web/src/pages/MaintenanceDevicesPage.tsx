@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useApiClient } from "../core/api/apiContext";
 import { useLocalization } from "../core/localization/localizationContext";
 import { PERMISSIONS } from "../core/permissions/permissionContext";
@@ -80,6 +80,17 @@ export function MaintenanceDevicesPage(): JSX.Element {
   const [pmTo, setPmTo] = useState("");
   const [toast, setToast] = useState("");
   const [scanOpen, setScanOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // The installed app's "scan" shortcut lands here as ?scan=1 — open the
+  // camera straight away so the technician never taps twice.
+  useEffect(() => {
+    if (searchParams.get("scan") !== "1") return;
+    setScanOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete("scan");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editDevice, setEditDevice] = useState<MaintenanceDevice | null>(null);

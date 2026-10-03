@@ -892,3 +892,125 @@ class MeterReadingModel(models.Model):
         raise MeterReadingImmutableError(
             "Meter readings cannot be deleted; append a correction instead."
         )
+
+
+# =====================================================================================
+# Field operations — work timers and offline sync (کار میدانی: تایمر و همگام‌سازی)
+# =====================================================================================
+class WorkTimerModel(models.Model):
+    """A technician's running stopwatch on one work order.
+
+    The row exists from «شروع کار» until «پایان کار». Stopping it mints a
+    :class:`WorkOrderLabourEntryModel` from the measured span, so the cost
+    report keeps a single source of truth (labour entries) while the timer
+    table keeps the evidence of *when* the span was actually observed.
+
+    ``startedAt`` is always the moment the technician pressed start — even if
+    the press happened offline and reached the server hours later.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenantId = models.UUIDField(db_index=True)
+    workOrderId = models.UUIDField(db_index=True)
+    technicianName = models.CharField(max_length=160)
+    technicianUserId = models.UUIDField(null=True, blank=True, db_index=True)
+    startedAt = models.DateTimeField(db_index=True)
+    endedAt = models.DateTimeField(null=True, blank=True, db_index=True)
+    pausedSeconds = models.IntegerField(default=0)
+    hourlyRate = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    startNote = models.CharField(max_length=500, blank=True, default="")
+    endNote = models.CharField(max_length=500, blank=True, default="")
+    labourEntryId = models.UUIDField(null=True, blank=True, db_index=True)
+    capturedOffline = models.BooleanField(default=False)
+    startedVia = models.CharField(max_length=12, default="online")
+    createdAt = models.DateTimeField(auto_now_add=True, db_index=True)
+    updatedAt = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "WorkTimer"
+        ordering = ["-startedAt"]
+        indexes = [
+            models.Index(
+                fields=["tenantId", "workOrderId", "startedAt"],
+                name="ix_wt_tenant_order_start",
+            ),
+            models.Index(
+                fields=["tenantId", "technicianName", "startedAt"],
+                name="ix_wt_tenant_tech_start",
+            ),
+        ]
+        constraints = [
+            # One running stopwatch per technician per order. The filtered
+            # condition is mandatory: SQL Server treats NULLs as equal in a
+            # plain unique index, which would forbid a second *finished* span.
+            models.UniqueConstraint(
+                fields=["tenantId", "workOrderId", "technicianName"],
+                condition=models.Q(endedAt__isnull=True),
+                name="uq_work_timer_one_running_per_tech",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(endedAt__isnull=True)
+                | models.Q(endedAt__gte=models.F("startedAt")),
+                name="ck_work_timer_end_after_start",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(pausedSeconds__gte=0),
+                name="ck_work_timer_paused_nonnegative",
+            ),
+        ]
+
+    def __str__(self) -> str:  # pragma: no cover — debug helper
+        return f"{self.technicianName}@{self.workOrderId}:{self.startedAt:%Y-%m-%dT%H:%M}"
+
+
+class OfflineSyncOperationModel(models.Model):
+    """Durable idempotency ledger for operations captured offline.
+
+    A phone that lost the network keeps its writes in a local queue and
+    replays them later — possibly twice, possibly days later, possibly after
+    a server restart. The shared-kernel ``IdempotencyMixin`` cannot carry that
+    load: it is cache-backed (LocMem in development) and evaporates on
+    restart. This table is the durable equivalent, keyed by the
+    client-generated ``clientRequestId``.
+
+    A replayed operation returns its *stored* outcome instead of executing
+    again, so a double-sync can never create two labour entries or consume a
+    spare part twice.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenantId = models.UUIDField(db_index=True)
+    clientRequestId = models.CharField(max_length=80)
+    kind = models.CharField(max_length=40, db_index=True)
+    status = models.CharField(max_length=12, default="applied", db_index=True)
+    resultId = models.CharField(max_length=64, blank=True, default="")
+    resultPayload = models.JSONField(default=dict, blank=True)
+    errorCode = models.CharField(max_length=60, blank=True, default="")
+    errorMessage = models.CharField(max_length=500, blank=True, default="")
+    actorName = models.CharField(max_length=160, blank=True, default="")
+    capturedAt = models.DateTimeField(null=True, blank=True)
+    receivedAt = models.DateTimeField(db_index=True)
+    deviceLabel = models.CharField(max_length=120, blank=True, default="")
+
+    class Meta:
+        db_table = "OfflineSyncOperation"
+        ordering = ["-receivedAt"]
+        indexes = [
+            models.Index(
+                fields=["tenantId", "kind", "receivedAt"],
+                name="ix_sync_tenant_kind_time",
+            ),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenantId", "clientRequestId"],
+                name="uq_sync_operation_client_request",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(status__in=("applied", "failed", "rejected")),
+                name="ck_sync_operation_status",
+            ),
+        ]
+
+    def __str__(self) -> str:  # pragma: no cover — debug helper
+        return f"{self.kind}:{self.clientRequestId}:{self.status}"

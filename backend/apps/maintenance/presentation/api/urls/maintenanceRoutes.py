@@ -66,6 +66,16 @@ from apps.maintenance.presentation.api.views.teamSyncViews import (
     TeamReservationDetailView,
     TeamReservationListView,
 )
+from apps.maintenance.presentation.api.views.fieldOpsViews import (
+    MyRunningTimersView,
+    OfflineSyncView,
+    ScanResolveView,
+    SyncHistoryView,
+    WorkOrderTimerListView,
+    WorkOrderTimerStartView,
+    WorkOrderTimerStopView,
+    WorkTimerDetailView,
+)
 from apps.maintenance.presentation.api.views.timeCostViews import (
     LabourEntryDetailView,
     MaintenanceCostReportView,
@@ -335,5 +345,30 @@ urlpatterns = [
         TeamInspectionTemplateCommitView.as_view(),
         name="teamInspectionTemplateCommit",
     ),
+    # -- Field operations: timers, scanning, offline sync -------------------------
+    path(
+        "work-orders/<uuid:workOrderId>/timer/start",
+        WorkOrderTimerStartView.as_view(),
+        name="workOrderTimerStart",
+    ),
+    path(
+        "work-orders/<uuid:workOrderId>/timer/stop",
+        WorkOrderTimerStopView.as_view(),
+        name="workOrderTimerStop",
+    ),
+    path(
+        "work-orders/<uuid:workOrderId>/timers",
+        WorkOrderTimerListView.as_view(),
+        name="workOrderTimerList",
+    ),
+    path("work-timers/active", MyRunningTimersView.as_view(), name="workTimerActive"),
+    path(
+        "work-timers/<uuid:timerId>",
+        WorkTimerDetailView.as_view(),
+        name="workTimerDetail",
+    ),
+    path("scan", ScanResolveView.as_view(), name="scanResolve"),
+    path("sync", OfflineSyncView.as_view(), name="offlineSync"),
+    path("sync/history", SyncHistoryView.as_view(), name="offlineSyncHistory"),
     path("team/inspection-records", TeamInspectionRecordListView.as_view(), name="teamInspectionRecordList"),
 ]

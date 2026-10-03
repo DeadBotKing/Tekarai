@@ -5,6 +5,7 @@ import { AuthProvider } from "../../core/auth/authContext";
 import { FeatureFlagProvider } from "../../core/flags/featureFlags";
 import { LocalizationProvider } from "../../core/localization/localizationContext";
 import { NotificationProvider } from "../../core/notifications/notificationContext";
+import { OfflineProvider } from "../../core/offline/offlineContext";
 import { PermissionProvider } from "../../core/permissions/permissionContext";
 import { TenantProvider } from "../../core/tenant/tenantContext";
 import { ThemeProvider } from "../../core/theme/themeContext";
@@ -19,7 +20,9 @@ export function AppProviders({ children }: { children: ReactNode }): JSX.Element
               <AuthProvider>
                 <PermissionProvider>
                   <FeatureFlagProvider>
-                    <NotificationProvider>{children}</NotificationProvider>
+                    <NotificationProvider>
+                      <OfflineProvider>{children}</OfflineProvider>
+                    </NotificationProvider>
                   </FeatureFlagProvider>
                 </PermissionProvider>
               </AuthProvider>

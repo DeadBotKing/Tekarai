@@ -1,0 +1,267 @@
+/* عملیات میدانی — اسکن، تایمر و صف آفلاین.
+   Mobile-first: these three surfaces are used one-handed, in gloves, in bad
+   light. Hit targets stay ≥44 px and nothing depends on hover. */
+
+/* ---------------------------------------------------------------- scanner */
+.scan-panel__tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.scan-panel__camera {
+  position: relative;
+  overflow: hidden;
+}
+
+.scan-panel__camera video {
+  width: 100%;
+  max-height: 46vh;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #000;
+}
+
+/* A frame to aim with: scanning accuracy is mostly a framing problem. */
+.scan-panel__reticle {
+  position: absolute;
+  inset: 16% 12%;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  border-radius: 14px;
+  box-shadow: 0 0 0 100vmax rgba(2, 6, 23, 0.35);
+  pointer-events: none;
+}
+
+.scan-panel__reticle::after {
+  content: "";
+  position: absolute;
+  inset-inline: 6%;
+  top: 50%;
+  height: 2px;
+  background: var(--color-accent, #2563eb);
+  opacity: 0.9;
+  animation: scanSweep 2.4s ease-in-out infinite;
+}
+
+@keyframes scanSweep {
+  0%, 100% { transform: translateY(-42%); }
+  50% { transform: translateY(42%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scan-panel__reticle::after { animation: none; }
+}
+
+.scan-panel__message--busy { opacity: 0.75; }
+
+/* ------------------------------------------------------------------ timer */
+.work-timer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 14px;
+  background: var(--color-surface-subtle, rgba(148, 163, 184, 0.08));
+}
+
+.work-timer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.work-timer__clock {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.work-timer__clock strong {
+  font-size: 32px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
+}
+
+.work-timer__clock--live strong { color: var(--color-success, #16a34a); }
+
+.work-timer__clock--live::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-success, #16a34a);
+  animation: timerPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes timerPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.82); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .work-timer__clock--live::before { animation: none; }
+}
+
+.work-timer__controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.work-timer__controls .button { min-height: 44px; }
+
+.work-timer__list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.work-timer__list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, #e2e8f0);
+}
+
+/* --------------------------------------------------------- offline status */
+.offline-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  text-decoration: none;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.offline-indicator strong {
+  font-variant-numeric: tabular-nums;
+  padding-inline-start: 2px;
+}
+
+.offline-indicator--offline {
+  background: rgba(239, 68, 68, 0.14);
+  color: #b91c1c;
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.offline-indicator--warn {
+  background: rgba(245, 158, 11, 0.16);
+  color: #b45309;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.offline-indicator--pending {
+  background: rgba(37, 99, 235, 0.14);
+  color: #1d4ed8;
+  border-color: rgba(37, 99, 235, 0.3);
+}
+
+[data-theme="dark"] .offline-indicator--offline { color: #fca5a5; }
+[data-theme="dark"] .offline-indicator--warn { color: #fcd34d; }
+[data-theme="dark"] .offline-indicator--pending { color: #93c5fd; }
+
+/* ---------------------------------------------------------- offline queue */
+.offline-queue__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.offline-queue__head h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 15px;
+}
+
+.offline-queue__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.offline-queue__list--compact li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--color-surface-subtle, rgba(148, 163, 184, 0.08));
+}
+
+.offline-queue__row {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 12px;
+  background: var(--color-surface, #fff);
+}
+
+.offline-queue__row-main {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.offline-queue__row-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+.offline-queue__row-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.offline-queue__error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-danger, #dc2626);
+}
+
+.offline-queue__error code {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+/* A stale, cached list must never look like a live one. */
+.offline-stale-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-warning-text, #b45309);
+}
+
+@media print {
+  body.printing-qr-label .offline-indicator { display: none; }
+}

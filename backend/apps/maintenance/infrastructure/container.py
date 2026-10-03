@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from apps.maintenance.application.useCases.alertScanUseCases import (
     RunMaintenanceAlertScanUseCase,
 )
@@ -72,6 +74,49 @@ from apps.maintenance.infrastructure.repositories.deviceHistoryRepositoryImpl im
 )
 from apps.maintenance.infrastructure.repositories.deviceRepositoryImpl import (
     DeviceRepositoryDjango,
+)
+from apps.maintenance.application.commands.maintenanceCommands import (
+    ChangeDeviceStatusCommand,
+    ChangeWorkOrderStatusCommand,
+)
+from apps.maintenance.application.commands.sparePartCommands import (
+    ConsumeSparePartCommand,
+)
+from apps.maintenance.application.commands.timeCostCommands import (
+    LogLabourEntryCommand,
+)
+from apps.maintenance.application.useCases.meterReadingUseCases import (
+    RecordManualReadingCommand,
+)
+from apps.maintenance.application.useCases.offlineSyncUseCases import (
+    ApplySyncBatchUseCase,
+    ListSyncHistoryUseCase,
+)
+from apps.maintenance.application.useCases.scanUseCases import ResolveScanUseCase
+from apps.maintenance.application.useCases.workTimerUseCases import (
+    CancelWorkTimerUseCase,
+    GetMyRunningTimersUseCase,
+    ListWorkTimersUseCase,
+    StartWorkTimerCommand,
+    StartWorkTimerUseCase,
+    StopWorkTimerCommand,
+    StopWorkTimerUseCase,
+)
+from apps.maintenance.domain.valueObjects.fieldOpsTypes import (
+    SYNC_DEVICE_STATUS,
+    SYNC_METER_READING,
+    SYNC_TIMER_START,
+    SYNC_TIMER_STOP,
+    SYNC_WORK_ORDER_LABOUR,
+    SYNC_WORK_ORDER_PART,
+    SYNC_WORK_ORDER_STATUS,
+)
+from apps.maintenance.infrastructure.repositories.fieldOpsRepositoryImpl import (
+    OfflineSyncLedgerDjango,
+    ScanResolutionRepositoryDjango,
+)
+from apps.maintenance.infrastructure.repositories.workTimerRepositoryImpl import (
+    WorkTimerRepositoryDjango,
 )
 from apps.maintenance.infrastructure.repositories.labourEntryRepositoryImpl import (
     LabourEntryRepositoryDjango,
@@ -634,3 +679,182 @@ def getMeterPmStatusUseCase() -> GetMeterPmStatusUseCase:
     return GetMeterPmStatusUseCase(
         registryRepository=deviceRegistryRepository(), **_meterDeps()
     )
+
+
+# =====================================================================================
+# Field operations — timers, scanning, offline sync (کار میدانی)
+# =====================================================================================
+def workTimerRepository() -> WorkTimerRepositoryDjango:
+    return WorkTimerRepositoryDjango()
+
+
+def scanResolutionRepository() -> ScanResolutionRepositoryDjango:
+    return ScanResolutionRepositoryDjango()
+
+
+def offlineSyncLedger() -> OfflineSyncLedgerDjango:
+    return OfflineSyncLedgerDjango()
+
+
+def _timerDeps() -> dict:
+    return {
+        "timerRepository": workTimerRepository(),
+        "workOrderRepository": workOrderRepository(),
+        "labourEntryRepository": labourEntryRepository(),
+        **_kernelPorts(),
+    }
+
+
+def startWorkTimerUseCase() -> StartWorkTimerUseCase:
+    return StartWorkTimerUseCase(**_timerDeps())
+
+
+def stopWorkTimerUseCase() -> StopWorkTimerUseCase:
+    return StopWorkTimerUseCase(**_timerDeps())
+
+
+def cancelWorkTimerUseCase() -> CancelWorkTimerUseCase:
+    return CancelWorkTimerUseCase(**_timerDeps())
+
+
+def listWorkTimersUseCase() -> ListWorkTimersUseCase:
+    return ListWorkTimersUseCase(**_timerDeps())
+
+
+def getMyRunningTimersUseCase() -> GetMyRunningTimersUseCase:
+    return GetMyRunningTimersUseCase(**_timerDeps())
+
+
+def resolveScanUseCase() -> ResolveScanUseCase:
+    return ResolveScanUseCase(scanRepository=scanResolutionRepository(), **_kernelPorts())
+
+
+# -- Sync handlers ------------------------------------------------------------------
+# Each handler turns one queued payload into a call on the *same* use case the
+# online endpoint uses — permissions, validation and events included. The
+# handler returns ``(resultId, resultPayload)``; everything else (idempotency,
+# verdicts, the ledger) is the sync use case's business.
+def _text(payload: Mapping[str, object], key: str, default: str = "") -> str:
+    value = payload.get(key, default)
+    return "" if value is None else str(value)
+
+
+def _occurred(payload: Mapping[str, object], *keys: str) -> str:
+    """First populated timestamp among *keys*, else the queue's occurredAt."""
+    for key in keys:
+        value = _text(payload, key)
+        if value:
+            return value
+    return _text(payload, "occurredAt")
+
+
+def _syncChangeWorkOrderStatus(payload: Mapping[str, object]) -> tuple[str, dict]:
+    dto = changeWorkOrderStatusUseCase().execute(
+        ChangeWorkOrderStatusCommand(
+            workOrderId=_text(payload, "workOrderId"),
+            target=_text(payload, "target") or _text(payload, "status"),
+            resolutionNote=_text(payload, "resolutionNote") or _text(payload, "note"),
+        )
+    )
+    return str(dto.id), {"status": dto.status}
+
+
+def _syncLogLabour(payload: Mapping[str, object]) -> tuple[str, dict]:
+    dto = logLabourEntryUseCase().execute(
+        LogLabourEntryCommand(
+            workOrderId=_text(payload, "workOrderId"),
+            technicianName=_text(payload, "technicianName"),
+            hours=_text(payload, "hours", "0"),
+            hourlyRate=_text(payload, "hourlyRate", "0"),
+            workedAt=_occurred(payload, "workedAt"),
+            note=_text(payload, "note"),
+        )
+    )
+    return dto.id, {"hours": dto.hours, "totalCost": dto.totalCost}
+
+
+def _syncConsumePart(payload: Mapping[str, object]) -> tuple[str, dict]:
+    dto = consumeSparePartUseCase().execute(
+        ConsumeSparePartCommand(
+            workOrderId=_text(payload, "workOrderId"),
+            partId=_text(payload, "partId"),
+            quantity=_text(payload, "quantity", "0"),
+            note=_text(payload, "note"),
+        )
+    )
+    return dto.id, {"quantity": dto.quantity, "partCode": dto.partCode}
+
+
+def _syncStartTimer(payload: Mapping[str, object]) -> tuple[str, dict]:
+    dto = startWorkTimerUseCase().execute(
+        StartWorkTimerCommand(
+            workOrderId=_text(payload, "workOrderId"),
+            technicianName=_text(payload, "technicianName"),
+            startedAt=_occurred(payload, "startedAt"),
+            hourlyRate=_text(payload, "hourlyRate", "0"),
+            note=_text(payload, "note"),
+            capturedOffline=True,
+        )
+    )
+    return dto.id, {"startedAt": dto.startedAt, "running": dto.running}
+
+
+def _syncStopTimer(payload: Mapping[str, object]) -> tuple[str, dict]:
+    dto = stopWorkTimerUseCase().execute(
+        StopWorkTimerCommand(
+            workOrderId=_text(payload, "workOrderId"),
+            timerId=_text(payload, "timerId"),
+            technicianName=_text(payload, "technicianName"),
+            endedAt=_occurred(payload, "endedAt"),
+            note=_text(payload, "note"),
+            pausedSeconds=int(_text(payload, "pausedSeconds", "0") or 0),
+            capturedOffline=True,
+        )
+    )
+    return dto.timer.id, {"hours": dto.hours, "labourEntryId": dto.labourEntryId}
+
+
+def _syncChangeDeviceStatus(payload: Mapping[str, object]) -> tuple[str, dict]:
+    dto = changeDeviceStatusUseCase().execute(
+        ChangeDeviceStatusCommand(
+            deviceId=_text(payload, "deviceId"),
+            target=_text(payload, "target") or _text(payload, "status"),
+        )
+    )
+    return str(dto.id), {"status": dto.status}
+
+
+def _syncRecordMeterReading(payload: Mapping[str, object]) -> tuple[str, dict]:
+    dto = recordManualMeterReadingUseCase().execute(
+        RecordManualReadingCommand(
+            deviceId=_text(payload, "deviceId"),
+            meterPointId=_text(payload, "meterPointId"),
+            meterCode=_text(payload, "meterCode"),
+            value=_text(payload, "value"),
+            capturedAt=_occurred(payload, "capturedAt"),
+            note=_text(payload, "note"),
+        )
+    )
+    return dto.id, {"value": dto.value, "delta": dto.delta}
+
+
+def syncHandlers() -> dict[str, object]:
+    return {
+        SYNC_WORK_ORDER_STATUS: _syncChangeWorkOrderStatus,
+        SYNC_WORK_ORDER_LABOUR: _syncLogLabour,
+        SYNC_WORK_ORDER_PART: _syncConsumePart,
+        SYNC_TIMER_START: _syncStartTimer,
+        SYNC_TIMER_STOP: _syncStopTimer,
+        SYNC_DEVICE_STATUS: _syncChangeDeviceStatus,
+        SYNC_METER_READING: _syncRecordMeterReading,
+    }
+
+
+def applySyncBatchUseCase() -> ApplySyncBatchUseCase:
+    return ApplySyncBatchUseCase(
+        ledger=offlineSyncLedger(), handlers=syncHandlers(), **_kernelPorts()
+    )
+
+
+def listSyncHistoryUseCase() -> ListSyncHistoryUseCase:
+    return ListSyncHistoryUseCase(ledger=offlineSyncLedger(), **_kernelPorts())

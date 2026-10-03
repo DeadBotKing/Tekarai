@@ -209,3 +209,30 @@ cd frontend-web && npm run typecheck && npm run test -- --run && npm run build
 device, define its meters, type a reading, see the history with its quality and
 consumption, correct a mistake with a reason, and watch the meter-driven PM
 strip move from «طبق برنامه» to «نزدیک سررسید» to «سررسید رسیده».
+
+---
+
+## ۱۱) اجرا و بررسی در ویندوز (PowerShell)
+
+```powershell
+.\run_dev.cmd                          # بالا آوردن کل سامانه (بک‌اند ۸۰۰۰ + فرانت ۴۱۷۳)
+.\run_dev.cmd -UseSqlite               # بدون SQL Server
+.\verify_meterReadings.cmd             # ۹۱ تست این قابلیت + کنترل مهاجرت‌ها
+.\verify_meterReadings.cmd -All        # کل تست بک‌اند + فرانت‌اند + تست زندهٔ API
+```
+
+Both launchers have a `.ps1` twin; the `.cmd` wrapper only unblocks the scripts
+and bypasses the execution policy. Backend tests always run on SQLite with
+`config.settings.testing`, so they never touch the SQL Server database. Only
+`-Smoke` talks to the running instance, where it creates a throwaway `SMOKE-…`
+device.
+
+**روی پایگاه دادهٔ موجود:** مهاجرت‌های `0013`/`0014` و سپس `bootstrapPlatform`
+باید یک‌بار اجرا شوند تا چهار دسترسی جدید ثبت شود؛ `run_dev.ps1` هر دو را
+خودکار انجام می‌دهد.
+
+> مهاجرت‌های این قابلیت تا امروز فقط روی SQLite آزموده شده‌اند. قیدهای
+> `UniqueConstraint` عمداً با `condition=...isnull=False` نوشته شده‌اند چون
+> SQL Server مقادیر NULL را در ایندکس یکتا برابر می‌گیرد، و `select_for_update()`
+> زیر `mssql-django` به `UPDLOCK` ترجمه می‌شود؛ ولی اولین اجرای `migrate` روی
+> SQL Server را روی یک نسخهٔ پشتیبان بگیرید.

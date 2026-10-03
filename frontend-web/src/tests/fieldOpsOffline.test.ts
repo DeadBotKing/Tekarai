@@ -454,6 +454,24 @@ describe("sessionStore — ماندگاری نشست انتخاب کاربر ا�
     expect(sessionStorage.getItem(KEY)).toContain("r2");
   });
 
+  it("ignores a session persisted by the build that had no checkbox", () => {
+    // Exactly what an upgrading user has in their browser: a localStorage
+    // entry nobody opted into. It must not sign them in.
+    localStorage.setItem(KEY, JSON.stringify(session));
+
+    // A fresh read is what happens on page load.
+    const restored = JSON.parse(localStorage.getItem(KEY) ?? "null") as {
+      remember?: boolean;
+    } | null;
+    expect(restored?.remember).toBeUndefined();
+
+    sessionStore.set(session, true);
+    const stamped = JSON.parse(localStorage.getItem(KEY) ?? "null") as {
+      remember?: boolean;
+    };
+    expect(stamped.remember).toBe(true);
+  });
+
   it("clears both stores on logout", () => {
     sessionStore.set(session, true);
     sessionStore.clear();

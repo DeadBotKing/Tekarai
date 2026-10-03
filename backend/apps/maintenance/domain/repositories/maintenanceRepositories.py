@@ -309,3 +309,147 @@ class InspectionSyncRepository(Protocol):
 
     def deleteTemplate(self, tenantId: uuid.UUID, templateId: str) -> bool:
         ...
+
+
+# =====================================================================================
+# Meter readings — manual + sensor capture (ثبت قرائت دستی و سنسوری)
+# =====================================================================================
+from apps.maintenance.domain.entities.meterReading import (  # noqa: E402
+    MeterPoint,
+    MeterPointSummary,
+    MeterReading,
+)
+
+
+@runtime_checkable
+class MeterPointRepository(Protocol):
+    """Definition side: what is measured on a device, and how it behaves."""
+
+    def getById(self, tenantId: uuid.UUID, pointId: uuid.UUID) -> MeterPoint | None:
+        ...
+
+    def getByCode(
+        self, tenantId: uuid.UUID, deviceId: uuid.UUID, code: str
+    ) -> MeterPoint | None:
+        ...
+
+    def getBySensorKey(self, tenantId: uuid.UUID, sensorKey: str) -> MeterPoint | None:
+        ...
+
+    def listForDevice(
+        self, tenantId: uuid.UUID, deviceId: uuid.UUID, *, includeInactive: bool = True
+    ) -> list[MeterPoint]:
+        ...
+
+    def listForTenant(
+        self,
+        tenantId: uuid.UUID,
+        *,
+        search: str = "",
+        kind: str = "",
+        activeOnly: bool = False,
+        limit: int = 500,
+    ) -> list[MeterPoint]:
+        ...
+
+    def runningHoursPoint(
+        self, tenantId: uuid.UUID, deviceId: uuid.UUID
+    ) -> MeterPoint | None:
+        ...
+
+    def create(
+        self,
+        tenantId: uuid.UUID,
+        deviceId: uuid.UUID,
+        payload: dict[str, object],
+        now: datetime,
+    ) -> MeterPoint:
+        ...
+
+    def update(
+        self,
+        tenantId: uuid.UUID,
+        pointId: uuid.UUID,
+        payload: dict[str, object],
+        now: datetime,
+    ) -> MeterPoint:
+        ...
+
+    def softDelete(self, tenantId: uuid.UUID, pointId: uuid.UUID, now: datetime) -> None:
+        ...
+
+
+@runtime_checkable
+class MeterReadingRepository(Protocol):
+    """Append-only stream of observations: no update, no delete, by design.
+
+    Corrections are new rows that supersede old ones, so the only mutation the
+    contract exposes is ``markSuperseded`` — bookkeeping about a row, never a
+    change to the observation it records.
+    """
+
+    def getById(self, tenantId: uuid.UUID, readingId: uuid.UUID) -> MeterReading | None:
+        ...
+
+    def findByIngestionKey(
+        self, tenantId: uuid.UUID, ingestionKey: str
+    ) -> MeterReading | None:
+        ...
+
+    def previousReading(
+        self, tenantId: uuid.UUID, pointId: uuid.UUID, capturedAt: datetime
+    ) -> MeterReading | None:
+        ...
+
+    def latestReading(
+        self, tenantId: uuid.UUID, pointId: uuid.UUID
+    ) -> MeterReading | None:
+        ...
+
+    def listReadings(
+        self,
+        tenantId: uuid.UUID,
+        *,
+        deviceId: uuid.UUID | None = None,
+        pointId: uuid.UUID | None = None,
+        captureMode: str = "",
+        quality: str = "",
+        fromMoment: datetime | None = None,
+        toMoment: datetime | None = None,
+        includeSuperseded: bool = True,
+        offset: int = 0,
+        limit: int = 100,
+    ) -> tuple[list[MeterReading], int]:
+        ...
+
+    def summarise(
+        self,
+        tenantId: uuid.UUID,
+        point: MeterPoint,
+        *,
+        fromMoment: datetime | None = None,
+        toMoment: datetime | None = None,
+    ) -> MeterPointSummary:
+        ...
+
+    def currentValuesByCode(
+        self, tenantId: uuid.UUID, deviceId: uuid.UUID
+    ) -> dict[str, Decimal]:
+        ...
+
+    def append(
+        self,
+        tenantId: uuid.UUID,
+        point: MeterPoint,
+        payload: dict[str, object],
+        now: datetime,
+    ) -> MeterReading:
+        ...
+
+    def lockPoint(self, tenantId: uuid.UUID, pointId: uuid.UUID) -> MeterPoint:
+        ...
+
+    def markSuperseded(
+        self, tenantId: uuid.UUID, readingId: uuid.UUID, correctionId: uuid.UUID
+    ) -> bool:
+        ...

@@ -54,6 +54,20 @@ def asDict(dto: Any) -> dict[str, Any]:
     return dataclasses.asdict(dto)
 
 
+def _triggerFields(data: dict[str, Any]) -> dict[str, str]:
+    """PM trigger fields, shared by the create and update call sites."""
+    return {
+        "triggerType": str(data["triggerType"]),
+        "metricType": str(data["metricType"]),
+        "metricInterval": str(data["metricInterval"]),
+        "thresholdOperator": str(data["thresholdOperator"]),
+        "thresholdValue": str(data["thresholdValue"]),
+        "warningValue": str(data["warningValue"]),
+        "metricUnit": str(data["metricUnit"]),
+        "sensorKey": str(data["sensorKey"]),
+    }
+
+
 class RegistryView(APIView):
     authentication_classes = [BearerSessionAuthentication]
     permission_classes = [IsAuthenticated]
@@ -278,6 +292,7 @@ class DevicePmPlanListView(IdempotencyMixin, RegistryView):
                 estimatedMinutes=int(data["estimatedMinutes"]),
                 responsibleName=str(data["responsibleName"]),
                 active=bool(data["active"]),
+                **_triggerFields(data),
             )
         )
         return Response(successEnvelope(asDict(dto)), status=201)
@@ -300,6 +315,7 @@ class PmPlanDetailView(RegistryView):
                 estimatedMinutes=int(data["estimatedMinutes"]),
                 responsibleName=str(data["responsibleName"]),
                 active=bool(data["active"]),
+                **_triggerFields(data),
             )
         )
         return Response(successEnvelope(asDict(dto)))
@@ -323,6 +339,7 @@ class PmPlanExecutionView(IdempotencyMixin, RegistryView):
                 performedByName=str(data["performedByName"]),
                 durationMinutes=int(data["durationMinutes"]),
                 findings=str(data["findings"]),
+                meterValue=str(data["meterValue"]),
             )
         )
         return Response(successEnvelope(asDict(dto)), status=201)

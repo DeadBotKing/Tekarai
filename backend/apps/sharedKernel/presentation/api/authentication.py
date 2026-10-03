@@ -43,6 +43,34 @@ class BearerSessionAuthentication(BaseAuthentication):
         return self.keyword
 
 
+class ApiKeyAuthentication(BaseAuthentication):
+    """X-API-Key authentication (§22) for server-to-server callers.
+
+    Lives beside the bearer adapter because an API key is a platform-wide
+    credential, not the property of one bounded context: the gateway that
+    pushes meter readings into Maintenance authenticates exactly the way any
+    other machine caller does. The implementation is resolved through the
+    ``apiKeyVerifier`` port, so no context imports another's internals.
+
+    Authentication only — scopes ride on the principal and permission
+    decisions stay with the gate (§20).
+    """
+
+    keyword = "X-API-Key"
+
+    def authenticate(self, request: Request) -> tuple[object, str | None] | None:
+        rawKey: str = request.headers.get("X-API-Key", "").strip()
+        if not rawKey:
+            return None  # not an API-key request — the Bearer path applies
+        verifier = sharedKernelProvider("apiKeyVerifier")()
+        principal = verifier.verifyApiKey(rawKey)
+        bindPrincipalIntoContext(principal)
+        return principal, rawKey
+
+    def authenticate_header(self, request: Request) -> str:
+        return self.keyword
+
+
 def bindPrincipalIntoContext(principal: SessionPrincipal) -> None:
     """Enrich the request context with actor/tenant identity (§26)."""
     from apps.sharedKernel.application.requestContext import bindContext

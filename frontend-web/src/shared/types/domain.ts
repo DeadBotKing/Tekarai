@@ -794,3 +794,163 @@ export interface CreateConversationInput {
   topic?: string;
   visibility?: ChannelVisibility;
 }
+
+// =====================================================================================
+// Meter readings — ثبت قرائت دستی و سنسوری
+// =====================================================================================
+
+/** A counter accumulates (running hours, kWh); a gauge is a spot value (°C, mm/s). */
+export type MeterKind = "cumulative" | "gauge";
+
+/** Who produced the number: a person at the machine, or a gateway/PLC. */
+export type MeterCaptureMode = "manual" | "sensor";
+
+/**
+ * Confidence in a single observation. Only `good` and `estimated` feed derived
+ * values (running hours, PM triggers); the others are kept but not trusted.
+ */
+export type MeterQuality = "good" | "suspect" | "estimated" | "bad";
+
+/** How a PM plan decides it is time: a date, a meter interval, or a threshold. */
+export type PmTriggerType = "calendar" | "meter" | "condition";
+
+export type MeterStatus = "ok" | "warning" | "due" | "unknown";
+
+/** Definition of something measured on a device. */
+export interface MeterPoint {
+  id: string;
+  deviceId: string;
+  code: string;
+  name: string;
+  unit: string;
+  kind: MeterKind;
+  sensorKey: string;
+  drivesRunningHours: boolean;
+  active: boolean;
+  /** Counter capacity before it wraps to zero; null when it never wraps. */
+  rolloverMaximum: number | null;
+  minimumValue: number | null;
+  maximumValue: number | null;
+  /** Plausibility guard used to flag impossible jumps between readings. */
+  maximumStepPerHour: number | null;
+  lastValue: number | null;
+  lastReadingAt: string;
+  lastCaptureMode: MeterCaptureMode | "";
+  readingCount: number;
+}
+
+/** One observation. Immutable: a mistake is fixed by appending a correction. */
+export interface MeterReading {
+  id: string;
+  deviceId: string;
+  meterPointId: string;
+  meterCode: string;
+  meterName: string;
+  unit: string;
+  value: number;
+  /** Consumption since the previous trusted reading; null when unknown. */
+  delta: number | null;
+  capturedAt: string;
+  captureMode: MeterCaptureMode;
+  quality: MeterQuality;
+  rolloverApplied: boolean;
+  note: string;
+  sensorKey: string;
+  recordedByName: string;
+  provenance: string;
+  correctsReadingId: string;
+  supersededByReadingId: string;
+  createdAt: string;
+}
+
+export interface MeterPointSummary {
+  meterPointId: string;
+  code: string;
+  name: string;
+  unit: string;
+  kind: MeterKind;
+  readingCount: number;
+  manualCount: number;
+  sensorCount: number;
+  suspectCount: number;
+  firstValue: number | null;
+  lastValue: number | null;
+  minimumValue: number | null;
+  maximumValue: number | null;
+  averageValue: number | null;
+  /** Total accumulated amount over the window; null for a gauge. */
+  totalConsumption: number | null;
+  firstCapturedAt: string;
+  lastCapturedAt: string;
+}
+
+/** A meter- or condition-driven PM plan with its live distance to the trigger. */
+export interface MeterPmStatusRow {
+  planId: string;
+  deviceId: string;
+  deviceCode: string;
+  deviceName: string;
+  title: string;
+  discipline: string;
+  triggerType: PmTriggerType;
+  metricType: string;
+  metricUnit: string;
+  /** Meter units between two services (meter trigger only). */
+  interval: number | null;
+  thresholdOperator: string;
+  thresholdValue: number | null;
+  currentValue: number | null;
+  dueAtValue: number | null;
+  remaining: number | null;
+  lastReadingAt: string;
+  status: MeterStatus;
+  /** Why the status is `unknown`: "noReadings", "noBaseline", … */
+  reason: string;
+}
+
+export interface SaveMeterPointInput {
+  code: string;
+  name: string;
+  unit?: string;
+  kind?: MeterKind;
+  sensorKey?: string;
+  drivesRunningHours?: boolean;
+  active?: boolean;
+  rolloverMaximum?: string;
+  minimumValue?: string;
+  maximumValue?: string;
+  maximumStepPerHour?: string;
+  note?: string;
+}
+
+export interface RecordMeterReadingInput {
+  /** Address the meter either by its code on the device or by its id. */
+  meterCode?: string;
+  meterPointId?: string;
+  /** Sent as a string so a large hour meter never loses precision. */
+  value: string;
+  capturedAt?: string;
+  quality?: MeterQuality;
+  note?: string;
+}
+
+/** Outcome of one sample inside a gateway batch; partial success is normal. */
+export interface MeterIngestResult {
+  index: number;
+  status: "accepted" | "duplicate" | "rejected";
+  readingId: string;
+  meterPointId: string;
+  sensorKey: string;
+  quality: MeterQuality | "";
+  delta: number | null;
+  errorCode: string;
+  message: string;
+}
+
+export interface MeterIngestBatch {
+  accepted: number;
+  duplicates: number;
+  rejected: number;
+  received: number;
+  results: MeterIngestResult[];
+}

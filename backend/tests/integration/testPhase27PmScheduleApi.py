@@ -75,7 +75,10 @@ class PmScheduleApiTests(AssetRegistryApiBase):
         # monthly plan: dueOn = performedOn + 30 days
         expected = (self.TODAY + datetime.timedelta(days=-30 + 30)).isoformat()
         self.assertEqual(item["dueOn"], expected, item)
-        self.assertEqual(item["deviceCode"], "")
+        # The feed joins the device so the calendar can label the row; this
+        # assertion previously read `== ""` and was never reached, because
+        # creating any PM plan returned HTTP 500 (migration 0012 drift).
+        self.assertEqual(item["deviceCode"], "PUMP-01")
 
     def testPlanInWindowIsIncluded(self) -> None:
         device = self.createDevice()

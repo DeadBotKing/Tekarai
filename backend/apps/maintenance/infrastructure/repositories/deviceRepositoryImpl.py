@@ -174,10 +174,18 @@ class DeviceRepositoryDjango:
         for field in self.NAMEPLATE_DATE_FIELDS:
             if field in values:
                 setattr(model, field, values[field] or None)
+        hoursAreDerived = self._runningHoursAreDerived(tenantId, deviceId)
         for field in self.NAMEPLATE_DECIMAL_FIELDS:
-            if field in values:
-                raw = values[field]
-                setattr(model, field, Decimal(str(raw)) if str(raw or "").strip() else Decimal("0"))
+            if field not in values:
+                continue
+            # Once a meter point drives the hours, the nameplate form is no
+            # longer allowed to overwrite them: a typed number would silently
+            # contradict a dated, attributed reading and send meter-driven PM
+            # plans off their cycle.
+            if field == "runningHours" and hoursAreDerived:
+                continue
+            raw = values[field]
+            setattr(model, field, Decimal(str(raw)) if str(raw or "").strip() else Decimal("0"))
         if "locationId" in values:
             model.locationId = values["locationId"] or None
             model.locationPath = locationPath
@@ -200,10 +208,24 @@ class DeviceRepositoryDjango:
             payload[field] = value.isoformat() if value else ""
         for field in self.NAMEPLATE_DECIMAL_FIELDS:
             payload[field] = str(getattr(model, field))
+        payload["runningHoursDerived"] = self._runningHoursAreDerived(tenantId, deviceId)
         payload["locationId"] = str(model.locationId) if model.locationId else ""
         payload["locationPath"] = model.locationPath
         payload["parentDeviceId"] = str(model.parentDeviceId) if model.parentDeviceId else ""
         return payload
+
+    @staticmethod
+    def _runningHoursAreDerived(tenantId: uuid.UUID, deviceId: uuid.UUID) -> bool:
+        """True when an active meter point is the source of Device.runningHours."""
+        from apps.maintenance.infrastructure.models import MeterPointModel
+
+        return MeterPointModel.objects.filter(
+            tenantId=tenantId,
+            deviceId=deviceId,
+            drivesRunningHours=True,
+            active=True,
+            deletedAt__isnull=True,
+        ).exists()
 
     def listChildren(self, tenantId: uuid.UUID, deviceId: uuid.UUID) -> list[Device]:
         """Sub-assemblies whose parent is this device (motor, gearbox, panel…)."""

@@ -384,10 +384,24 @@ class PmFrequency(ValueObject):
                 "PM frequency must be positive.", fieldErrors={"frequencyEvery": str(self.every)}
             )
 
+    @property
+    def isMeterBased(self) -> bool:
+        """True when this period counts meter units, not days.
+
+        A meter-based frequency has no calendar equivalent by design; its due
+        date comes from ``MeterReading`` data through the plan's meter trigger,
+        not from arithmetic on dates.
+        """
+        return self.unit == FREQUENCY_RUNNING_HOUR
+
     def asDays(self) -> int | None:
         """Calendar period in days, or None for meter-based (runningHour) plans."""
         perUnit = FREQUENCY_DAYS.get(self.unit)
         return None if perUnit is None else perUnit * self.every
+
+    def asMeterUnits(self) -> int | None:
+        """Meter interval, or None for calendar periods."""
+        return self.every if self.isMeterBased else None
 
     def __str__(self) -> str:
         return f"{self.every}:{self.unit}"

@@ -28,7 +28,16 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal
 
+from apps.maintenance.domain.services.meterReadingRules import (
+    TriggerEvaluation,
+    evaluatePlanTrigger,
+)
 from apps.maintenance.domain.valueObjects.maintenanceState import FREQUENCY_DAYS
+from apps.maintenance.domain.valueObjects.meterTypes import (
+    TRIGGER_CALENDAR,
+    TRIGGER_CONDITION,
+    TRIGGER_METER,
+)
 
 
 @dataclass(frozen=True)
@@ -87,7 +96,22 @@ class DeviceSpecification:
 
 @dataclass(frozen=True)
 class PmPlan:
-    """A recurring preventive-maintenance rule owned by one discipline."""
+    """A recurring preventive-maintenance rule owned by one discipline.
+
+    A plan fires on one of three triggers:
+
+    * ``calendar``  — every N days/weeks/months since the last execution;
+    * ``meter``     — every N meter units (running hours, kWh, cycles) since
+      the meter value recorded at the last execution;
+    * ``condition`` — when a measured value crosses a threshold.
+
+    The meter and condition triggers are driven by a ``MeterPoint`` on the same
+    device, identified by ``metricType`` (its code). Before meter readings
+    existed, a ``runningHour`` plan could be saved but could never become due,
+    because its period had no calendar equivalent — the plan was inert. Meter
+    readings supply the missing input, and ``meterDueStatus`` is the rule that
+    turns them into a due date.
+    """
 
     id: uuid.UUID
     tenantId: uuid.UUID
@@ -102,16 +126,40 @@ class PmPlan:
     responsibleName: str = ""
     lastExecutedOn: date | None = None
     active: bool = True
+    # -- Meter / condition trigger ------------------------------------------------
+    triggerType: str = TRIGGER_CALENDAR
+    #: Code of the MeterPoint that drives this plan (empty for calendar plans).
+    metricType: str = ""
+    #: "Every N units" for a meter trigger.
+    metricInterval: Decimal = Decimal("0")
+    thresholdOperator: str = ">="
+    thresholdValue: Decimal = Decimal("0")
+    #: Lead distance for a warning before the trigger actually trips.
+    warningValue: Decimal = Decimal("0")
+    metricUnit: str = ""
+    #: Optional direct sensor binding, when the plan watches a raw gateway tag.
+    sensorKey: str = ""
+    #: Latest observed meter value, denormalised for list screens.
+    lastMetricValue: Decimal | None = None
+    #: Meter value at the last execution — the baseline a meter trigger counts from.
+    lastExecutedMeterValue: Decimal | None = None
     createdAt: datetime | None = None
     updatedAt: datetime | None = None
 
+    @property
+    def isMeterDriven(self) -> bool:
+        """True when due-ness comes from readings rather than the calendar."""
+        return self.triggerType in (TRIGGER_METER, TRIGGER_CONDITION)
+
     def periodDays(self) -> int | None:
-        """Calendar period in days; None for meter-based (runningHour) plans."""
+        """Calendar period in days; None for meter-driven plans."""
+        if self.isMeterDriven:
+            return None
         perUnit = FREQUENCY_DAYS.get(self.frequencyUnit)
         return None if perUnit is None else perUnit * max(1, self.frequencyEvery)
 
     def nextDueOn(self) -> date | None:
-        """Derived next due date — None when never executed or meter-based."""
+        """Derived next due date — None when never executed or meter-driven."""
         period = self.periodDays()
         if period is None or self.lastExecutedOn is None:
             return None
@@ -119,9 +167,33 @@ class PmPlan:
 
         return self.lastExecutedOn + timedelta(days=period)
 
-    def isOverdue(self, asOf: date) -> bool:
+    def meterDueStatus(self, currentValue: Decimal | None = None) -> TriggerEvaluation:
+        """Where this plan stands against the meter.
+
+        Falls back to ``lastMetricValue`` so a caller that has not loaded the
+        meter point still gets the last known answer instead of nothing.
+        """
+        reading = currentValue if currentValue is not None else self.lastMetricValue
+        return evaluatePlanTrigger(self, reading)
+
+    def isMeterOverdue(self, currentValue: Decimal | None = None) -> bool:
+        return bool(self.active and self.meterDueStatus(currentValue).isDue)
+
+    def isOverdue(self, asOf: date, currentValue: Decimal | None = None) -> bool:
+        """Overdue by whichever rule governs this plan.
+
+        Previously a ``runningHour`` plan always answered ``False`` here: its
+        period was ``None``, so the calendar branch could never trip and no
+        other branch existed. Meter-driven plans now answer from the meter.
+        """
+        if not self.active:
+            return False
+        if self.isMeterDriven:
+            return self.meterDueStatus(currentValue).isDue
         due = self.nextDueOn()
-        return bool(self.active and due is not None and asOf > due)
+        # Due today counts as overdue: the period has been fully consumed and
+        # the job has not been done, which is what the schedule feed reports.
+        return bool(due is not None and asOf >= due)
 
 
 @dataclass(frozen=True)
@@ -140,6 +212,11 @@ class PmExecution:
     durationMinutes: int = 0
     findings: str = ""
     workOrderId: uuid.UUID | None = None
+    #: Meter value at the moment of execution. This is what resets a
+    #: meter-driven plan's clock, the way ``performedOn`` resets a calendar
+    #: plan's — without it an "every 500 hours" plan could never start a new
+    #: cycle and would stay permanently due after its first execution.
+    meterValue: Decimal | None = None
     createdAt: datetime | None = None
 
 

@@ -22,6 +22,17 @@ from apps.maintenance.application.useCases.maintenanceAttachmentUseCases import 
     ListMaintenanceAttachmentsUseCase,
     UploadMaintenanceAttachmentUseCase,
 )
+from apps.maintenance.application.useCases.meterReadingUseCases import (
+    CorrectMeterReadingUseCase,
+    DeleteMeterPointUseCase,
+    GetMeterPmStatusUseCase,
+    GetMeterPointSummaryUseCase,
+    IngestSensorReadingsUseCase,
+    ListMeterPointsUseCase,
+    ListMeterReadingsUseCase,
+    RecordManualMeterReadingUseCase,
+    SaveMeterPointUseCase,
+)
 from apps.maintenance.application.useCases.sparePartUseCases import (
     ConsumeSparePartUseCase,
     CreateSparePartUseCase,
@@ -67,6 +78,10 @@ from apps.maintenance.infrastructure.repositories.labourEntryRepositoryImpl impo
 )
 from apps.maintenance.infrastructure.repositories.maintenanceAttachmentRepositoryImpl import (
     MaintenanceAttachmentRepositoryDjango,
+)
+from apps.maintenance.infrastructure.repositories.meterReadingRepositoryImpl import (
+    MeterPointRepositoryDjango,
+    MeterReadingRepositoryDjango,
 )
 from apps.maintenance.infrastructure.repositories.sparePartRepositoryImpl import (
     SparePartRepositoryDjango,
@@ -489,7 +504,7 @@ def recordClosureDetailsUseCase() -> RecordClosureDetailsUseCase:
 
 
 # -- Team sync (رزرو قطعات + چک‌لیست‌های تیمی) -------------------------------------
-def partReservationRepository() -> "PartReservationRepositoryImpl":
+def partReservationRepository() -> PartReservationRepositoryImpl:
     from apps.maintenance.infrastructure.repositories.teamSyncRepositoryImpl import (
         PartReservationRepositoryImpl,
     )
@@ -497,7 +512,7 @@ def partReservationRepository() -> "PartReservationRepositoryImpl":
     return PartReservationRepositoryImpl()
 
 
-def inspectionSyncRepository() -> "InspectionSyncRepositoryImpl":
+def inspectionSyncRepository() -> InspectionSyncRepositoryImpl:
     from apps.maintenance.infrastructure.repositories.teamSyncRepositoryImpl import (
         InspectionSyncRepositoryImpl,
     )
@@ -505,25 +520,25 @@ def inspectionSyncRepository() -> "InspectionSyncRepositoryImpl":
     return InspectionSyncRepositoryImpl()
 
 
-def listReservationsUseCase() -> "ListReservationsUseCase":
+def listReservationsUseCase() -> ListReservationsUseCase:
     from apps.maintenance.application.useCases.teamSyncUseCases import ListReservationsUseCase
 
     return ListReservationsUseCase(repository=partReservationRepository(), **_kernelPorts())
 
 
-def saveReservationUseCase() -> "SaveReservationUseCase":
+def saveReservationUseCase() -> SaveReservationUseCase:
     from apps.maintenance.application.useCases.teamSyncUseCases import SaveReservationUseCase
 
     return SaveReservationUseCase(repository=partReservationRepository(), **_kernelPorts())
 
 
-def closeReservationUseCase() -> "CloseReservationUseCase":
+def closeReservationUseCase() -> CloseReservationUseCase:
     from apps.maintenance.application.useCases.teamSyncUseCases import CloseReservationUseCase
 
     return CloseReservationUseCase(repository=partReservationRepository(), **_kernelPorts())
 
 
-def listInspectionTemplatesUseCase() -> "ListInspectionTemplatesUseCase":
+def listInspectionTemplatesUseCase() -> ListInspectionTemplatesUseCase:
     from apps.maintenance.application.useCases.teamSyncUseCases import (
         ListInspectionTemplatesUseCase,
     )
@@ -531,13 +546,13 @@ def listInspectionTemplatesUseCase() -> "ListInspectionTemplatesUseCase":
     return ListInspectionTemplatesUseCase(repository=inspectionSyncRepository(), **_kernelPorts())
 
 
-def saveInspectionTemplateUseCase() -> "SaveInspectionTemplateUseCase":
+def saveInspectionTemplateUseCase() -> SaveInspectionTemplateUseCase:
     from apps.maintenance.application.useCases.teamSyncUseCases import SaveInspectionTemplateUseCase
 
     return SaveInspectionTemplateUseCase(repository=inspectionSyncRepository(), **_kernelPorts())
 
 
-def commitInspectionTemplateUseCase() -> "CommitInspectionTemplateUseCase":
+def commitInspectionTemplateUseCase() -> CommitInspectionTemplateUseCase:
     from apps.maintenance.application.useCases.teamSyncUseCases import (
         CommitInspectionTemplateUseCase,
     )
@@ -545,21 +560,77 @@ def commitInspectionTemplateUseCase() -> "CommitInspectionTemplateUseCase":
     return CommitInspectionTemplateUseCase(repository=inspectionSyncRepository(), **_kernelPorts())
 
 
-def listInspectionRecordsUseCase() -> "ListInspectionRecordsUseCase":
+def listInspectionRecordsUseCase() -> ListInspectionRecordsUseCase:
     from apps.maintenance.application.useCases.teamSyncUseCases import ListInspectionRecordsUseCase
 
     return ListInspectionRecordsUseCase(repository=inspectionSyncRepository(), **_kernelPorts())
 
 
-def saveInspectionRecordUseCase() -> "SaveInspectionRecordUseCase":
+def saveInspectionRecordUseCase() -> SaveInspectionRecordUseCase:
     from apps.maintenance.application.useCases.teamSyncUseCases import SaveInspectionRecordUseCase
 
     return SaveInspectionRecordUseCase(repository=inspectionSyncRepository(), **_kernelPorts())
 
 
-def deleteInspectionTemplateUseCase() -> "DeleteInspectionTemplateUseCase":
+def deleteInspectionTemplateUseCase() -> DeleteInspectionTemplateUseCase:
     from apps.maintenance.application.useCases.teamSyncUseCases import (
         DeleteInspectionTemplateUseCase,
     )
 
     return DeleteInspectionTemplateUseCase(repository=inspectionSyncRepository(), **_kernelPorts())
+
+
+# -- Meter readings (ثبت قرائت دستی و سنسوری) -------------------------------------
+def meterPointRepository() -> MeterPointRepositoryDjango:
+    return MeterPointRepositoryDjango()
+
+
+def meterReadingRepository() -> MeterReadingRepositoryDjango:
+    return MeterReadingRepositoryDjango()
+
+
+def _meterDeps() -> dict:
+    return {
+        "pointRepository": meterPointRepository(),
+        "readingRepository": meterReadingRepository(),
+        "deviceRepository": deviceRepository(),
+        **_kernelPorts(),
+    }
+
+
+def saveMeterPointUseCase() -> SaveMeterPointUseCase:
+    return SaveMeterPointUseCase(**_meterDeps())
+
+
+def listMeterPointsUseCase() -> ListMeterPointsUseCase:
+    return ListMeterPointsUseCase(**_meterDeps())
+
+
+def deleteMeterPointUseCase() -> DeleteMeterPointUseCase:
+    return DeleteMeterPointUseCase(**_meterDeps())
+
+
+def recordManualMeterReadingUseCase() -> RecordManualMeterReadingUseCase:
+    return RecordManualMeterReadingUseCase(**_meterDeps())
+
+
+def ingestSensorReadingsUseCase() -> IngestSensorReadingsUseCase:
+    return IngestSensorReadingsUseCase(**_meterDeps())
+
+
+def correctMeterReadingUseCase() -> CorrectMeterReadingUseCase:
+    return CorrectMeterReadingUseCase(**_meterDeps())
+
+
+def listMeterReadingsUseCase() -> ListMeterReadingsUseCase:
+    return ListMeterReadingsUseCase(**_meterDeps())
+
+
+def getMeterPointSummaryUseCase() -> GetMeterPointSummaryUseCase:
+    return GetMeterPointSummaryUseCase(**_meterDeps())
+
+
+def getMeterPmStatusUseCase() -> GetMeterPmStatusUseCase:
+    return GetMeterPmStatusUseCase(
+        registryRepository=deviceRegistryRepository(), **_meterDeps()
+    )

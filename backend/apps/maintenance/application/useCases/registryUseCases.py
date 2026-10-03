@@ -57,6 +57,17 @@ from apps.maintenance.domain.services.maintenanceAnalytics import (
     summarisePartUsage,
     summariseTechnicians,
 )
+from apps.maintenance.domain.valueObjects.maintenanceState import FREQUENCY_RUNNING_HOUR
+from apps.maintenance.domain.valueObjects.meterTypes import (
+    TRIGGER_CALENDAR,
+    TRIGGER_CONDITION,
+    TRIGGER_METER,
+    MeterValue,
+    ensureThresholdOperator,
+    ensureTriggerType,
+    normalizeMeterCode,
+    normalizeSensorKey,
+)
 from apps.sharedKernel.application.useCase import AUDIT_CREATE, AUDIT_DELETE, AUDIT_UPDATE, UseCase
 from apps.sharedKernel.domain.errors import (
     DuplicateBusinessCodeError,
@@ -67,6 +78,27 @@ from apps.sharedKernel.domain.errors import (
 PERMISSION_REGISTRY_VIEW = "maintenance.device.view"
 PERMISSION_REGISTRY_MANAGE = "maintenance.device.manage"
 PERMISSION_REGISTRY_LIST = "maintenance.device.list"
+
+
+def planDecimal(raw: str, fieldName: str) -> Decimal | None:
+    """Parse an optional decimal field of a PM plan."""
+    text = str(raw or "").strip()
+    if not text:
+        return None
+    return MeterValue.parse(text, fieldName=fieldName).amount
+
+
+def resolveTriggerType(requested: str, frequencyUnit: str) -> str:
+    """Decide which trigger governs a plan.
+
+    ``frequencyUnit='runningHour'`` is the pre-existing way the UI expressed
+    "every N running hours". It is treated as a meter trigger so plans saved
+    through the old form start working instead of staying inert.
+    """
+    trigger = str(requested or "").strip() or TRIGGER_CALENDAR
+    if trigger == TRIGGER_CALENDAR and frequencyUnit == FREQUENCY_RUNNING_HOUR:
+        return TRIGGER_METER
+    return trigger
 
 
 # =====================================================================================
@@ -136,6 +168,15 @@ class SavePmPlanCommand:
     estimatedMinutes: int = 0
     responsibleName: str = ""
     active: bool = True
+    # -- Meter / condition trigger ------------------------------------------------
+    triggerType: str = "calendar"
+    metricType: str = ""
+    metricInterval: str = ""
+    thresholdOperator: str = ">="
+    thresholdValue: str = ""
+    warningValue: str = ""
+    metricUnit: str = ""
+    sensorKey: str = ""
 
 
 @dataclass(frozen=True)
@@ -150,6 +191,9 @@ class RecordPmExecutionCommand:
     performedByName: str = ""
     durationMinutes: int = 0
     findings: str = ""
+    #: Meter value observed at execution. Blank lets the repository read the
+    #: bound meter point's current value.
+    meterValue: str = ""
 
 
 @dataclass(frozen=True)
@@ -452,10 +496,46 @@ class SavePmPlanUseCase(RegistryUseCaseBase):
             raise ValidationFailedError(
                 "PM plan title is required.", fieldErrors={"title": "required"}
             )
+        triggerType = resolveTriggerType(command.triggerType, command.frequencyUnit)
+        ensureTriggerType(triggerType)
+        ensureThresholdOperator(command.thresholdOperator or ">=")
+        if triggerType == TRIGGER_CALENDAR:
+            return
+
+        # A meter-driven plan that names no meter can never be evaluated; a
+        # database constraint also enforces this, but failing here produces a
+        # field-level message instead of an opaque integrity error.
+        if not str(command.metricType or "").strip():
+            raise ValidationFailedError(
+                "A meter-driven plan must name the meter it watches.",
+                fieldErrors={"metricType": "required"},
+            )
+        if triggerType == TRIGGER_METER:
+            interval = planDecimal(command.metricInterval, "metricInterval")
+            if interval is None:
+                interval = Decimal(str(max(1, command.frequencyEvery)))
+            if interval <= 0:
+                raise ValidationFailedError(
+                    "Meter interval must be positive.",
+                    fieldErrors={"metricInterval": "notPositive"},
+                )
+        if triggerType == TRIGGER_CONDITION:
+            if planDecimal(command.thresholdValue, "thresholdValue") is None:
+                raise ValidationFailedError(
+                    "A condition trigger needs a threshold value.",
+                    fieldErrors={"thresholdValue": "required"},
+                )
 
     def perform(self, command: SavePmPlanCommand) -> PmPlanDto:
         tenantId = resolveTenantId("")
         now = self.clock.nowUtc()
+        triggerType = resolveTriggerType(command.triggerType, command.frequencyUnit)
+        metricType = normalizeMeterCode(command.metricType) if command.metricType else ""
+        interval = planDecimal(command.metricInterval, "metricInterval")
+        if triggerType == TRIGGER_METER and interval is None:
+            # "Every 500 running hours" typed into the calendar fields is the
+            # same intent; carry it over instead of demanding re-entry.
+            interval = Decimal(str(max(1, command.frequencyEvery)))
         payload = {
             "title": command.title,
             "discipline": command.discipline,
@@ -466,6 +546,16 @@ class SavePmPlanUseCase(RegistryUseCaseBase):
             "estimatedMinutes": command.estimatedMinutes,
             "responsibleName": command.responsibleName,
             "active": command.active,
+            "triggerType": triggerType,
+            "metricType": metricType,
+            "metricInterval": interval if interval is not None else Decimal("0"),
+            "thresholdOperator": command.thresholdOperator or ">=",
+            "thresholdValue": planDecimal(command.thresholdValue, "thresholdValue")
+            or Decimal("0"),
+            "warningValue": planDecimal(command.warningValue, "warningValue")
+            or Decimal("0"),
+            "metricUnit": command.metricUnit.strip(),
+            "sensorKey": normalizeSensorKey(command.sensorKey),
         }
         if command.planId:
             plan = self.registryRepository.updatePlan(
@@ -528,6 +618,7 @@ class RecordPmExecutionUseCase(RegistryUseCaseBase):
                 "performedByName": command.performedByName,
                 "durationMinutes": command.durationMinutes,
                 "findings": command.findings,
+                "meterValue": planDecimal(command.meterValue, "meterValue"),
             },
             now,
         )

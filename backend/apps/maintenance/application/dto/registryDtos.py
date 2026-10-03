@@ -84,6 +84,21 @@ class PmPlanDto:
     nextDueOn: str = ""
     overdue: bool = False
     active: bool = True
+    # -- Meter / condition trigger ------------------------------------------------
+    triggerType: str = "calendar"
+    metricType: str = ""
+    metricInterval: str = ""
+    thresholdOperator: str = ">="
+    thresholdValue: str = ""
+    warningValue: str = ""
+    metricUnit: str = ""
+    sensorKey: str = ""
+    lastMetricValue: str = ""
+    lastExecutedMeterValue: str = ""
+    #: Meter-trigger verdict: ok | warning | due | unknown.
+    meterStatus: str = ""
+    meterDueAtValue: str = ""
+    meterRemaining: str = ""
 
 
 @dataclass(frozen=True)
@@ -98,6 +113,8 @@ class PmExecutionDto:
     performedByName: str = ""
     durationMinutes: int = 0
     findings: str = ""
+    #: Meter value at execution — the baseline the next meter cycle counts from.
+    meterValue: str = ""
 
 
 @dataclass(frozen=True)
@@ -367,8 +384,14 @@ def specificationDto(spec: DeviceSpecification) -> SpecificationDto:
     )
 
 
+def _decimalText(value) -> str:  # noqa: ANN001 — Decimal | None
+    """Decimals cross the wire as strings so JavaScript cannot round them."""
+    return format(value, "f") if value is not None else ""
+
+
 def pmPlanDto(plan: PmPlan, asOf) -> PmPlanDto:  # noqa: ANN001 — date
     nextDue = plan.nextDueOn()
+    evaluation = plan.meterDueStatus()
     return PmPlanDto(
         id=str(plan.id),
         deviceId=str(plan.deviceId),
@@ -385,6 +408,19 @@ def pmPlanDto(plan: PmPlan, asOf) -> PmPlanDto:  # noqa: ANN001 — date
         nextDueOn=nextDue.isoformat() if nextDue else "",
         overdue=plan.isOverdue(asOf),
         active=plan.active,
+        triggerType=plan.triggerType,
+        metricType=plan.metricType,
+        metricInterval=_decimalText(plan.metricInterval),
+        thresholdOperator=plan.thresholdOperator,
+        thresholdValue=_decimalText(plan.thresholdValue),
+        warningValue=_decimalText(plan.warningValue),
+        metricUnit=plan.metricUnit,
+        sensorKey=plan.sensorKey,
+        lastMetricValue=_decimalText(plan.lastMetricValue),
+        lastExecutedMeterValue=_decimalText(plan.lastExecutedMeterValue),
+        meterStatus=evaluation.status if plan.isMeterDriven else "",
+        meterDueAtValue=_decimalText(evaluation.dueAtValue) if plan.isMeterDriven else "",
+        meterRemaining=_decimalText(evaluation.remaining) if plan.isMeterDriven else "",
     )
 
 
@@ -400,6 +436,7 @@ def pmExecutionDto(run: PmExecution) -> PmExecutionDto:
         performedByName=run.performedByName,
         durationMinutes=run.durationMinutes,
         findings=run.findings,
+        meterValue=_decimalText(run.meterValue),
     )
 
 

@@ -39,6 +39,41 @@ from apps.sharedKernel.domain.errors import EntityNotFoundError
 
 MAX_LOCATION_DEPTH = 12
 
+#: PM trigger columns, with the defaults a calendar plan must carry. They are
+#: listed explicitly because migration 0012 created them NOT NULL: omitting any
+#: one of them from an INSERT is what used to make plan creation fail with a
+#: 500. Keeping the list in one place means a new trigger column can never be
+#: forgotten by one of the two write paths.
+_TRIGGER_DEFAULTS: dict[str, object] = {
+    "triggerType": "calendar",
+    "metricType": "",
+    "metricInterval": Decimal("0"),
+    "thresholdOperator": ">=",
+    "thresholdValue": Decimal("0"),
+    "warningValue": Decimal("0"),
+    "metricUnit": "",
+    "sensorKey": "",
+}
+
+
+def _triggerColumns(
+    payload: dict[str, object], model: PmPlanModel | None = None
+) -> dict[str, object]:
+    """Resolve the trigger columns for an insert or update.
+
+    On update, an absent key keeps the stored value; on insert it falls back to
+    the calendar default.
+    """
+    resolved: dict[str, object] = {}
+    for column, fallback in _TRIGGER_DEFAULTS.items():
+        if column in payload and payload[column] is not None:
+            resolved[column] = payload[column]
+        elif model is not None:
+            resolved[column] = getattr(model, column)
+        else:
+            resolved[column] = fallback
+    return resolved
+
 
 def _splitLines(value: str) -> tuple[str, ...]:
     return tuple(line.strip() for line in (value or "").splitlines() if line.strip())
@@ -384,6 +419,7 @@ class DeviceRegistryRepositoryDjango:
             lastExecutedOn=payload.get("lastExecutedOn") or None,
             active=bool(payload.get("active", True)),
             createdAt=now,
+            **_triggerColumns(payload),
         )
         return self.toPlan(model)
 
@@ -404,6 +440,8 @@ class DeviceRegistryRepositoryDjango:
         model.estimatedMinutes = int(payload.get("estimatedMinutes", model.estimatedMinutes) or 0)
         model.responsibleName = str(payload.get("responsibleName", model.responsibleName))
         model.active = bool(payload.get("active", model.active))
+        for column, value in _triggerColumns(payload, model).items():
+            setattr(model, column, value)
         model.updatedAt = now
         model.save()
         return self.toPlan(model)
@@ -440,7 +478,26 @@ class DeviceRegistryRepositoryDjango:
         if plan is None:
             raise EntityNotFoundError("PM plan not found.")
         performedOn: date = payload.get("performedOn") or now.date()  # type: ignore[assignment]
-        dueOn = self.toPlan(plan).nextDueOn()
+        domainPlan = self.toPlan(plan)
+        dueOn = domainPlan.nextDueOn()
+
+        # A meter-driven plan's cycle is reset by the meter, not the calendar.
+        # The caller may state the value observed at execution; otherwise the
+        # meter point's current reading is used.
+        rawMeterValue = payload.get("meterValue")
+        meterValue: Decimal | None = (
+            rawMeterValue if isinstance(rawMeterValue, Decimal) else None
+        )
+        if meterValue is None and rawMeterValue not in (None, ""):
+            meterValue = Decimal(str(rawMeterValue))
+        if meterValue is None and domainPlan.isMeterDriven:
+            meterValue = self._currentMeterValue(tenantId, plan.deviceId, plan.metricType)
+        onTime = bool(dueOn is None or performedOn <= dueOn)
+        if domainPlan.isMeterDriven:
+            # "On time" for a meter plan means the meter had not yet passed the
+            # due value — comparing dates would always report success.
+            onTime = not domainPlan.isMeterOverdue(meterValue)
+
         model = PmExecutionModel.objects.create(
             tenantId=tenantId,
             planId=planId,
@@ -448,16 +505,66 @@ class DeviceRegistryRepositoryDjango:
             discipline=plan.discipline,
             performedOn=performedOn,
             dueOn=dueOn,
-            onTime=bool(dueOn is None or performedOn <= dueOn),
+            onTime=onTime,
             performedByName=str(payload.get("performedByName", "")),
             durationMinutes=int(payload.get("durationMinutes", 0) or 0),
             findings=str(payload.get("findings", "")),
+            meterValue=meterValue,
             createdAt=now,
         )
         plan.lastExecutedOn = performedOn
         plan.updatedAt = now
-        plan.save(update_fields=["lastExecutedOn", "updatedAt"])
+        updated = ["lastExecutedOn", "updatedAt"]
+        if meterValue is not None:
+            plan.lastExecutedMeterValue = meterValue
+            plan.lastMetricValue = meterValue
+            updated += ["lastExecutedMeterValue", "lastMetricValue"]
+        plan.save(update_fields=updated)
         return self.toExecution(model)
+
+    @staticmethod
+    def _currentMeterValue(
+        tenantId: uuid.UUID, deviceId: uuid.UUID, metricType: str
+    ) -> Decimal | None:
+        """Latest cached value of the meter point a plan is bound to."""
+        if not metricType:
+            return None
+        from apps.maintenance.infrastructure.models import MeterPointModel
+
+        point = MeterPointModel.objects.filter(
+            tenantId=tenantId,
+            deviceId=deviceId,
+            code=metricType,
+            deletedAt__isnull=True,
+        ).first()
+        return point.lastValue if point else None
+
+    def refreshPlanMeterValues(
+        self, tenantId: uuid.UUID, deviceId: uuid.UUID, code: str, value: Decimal
+    ) -> int:
+        """Push a new reading onto every plan watching this meter point.
+
+        Denormalised so PM list screens do not need a join per row. Plans that
+        have never been executed adopt the first reading as their baseline —
+        otherwise a plan attached to a pump with 40 000 existing hours would be
+        born eighty cycles overdue.
+        """
+        plans = PmPlanModel.objects.filter(
+            tenantId=tenantId,
+            deviceId=deviceId,
+            metricType=code,
+            deletedAt__isnull=True,
+        )
+        touched = 0
+        for plan in plans:
+            plan.lastMetricValue = value
+            fields = ["lastMetricValue"]
+            if plan.lastExecutedMeterValue is None and plan.triggerType == "meter":
+                plan.lastExecutedMeterValue = value
+                fields.append("lastExecutedMeterValue")
+            plan.save(update_fields=fields)
+            touched += 1
+        return touched
 
     def listExecutions(
         self,
@@ -598,6 +705,16 @@ class DeviceRegistryRepositoryDjango:
             responsibleName=model.responsibleName,
             lastExecutedOn=model.lastExecutedOn,
             active=model.active,
+            triggerType=model.triggerType,
+            metricType=model.metricType,
+            metricInterval=model.metricInterval,
+            thresholdOperator=model.thresholdOperator,
+            thresholdValue=model.thresholdValue,
+            warningValue=model.warningValue,
+            metricUnit=model.metricUnit,
+            sensorKey=model.sensorKey,
+            lastMetricValue=model.lastMetricValue,
+            lastExecutedMeterValue=model.lastExecutedMeterValue,
             createdAt=model.createdAt,
             updatedAt=model.updatedAt,
         )
@@ -617,6 +734,7 @@ class DeviceRegistryRepositoryDjango:
             durationMinutes=model.durationMinutes,
             findings=model.findings,
             workOrderId=model.workOrderId,
+            meterValue=model.meterValue,
             createdAt=model.createdAt,
         )
 

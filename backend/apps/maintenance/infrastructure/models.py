@@ -7,6 +7,8 @@ from pathlib import Path
 
 from django.db import models
 
+from apps.maintenance.domain.exceptions.meterErrors import MeterReadingImmutableError
+
 
 def maintenanceAttachmentPath(instance, filename: str) -> str:  # noqa: ANN001
     """Opaque, tenant-partitioned storage key; never trust the client filename."""
@@ -439,10 +441,39 @@ class PmPlanModel(models.Model):
     updatedAt = models.DateTimeField(null=True, blank=True)
     deletedAt = models.DateTimeField(null=True, blank=True)
 
+    # -- Meter / condition trigger ------------------------------------------------
+    # These columns were added to the database by migration 0012 but were never
+    # declared here, so every INSERT omitted them and the NOT NULL column
+    # ``triggerType`` rejected it — creating any PM plan returned HTTP 500.
+    # Declaring them restores plan creation *and* activates the meter triggers
+    # the migration was written for.
+    triggerType = models.CharField(default="calendar", db_index=True, max_length=20)
+    metricType = models.CharField(blank=True, default="", max_length=40)
+    metricInterval = models.DecimalField(decimal_places=3, default=0, max_digits=14)
+    thresholdOperator = models.CharField(default=">=", max_length=4)
+    thresholdValue = models.DecimalField(decimal_places=3, default=0, max_digits=18)
+    warningValue = models.DecimalField(decimal_places=3, default=0, max_digits=18)
+    metricUnit = models.CharField(blank=True, default="", max_length=30)
+    sensorKey = models.CharField(blank=True, default="", max_length=120)
+    lastMetricValue = models.DecimalField(
+        blank=True, null=True, decimal_places=3, max_digits=18
+    )
+    # The meter value at the last execution — the baseline a meter trigger
+    # counts its next interval from.
+    lastExecutedMeterValue = models.DecimalField(
+        blank=True, null=True, decimal_places=3, max_digits=18
+    )
+
     class Meta:
         db_table = "PmPlan"
         ordering = ["discipline", "title"]
-        indexes = [models.Index(fields=["tenantId", "deviceId", "discipline"])]
+        indexes = [
+            models.Index(fields=["tenantId", "deviceId", "discipline"]),
+            models.Index(
+                fields=["tenantId", "triggerType", "active"],
+                name="ix_pm_plan_tenant_trigger",
+            ),
+        ]
         constraints = [
             models.CheckConstraint(
                 condition=models.Q(frequencyEvery__gt=0),
@@ -453,6 +484,25 @@ class PmPlanModel(models.Model):
                     frequencyUnit__in=("day", "week", "month", "runningHour")
                 ),
                 name="ck_pm_plan_frequency_unit",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(triggerType__in=("calendar", "meter", "condition")),
+                name="ck_pm_plan_trigger_type",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(thresholdOperator__in=(">=", "<=", ">", "<")),
+                name="ck_pm_plan_threshold_operator",
+            ),
+            # A meter trigger without a positive interval can never fire; a
+            # database that allows one guarantees a silently inert plan.
+            models.CheckConstraint(
+                condition=~models.Q(triggerType="meter") | models.Q(metricInterval__gt=0),
+                name="ck_pm_plan_meter_interval",
+            ),
+            # Both meter-driven trigger types need to know which meter to read.
+            models.CheckConstraint(
+                condition=models.Q(triggerType="calendar") | ~models.Q(metricType=""),
+                name="ck_pm_plan_metric_type_required",
             ),
         ]
 
@@ -475,6 +525,9 @@ class PmExecutionModel(models.Model):
     durationMinutes = models.IntegerField(default=0)
     findings = models.TextField(blank=True, default="")
     workOrderId = models.UUIDField(null=True, blank=True, db_index=True)
+    # Meter value at execution time — resets a meter-driven plan's cycle the
+    # way ``performedOn`` resets a calendar plan's.
+    meterValue = models.DecimalField(blank=True, null=True, decimal_places=3, max_digits=18)
     createdAt = models.DateTimeField(db_index=True)
 
     class Meta:
@@ -641,3 +694,201 @@ class PartTransactionModel(models.Model):
                 name="ck_part_transaction_nonnegative_balance",
             ),
         ]
+
+
+# =====================================================================================
+# Meter readings — ثبت قرائت دستی و سنسوری
+# =====================================================================================
+class MeterPointModel(models.Model):
+    """A measurable channel on one device (hour meter, kWh, temperature …)."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenantId = models.UUIDField(db_index=True)
+    deviceId = models.UUIDField(db_index=True)
+    code = models.CharField(max_length=48)
+    name = models.CharField(max_length=200)
+    unit = models.CharField(max_length=30, blank=True, default="")
+    kind = models.CharField(max_length=12, default="gauge", db_index=True)
+    # Gateway binding (PLC tag / OPC-UA node / MQTT topic). Unique per tenant
+    # when present, so one pushed sample can never match two meter points.
+    sensorKey = models.CharField(max_length=120, blank=True, default="", db_index=True)
+    minimumValue = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
+    maximumValue = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
+    rolloverMaximum = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
+    maximumStepPerHour = models.DecimalField(
+        max_digits=18, decimal_places=4, null=True, blank=True
+    )
+    drivesRunningHours = models.BooleanField(default=False)
+    active = models.BooleanField(default=True, db_index=True)
+    # Denormalised current state, refreshed on append.
+    lastValue = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
+    lastReadingAt = models.DateTimeField(null=True, blank=True)
+    lastCaptureMode = models.CharField(max_length=10, blank=True, default="")
+    readingCount = models.IntegerField(default=0)
+    createdAt = models.DateTimeField(db_index=True)
+    updatedAt = models.DateTimeField(null=True, blank=True)
+    deletedAt = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "MeterPoint"
+        ordering = ["code"]
+        indexes = [
+            models.Index(fields=["tenantId", "deviceId", "active"], name="ix_mpoint_tenant_dev"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenantId", "deviceId", "code"],
+                condition=models.Q(deletedAt__isnull=True),
+                name="uq_meter_point_device_code",
+            ),
+            # One sensor key resolves to exactly one point, tenant-wide.
+            models.UniqueConstraint(
+                fields=["tenantId", "sensorKey"],
+                condition=models.Q(deletedAt__isnull=True) & ~models.Q(sensorKey=""),
+                name="uq_meter_point_sensor_key",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(kind__in=("cumulative", "gauge")),
+                name="ck_meter_point_kind",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(minimumValue__isnull=True)
+                | models.Q(maximumValue__isnull=True)
+                | models.Q(minimumValue__lte=models.F("maximumValue")),
+                name="ck_meter_point_range",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(rolloverMaximum__isnull=True)
+                | models.Q(rolloverMaximum__gt=0),
+                name="ck_meter_point_rollover_positive",
+            ),
+            # Only a counter can roll over; a thermometer that "wraps" is a
+            # configuration mistake that would silently fabricate consumption.
+            models.CheckConstraint(
+                condition=models.Q(rolloverMaximum__isnull=True)
+                | models.Q(kind="cumulative"),
+                name="ck_meter_point_rollover_cumulative_only",
+            ),
+            # Running hours accumulate; a gauge can never be their source.
+            models.CheckConstraint(
+                condition=models.Q(drivesRunningHours=False) | models.Q(kind="cumulative"),
+                name="ck_meter_point_hours_cumulative_only",
+            ),
+        ]
+
+    def __str__(self) -> str:  # pragma: no cover — debug helper
+        return f"{self.code}:{self.name}"
+
+
+class MeterReadingQuerySet(models.QuerySet):
+    """Block accidental bulk mutation of the append-only reading stream."""
+
+    def update(self, **kwargs) -> int:  # noqa: ANN003 — Django QuerySet contract
+        raise MeterReadingImmutableError("Meter readings cannot be updated.")
+
+    def delete(self) -> tuple[int, dict[str, int]]:
+        raise MeterReadingImmutableError("Meter readings cannot be deleted.")
+
+    def markSuperseded(self, readingId: uuid.UUID, correctionId: uuid.UUID) -> int:
+        """The one sanctioned write to an existing row.
+
+        Linking a mistake to its correction is bookkeeping about the row, not
+        a change to the observation it records, so it is allowed — but only
+        through this named method, and only on a row not already superseded.
+        """
+        rows = super().filter(id=readingId, supersededByReadingId__isnull=True)
+        # Call Django's implementation directly: self.update() is the guard
+        # above, and going through it here would block the one write we allow.
+        return models.QuerySet.update(rows, supersededByReadingId=correctionId)
+
+
+class MeterReadingModel(models.Model):
+    """One observed meter value — immutable once written."""
+
+    objects = MeterReadingQuerySet.as_manager()
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenantId = models.UUIDField(db_index=True)
+    deviceId = models.UUIDField(db_index=True)
+    meterPoint = models.ForeignKey(
+        MeterPointModel,
+        on_delete=models.PROTECT,
+        related_name="readings",
+        db_column="meterPointId",
+    )
+    value = models.DecimalField(max_digits=18, decimal_places=4)
+    delta = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
+    capturedAt = models.DateTimeField(db_index=True)
+    captureMode = models.CharField(max_length=10, default="manual", db_index=True)
+    quality = models.CharField(max_length=10, default="good", db_index=True)
+    rolloverApplied = models.BooleanField(default=False)
+    note = models.CharField(max_length=500, blank=True, default="")
+    sensorKey = models.CharField(max_length=120, blank=True, default="")
+    sourceRef = models.CharField(max_length=160, blank=True, default="")
+    # Idempotency token from the gateway; unique per tenant when present so a
+    # retried batch cannot double-count a counter.
+    ingestionKey = models.CharField(max_length=128, null=True, blank=True)
+    recordedById = models.UUIDField(null=True, blank=True)
+    recordedByName = models.CharField(max_length=160, blank=True, default="")
+    correctsReadingId = models.UUIDField(null=True, blank=True, db_index=True)
+    supersededByReadingId = models.UUIDField(null=True, blank=True)
+    correlationId = models.CharField(max_length=64, blank=True, default="")
+    createdAt = models.DateTimeField(db_index=True)
+
+    class Meta:
+        db_table = "MeterReading"
+        ordering = ["-capturedAt", "-createdAt"]
+        indexes = [
+            models.Index(
+                fields=["tenantId", "meterPoint", "capturedAt"],
+                name="ix_mr_tenant_point_time",
+            ),
+            models.Index(
+                fields=["tenantId", "deviceId", "capturedAt"],
+                name="ix_mr_tenant_device_time",
+            ),
+            models.Index(
+                fields=["tenantId", "captureMode", "capturedAt"],
+                name="ix_mr_tenant_mode_time",
+            ),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenantId", "ingestionKey"],
+                condition=models.Q(ingestionKey__isnull=False),
+                name="uq_meter_reading_ingestion_key",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(captureMode__in=("manual", "sensor")),
+                name="ck_meter_reading_capture_mode",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(quality__in=("good", "suspect", "estimated", "bad")),
+                name="ck_meter_reading_quality",
+            ),
+            # A reading cannot supersede itself — that would create a cycle
+            # that makes the correction chain unresolvable.
+            models.CheckConstraint(
+                condition=~models.Q(supersededByReadingId=models.F("id")),
+                name="ck_meter_reading_no_self_supersede",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(correctsReadingId=models.F("id")),
+                name="ck_meter_reading_no_self_correction",
+            ),
+        ]
+
+    def save(self, *args, **kwargs) -> None:  # noqa: ANN002, ANN003
+        """Allow the insert, and afterwards only the supersede bookkeeping."""
+        if not self._state.adding:
+            allowed = kwargs.get("update_fields") or ()
+            if set(allowed) - {"supersededByReadingId"}:
+                raise MeterReadingImmutableError("Meter readings cannot be updated.")
+            if not allowed:
+                raise MeterReadingImmutableError("Meter readings cannot be updated.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs) -> None:  # noqa: ANN002, ANN003
+        raise MeterReadingImmutableError(
+            "Meter readings cannot be deleted; append a correction instead."
+        )

@@ -20,6 +20,18 @@ from apps.maintenance.presentation.api.views.maintenanceAttachmentViews import (
     MaintenanceAttachmentDownloadView,
     WorkOrderAttachmentView,
 )
+from apps.maintenance.presentation.api.views.meterViews import (
+    DeviceMeterPointListView,
+    DeviceMeterReadingView,
+    MeterPmStatusView,
+    MeterPointDetailView,
+    MeterPointListView,
+    MeterPointReadingView,
+    MeterPointSummaryView,
+    MeterReadingCorrectionView,
+    MeterReadingListView,
+    SensorIngestView,
+)
 from apps.maintenance.presentation.api.views.registryViews import (
     DeviceAnalyticsView,
     DeviceAssignmentsView,
@@ -135,6 +147,47 @@ urlpatterns = [
         DevicePmPlanListView.as_view(),
         name="devicePmPlans",
     ),
+    # -- Meter readings (ثبت قرائت دستی و سنسوری) --------------------------------
+    # Static ingest path precedes the reading uuid capture, otherwise
+    # "ingest" would be parsed as a reading id.
+    path(
+        "meter-readings/ingest",
+        SensorIngestView.as_view(),
+        name="meterReadingIngest",
+    ),
+    path("meter-readings", MeterReadingListView.as_view(), name="meterReadingList"),
+    path(
+        "meter-readings/<uuid:readingId>/correct",
+        MeterReadingCorrectionView.as_view(),
+        name="meterReadingCorrect",
+    ),
+    path("meter-points", MeterPointListView.as_view(), name="meterPointList"),
+    path(
+        "meter-points/<uuid:meterPointId>",
+        MeterPointDetailView.as_view(),
+        name="meterPointDetail",
+    ),
+    path(
+        "meter-points/<uuid:meterPointId>/readings",
+        MeterPointReadingView.as_view(),
+        name="meterPointReadings",
+    ),
+    path(
+        "meter-points/<uuid:meterPointId>/summary",
+        MeterPointSummaryView.as_view(),
+        name="meterPointSummary",
+    ),
+    path(
+        "devices/<uuid:deviceId>/meter-points",
+        DeviceMeterPointListView.as_view(),
+        name="deviceMeterPoints",
+    ),
+    path(
+        "devices/<uuid:deviceId>/meter-readings",
+        DeviceMeterReadingView.as_view(),
+        name="deviceMeterReadings",
+    ),
+    path("meter-pm-status", MeterPmStatusView.as_view(), name="meterPmStatus"),
     path("pm-schedule", PmScheduleView.as_view(), name="pmSchedule"),
     path("pm-plans/<uuid:planId>", PmPlanDetailView.as_view(), name="pmPlanDetail"),
     path(

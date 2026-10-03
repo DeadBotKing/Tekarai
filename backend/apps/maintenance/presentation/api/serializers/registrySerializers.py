@@ -13,12 +13,18 @@ from apps.maintenance.domain.valueObjects.maintenanceState import (
     MAINTENANCE_DEPARTMENTS,
     PM_FREQUENCY_UNITS,
 )
+from apps.maintenance.domain.valueObjects.meterTypes import (
+    PM_TRIGGER_TYPES,
+    THRESHOLD_OPERATORS,
+)
 
 DEPARTMENT_CHOICES = list(MAINTENANCE_DEPARTMENTS)
 CRITICALITY_CHOICES = list(ASSET_CRITICALITIES)
 LOCATION_KIND_CHOICES = list(LOCATION_KINDS)
 FREQUENCY_UNIT_CHOICES = list(PM_FREQUENCY_UNITS)
 ASSIGNMENT_ROLE_CHOICES = list(DEVICE_ASSIGNMENT_ROLES)
+TRIGGER_TYPE_CHOICES = list(PM_TRIGGER_TYPES)
+THRESHOLD_OPERATOR_CHOICES = list(THRESHOLD_OPERATORS)
 
 
 class SaveLocationSerializer(serializers.Serializer):
@@ -72,6 +78,27 @@ class SavePmPlanSerializer(serializers.Serializer):
         max_length=160, required=False, allow_blank=True, default=""
     )
     active = serializers.BooleanField(required=False, default=True)
+    # -- Meter / condition trigger (Phase 33) -------------------------------------
+    # Decimals travel as strings: a JSON number is a double in every browser,
+    # and a threshold is a contractual value that must not be rounded.
+    triggerType = serializers.ChoiceField(
+        choices=TRIGGER_TYPE_CHOICES, required=False, default="calendar"
+    )
+    metricType = serializers.CharField(
+        max_length=48, required=False, allow_blank=True, default=""
+    )
+    metricInterval = serializers.CharField(required=False, allow_blank=True, default="")
+    thresholdOperator = serializers.ChoiceField(
+        choices=THRESHOLD_OPERATOR_CHOICES, required=False, default=">="
+    )
+    thresholdValue = serializers.CharField(required=False, allow_blank=True, default="")
+    warningValue = serializers.CharField(required=False, allow_blank=True, default="")
+    metricUnit = serializers.CharField(
+        max_length=30, required=False, allow_blank=True, default=""
+    )
+    sensorKey = serializers.CharField(
+        max_length=120, required=False, allow_blank=True, default=""
+    )
 
 
 class RecordPmExecutionSerializer(serializers.Serializer):
@@ -81,6 +108,8 @@ class RecordPmExecutionSerializer(serializers.Serializer):
     )
     durationMinutes = serializers.IntegerField(required=False, min_value=0, default=0)
     findings = serializers.CharField(required=False, allow_blank=True, default="")
+    #: Meter value observed at execution — resets a meter-driven plan's cycle.
+    meterValue = serializers.CharField(required=False, allow_blank=True, default="")
 
 
 class SaveBomItemSerializer(serializers.Serializer):

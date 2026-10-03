@@ -1,24 +1,22 @@
 import type { TokenPair } from "../api/apiTypes";
 
 /**
- * Where the signed-in session lives between page loads.
+ * Where the signed-in session lives between page loads — and that is the
+ * user's decision, not ours.
  *
- * `localStorage`, not `sessionStorage`, and that is a deliberate trade.
- * A technician installs this as an app, walks into a plant with no signal and
- * closes it between jobs. With `sessionStorage` the session dies with the tab
- * and they are asked to log in — which, with no network, is impossible. Work
- * already captured would sit in the queue unreachable. Surviving a restart is
- * the whole point of an offline app, so the tokens have to outlive the tab.
+ * - **"Keep me signed in" off (default):** `sessionStorage`. The session dies
+ *   with the tab, so a shared office PC never lets the next person in.
+ * - **On:** `localStorage`. A technician installs this as an app, walks into
+ *   a plant with no signal and closes it between jobs; without persistence
+ *   they would be asked to log in with no network to do it, and the work
+ *   already in the offline queue would be stranded.
  *
- * The cost is that an XSS bug could read the tokens. That is mitigated where
- * it should be: short-lived access tokens with refresh rotation server-side,
- * no `dangerouslySetInnerHTML` in this codebase, and `logout()` wiping both
- * the tokens and the cached API responses.
+ * Persisting costs something — an XSS bug could read the tokens — so it is
+ * opt-in, mitigated by short-lived access tokens with server-side refresh
+ * rotation and a `logout()` that wipes the tokens and the cached API
+ * responses together.
  */
 const SESSION_KEY = "tekarai.gui.session.v1";
-
-/** Pre-PWA storage; read once so an open tab is not logged out on upgrade. */
-const LEGACY_KEY = "tekarai.gui.session.v1";
 
 export interface StoredSession extends TokenPair {
   user: UserSession;
@@ -47,15 +45,13 @@ const parseSession = (raw: string | null): StoredSession | null => {
 
 const readStored = (): StoredSession | null => {
   try {
-    const current = parseSession(localStorage.getItem(SESSION_KEY));
-    if (current) return current;
-    const legacy = parseSession(sessionStorage.getItem(LEGACY_KEY));
-    if (legacy) {
-      // Migrate in place: the next reload finds it in localStorage.
-      localStorage.setItem(SESSION_KEY, JSON.stringify(legacy));
-      sessionStorage.removeItem(LEGACY_KEY);
-    }
-    return legacy;
+    // This tab first: a session kept only for the tab must win over a
+    // remembered one, otherwise signing in as someone else here would
+    // silently revert on the next reload.
+    return (
+      parseSession(sessionStorage.getItem(SESSION_KEY)) ??
+      parseSession(localStorage.getItem(SESSION_KEY))
+    );
   } catch {
     // Private mode, disabled storage, quota: run from memory only.
     return null;
@@ -64,25 +60,40 @@ const readStored = (): StoredSession | null => {
 
 let memorySession: StoredSession | null = readStored();
 
+/** True while the active session was stored with "keep me signed in". */
+const isRemembered = (): boolean => {
+  try {
+    return localStorage.getItem(SESSION_KEY) !== null;
+  } catch {
+    return false;
+  }
+};
+
 export const sessionStore = {
   get: (): StoredSession | null => memorySession,
-  set: (session: StoredSession): void => {
+  /** @param remember persist beyond this tab (the login checkbox). */
+  set: (session: StoredSession, remember = isRemembered()): void => {
     memorySession = session;
     try {
-      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      const target = remember ? localStorage : sessionStorage;
+      const other = remember ? sessionStorage : localStorage;
+      target.setItem(SESSION_KEY, JSON.stringify(session));
+      other.removeItem(SESSION_KEY);
     } catch {
       // Memory-only fallback keeps the UI usable when storage is unavailable.
     }
   },
   updateTokens: (tokens: TokenPair): void => {
     if (!memorySession) return;
-    sessionStore.set({ ...memorySession, ...tokens });
+    // A token refresh must not quietly promote a tab-only session to a
+    // remembered one, so the current choice is preserved.
+    sessionStore.set({ ...memorySession, ...tokens }, isRemembered());
   },
   clear: (): void => {
     memorySession = null;
     try {
       localStorage.removeItem(SESSION_KEY);
-      sessionStorage.removeItem(LEGACY_KEY);
+      sessionStorage.removeItem(SESSION_KEY);
     } catch {
       // Nothing else to do: the in-memory session is already cleared.
     }

@@ -10,6 +10,8 @@ interface LoginCredentials {
   tenantCode: string;
   identifier: string;
   password: string;
+  /** "Keep me signed in on this device" — off means the tab owns the session. */
+  remember?: boolean;
 }
 
 interface AuthContextValue {
@@ -41,7 +43,8 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
       if (runtimeConfig.demoMode) {
         ({ tokens, user } = await demoLogin(credentials));
       } else {
-        const response = await api.post<TokenPair & { user?: UserSession; permissions?: string[] }>("auth/login", credentials);
+        const { remember: _remember, ...payload } = credentials;
+        const response = await api.post<TokenPair & { user?: UserSession; permissions?: string[] }>("auth/login", payload);
         tokens = response;
         const fallback: UserSession = {
           id: "unknown",
@@ -53,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
         user = { ...fallback, ...(response.user ?? {}), permissions: response.permissions ?? response.user?.permissions ?? [] };
       }
       const nextSession: StoredSession = { ...tokens, user };
-      sessionStore.set(nextSession);
+      sessionStore.set(nextSession, credentials.remember === true);
       setSession(nextSession);
     } finally {
       setIsLoading(false);

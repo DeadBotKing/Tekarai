@@ -147,7 +147,26 @@ reasons — with a visible «نسخه‌ی آفلاین از …» note. A stale
 live is worse than no list.
 
 **Not registered in dev.** A service worker caching a Vite dev bundle makes
-code changes invisible.
+code changes invisible. Cache names carry the build id injected by
+`vite.config.ts` (`?v=` on the registration URL), so every release installs a
+new worker and discards the previous caches without anyone bumping a constant.
+
+### Staying signed in
+
+An installed app that forgets the session is useless in a plant: reopening it
+with no signal means a login that cannot complete, and the queued work sits
+unreachable. So the login page's «در این دستگاه وارد بمانم» is wired to
+`sessionStore`:
+
+| Checkbox | Storage | Lives until |
+| --- | --- | --- |
+| off (**default**) | `sessionStorage` | the tab closes |
+| on | `localStorage` | logout |
+
+The default is off on purpose — persistence is a decision someone makes for
+*their* device, not something that silently happens on a shared office PC. A
+token refresh keeps whichever choice was made; `logout()` clears both stores
+plus the cached API responses.
 
 ---
 

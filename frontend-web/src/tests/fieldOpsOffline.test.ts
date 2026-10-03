@@ -417,26 +417,49 @@ describe("SyncEngine — تعارض، نشست منقضی و تلاش مجدد",
   });
 });
 
-describe("sessionStore — نشست باید بازشدن دوبارهٔ اپ را دوام بیاورد", () => {
-  it("writes to localStorage so an installed app survives a restart", () => {
-    sessionStore.set({
-      accessToken: "a",
-      refreshToken: "r",
-      user: {
-        id: "u1",
-        displayName: "مهندس حسینی",
-        email: "h@example.com",
-        role: "technician",
-        permissions: [],
-      },
-    });
+describe("sessionStore — ماندگاری نشست انتخاب کاربر است", () => {
+  const KEY = "tekarai.gui.session.v1";
+  const session = {
+    accessToken: "a",
+    refreshToken: "r",
+    user: {
+      id: "u1",
+      displayName: "مهندس حسینی",
+      email: "h@example.com",
+      role: "technician",
+      permissions: [],
+    },
+  };
 
-    // The technician closes the app in a plant with no signal: this is what
-    // has to still be there when they reopen it.
-    expect(localStorage.getItem("tekarai.gui.session.v1")).toContain("refreshToken");
-    expect(sessionStorage.getItem("tekarai.gui.session.v1")).toBeNull();
+  it("keeps a plain sign-in inside the tab, so a shared PC forgets it", () => {
+    sessionStore.set(session, false);
 
+    expect(sessionStorage.getItem(KEY)).toContain("refreshToken");
+    expect(localStorage.getItem(KEY)).toBeNull();
+  });
+
+  it("persists only when «keep me signed in» was ticked", () => {
+    sessionStore.set(session, true);
+
+    // What an installed app needs when it reopens with no signal.
+    expect(localStorage.getItem(KEY)).toContain("refreshToken");
+    expect(sessionStorage.getItem(KEY)).toBeNull();
+  });
+
+  it("does not promote a tab-only session when the token is refreshed", () => {
+    sessionStore.set(session, false);
+    sessionStore.updateTokens({ accessToken: "a2", refreshToken: "r2" });
+
+    expect(localStorage.getItem(KEY)).toBeNull();
+    expect(sessionStorage.getItem(KEY)).toContain("r2");
+  });
+
+  it("clears both stores on logout", () => {
+    sessionStore.set(session, true);
     sessionStore.clear();
-    expect(localStorage.getItem("tekarai.gui.session.v1")).toBeNull();
+
+    expect(localStorage.getItem(KEY)).toBeNull();
+    expect(sessionStorage.getItem(KEY)).toBeNull();
+    expect(sessionStore.get()).toBeNull();
   });
 });

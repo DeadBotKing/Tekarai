@@ -83,6 +83,32 @@ class SyncOperationUnsupportedError(ValidationFailedError):
     httpStatus = 422
 
 
+class SyncConflictError(ConflictError):
+    """The record moved on while the phone was offline.
+
+    Raised only when the queued item declared the value it was based on and
+    the server now holds a different one. Without this check the stale write
+    wins by virtue of arriving last, and the person who changed the record in
+    the meantime never learns their edit was undone.
+    """
+
+    code = "MAINT_SYNC_CONFLICT"
+    httpStatus = 409
+
+    def __init__(
+        self,
+        message: str = "",
+        *,
+        expected: str = "",
+        current: str = "",
+        fieldErrors: dict[str, str] | None = None,
+    ) -> None:
+        super().__init__(message or "This record changed while you were offline.")
+        self.expected = expected
+        self.current = current
+        self.fieldErrors = fieldErrors or {}
+
+
 class SyncBatchTooLargeError(ValidationFailedError):
     """A single sync batch exceeded the per-request operation ceiling."""
 
@@ -94,6 +120,7 @@ __all__ = [
     "ScanCodeUnreadableError",
     "ScanTargetNotFoundError",
     "SyncBatchTooLargeError",
+    "SyncConflictError",
     "SyncOperationUnsupportedError",
     "TimerAlreadyRunningError",
     "TimerNotRunningError",

@@ -25,7 +25,10 @@
  * so a shared phone cannot leak one user's work orders to the next.
  */
 
-const VERSION = "v1";
+// Set by the registering page as `?v=<build id>`; falling back to a literal
+// only matters for a hand-registered worker in a console.
+const VERSION =
+  new URL(self.location.href).searchParams.get("v") || "v1";
 const SHELL_CACHE = `tekarai-shell-${VERSION}`;
 const ASSET_CACHE = `tekarai-assets-${VERSION}`;
 const API_CACHE = `tekarai-api-${VERSION}`;

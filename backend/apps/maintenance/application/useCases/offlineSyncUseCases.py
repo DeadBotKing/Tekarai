@@ -21,9 +21,15 @@ Four properties the design is built around:
 
 3. **The verdict tells the queue what to do.** ``applied``/``duplicate`` →
    delete the item. ``rejected`` → delete it and show the technician why; it
-   will never succeed. ``failed`` → keep it, retry next time. Getting this
-   wrong in either direction is costly: retrying a rejected item forever
-   blocks the queue, dropping a failed item loses work.
+   will never succeed. ``conflict`` → delete it too, but loudly: the record
+   moved while the phone was away and a human must decide. ``failed`` → keep
+   it, retry next time. Getting this wrong in either direction is costly:
+   retrying a rejected item forever blocks the queue, dropping a failed item
+   loses work.
+
+   A conflict is only ever reported when the client said what it based its
+   change on (``baselineStatus``). Clients that stay silent keep the old
+   last-write-wins behaviour, so an older phone is never locked out.
 
 4. **No privilege laundering.** Items are executed through the very same use
    cases the online endpoints use, so every permission check still runs. A
@@ -47,6 +53,7 @@ from datetime import datetime
 from apps.maintenance.application.services.tenantResolver import resolveTenantId
 from apps.maintenance.domain.exceptions.fieldOpsErrors import (
     SyncBatchTooLargeError,
+    SyncConflictError,
     SyncOperationUnsupportedError,
     TimerAlreadyRunningError,
     TimerNotRunningError,
@@ -59,6 +66,7 @@ from apps.maintenance.domain.valueObjects.fieldOpsTypes import (
     MAX_SYNC_BATCH,
     SYNC_KINDS,
     SYNC_STATUS_APPLIED,
+    SYNC_STATUS_CONFLICT,
     SYNC_STATUS_DUPLICATE,
     SYNC_STATUS_FAILED,
     SYNC_STATUS_REJECTED,
@@ -122,6 +130,7 @@ class SyncBatchResultDto:
     appliedCount: int = 0
     duplicateCount: int = 0
     rejectedCount: int = 0
+    conflictCount: int = 0
     failedCount: int = 0
     serverTime: str = ""
 
@@ -130,6 +139,7 @@ class SyncBatchResultDto:
             "appliedCount": self.appliedCount,
             "duplicateCount": self.duplicateCount,
             "rejectedCount": self.rejectedCount,
+            "conflictCount": self.conflictCount,
             "failedCount": self.failedCount,
             "serverTime": self.serverTime,
         }
@@ -155,10 +165,26 @@ class SyncLedgerEntryDto:
 _IDEMPOTENT_CONFLICTS = (TimerAlreadyRunningError, TimerNotRunningError)
 
 
+def _replayVerdict(rememberedStatus: str) -> str:
+    """What a *second* sight of the same clientRequestId should answer.
+
+    An applied item becomes ``duplicate``; a conflict stays a conflict (the
+    technician still has to look at it); anything else is a permanent no.
+    """
+    if rememberedStatus == SYNC_STATUS_APPLIED:
+        return SYNC_STATUS_DUPLICATE
+    if rememberedStatus == SYNC_STATUS_CONFLICT:
+        return SYNC_STATUS_CONFLICT
+    return SYNC_STATUS_REJECTED
+
+
 def classifyFailure(error: Exception) -> tuple[str, str, str]:
     """(status, errorCode, message) for one failed operation."""
     if isinstance(error, _IDEMPOTENT_CONFLICTS):
         return SYNC_STATUS_DUPLICATE, getattr(error, "code", ""), str(error)
+    if isinstance(error, SyncConflictError):
+        # Checked before the generic ConflictError below — it *is* one.
+        return SYNC_STATUS_CONFLICT, error.code, str(error)
     if isinstance(
         error,
         (
@@ -244,11 +270,7 @@ class ApplySyncBatchUseCase(UseCase):
                 return SyncOperationResultDto(
                     clientRequestId=key,
                     kind=remembered.kind or kind,
-                    status=(
-                        SYNC_STATUS_DUPLICATE
-                        if remembered.status == SYNC_STATUS_APPLIED
-                        else SYNC_STATUS_REJECTED
-                    ),
+                    status=_replayVerdict(remembered.status),
                     resultId=remembered.resultId,
                     result=remembered.resultPayload,
                     errorCode=remembered.errorCode,
@@ -306,7 +328,7 @@ class ApplySyncBatchUseCase(UseCase):
                     tenantId,
                     key,
                     kind,
-                    SYNC_STATUS_REJECTED if status == SYNC_STATUS_REJECTED else SYNC_STATUS_FAILED,
+                    status if status in (SYNC_STATUS_REJECTED, SYNC_STATUS_CONFLICT) else SYNC_STATUS_FAILED,
                     errorCode=code,
                     errorMessage=message,
                     actorName=actorName,
@@ -355,6 +377,7 @@ class ApplySyncBatchUseCase(UseCase):
             SYNC_STATUS_APPLIED: 0,
             SYNC_STATUS_DUPLICATE: 0,
             SYNC_STATUS_REJECTED: 0,
+            SYNC_STATUS_CONFLICT: 0,
             SYNC_STATUS_FAILED: 0,
         }
         for item in results:
@@ -364,6 +387,7 @@ class ApplySyncBatchUseCase(UseCase):
             appliedCount=tally[SYNC_STATUS_APPLIED],
             duplicateCount=tally[SYNC_STATUS_DUPLICATE],
             rejectedCount=tally[SYNC_STATUS_REJECTED],
+            conflictCount=tally[SYNC_STATUS_CONFLICT],
             failedCount=tally[SYNC_STATUS_FAILED],
             serverTime=now.isoformat(),
         )

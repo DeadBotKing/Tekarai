@@ -11,3 +11,6 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+/** Injected by vite.config.ts; names the service worker's caches. */
+declare const __APP_BUILD_ID__: string;

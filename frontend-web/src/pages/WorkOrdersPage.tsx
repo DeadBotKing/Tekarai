@@ -599,7 +599,10 @@ export function WorkOrdersPage(): JSX.Element {
       if (offline && isConnectivityFailure(error)) {
         await offline.enqueue({
           kind: "workOrder.status",
-          payload: { workOrderId: order.id, target },
+          // baselineStatus is what the technician was looking at. If the
+          // order has moved on by the time this syncs, the server reports a
+          // conflict instead of silently overwriting the newer value.
+          payload: { workOrderId: order.id, target, baselineStatus: order.status },
           label: `${order.title} → ${t(`cmms.woStatus.${target}`)}`,
         });
         setOrders((current) =>

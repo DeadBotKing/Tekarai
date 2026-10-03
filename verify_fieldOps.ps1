@@ -282,6 +282,25 @@ if ($Smoke) {
   Report ($sync3.ok -and @($sync3.data.data)[0].status -eq "rejected") `
     "عملیات نادرست «ردشده» برمی‌گردد و کل دسته را خراب نمی‌کند"
 
+  # تعارض: کسی در مدت آفلاین بودن، همان رکورد را تغییر داده است
+  $conflictKey = "smoke-$suffix-3"
+  $conflictBatch = @{
+    deviceLabel = "verify_fieldOps"
+    atomic = $false
+    operations = @(
+      @{ clientRequestId = $conflictKey; kind = "device.status"
+         payload = @{ deviceId = $deviceId; target = "outOfService"; baselineStatus = "operational" }
+         occurredAt = (Get-Date).ToUniversalTime().ToString("o") }
+    )
+  }
+  $sync4 = Try-Api -Method Post -Path "/maintenance/sync" -Body $conflictBatch
+  Report ($sync4.ok -and @($sync4.data.data)[0].status -eq "conflict") `
+    "تغییر همزمانِ دیگران «تعارض» گزارش می‌شود و بازنویسی نمی‌شود"
+
+  $stillUnderMaintenance = Try-Api -Method Get -Path "/maintenance/devices/$deviceId"
+  Report ($stillUnderMaintenance.ok -and $stillUnderMaintenance.data.data.status -eq "underMaintenance") `
+    "رکوردِ تغییرکرده دست‌نخورده باقی می‌ماند"
+
   $history = Try-Api -Method Get -Path "/maintenance/sync/history?limit=20"
   $seen = $false
   if ($history.ok) { $seen = @($history.data.data | Where-Object { $_.clientRequestId -eq $key }).Count -ge 1 }

@@ -102,7 +102,13 @@ from apps.maintenance.application.useCases.workTimerUseCases import (
     StopWorkTimerCommand,
     StopWorkTimerUseCase,
 )
+from apps.maintenance.application.queries.maintenanceQueries import (
+    GetDeviceQuery,
+    GetWorkOrderQuery,
+)
+from apps.maintenance.domain.exceptions.fieldOpsErrors import SyncConflictError
 from apps.maintenance.domain.valueObjects.fieldOpsTypes import (
+    SYNC_BASELINE_KEY,
     SYNC_DEVICE_STATUS,
     SYNC_METER_READING,
     SYNC_TIMER_START,
@@ -748,10 +754,38 @@ def _occurred(payload: Mapping[str, object], *keys: str) -> str:
     return _text(payload, "occurredAt")
 
 
+def _guardBaseline(payload: Mapping[str, object], current: str) -> None:
+    """Refuse a queued change whose premise no longer holds.
+
+    The phone sends the status it was looking at when the technician tapped.
+    If the server has moved on since — a supervisor closed the order, someone
+    else put the device back in service — applying the queued change would
+    quietly undo their work. We stop and let a human look instead.
+
+    No baseline in the payload means an older client: keep the previous
+    last-write-wins behaviour rather than breaking their queue.
+    """
+    expected = _text(payload, SYNC_BASELINE_KEY)
+    if not expected or expected == current:
+        return
+    raise SyncConflictError(
+        f"Changed to «{current}» while offline (you saw «{expected}»).",
+        expected=expected,
+        current=current,
+        fieldErrors={"currentStatus": current},
+    )
+
+
 def _syncChangeWorkOrderStatus(payload: Mapping[str, object]) -> tuple[str, dict]:
+    workOrderId = _text(payload, "workOrderId")
+    if _text(payload, SYNC_BASELINE_KEY):
+        _guardBaseline(
+            payload,
+            getWorkOrderUseCase().execute(GetWorkOrderQuery(workOrderId=workOrderId)).status,
+        )
     dto = changeWorkOrderStatusUseCase().execute(
         ChangeWorkOrderStatusCommand(
-            workOrderId=_text(payload, "workOrderId"),
+            workOrderId=workOrderId,
             target=_text(payload, "target") or _text(payload, "status"),
             resolutionNote=_text(payload, "resolutionNote") or _text(payload, "note"),
         )
@@ -815,9 +849,15 @@ def _syncStopTimer(payload: Mapping[str, object]) -> tuple[str, dict]:
 
 
 def _syncChangeDeviceStatus(payload: Mapping[str, object]) -> tuple[str, dict]:
+    deviceId = _text(payload, "deviceId")
+    if _text(payload, SYNC_BASELINE_KEY):
+        _guardBaseline(
+            payload,
+            getDeviceUseCase().execute(GetDeviceQuery(deviceId=deviceId)).status,
+        )
     dto = changeDeviceStatusUseCase().execute(
         ChangeDeviceStatusCommand(
-            deviceId=_text(payload, "deviceId"),
+            deviceId=deviceId,
             target=_text(payload, "target") or _text(payload, "status"),
         )
     )

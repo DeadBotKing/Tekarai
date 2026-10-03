@@ -612,6 +612,88 @@ class OfflineSyncApiTests(FieldOpsApiBase):
             DeviceModel.objects.get(id=device["id"]).status, "underMaintenance"
         )
 
+    def testStaleDeviceStatusIsFlaggedAsAConflictInsteadOfOverwriting(self) -> None:
+        """The scenario the baseline exists for.
+
+        The phone queues «put it under maintenance» while looking at
+        ``operational``. Before the sync lands, someone retires the device.
+        Replaying blindly would quietly resurrect it.
+        """
+        device = self.createDevice("PUMP-403")
+        self.client.post(
+            f"{BASE}/devices/{device['id']}/status",
+            {"target": "retired"},
+            format="json",
+            **self.auth,
+        )
+
+        response = self.sync(
+            [
+                self.operation(
+                    "device.status",
+                    {
+                        "deviceId": device["id"],
+                        "target": "underMaintenance",
+                        "baselineStatus": "operational",
+                    },
+                )
+            ]
+        )
+
+        item = response.json()["data"][0]
+        self.assertEqual(item["status"], "conflict")
+        self.assertEqual(item["errorCode"], "MAINT_SYNC_CONFLICT")
+        self.assertEqual(
+            DeviceModel.objects.get(id=device["id"]).status, "retired"
+        )
+        self.assertEqual(response.json()["meta"]["conflictCount"], 1)
+
+    def testAMatchingBaselineAppliesNormally(self) -> None:
+        device = self.createDevice("PUMP-404")
+        response = self.sync(
+            [
+                self.operation(
+                    "device.status",
+                    {
+                        "deviceId": device["id"],
+                        "target": "underMaintenance",
+                        "baselineStatus": "operational",
+                    },
+                )
+            ]
+        )
+        self.assertEqual(response.json()["data"][0]["status"], "applied")
+
+    def testAConflictStaysAConflictOnReplay(self) -> None:
+        """Re-sending the same item must not degrade into a silent rejection."""
+        device = self.createDevice("PUMP-405")
+        self.client.post(
+            f"{BASE}/devices/{device['id']}/status",
+            {"target": "retired"},
+            format="json",
+            **self.auth,
+        )
+        operation = self.operation(
+            "device.status",
+            {
+                "deviceId": device["id"],
+                "target": "underMaintenance",
+                "baselineStatus": "operational",
+            },
+            key="conflict-replay",
+        )
+        self.sync([operation])
+        again = self.sync([operation])
+        self.assertEqual(again.json()["data"][0]["status"], "conflict")
+
+    def testAWorkOrderStatusWithoutBaselineKeepsWorking(self) -> None:
+        """Older clients send no baseline — they must not start failing."""
+        _deviceId, orderId = self.readyOrder()
+        response = self.sync(
+            [self.operation("workOrder.status", {"workOrderId": orderId, "target": "inProgress"})]
+        )
+        self.assertEqual(response.json()["data"][0]["status"], "applied")
+
     def testMeterReadingCapturedOfflineKeepsItsMoment(self) -> None:
         device = self.createDevice("PUMP-402")
         self.client.post(

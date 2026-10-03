@@ -22,10 +22,22 @@ export const SYNC_KINDS = [
 export type SyncKind = (typeof SYNC_KINDS)[number];
 
 /** Per-item verdict returned by the server. */
-export type SyncStatus = "applied" | "duplicate" | "rejected" | "failed";
+export type SyncStatus =
+  | "applied"
+  | "duplicate"
+  | "rejected"
+  | "conflict"
+  | "failed";
 
 /** Local lifecycle of a queued item (never sent to the server). */
-export type QueueState = "pending" | "syncing" | "rejected";
+export type QueueState = "pending" | "syncing" | "rejected" | "conflict";
+
+/**
+ * Parked = the server has spoken and no retry will help. Both states stay in
+ * the list so the technician can read why; neither is ever re-sent.
+ */
+export const isParked = (item: { state: QueueState }): boolean =>
+  item.state === "rejected" || item.state === "conflict";
 
 export interface QueuedOperation {
   /** Idempotency key minted on the device; the server dedupes on it. */
@@ -41,6 +53,12 @@ export interface QueuedOperation {
   lastError: string;
   lastErrorCode: string;
   createdAt: string;
+  /**
+   * Earliest moment this item may be retried (ISO). Set after a transient
+   * failure so a broken item cannot spin against the server on every
+   * reconnect, which on a phone means a flat battery.
+   */
+  nextAttemptAt?: string;
 }
 
 export interface SyncOperationResult {
@@ -57,11 +75,15 @@ export interface SyncOutcome {
   applied: number;
   duplicate: number;
   rejected: number;
+  /** Someone changed the same record while this device was away. */
+  conflict: number;
   failed: number;
   /** Items the server refused permanently, kept locally so the user sees why. */
   rejectedItems: QueuedOperation[];
   /** True when the flush could not reach the server at all. */
   offline: boolean;
+  /** The session expired mid-flush: nothing was lost, but a login is needed. */
+  authRequired: boolean;
 }
 
 export interface CachedRead {

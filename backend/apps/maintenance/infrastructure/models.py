@@ -1007,7 +1007,9 @@ class OfflineSyncOperationModel(models.Model):
                 name="uq_sync_operation_client_request",
             ),
             models.CheckConstraint(
-                condition=models.Q(status__in=("applied", "failed", "rejected")),
+                condition=models.Q(
+                    status__in=("applied", "failed", "rejected", "conflict")
+                ),
                 name="ck_sync_operation_status",
             ),
         ]

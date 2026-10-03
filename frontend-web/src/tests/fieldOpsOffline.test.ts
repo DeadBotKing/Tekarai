@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { OfflineQueue } from "../core/offline/queue";
 import { createMemoryStore, QUEUE_STORE } from "../core/offline/storage";
-import { SyncEngine, describeDevice } from "../core/offline/syncEngine";
+import { MAX_ATTEMPTS, SyncEngine, describeDevice, retryDelayMs } from "../core/offline/syncEngine";
+import { sessionStore } from "../core/auth/sessionStore";
 import { isConnectivityFailure } from "../core/offline/offlineActions";
 import { ApiClientError } from "../core/api/apiClient";
 import type { QueuedOperation, SyncOperationResult } from "../core/offline/types";
@@ -320,5 +321,122 @@ describe("isConnectivityFailure — صف یا خطا", () => {
   it("does not queue a refusal — replaying a 422 forever hides the real problem", () => {
     expect(isConnectivityFailure(new ApiClientError("x", { status: 422 }))).toBe(false);
     expect(isConnectivityFailure(new ApiClientError("x", { status: 403 }))).toBe(false);
+  });
+});
+
+describe("SyncEngine — تعارض، نشست منقضی و تلاش مجدد", () => {
+  let store = createMemoryStore();
+
+  beforeEach(() => {
+    store = createMemoryStore();
+  });
+
+  it("parks a conflict separately from a rejection and never replays it", async () => {
+    const queue = new OfflineQueue(store);
+    const item = await queue.enqueue({
+      kind: "workOrder.status",
+      payload: { workOrderId: "w1", target: "done", baselineStatus: "assigned" },
+      label: "پمپ ۱ → انجام‌شده",
+    });
+
+    const outcome = await engineFor(queue, [
+      {
+        clientRequestId: item.clientRequestId,
+        kind: "workOrder.status",
+        status: "conflict",
+        errorCode: "MAINT_SYNC_CONFLICT",
+        errorMessage: "در این فاصله تغییر کرد.",
+      },
+    ]).flush();
+
+    expect(outcome.conflict).toBe(1);
+    expect(outcome.rejected).toBe(0);
+    const stored = queue.list()[0];
+    expect(stored.state).toBe("conflict");
+    expect(stored.lastErrorCode).toBe("MAINT_SYNC_CONFLICT");
+    // Parked, so a later flush must not send it a second time.
+    expect(queue.pending()).toHaveLength(0);
+    expect(queue.countPending()).toBe(0);
+  });
+
+  it("stops on an expired session without burning attempts", async () => {
+    const queue = new OfflineQueue(store);
+    await queue.enqueue({ kind: "workTimer.stop", payload: {}, label: "x" });
+    const expired = Object.assign(new Error("Unauthorized"), { status: 401 });
+
+    const outcome = await engineFor(queue, expired as unknown as Error).flush();
+
+    expect(outcome.authRequired).toBe(true);
+    expect(outcome.offline).toBe(false);
+    const stored = queue.list()[0];
+    expect(stored.state).toBe("pending");
+    // Nothing reached the server, so the item is no closer to being parked.
+    expect(stored.attempts).toBe(0);
+  });
+
+  it("backs a transient failure off instead of retrying it immediately", async () => {
+    const queue = new OfflineQueue(store);
+    const item = await queue.enqueue({ kind: "meter.reading", payload: {}, label: "m" });
+    const verdict: SyncOperationResult[] = [
+      { clientRequestId: item.clientRequestId, kind: "meter.reading", status: "failed" },
+    ];
+
+    await engineFor(queue, verdict).flush();
+    const afterFirst = queue.list()[0];
+    expect(afterFirst.attempts).toBe(1);
+    expect(afterFirst.nextAttemptAt).toBeTruthy();
+    expect(Date.parse(afterFirst.nextAttemptAt ?? "")).toBeGreaterThan(Date.now());
+
+    // A flush during the backoff window must not touch the server at all.
+    let sent = 0;
+    await engineFor(queue, verdict, () => {
+      sent += 1;
+    }).flush();
+    expect(sent).toBe(0);
+    expect(queue.list()[0].attempts).toBe(1);
+  });
+
+  it("gives up and parks an item that keeps failing", async () => {
+    const queue = new OfflineQueue(store);
+    const item = await queue.enqueue({ kind: "meter.reading", payload: {}, label: "m" });
+    await queue.update(item.clientRequestId, { attempts: MAX_ATTEMPTS - 1 });
+
+    await engineFor(queue, [
+      { clientRequestId: item.clientRequestId, kind: "meter.reading", status: "failed" },
+    ]).flush();
+
+    const stored = queue.list()[0];
+    expect(stored.state).toBe("rejected");
+    expect(stored.attempts).toBe(MAX_ATTEMPTS);
+  });
+
+  it("grows the retry delay and caps it at half an hour", () => {
+    expect(retryDelayMs(1)).toBe(30_000);
+    expect(retryDelayMs(2)).toBe(60_000);
+    expect(retryDelayMs(20)).toBe(30 * 60_000);
+  });
+});
+
+describe("sessionStore — نشست باید بازشدن دوبارهٔ اپ را دوام بیاورد", () => {
+  it("writes to localStorage so an installed app survives a restart", () => {
+    sessionStore.set({
+      accessToken: "a",
+      refreshToken: "r",
+      user: {
+        id: "u1",
+        displayName: "مهندس حسینی",
+        email: "h@example.com",
+        role: "technician",
+        permissions: [],
+      },
+    });
+
+    // The technician closes the app in a plant with no signal: this is what
+    // has to still be there when they reopen it.
+    expect(localStorage.getItem("tekarai.gui.session.v1")).toContain("refreshToken");
+    expect(sessionStorage.getItem("tekarai.gui.session.v1")).toBeNull();
+
+    sessionStore.clear();
+    expect(localStorage.getItem("tekarai.gui.session.v1")).toBeNull();
   });
 });

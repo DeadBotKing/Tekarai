@@ -63,6 +63,9 @@ SYNC_KINDS = (
 #: ``applied``   — executed now; drop it from the queue.
 #: ``duplicate`` — already executed earlier (same clientRequestId, or the
 #:                 server-side state shows the effect); drop it too.
+#: ``conflict``  — someone else changed the same record while the phone was
+#:                 offline, so replaying would silently overwrite their work;
+#:                 drop it and make the technician look at the new state.
 #: ``rejected``  — will never succeed (validation, permission, vanished
 #:                 target); drop it and show the technician why.
 #: ``failed``    — transient (server error, lock contention); keep it and
@@ -70,18 +73,30 @@ SYNC_KINDS = (
 SYNC_STATUS_APPLIED = "applied"
 SYNC_STATUS_DUPLICATE = "duplicate"
 SYNC_STATUS_REJECTED = "rejected"
+SYNC_STATUS_CONFLICT = "conflict"
 SYNC_STATUS_FAILED = "failed"
 
 SYNC_STATUSES = (
     SYNC_STATUS_APPLIED,
     SYNC_STATUS_DUPLICATE,
     SYNC_STATUS_REJECTED,
+    SYNC_STATUS_CONFLICT,
     SYNC_STATUS_FAILED,
 )
 
 #: Statuses persisted in the ledger. ``duplicate`` is never stored — it is a
 #: *reply* about an already-stored row.
-PERSISTED_SYNC_STATUSES = (SYNC_STATUS_APPLIED, SYNC_STATUS_FAILED, "rejected")
+PERSISTED_SYNC_STATUSES = (
+    SYNC_STATUS_APPLIED,
+    SYNC_STATUS_FAILED,
+    SYNC_STATUS_REJECTED,
+    SYNC_STATUS_CONFLICT,
+)
+
+#: Payload key a client sends to say «this is the value I was looking at when
+#: I queued the change». Absent ⇒ no concurrency check (older clients keep
+#: working, last-write-wins as before).
+SYNC_BASELINE_KEY = "baselineStatus"
 
 #: One phone cannot flood the server with an unbounded backlog in one request.
 MAX_SYNC_BATCH = 200
@@ -118,10 +133,12 @@ __all__ = [
     "SCAN_TARGET_SPARE_PART",
     "SCAN_TARGET_WORK_ORDER",
     "SYNC_DEVICE_STATUS",
+    "SYNC_BASELINE_KEY",
     "SYNC_KINDS",
     "SYNC_METER_READING",
     "SYNC_STATUSES",
     "SYNC_STATUS_APPLIED",
+    "SYNC_STATUS_CONFLICT",
     "SYNC_STATUS_DUPLICATE",
     "SYNC_STATUS_FAILED",
     "SYNC_STATUS_REJECTED",

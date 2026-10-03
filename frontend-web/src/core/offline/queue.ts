@@ -17,6 +17,7 @@
  */
 
 import { CACHE_STORE, META_STORE, QUEUE_STORE, type KeyValueStore } from "./storage";
+import { isParked } from "./types";
 import type { CachedRead, QueuedOperation, SyncKind } from "./types";
 
 export type QueueListener = (operations: QueuedOperation[]) => void;
@@ -76,7 +77,7 @@ export class OfflineQueue {
 
   /** Items eligible for the next flush (rejected ones are parked). */
   pending(): QueuedOperation[] {
-    return this.cache.filter((item) => item.state !== "rejected");
+    return this.cache.filter((item) => !isParked(item));
   }
 
   countPending(): number {
@@ -84,7 +85,7 @@ export class OfflineQueue {
   }
 
   countRejected(): number {
-    return this.cache.filter((item) => item.state === "rejected").length;
+    return this.cache.filter(isParked).length;
   }
 
   async enqueue(input: EnqueueInput): Promise<QueuedOperation> {
@@ -129,11 +130,11 @@ export class OfflineQueue {
 
   /** Drop the permanently-refused items once the technician has seen them. */
   async clearRejected(): Promise<void> {
-    const rejected = this.cache.filter((item) => item.state === "rejected");
+    const rejected = this.cache.filter(isParked);
     await Promise.all(
       rejected.map((item) => this.store.remove(QUEUE_STORE, item.clientRequestId)),
     );
-    this.cache = this.cache.filter((item) => item.state !== "rejected");
+    this.cache = this.cache.filter((item) => !isParked(item));
     this.emit();
   }
 

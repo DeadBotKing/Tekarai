@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useApiClient } from "../core/api/apiContext";
 import { faText as t } from "../core/localization/i18n";
 import { useOffline } from "../core/offline/offlineContext";
+import { isParked } from "../core/offline/types";
 import type { QueuedOperation } from "../core/offline/types";
 import {
   createFieldOpsService,
@@ -61,6 +62,8 @@ const statusLabel = (status: string): string => {
       return t("offline.status.syncing");
     case "rejected":
       return t("offline.status.rejected");
+    case "conflict":
+      return t("offline.status.conflict");
     case "applied":
       return t("offline.status.applied");
     case "duplicate":
@@ -82,6 +85,8 @@ const statusTone = (
       return "info";
     case "rejected":
       return "danger";
+    case "conflict":
+      return "warning";
     case "failed":
       return "warning";
     default:
@@ -159,8 +164,8 @@ export function OfflineQueuePage(): JSX.Element {
   const [history, setHistory] = useState<SyncLedgerEntry[]>([]);
   const [toast, setToast] = useState("");
 
-  const pending = operations.filter((item) => item.state !== "rejected");
-  const rejected = operations.filter((item) => item.state === "rejected");
+  const pending = operations.filter((item) => !isParked(item));
+  const rejected = operations.filter(isParked);
 
   const loadHistory = useCallback(async (): Promise<void> => {
     try {
@@ -177,12 +182,14 @@ export function OfflineQueuePage(): JSX.Element {
   const syncNow = async (): Promise<void> => {
     const outcome = await flush();
     setToast(
-      outcome.offline
+      outcome.authRequired
+        ? t("offline.syncAuthRequired")
+        : outcome.offline
         ? t("offline.syncOffline")
         : t("offline.syncResult", {
             applied: outcome.applied.toLocaleString("fa-IR"),
             duplicate: outcome.duplicate.toLocaleString("fa-IR"),
-            rejected: outcome.rejected.toLocaleString("fa-IR"),
+            rejected: (outcome.rejected + outcome.conflict).toLocaleString("fa-IR"),
             failed: outcome.failed.toLocaleString("fa-IR"),
           }),
     );
@@ -244,6 +251,9 @@ export function OfflineQueuePage(): JSX.Element {
               {t("offline.clearRejected")}
             </Button>
           </div>
+          {rejected.some((item) => item.state === "conflict") && (
+            <p className="detail-panel__description">{t("offline.conflictHelp")}</p>
+          )}
           <ul className="offline-queue__list">
             {rejected.map((operation) => (
               <OperationRow

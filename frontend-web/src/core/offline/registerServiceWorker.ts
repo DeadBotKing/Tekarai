@@ -12,9 +12,14 @@
  * 3. **Take over immediately on update.** A technician who force-quits the
  *    app after an update must not get the old bundle; `skipWaiting` plus a
  *    one-shot reload keeps them on the version the office thinks they have.
+ * 4. **Name the caches after the build.** The `?v=` carries this build's id
+ *    into the worker, which uses it for its cache names. A new release
+ *    therefore installs a new worker and drops the previous caches by
+ *    itself — no constant to remember to bump.
  */
 
-const SERVICE_WORKER_URL = "/serviceWorker.js";
+const buildId = typeof __APP_BUILD_ID__ === "string" ? __APP_BUILD_ID__ : "dev";
+const SERVICE_WORKER_URL = `/serviceWorker.js?v=${encodeURIComponent(buildId)}`;
 
 export interface RegisterOptions {
   /** Defaults to `import.meta.env.PROD`. */

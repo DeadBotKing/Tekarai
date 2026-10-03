@@ -177,11 +177,49 @@ Verdict handling:
 | `applied` | delete |
 | `duplicate` | delete (the first attempt landed) |
 | `rejected` | park as rejected, show the server's reason, offer retry/discard |
-| `failed` | keep as pending, retry later |
+| `conflict` | park as conflict — somebody else changed the record meanwhile |
+| `failed` | keep as pending, retry after a growing delay |
 | *missing from the response* | keep as pending — never assume success |
 
 A flush is single-flight: concurrent callers share one batch. Batches are
 capped at 50 client-side (the server refuses >200).
+
+**Retry discipline.** A `failed` item is not retried on the next heartbeat;
+`retryDelayMs()` grows 30 s → 1 m → 2 m … capped at 30 minutes, stored on the
+item as `nextAttemptAt`, and the engine skips items whose window has not
+opened. After `MAX_ATTEMPTS` (8) the item is parked instead of retried
+forever: a queue that spins against a server which will never accept it
+drains the battery and hides the real problem.
+
+**An expired session stops the flush.** A 401/403 from the transport sets
+`authRequired` and leaves the queue untouched *without* counting an attempt —
+the work never reached the server, so it must not be penalised. The UI asks
+for a login; nothing is lost.
+
+### Conflicts — the one thing an offline queue must not get wrong
+
+Replaying a queued change blindly means the *stale* value wins simply because
+it arrived last. A technician flips a work order to «done» at 09:00 with no
+signal; at 11:00 a supervisor reopens it from the office; at 12:00 the phone
+syncs and silently closes it again, and nobody is told.
+
+So a queued status change carries the value it was based on:
+
+```jsonc
+{ "kind": "workOrder.status",
+  "payload": { "workOrderId": "…", "target": "done", "baselineStatus": "assigned" } }
+```
+
+Before applying, the server re-reads the record. If the current status is not
+`baselineStatus`, nothing is written and the item comes back as `conflict`
+(`MAINT_SYNC_CONFLICT`), carrying the current value. The item is parked in the
+queue with an explanation and the technician opens the record to decide.
+
+`baselineStatus` is **optional by design**: an older client that omits it keeps
+the previous last-write-wins behaviour rather than having its whole queue
+rejected after an upgrade. Conflicts are also remembered in the ledger, so a
+replay of the same `clientRequestId` answers `conflict` again rather than
+degrading into a bare `rejected`.
 
 ### Server
 
@@ -210,6 +248,10 @@ for a phone that was offline over a weekend. A previously `failed` ledger entry
 is forgotten and re-executed; `applied` and `rejected` are replayed from the
 ledger. A duplicate `clientRequestId` *within one batch* rejects the whole
 batch (400) — the client is confused and guessing would be worse.
+
+Migration `0016_syncConflictVerdict` only widens the ledger's status check
+constraint to admit `conflict`; it is separate from `0015` so a database that
+already ran the first field-operations release can move forward in place.
 
 ---
 

@@ -14,6 +14,7 @@ import { createFieldOpsService } from "../../features/maintenance/fieldOpsServic
 import { OfflineQueue, type EnqueueInput } from "./queue";
 import { createDefaultStore } from "./storage";
 import { LAST_SYNC_META_KEY, SyncEngine } from "./syncEngine";
+import { isParked } from "./types";
 import type { QueuedOperation, SyncOutcome } from "./types";
 
 /**
@@ -81,13 +82,16 @@ export function OfflineProvider({ children }: { children: ReactNode }): JSX.Elem
 
   const flush = useCallback(async (): Promise<SyncOutcome> => {
     if (!authenticated.current) {
+      // Not logged in: the queue survives untouched until someone is.
       return {
         applied: 0,
         duplicate: 0,
         rejected: 0,
+        conflict: 0,
         failed: 0,
         rejectedItems: [],
         offline: true,
+        authRequired: true,
       };
     }
     setIsSyncing(true);
@@ -130,7 +134,7 @@ export function OfflineProvider({ children }: { children: ReactNode }): JSX.Elem
   // Slow retry while work is waiting — covers "the link came back but the
   // browser never fired an event", which is the normal case on mobile.
   useEffect(() => {
-    const pending = operations.filter((item) => item.state !== "rejected").length;
+    const pending = operations.filter((item) => !isParked(item)).length;
     if (pending === 0 || !isAuthenticated || !isOnline) return undefined;
     const handle = window.setInterval(() => {
       void flush();
@@ -162,8 +166,8 @@ export function OfflineProvider({ children }: { children: ReactNode }): JSX.Elem
   const value = useMemo<OfflineContextValue>(
     () => ({
       isOnline,
-      pendingCount: operations.filter((item) => item.state !== "rejected").length,
-      rejectedCount: operations.filter((item) => item.state === "rejected").length,
+      pendingCount: operations.filter((item) => !isParked(item)).length,
+      rejectedCount: operations.filter(isParked).length,
       operations,
       lastSyncAt,
       isSyncing,

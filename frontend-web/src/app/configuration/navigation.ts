@@ -69,6 +69,7 @@ export const navigationConfig: NavigationItem[] = [
           { id: "maintenanceWorkOrders", label: "nav.workOrders", icon: "checkSquare", route: "/app/maintenance/work-orders", permission: PERMISSIONS.maintenanceWorkOrderList },
           { id: "maintenanceInspections", label: "nav.inspections", icon: "checkSquare", route: "/app/maintenance/inspections", permission: PERMISSIONS.maintenanceWorkOrderList },
           { id: "maintenancePmCalendar", label: "nav.pmCalendar", icon: "calendar", route: "/app/maintenance/pm-calendar", permission: PERMISSIONS.maintenanceDeviceList },
+          { id: "maintenanceWorkCalendar", label: "calendar.nav", icon: "clock", route: "/app/maintenance/work-calendar", permission: PERMISSIONS.maintenanceDeviceList },
           { id: "maintenanceMeterReadings", label: "nav.meterReadings", icon: "activity", route: "/app/maintenance/meter-readings", permission: PERMISSIONS.maintenanceMeterView },
           { id: "maintenanceOfflineQueue", label: "nav.offlineQueue", icon: "cloud", route: "/app/maintenance/offline-queue", permission: PERMISSIONS.maintenanceWorkOrderList },
         ],

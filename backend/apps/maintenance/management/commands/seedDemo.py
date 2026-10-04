@@ -13,12 +13,13 @@ no cross-tenant writes).
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from apps.maintenance.infrastructure.models import (
+    CalendarHolidayModel,
     DeviceModel,
     MaintenanceLocationModel,
     MaintenancePersonnelModel,
@@ -28,6 +29,8 @@ from apps.maintenance.infrastructure.models import (
     WorkOrderLabourEntryModel,
     WorkOrderModel,
     WorkOrderPartUsageModel,
+    WorkCalendarModel,
+    WorkShiftModel,
 )
 from apps.tenancy.infrastructure.models import TenantModel
 
@@ -265,6 +268,89 @@ class Command(BaseCommand):
             DeviceModel.objects.filter(id=childId, parentDeviceId__isnull=True).update(
                 parentDeviceId=parentId
             )
+
+        # -- Work calendar, holidays and shifts (Phase 28) ---------------------------
+        # A Jalali date picker is not a schedule. The demo therefore carries a
+        # real working pattern: a site calendar, the fixed-date Iranian public
+        # holidays for 1405, and a three-shift rotation to give capacity a
+        # number.
+        #
+        # Only the *fixed* Jalali holidays are seeded. The lunar ones (عید فطر,
+        # تاسوعا, عاشورا …) move against the solar calendar every year and need
+        # a Hijri conversion this product deliberately does not carry; they are
+        # entered per-year from the calendar screen.
+        calendar, calendarCreated = WorkCalendarModel.objects.get_or_create(
+            tenantId=tenantId,
+            code="CAL-MAIN",
+            deletedAt__isnull=True,
+            defaults={
+                "name": "تقویم کاری سایت اصلی",
+                "locationId": locationIds.get("SITE-01"),
+                "timezone": "Asia/Tehran",
+                "weekendDays": "4",  # جمعه
+                "rollPolicy": "forward",
+                "isDefault": True,
+                "active": True,
+                "note": "هفتهٔ کاری شنبه تا پنجشنبه، جمعه تعطیل.",
+                "createdAt": now,
+            },
+        )
+
+        # (jalaliMonth, jalaliDay, gregorian, name) for Iranian year 1405.
+        OFFICIAL_HOLIDAYS_1405 = [
+            (1, 1, "2026-03-21", "نوروز"),
+            (1, 2, "2026-03-22", "نوروز"),
+            (1, 3, "2026-03-23", "نوروز"),
+            (1, 4, "2026-03-24", "نوروز"),
+            (1, 12, "2026-04-01", "روز جمهوری اسلامی"),
+            (1, 13, "2026-04-02", "روز طبیعت"),
+            (3, 14, "2026-06-04", "رحلت امام خمینی"),
+            (3, 15, "2026-06-05", "قیام ۱۵ خرداد"),
+            (11, 22, "2027-02-11", "پیروزی انقلاب اسلامی"),
+            (12, 29, "2027-03-20", "ملی‌شدن صنعت نفت"),
+        ]
+        holidayCreated = 0
+        for jMonth, jDay, iso, title in OFFICIAL_HOLIDAYS_1405:
+            _, made = CalendarHolidayModel.objects.get_or_create(
+                tenantId=tenantId,
+                calendarId=calendar.id,
+                onDate=date.fromisoformat(iso),
+                deletedAt__isnull=True,
+                defaults={
+                    "name": title,
+                    "kind": "official",
+                    "recursAnnually": True,
+                    "jalaliMonth": jMonth,
+                    "jalaliDay": jDay,
+                    "createdAt": now,
+                },
+            )
+            holidayCreated += int(made)
+
+        SHIFTS = [
+            ("SH-A", "شیفت صبح", "morning", time(6, 0), time(14, 0), 4),
+            ("SH-B", "شیفت عصر", "evening", time(14, 0), time(22, 0), 3),
+            ("SH-C", "شیفت شب", "night", time(22, 0), time(6, 0), 2),
+        ]
+        shiftCreated = 0
+        for code, title, kind, startAt, endAt, crew in SHIFTS:
+            _, made = WorkShiftModel.objects.get_or_create(
+                tenantId=tenantId,
+                calendarId=calendar.id,
+                code=code,
+                deletedAt__isnull=True,
+                defaults={
+                    "name": title,
+                    "kind": kind,
+                    "startTime": startAt,
+                    "endTime": endAt,
+                    "weekdays": "",  # every day the calendar is open
+                    "headcount": crew,
+                    "active": True,
+                    "createdAt": now,
+                },
+            )
+            shiftCreated += int(made)
 
         # -- PM plans + one execution each -------------------------------------------
         planIds: dict[str, uuid.UUID] = {}

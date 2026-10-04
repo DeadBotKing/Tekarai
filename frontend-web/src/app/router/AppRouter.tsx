@@ -14,6 +14,7 @@ import { AssetHierarchyPage } from "../../pages/AssetHierarchyPage";
 import { MaintenancePersonnelPage } from "../../pages/MaintenancePersonnelPage";
 import { FleetAnalyticsPage } from "../../pages/FleetAnalyticsPage";
 import { MaintenancePmCalendarPage } from "../../pages/MaintenancePmCalendarPage";
+import { WorkCalendarPage } from "../../pages/WorkCalendarPage";
 import { MeterReadingsPage } from "../../pages/MeterReadingsPage";
 import { OfflineQueuePage } from "../../pages/OfflineQueuePage";
 import { MaintenanceReportPage } from "../../pages/MaintenanceReportPage";
@@ -59,6 +60,7 @@ export function AppRouter(): JSX.Element {
       <Route path="account" element={<AccountPage />} />
       <Route path="maintenance/inspections" element={<MaintenanceInspectionsPage />} />
       <Route path="maintenance/pm-calendar" element={<MaintenancePmCalendarPage />} />
+      <Route path="maintenance/work-calendar" element={<WorkCalendarPage />} />
       <Route path="maintenance/meter-readings" element={<MeterReadingsPage />} />
       <Route path="maintenance/offline-queue" element={<OfflineQueuePage />} />
       <Route path="documents" element={<DocumentsPage />} />

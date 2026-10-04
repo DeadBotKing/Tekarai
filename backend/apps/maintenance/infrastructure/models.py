@@ -1064,3 +1064,166 @@ class OfflineSyncOperationModel(models.Model):
 
     def __str__(self) -> str:  # pragma: no cover — debug helper
         return f"{self.kind}:{self.clientRequestId}:{self.status}"
+
+
+# =================================================================================
+# Phase 28 — work calendar, holidays, shifts
+# =================================================================================
+
+
+class WorkCalendarModel(models.Model):
+    """A site's working pattern: which days it opens and in which timezone.
+
+    Scoped to a location rather than a tenant so a group with plants in
+    different provinces — or different countries — can run different weekends,
+    holidays and clocks under one account. A calendar with ``locationId`` null
+    and ``isDefault`` true is the tenant-wide fallback used by every site that
+    has not been given its own.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenantId = models.UUIDField(db_index=True)
+    code = models.CharField(max_length=60)
+    name = models.CharField(max_length=200)
+    #: The site this calendar governs. Null = tenant-wide default.
+    locationId = models.UUIDField(null=True, blank=True, db_index=True)
+    #: IANA name, not an offset: offsets change twice a year, names do not.
+    timezone = models.CharField(max_length=64, default="Asia/Tehran")
+    #: CSV of python weekday numbers (Mon 0 … Sun 6). Default is جمعه only.
+    weekendDays = models.CharField(max_length=32, default="4")
+    #: What to do with a PM landing on a closed day.
+    rollPolicy = models.CharField(max_length=16, default="forward")
+    isDefault = models.BooleanField(default=False)
+    active = models.BooleanField(default=True)
+    note = models.CharField(max_length=400, blank=True, default="")
+    createdAt = models.DateTimeField(db_index=True)
+    updatedAt = models.DateTimeField(null=True, blank=True)
+    deletedAt = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "MaintenanceWorkCalendar"
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenantId", "code"],
+                condition=models.Q(deletedAt__isnull=True),
+                name="uq_maintenance_calendar_tenant_code",
+            ),
+            # One calendar per site. Without this a location could end up with
+            # two calendars and the resolver would have to guess which wins.
+            models.UniqueConstraint(
+                fields=["tenantId", "locationId"],
+                condition=models.Q(deletedAt__isnull=True, locationId__isnull=False),
+                name="uq_maintenance_calendar_tenant_location",
+            ),
+        ]
+
+    def __str__(self) -> str:  # pragma: no cover — debug helper
+        return f"{self.code}:{self.name}"
+
+
+class CalendarHolidayModel(models.Model):
+    """One non-working date on a calendar.
+
+    Stored as a concrete Gregorian date because that is what arithmetic needs.
+    ``recursAnnually`` marks the fixed-Jalali holidays (نوروز, ۲۲ بهمن) whose
+    Gregorian date drifts a day either way: the Jalali month/day is kept
+    alongside so a later year can be generated without re-deriving it.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenantId = models.UUIDField(db_index=True)
+    calendarId = models.UUIDField(db_index=True)
+    onDate = models.DateField(db_index=True)
+    name = models.CharField(max_length=200)
+    kind = models.CharField(max_length=16, default="official")
+    recursAnnually = models.BooleanField(default=False)
+    #: Jalali month/day for recurring holidays; 0 when not applicable.
+    jalaliMonth = models.PositiveSmallIntegerField(default=0)
+    jalaliDay = models.PositiveSmallIntegerField(default=0)
+    createdAt = models.DateTimeField(db_index=True)
+    deletedAt = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "MaintenanceCalendarHoliday"
+        ordering = ["onDate"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenantId", "calendarId", "onDate"],
+                condition=models.Q(deletedAt__isnull=True),
+                name="uq_maintenance_holiday_calendar_date",
+            )
+        ]
+        indexes = [models.Index(fields=["tenantId", "calendarId", "onDate"])]
+
+    def __str__(self) -> str:  # pragma: no cover — debug helper
+        return f"{self.onDate}:{self.name}"
+
+
+class WorkShiftModel(models.Model):
+    """A staffed window on a calendar — the unit scheduling actually buys.
+
+    ``headcount`` is the planned crew size. Real assignments live in
+    ``ShiftAssignmentModel``; capacity prefers the assignments when they exist
+    and falls back to this figure so a plant can plan before it rosters.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenantId = models.UUIDField(db_index=True)
+    calendarId = models.UUIDField(db_index=True)
+    code = models.CharField(max_length=60)
+    name = models.CharField(max_length=200)
+    kind = models.CharField(max_length=16, default="general")
+    startTime = models.TimeField()
+    endTime = models.TimeField()
+    #: CSV of weekday numbers; empty = every day the calendar is open.
+    weekdays = models.CharField(max_length=32, blank=True, default="")
+    headcount = models.PositiveSmallIntegerField(default=0)
+    active = models.BooleanField(default=True)
+    createdAt = models.DateTimeField(db_index=True)
+    updatedAt = models.DateTimeField(null=True, blank=True)
+    deletedAt = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "MaintenanceWorkShift"
+        ordering = ["startTime"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenantId", "calendarId", "code"],
+                condition=models.Q(deletedAt__isnull=True),
+                name="uq_maintenance_shift_calendar_code",
+            )
+        ]
+
+    def __str__(self) -> str:  # pragma: no cover — debug helper
+        return f"{self.code}:{self.startTime}-{self.endTime}"
+
+
+class ShiftAssignmentModel(models.Model):
+    """Which technician works which shift, over which period.
+
+    Dated rather than a plain link so the roster has history: capacity for a
+    date in the past is computed from who was actually on that shift then, not
+    from today's roster.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenantId = models.UUIDField(db_index=True)
+    shiftId = models.UUIDField(db_index=True)
+    personnelId = models.UUIDField(db_index=True)
+    fromDate = models.DateField(db_index=True)
+    #: Null = open-ended, still on this shift.
+    toDate = models.DateField(null=True, blank=True)
+    createdAt = models.DateTimeField(db_index=True)
+    deletedAt = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "MaintenanceShiftAssignment"
+        ordering = ["-fromDate"]
+        indexes = [
+            models.Index(fields=["tenantId", "shiftId", "fromDate"]),
+            models.Index(fields=["tenantId", "personnelId"]),
+        ]
+
+    def __str__(self) -> str:  # pragma: no cover — debug helper
+        return f"{self.personnelId}@{self.shiftId}"

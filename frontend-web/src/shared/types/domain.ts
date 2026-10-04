@@ -1048,3 +1048,116 @@ export interface MeterIngestBatch {
   received: number;
   results: MeterIngestResult[];
 }
+
+// -- Work calendar, shifts, capacity (Phase 28) ------------------------------------
+export type HolidayKind = "official" | "local" | "shutdown";
+export type ShiftKind = "morning" | "evening" | "night" | "general";
+export type RollPolicy = "forward" | "backward" | "none";
+
+export const HOLIDAY_KINDS: HolidayKind[] = ["official", "local", "shutdown"];
+export const SHIFT_KINDS: ShiftKind[] = ["morning", "evening", "night", "general"];
+export const ROLL_POLICIES: RollPolicy[] = ["forward", "backward", "none"];
+
+/**
+ * Weekday numbers follow python's `date.weekday()` — Monday 0 … Sunday 6 —
+ * because that is what the API stores. The Iranian *display* order (شنبه
+ * first) is applied in the UI only; converting here would mean two
+ * conventions fighting over the same numbers.
+ */
+export const WEEKDAY_ORDER_IR = [5, 6, 0, 1, 2, 3, 4];
+
+export interface WorkShift {
+  id: string;
+  calendarId: string;
+  code: string;
+  name: string;
+  kind: ShiftKind;
+  startTime: string;
+  endTime: string;
+  weekdays: number[];
+  headcount: number;
+  assignedCount: number;
+  effectiveHeadcount: number;
+  durationHours: string;
+  capacityHours: string;
+  crossesMidnight: boolean;
+  active: boolean;
+}
+
+export interface WorkCalendar {
+  id: string;
+  code: string;
+  name: string;
+  locationId: string;
+  locationPath: string;
+  timezone: string;
+  weekendDays: number[];
+  rollPolicy: RollPolicy;
+  isDefault: boolean;
+  active: boolean;
+  note: string;
+  shifts: WorkShift[];
+  holidayCount: number;
+}
+
+export interface CalendarHoliday {
+  id: string;
+  calendarId: string;
+  onDate: string;
+  name: string;
+  kind: HolidayKind;
+  recursAnnually: boolean;
+  jalaliMonth: number;
+  jalaliDay: number;
+}
+
+export interface CapacityJob {
+  deviceId: string;
+  deviceCode: string;
+  deviceName: string;
+  title: string;
+  dueOn: string;
+  rolled: boolean;
+  estimatedHours: string;
+}
+
+export interface CapacityDay {
+  onDate: string;
+  isWorkingDay: boolean;
+  isWeekend: boolean;
+  isHoliday: boolean;
+  shiftCount: number;
+  capacityHours: string;
+  demandHours: string;
+  utilisationPercent: string;
+  jobCount: number;
+  jobs: CapacityJob[];
+}
+
+export interface CapacityPlan {
+  calendarId: string;
+  fromDate: string;
+  toDate: string;
+  days: CapacityDay[];
+  shifts: WorkShift[];
+  summary: {
+    totalCapacityHours: string;
+    totalDemandHours: string;
+    utilisationPercent: string;
+    workingDays: number;
+    closedDays: number;
+    overloadedDays: number;
+  };
+}
+
+export interface WorkingDayAnswer {
+  calendarId: string;
+  onDate: string;
+  isWorkingDay: boolean;
+  isWeekend: boolean;
+  isHoliday: boolean;
+  rollPolicy: RollPolicy;
+  plannedOn: string;
+  rolled: boolean;
+  addWorkingDays?: string;
+}

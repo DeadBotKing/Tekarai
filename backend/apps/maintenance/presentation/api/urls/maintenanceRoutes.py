@@ -5,6 +5,18 @@ from __future__ import annotations
 from django.urls import path
 
 from apps.maintenance.presentation.api.views import openapiRegistration  # noqa: F401
+from apps.maintenance.presentation.api.views.workCalendarViews import (
+    CalendarHolidayDetailView,
+    CalendarHolidayView,
+    CapacityPlanView,
+    ShiftAssignmentDetailView,
+    ShiftAssignmentView,
+    WorkCalendarDetailView,
+    WorkCalendarListView,
+    WorkingDayView,
+    WorkShiftDetailView,
+    WorkShiftView,
+)
 from apps.maintenance.presentation.api.views.assetHierarchyViews import (
     AssetAncestryView,
     AssetMovementListView,
@@ -226,6 +238,45 @@ urlpatterns = [
         "devices/<uuid:deviceId>/analytics",
         DeviceAnalyticsView.as_view(),
         name="deviceAnalytics",
+    ),
+    # -- Work calendar, shifts, capacity (Phase 28) ------------------------------
+    # Static segments are declared before the <uuid:> ones so "holidays" and
+    # "shifts" are never swallowed by the detail route.
+    path("work-calendars", WorkCalendarListView.as_view(), name="workCalendars"),
+    path(
+        "work-calendars/holidays",
+        CalendarHolidayView.as_view(),
+        name="calendarHolidays",
+    ),
+    path(
+        "work-calendars/holidays/<uuid:holidayId>",
+        CalendarHolidayDetailView.as_view(),
+        name="calendarHolidayDetail",
+    ),
+    path("work-calendars/shifts", WorkShiftView.as_view(), name="workShifts"),
+    path(
+        "work-calendars/shifts/<uuid:shiftId>",
+        WorkShiftDetailView.as_view(),
+        name="workShiftDetail",
+    ),
+    path(
+        "work-calendars/assignments",
+        ShiftAssignmentView.as_view(),
+        name="shiftAssignments",
+    ),
+    path(
+        "work-calendars/assignments/<uuid:assignmentId>",
+        ShiftAssignmentDetailView.as_view(),
+        name="shiftAssignmentDetail",
+    ),
+    path("work-calendars/capacity", CapacityPlanView.as_view(), name="capacityPlan"),
+    path(
+        "work-calendars/working-day", WorkingDayView.as_view(), name="workingDay"
+    ),
+    path(
+        "work-calendars/<uuid:calendarId>",
+        WorkCalendarDetailView.as_view(),
+        name="workCalendarDetail",
     ),
     # -- Asset hierarchy (Phase 27) ---------------------------------------------
     path("assets/tree", AssetTreeView.as_view(), name="assetTree"),

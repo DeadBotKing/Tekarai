@@ -171,7 +171,11 @@ export function EmptyState({ icon = "folder", title, description, action }: { ic
 }
 
 export function ErrorState({ title, description, retry }: { title: string; description: string; retry?: () => void }): JSX.Element {
-  return <div className="state state--error" role="alert"><span className="state__icon"><Icon name="warning" size={24} /></span><h3>{title}</h3><p>{description}</p>{retry && <Button variant="secondary" icon="refresh" onClick={retry}>Retry</Button>}</div>;
+  // The retry label used to be the literal "Retry", which read as English
+  // inside an otherwise Persian, right-to-left page. `common.retry` already
+  // ships in every locale.
+  const { t } = useLocalization();
+  return <div className="state state--error" role="alert"><span className="state__icon"><Icon name="warning" size={24} /></span><h3>{title}</h3><p>{description}</p>{retry && <Button variant="secondary" icon="refresh" onClick={retry}>{t("common.retry")}</Button>}</div>;
 }
 
 export function Divider(): JSX.Element { return <div className="divider" />; }

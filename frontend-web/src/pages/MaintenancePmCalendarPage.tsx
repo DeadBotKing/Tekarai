@@ -29,6 +29,9 @@ import {
   todayIso,
 } from "../core/localization/jalali";
 import { taxonomyLabel } from "../core/localization/taxonomyLabel";
+import { createWorkCalendarService } from "../features/maintenance/workCalendarService";
+import { createDemoWorkCalendarService } from "../features/maintenance/workCalendarDemoData";
+import { isWeekendDay } from "../features/maintenance/workCalendarMath";
 import { mergeOptions } from "../features/maintenance/optionCatalog";
 
 interface JalaliMonth {
@@ -61,6 +64,10 @@ export function MaintenancePmCalendarPage(): JSX.Element {
     () => (runtimeConfig.demoMode ? createDemoRegistryService() : createRegistryService(api)),
     [api],
   );
+  const workCalendar = useMemo(
+    () => (runtimeConfig.demoMode ? createDemoWorkCalendarService() : createWorkCalendarService(api)),
+    [api],
+  );
 
   const [month, setMonth] = useState<JalaliMonth>(currentJalaliMonth);
   const [items, setItems] = useState<PmScheduleItem[]>([]);
@@ -69,6 +76,15 @@ export function MaintenancePmCalendarPage(): JSX.Element {
   const [disciplineFilter, setDisciplineFilter] = useState("");
   const [dayModal, setDayModal] = useState<{ iso: string; items: PmScheduleItem[] } | null>(null);
   const [downloading, setDownloading] = useState(false);
+  /**
+   * Days the plant is shut, as `iso -> label` ("" for an ordinary weekend).
+   *
+   * Phase 28 added a real work calendar; this grid predates it and used to
+   * assume جمعه was the only closed day. Shading is read-only and additive:
+   * if the calendar cannot be loaded the map stays empty and the page behaves
+   * exactly as it did before.
+   */
+  const [closedDays, setClosedDays] = useState<Map<string, string>>(new Map());
 
   const downloadExport = async (format: "csv" | "xlsx" | "pdf"): Promise<void> => {
     setDownloading(true);
@@ -124,6 +140,34 @@ export function MaintenancePmCalendarPage(): JSX.Element {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const run = async (): Promise<void> => {
+      try {
+        const calendars = await workCalendar.listCalendars(controller.signal);
+        const active = calendars.find((row) => row.isDefault) ?? calendars[0];
+        if (!active) return;
+        const holidays = await workCalendar.listHolidays(
+          { calendarId: active.id, fromDate: monthStartIso, toDate: monthEndIso },
+          controller.signal,
+        );
+        const shape = { weekendDays: active.weekendDays, holidays: new Set<string>() };
+        const closed = new Map<string, string>();
+        for (let day = 1; day <= monthLength; day += 1) {
+          const iso = jalaliPartsToIso(month.year, month.month, day);
+          if (isWeekendDay(shape, iso)) closed.set(iso, "");
+        }
+        for (const holiday of holidays) closed.set(holiday.onDate, holiday.name);
+        setClosedDays(closed);
+      } catch {
+        // A calendar is an enhancement here, not a dependency — stay quiet.
+        setClosedDays(new Map());
+      }
+    };
+    void run();
+    return () => controller.abort();
+  }, [workCalendar, month.year, month.month, monthLength, monthStartIso, monthEndIso]);
 
   const today = todayIso();
 
@@ -248,6 +292,7 @@ export function MaintenancePmCalendarPage(): JSX.Element {
                   className={[
                     "pm-cal__cell",
                     index % 7 === 6 ? "pm-cal__cell--fri" : "",
+                    closedDays.has(cell.iso) ? "pm-cal__cell--closed" : "",
                     cell.iso === today ? "pm-cal__cell--today" : "",
                     hasOverdue ? "pm-cal__cell--has-overdue" : "",
                     dayItems.length > 0 ? "is-clickable" : "",
@@ -263,6 +308,16 @@ export function MaintenancePmCalendarPage(): JSX.Element {
                   }}
                 >
                   <span className="pm-cal__day">{toPersianDigits(cell.day)}</span>
+                  {closedDays.get(cell.iso) && (
+                    <span className="pm-cal__holiday" title={closedDays.get(cell.iso)}>
+                      {closedDays.get(cell.iso)}
+                    </span>
+                  )}
+                  {closedDays.has(cell.iso) && dayItems.length > 0 && (
+                    <span className="pm-cal__conflict" title={t("cmms.pmCal.closedConflictHint")}>
+                      <Icon name="warning" size={11} /> {t("cmms.pmCal.closedConflict")}
+                    </span>
+                  )}
                   <div className="pm-cal__events">
                     {dayItems.slice(0, MAX_CHIPS_PER_CELL).map((item) => (
                       <span key={item.id} className={chipClass(item)} title={`${item.deviceCode} — ${item.title}`}>

@@ -448,3 +448,61 @@ class PmFrequency(ValueObject):
 
     def __str__(self) -> str:
         return f"{self.every}:{self.unit}"
+
+
+# =================================================================================
+# Phase 28 — work calendar, shifts and capacity
+# =================================================================================
+#
+# A Jalali date picker is presentation. Scheduling is a different problem: it
+# needs to know which days a given site actually works, which of those days are
+# holidays, what shifts cover them, and how many technician-hours that buys.
+# None of that can be derived from a calendar widget.
+
+# -- Weekday numbering ------------------------------------------------------------
+#: Weekdays are stored the way Python's ``date.weekday()`` reports them —
+#: Monday 0 … Sunday 6 — so no conversion is needed at the point of use.
+#: The *presentation* order is Iranian (شنبه first); that is a UI concern and
+#: deliberately not encoded here.
+MONDAY = 0
+TUESDAY = 1
+WEDNESDAY = 2
+THURSDAY = 3
+FRIDAY = 4
+SATURDAY = 5
+SUNDAY = 6
+
+WEEKDAYS = (MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY)
+
+#: The Iranian working week runs شنبه → چهارشنبه with پنجشنبه often a half or
+#: full day off and جمعه the weekly holiday. Only جمعه is a safe default; a
+#: plant that also closes پنجشنبه says so on its own calendar.
+DEFAULT_WEEKEND_DAYS = (FRIDAY,)
+
+# -- Holiday kinds ----------------------------------------------------------------
+HOLIDAY_OFFICIAL = "official"  # national — comes from the country calendar
+HOLIDAY_LOCAL = "local"  # this site only (local observance, municipal)
+HOLIDAY_SHUTDOWN = "shutdown"  # planned plant shutdown / تعطیلی برنامه‌ریزی‌شده
+
+HOLIDAY_KINDS = (HOLIDAY_OFFICIAL, HOLIDAY_LOCAL, HOLIDAY_SHUTDOWN)
+
+# -- Shift rotation ---------------------------------------------------------------
+SHIFT_MORNING = "morning"
+SHIFT_EVENING = "evening"
+SHIFT_NIGHT = "night"
+SHIFT_GENERAL = "general"  # اداری — a single day shift, no rotation
+
+SHIFT_KINDS = (SHIFT_MORNING, SHIFT_EVENING, SHIFT_NIGHT, SHIFT_GENERAL)
+
+# -- Scheduling policy ------------------------------------------------------------
+#: What to do when a PM falls on a non-working day.
+ROLL_FORWARD = "forward"  # next working day — the safe default
+ROLL_BACKWARD = "backward"  # previous working day — for jobs that must not slip
+ROLL_NONE = "none"  # leave it where it lands
+
+ROLL_POLICIES = (ROLL_FORWARD, ROLL_BACKWARD, ROLL_NONE)
+
+#: A roll must terminate. A calendar with every day marked non-working would
+#: otherwise spin forever; after this many days the original date is returned
+#: unchanged and the caller is told the calendar is unusable.
+MAX_ROLL_DAYS = 30

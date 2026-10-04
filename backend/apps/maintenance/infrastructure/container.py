@@ -443,6 +443,20 @@ from apps.maintenance.application.useCases.assetHierarchyUseCases import (  # no
     ReinstateAssetUseCase,
     RetireAssetUseCase,
 )
+from apps.maintenance.application.useCases.workCalendarUseCases import (  # noqa: E402
+    DeleteCalendarEntryUseCase,
+    GetCapacityPlanUseCase,
+    GetWorkingDayUseCase,
+    ListHolidaysUseCase,
+    ListWorkCalendarsUseCase,
+    SaveHolidayUseCase,
+    SaveShiftAssignmentUseCase,
+    SaveShiftUseCase,
+    SaveWorkCalendarUseCase,
+)
+from apps.maintenance.infrastructure.repositories.workCalendarRepositoryImpl import (  # noqa: E402
+    WorkCalendarRepositoryDjango,
+)
 from apps.maintenance.infrastructure.repositories.assetRegistryRepositoryImpl import (  # noqa: E402
     AssetMovementRepositoryDjango,
     DeviceRegistryRepositoryDjango,
@@ -945,3 +959,52 @@ def applySyncBatchUseCase() -> ApplySyncBatchUseCase:
 
 def listSyncHistoryUseCase() -> ListSyncHistoryUseCase:
     return ListSyncHistoryUseCase(ledger=offlineSyncLedger(), **_kernelPorts())
+
+
+def workCalendarRepository() -> WorkCalendarRepositoryDjango:
+    return WorkCalendarRepositoryDjango()
+
+
+def _workCalendarDeps() -> dict:
+    return {
+        "calendarRepository": workCalendarRepository(),
+        "deviceRepository": deviceRepository(),
+        "locationRepository": locationRepository(),
+        **_kernelPorts(),
+    }
+
+
+def listWorkCalendarsUseCase() -> ListWorkCalendarsUseCase:
+    return ListWorkCalendarsUseCase(**_workCalendarDeps())
+
+
+def listHolidaysUseCase() -> ListHolidaysUseCase:
+    return ListHolidaysUseCase(**_workCalendarDeps())
+
+
+def getCapacityPlanUseCase() -> GetCapacityPlanUseCase:
+    return GetCapacityPlanUseCase(**_workCalendarDeps())
+
+
+def getWorkingDayUseCase() -> GetWorkingDayUseCase:
+    return GetWorkingDayUseCase(**_workCalendarDeps())
+
+
+def saveWorkCalendarUseCase() -> SaveWorkCalendarUseCase:
+    return SaveWorkCalendarUseCase(**_workCalendarDeps())
+
+
+def saveHolidayUseCase() -> SaveHolidayUseCase:
+    return SaveHolidayUseCase(**_workCalendarDeps())
+
+
+def saveShiftUseCase() -> SaveShiftUseCase:
+    return SaveShiftUseCase(**_workCalendarDeps())
+
+
+def saveShiftAssignmentUseCase() -> SaveShiftAssignmentUseCase:
+    return SaveShiftAssignmentUseCase(**_workCalendarDeps())
+
+
+def deleteCalendarEntryUseCase() -> DeleteCalendarEntryUseCase:
+    return DeleteCalendarEntryUseCase(**_workCalendarDeps())

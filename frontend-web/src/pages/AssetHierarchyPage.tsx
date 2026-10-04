@@ -13,6 +13,7 @@ import {
   Button,
   Card,
   EmptyState,
+  ErrorState,
   LoadingState,
   MetricCard,
   PermissionGuard,
@@ -140,10 +141,16 @@ export function AssetHierarchyPage(): JSX.Element {
   const [search, setSearch] = useState("");
   const [includeRetired, setIncludeRetired] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // A failed fetch and a genuinely empty plant both render as "no rows".
+  // Without this the user is told nothing is here when in fact the request
+  // never landed, so the error is kept rather than left to a toast that
+  // disappears before it can be read.
+  const [loadError, setLoadError] = useState("");
 
   const load = useCallback(
     async (signal?: AbortSignal) => {
       setLoading(true);
+      setLoadError("");
       try {
         const result = await registry.getAssetTree({ includeRetired }, signal);
         setTree(result);
@@ -160,7 +167,7 @@ export function AssetHierarchyPage(): JSX.Element {
         });
       } catch (error) {
         if ((error as Error)?.name !== "AbortError") {
-          setToast((error as Error).message || t("error.networkBody"));
+          setLoadError((error as Error).message || t("error.networkBody"));
         }
       } finally {
         setLoading(false);
@@ -253,6 +260,12 @@ export function AssetHierarchyPage(): JSX.Element {
 
           {loading ? (
             <LoadingState label={t("assets.tree.title")} />
+          ) : loadError ? (
+            <ErrorState
+              title={t("error.networkTitle")}
+              description={loadError}
+              retry={() => void load()}
+            />
           ) : visibleRoots.length === 0 ? (
             <EmptyState
               title={search.trim() ? t("assets.tree.noMatch") : t("assets.tree.empty")}

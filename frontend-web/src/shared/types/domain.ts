@@ -1109,6 +1109,12 @@ export interface CalendarHoliday {
   recursAnnually: boolean;
   jalaliMonth: number;
   jalaliDay: number;
+  /**
+   * True when this item is a recurring holiday projected onto a window rather
+   * than a stored row. Projected items carry their source row's id, so they
+   * are for display only — deleting one would delete the original.
+   */
+  projected: boolean;
 }
 
 export interface CapacityJob {

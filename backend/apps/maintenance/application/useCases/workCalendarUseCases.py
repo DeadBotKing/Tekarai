@@ -25,6 +25,7 @@ from apps.maintenance.application.useCases.registryUseCases import (
     PERMISSION_REGISTRY_MANAGE,
     PERMISSION_REGISTRY_VIEW,
 )
+from apps.maintenance.domain.services.jalaliCalendar import dateToJalali
 from apps.maintenance.domain.services.workCalendarRules import (
     CalendarSpec,
     dailyCapacityHours,
@@ -438,6 +439,7 @@ class SaveHolidayUseCase(WorkCalendarUseCaseBase):
         if command.kind not in HOLIDAY_KINDS:
             raise WorkCalendarError(f"Unknown holiday kind «{command.kind}».")
         calendarId = self.requireCalendarId(tenantId, command.calendarId)
+        _, jalaliMonth, jalaliDay = dateToJalali(onDate)
         values = {
             "id": command.id or None,
             "calendarId": calendarId,
@@ -445,8 +447,13 @@ class SaveHolidayUseCase(WorkCalendarUseCaseBase):
             "name": command.name.strip(),
             "kind": command.kind,
             "recursAnnually": command.recursAnnually,
-            "jalaliMonth": command.jalaliMonth,
-            "jalaliDay": command.jalaliDay,
+            # Derived here, never taken from the caller. The Jalali parts are
+            # what `recursAnnually` projects on, so they must agree with
+            # `onDate` or a holiday would recur on the wrong day. The web form
+            # was sending zeros, which silently made every holiday
+            # non-recurring however the box was ticked.
+            "jalaliMonth": jalaliMonth,
+            "jalaliDay": jalaliDay,
         }
         saved = self.calendarRepository.saveHoliday(tenantId, values, now)
         self.audit(AUDIT_CREATE, resourceType="CalendarHoliday", resourceId=saved["id"], tenantId=tenantId)

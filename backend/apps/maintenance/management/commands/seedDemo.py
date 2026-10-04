@@ -18,6 +18,8 @@ from datetime import UTC, date, datetime, time, timedelta
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
+from apps.maintenance.domain.services.iranHolidays import IRAN_OFFICIAL_SOLAR_HOLIDAYS
+from apps.maintenance.domain.services.jalaliCalendar import jalaliMonthLength, jalaliToDate
 from apps.maintenance.infrastructure.models import (
     CalendarHolidayModel,
     DeviceModel,
@@ -296,21 +298,14 @@ class Command(BaseCommand):
             },
         )
 
-        # (jalaliMonth, jalaliDay, gregorian, name) for Iranian year 1405.
-        OFFICIAL_HOLIDAYS_1405 = [
-            (1, 1, "2026-03-21", "نوروز"),
-            (1, 2, "2026-03-22", "نوروز"),
-            (1, 3, "2026-03-23", "نوروز"),
-            (1, 4, "2026-03-24", "نوروز"),
-            (1, 12, "2026-04-01", "روز جمهوری اسلامی"),
-            (1, 13, "2026-04-02", "روز طبیعت"),
-            (3, 14, "2026-06-04", "رحلت امام خمینی"),
-            (3, 15, "2026-06-05", "قیام ۱۵ خرداد"),
-            (11, 22, "2027-02-11", "پیروزی انقلاب اسلامی"),
-            (12, 29, "2027-03-20", "ملی‌شدن صنعت نفت"),
-        ]
+        # The official solar list lives in the domain so `seedIranHolidays`
+        # (production-safe) and this demo seeder cannot drift apart.
+        jalaliYear = 1405
         holidayCreated = 0
-        for jMonth, jDay, iso, title in OFFICIAL_HOLIDAYS_1405:
+        for jMonth, jDay, title in IRAN_OFFICIAL_SOLAR_HOLIDAYS:
+            if jDay > jalaliMonthLength(jalaliYear, jMonth):
+                continue
+            iso = jalaliToDate(jalaliYear, jMonth, jDay).isoformat()
             _, made = CalendarHolidayModel.objects.get_or_create(
                 tenantId=tenantId,
                 calendarId=calendar.id,

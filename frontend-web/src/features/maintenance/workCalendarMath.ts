@@ -1,3 +1,8 @@
+import {
+  isoToJalaliParts,
+  jalaliMonthLength,
+  jalaliPartsToIso,
+} from "../../core/localization/jalali";
 import type { CapacityDay, WorkShift } from "../../shared/types/domain";
 
 /**
@@ -55,6 +60,37 @@ export const isWorkingDay = (shape: CalendarShape, iso: string): boolean =>
   !isWeekendDay(shape, iso) && !isHolidayDay(shape, iso);
 
 /** Bounded like the backend's MAX_ROLL_DAYS so a bad calendar cannot hang the tab. */
+/**
+ * Every Gregorian date on which a fixed Jalali day falls inside a window.
+ *
+ * Iranian solar holidays are fixed in the Jalali calendar, so their Gregorian
+ * date drifts: نوروز is 21 March in 1405 and 1406 but 20 March in 1407. Simply
+ * repeating the stored Gregorian date would be wrong roughly half the time,
+ * which is why recurrence is expanded through Jalali on both sides of the API.
+ *
+ * ۳۰ اسفند only exists in leap years; in ordinary years that occurrence is
+ * skipped rather than clamped onto the 29th, matching the backend.
+ */
+export const expandRecurringDates = (
+  jalaliMonth: number,
+  jalaliDay: number,
+  fromIso: string,
+  toIso: string,
+): string[] => {
+  if (jalaliMonth < 1 || jalaliMonth > 12 || jalaliDay < 1 || jalaliDay > 31) return [];
+  if (fromIso > toIso) return [];
+  const first = isoToJalaliParts(fromIso);
+  const last = isoToJalaliParts(toIso);
+  if (!first || !last) return [];
+  const dates: string[] = [];
+  for (let year = first[0]; year <= last[0]; year += 1) {
+    if (jalaliDay > jalaliMonthLength(year, jalaliMonth)) continue;
+    const iso = jalaliPartsToIso(year, jalaliMonth, jalaliDay);
+    if (iso >= fromIso && iso <= toIso) dates.push(iso);
+  }
+  return dates;
+};
+
 export const MAX_ROLL_DAYS = 30;
 
 export const rollToWorkingDay = (shape: CalendarShape, iso: string): string => {

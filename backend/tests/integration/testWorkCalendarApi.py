@@ -777,3 +777,154 @@ class WorkCalendarApiTests(TestCase):
             with self.subTest(url=url, method=method):
                 response = getattr(anonymous, method)(url)
                 self.assertIn(response.status_code, (401, 403))
+
+
+class RecurringHolidayTests(TestCase):
+    """A holiday ticked «هر سال تکرار می‌شود» must actually recur (Phase 28.1).
+
+    Before this, `recursAnnually` was stored and echoed back by the API but
+    never consulted, so نوروز entered for 1405 left the plant wide open on
+    نوروز 1406. These tests pin the behaviour the checkbox promises.
+    """
+
+    def setUp(self) -> None:
+        cache.clear()
+        seedPlatform()
+        self.tenantId = platformTenantId()
+        self.client = APIClient()
+        tokens = loginViaApi(self.client)
+        self.auth = {"HTTP_AUTHORIZATION": f"Bearer {tokens['accessToken']}"}
+        from django.utils import timezone as djtz
+
+        self.calendar = WorkCalendarModel.objects.create(
+            tenantId=self.tenantId,
+            code="CAL-R",
+            name="تقویم تکرار",
+            timezone="Asia/Tehran",
+            weekendDays="4",
+            rollPolicy="forward",
+            isDefault=True,
+            active=True,
+            createdAt=djtz.now(),
+        ).id
+
+    def _addHoliday(self, onDate: date, name: str, recurs: bool) -> dict:
+        response = self.client.post(
+            f"{BASE}/work-calendars/holidays",
+            {
+                "calendarId": str(self.calendar),
+                "onDate": onDate.isoformat(),
+                "name": name,
+                "kind": "official",
+                "recursAnnually": recurs,
+            },
+            format="json",
+            **self.auth,
+        )
+        self.assertEqual(response.status_code, 201, response.content)
+        return response.json()["data"]
+
+    def _workingDay(self, onDate: date) -> dict:
+        return self.client.get(
+            f"{BASE}/work-calendars/working-day",
+            {"calendarId": str(self.calendar), "onDate": onDate.isoformat()},
+            **self.auth,
+        ).json()["data"]
+
+    def testServerDerivesJalaliPartsEvenWhenTheClientSendsNone(self) -> None:
+        """The web form never sent them, which silently disabled recurrence."""
+        saved = self._addHoliday(date(2026, 3, 21), "نوروز", recurs=True)
+        self.assertEqual(saved["jalaliMonth"], 1)
+        self.assertEqual(saved["jalaliDay"], 1)
+
+    def testRecurringHolidayClosesTheSameJalaliDayNextYear(self) -> None:
+        self._addHoliday(date(2026, 3, 21), "نوروز", recurs=True)
+        # Entered for 1405 only; 1406's نوروز is a different Gregorian date.
+        nextYear = self._workingDay(date(2027, 3, 21))
+        self.assertTrue(nextYear["isHoliday"])
+        self.assertFalse(nextYear["isWorkingDay"])
+
+    def testRecurrenceTracksTheJalaliDateNotTheGregorianOne(self) -> None:
+        """نوروز 1407 is 20 March, not 21 — the drift that makes this hard."""
+        self._addHoliday(date(2026, 3, 21), "نوروز", recurs=True)
+        self.assertTrue(self._workingDay(date(2028, 3, 20))["isHoliday"])
+        self.assertFalse(self._workingDay(date(2028, 3, 21))["isHoliday"])
+
+    def testNonRecurringHolidayStaysInItsOwnYear(self) -> None:
+        """The checkbox has to mean something in both positions."""
+        self._addHoliday(date(2026, 6, 10), "توقف موردی", recurs=False)
+        self.assertTrue(self._workingDay(date(2026, 6, 10))["isHoliday"])
+        self.assertFalse(self._workingDay(date(2027, 6, 10))["isHoliday"])
+
+    def testCapacityPlanTreatsAProjectedHolidayAsClosed(self) -> None:
+        self._addHoliday(date(2026, 3, 21), "نوروز", recurs=True)
+        plan = self.client.get(
+            f"{BASE}/work-calendars/capacity",
+            {
+                "calendarId": str(self.calendar),
+                "fromDate": "2027-03-20",
+                "toDate": "2027-03-23",
+            },
+            **self.auth,
+        ).json()["data"]
+        byDate = {day["onDate"]: day for day in plan["days"]}
+        self.assertFalse(byDate["2027-03-21"]["isWorkingDay"])
+        self.assertTrue(byDate["2027-03-21"]["isHoliday"])
+        # A shut day buys no hours; the API may format that as "0" or "0.00".
+        self.assertEqual(float(byDate["2027-03-21"]["capacityHours"]), 0.0)
+
+    def testARolledJobSkipsAProjectedHoliday(self) -> None:
+        """The point of the whole feature: work moves off a recurring holiday."""
+        self._addHoliday(date(2026, 3, 21), "نوروز", recurs=True)
+        answer = self.client.get(
+            f"{BASE}/work-calendars/working-day",
+            {"calendarId": str(self.calendar), "onDate": "2027-03-21"},
+            **self.auth,
+        ).json()["data"]
+        self.assertFalse(answer["isWorkingDay"])
+        self.assertTrue(answer["rolled"])
+        self.assertNotEqual(answer["plannedOn"], "2027-03-21")
+
+    def testWindowedListProjectsOccurrencesWithTheirName(self) -> None:
+        self._addHoliday(date(2026, 3, 21), "نوروز", recurs=True)
+        payload = self.client.get(
+            f"{BASE}/work-calendars/holidays",
+            {
+                "calendarId": str(self.calendar),
+                "fromDate": "2027-01-01",
+                "toDate": "2027-12-31",
+            },
+            **self.auth,
+        ).json()["data"]
+        items = payload["items"]
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]["onDate"], "2027-03-21")
+        self.assertEqual(items[0]["name"], "نوروز")
+        self.assertTrue(items[0]["projected"])
+
+    def testUnwindowedListStillReturnsOnlyRealRows(self) -> None:
+        """The management table must not offer a delete button for a ghost."""
+        self._addHoliday(date(2026, 3, 21), "نوروز", recurs=True)
+        payload = self.client.get(
+            f"{BASE}/work-calendars/holidays",
+            {"calendarId": str(self.calendar)},
+            **self.auth,
+        ).json()["data"]
+        self.assertEqual(len(payload["items"]), 1)
+        self.assertEqual(payload["items"][0]["onDate"], "2026-03-21")
+        self.assertFalse(payload["items"][0]["projected"])
+        self.assertEqual(
+            CalendarHolidayModel.objects.filter(
+                calendarId=self.calendar, deletedAt__isnull=True
+            ).count(),
+            1,
+        )
+
+    def testDeletingTheSourceStopsEveryFutureOccurrence(self) -> None:
+        saved = self._addHoliday(date(2026, 3, 21), "نوروز", recurs=True)
+        self.assertTrue(self._workingDay(date(2027, 3, 21))["isHoliday"])
+        response = self.client.delete(
+            f"{BASE}/work-calendars/holidays/{saved['id']}", **self.auth
+        )
+        self.assertIn(response.status_code, (200, 204))
+        self.assertFalse(self._workingDay(date(2027, 3, 21))["isHoliday"])

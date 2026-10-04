@@ -11,6 +11,7 @@ import uuid
 from decimal import Decimal
 from datetime import date, datetime, time, timedelta, timezone
 
+from apps.maintenance.domain.services.jalaliCalendar import expandRecurringDates
 from apps.maintenance.domain.services.workCalendarRules import (
     CalendarSpec,
     ShiftSpec,
@@ -159,7 +160,7 @@ class WorkCalendarRepositoryDjango:
         ).first()
         if row is None:
             return CalendarSpec()
-        holidays = frozenset(
+        holidays = set(
             CalendarHolidayModel.objects.filter(
                 tenantId=tenantId,
                 calendarId=calendarId,
@@ -168,11 +169,40 @@ class WorkCalendarRepositoryDjango:
                 onDate__lte=end,
             ).values_list("onDate", flat=True)
         )
+        holidays.update(self._recurringOccurrences(tenantId, calendarId, start, end))
         return CalendarSpec(
             weekendDays=normaliseWeekendDays(row.weekendDays),
-            holidays=holidays,
+            holidays=frozenset(holidays),
             rollPolicy=row.rollPolicy or ROLL_FORWARD,
         )
+
+    def _recurringRows(self, tenantId: uuid.UUID, calendarId: uuid.UUID):
+        """Holiday rows pinned to a Jalali month/day and marked as recurring."""
+        return CalendarHolidayModel.objects.filter(
+            tenantId=tenantId,
+            calendarId=calendarId,
+            deletedAt__isnull=True,
+            recursAnnually=True,
+            jalaliMonth__gte=1,
+            jalaliDay__gte=1,
+        )
+
+    def _recurringOccurrences(
+        self, tenantId: uuid.UUID, calendarId: uuid.UUID, start: date, end: date
+    ) -> set[date]:
+        """Every date a recurring holiday falls on inside the window.
+
+        A holiday is stored once, for the year it was entered. Because the
+        solar holidays are fixed in the *Jalali* calendar their Gregorian date
+        drifts — نوروز is 21 March in 1405 and 1406 but 20 March in 1407 — so
+        the occurrence has to be recomputed per year rather than reused.
+        """
+        found: set[date] = set()
+        for row in self._recurringRows(tenantId, calendarId).values_list(
+            "jalaliMonth", "jalaliDay"
+        ):
+            found.update(expandRecurringDates(row[0], row[1], start, end))
+        return found
 
     # -- holidays -----------------------------------------------------------------
     def listHolidays(
@@ -185,11 +215,32 @@ class WorkCalendarRepositoryDjango:
         rows = CalendarHolidayModel.objects.filter(
             tenantId=tenantId, calendarId=calendarId, deletedAt__isnull=True
         )
-        if start is not None:
-            rows = rows.filter(onDate__gte=start)
-        if end is not None:
-            rows = rows.filter(onDate__lte=end)
-        return [self._holidayDict(row) for row in rows.order_by("onDate")]
+        if start is None or end is None:
+            # No window: the caller is managing the rows themselves, so return
+            # exactly what is stored — every item has a real, deletable id.
+            if start is not None:
+                rows = rows.filter(onDate__gte=start)
+            if end is not None:
+                rows = rows.filter(onDate__lte=end)
+            return [self._holidayDict(row) for row in rows.order_by("onDate")]
+
+        # A window asks a different question — "which holidays fall in these
+        # dates" — so recurring rows stored under another year are projected
+        # onto it. Such an item carries its source row's id, so it is meant
+        # for display, not for deletion.
+        stored = list(rows.filter(onDate__gte=start, onDate__lte=end))
+        seen = {row.onDate for row in stored}
+        items = [self._holidayDict(row) for row in stored]
+        for row in self._recurringRows(tenantId, calendarId):
+            for occurrence in expandRecurringDates(row.jalaliMonth, row.jalaliDay, start, end):
+                if occurrence in seen:
+                    continue
+                seen.add(occurrence)
+                projected = self._holidayDict(row)
+                projected["onDate"] = occurrence.isoformat()
+                projected["projected"] = True
+                items.append(projected)
+        return sorted(items, key=lambda item: item["onDate"])
 
     def saveHoliday(self, tenantId: uuid.UUID, values: dict, now: datetime) -> dict:
         holidayId = values.get("id")
@@ -382,6 +433,7 @@ class WorkCalendarRepositoryDjango:
             "name": row.name,
             "kind": row.kind,
             "recursAnnually": row.recursAnnually,
+            "projected": False,
             "jalaliMonth": row.jalaliMonth,
             "jalaliDay": row.jalaliDay,
         }

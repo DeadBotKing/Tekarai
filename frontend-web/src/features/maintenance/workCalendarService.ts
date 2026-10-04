@@ -81,6 +81,7 @@ export const toHoliday = (raw: Record<string, unknown>): CalendarHoliday => ({
   recursAnnually: flag(raw.recursAnnually),
   jalaliMonth: count(raw.jalaliMonth),
   jalaliDay: count(raw.jalaliDay),
+  projected: Boolean(raw.projected ?? false),
 });
 
 const toCapacityJob = (raw: Record<string, unknown>): CapacityJob => ({

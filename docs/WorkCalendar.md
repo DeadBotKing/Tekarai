@@ -148,22 +148,126 @@ Nowruz 1405 begins 2026-03-21. Months 1–6 are 31 days, 7–11 are 30.
 | 2027-02-11 | پیروزی انقلاب اسلامی |
 | 2027-03-20 | ملی‌شدن صنعت نفت |
 
+These are seeded for 1405, but each row is marked **recurring**, so they
+project forward indefinitely — see "Annual recurrence" below. The table lives
+in `apps/maintenance/domain/services/iranHolidays.py` as
+`IRAN_OFFICIAL_SOLAR_HOLIDAYS` and is shared by `seedDemo` and
+`seedIranHolidays`, so the two can never drift apart.
+
 Lunar/Hijri holidays are deliberately **not** seeded: they shift against the
 solar calendar every year, so a hardcoded list would be wrong by next year.
 Enter them from the holidays tab.
+
+## Annual recurrence (Phase 28.1)
+
+Ticking «هر سال تکرار می‌شود» now does something. Until Phase 28.1 the flag was
+stored, returned by the API and rendered in the table while **no code anywhere
+read it** — the holiday simply stayed a one-off, and the checkbox was a promise
+the system never kept.
+
+### Why it has to go through Jalali
+
+Repeating the stored *Gregorian* date would be wrong about half the time,
+because Iran's official solar holidays are fixed in the **Jalali** calendar and
+the Gregorian equivalent drifts with the leap cycle:
+
+| Jalali | نوروز (۱ فروردین) |
+| --- | --- |
+| 1405 | 2026-03-21 |
+| 1406 | 2027-03-21 |
+| 1407 | **2028-03-20** |
+| 1408 | **2029-03-20** |
+| 1409 | 2030-03-21 |
+
+So recurrence is expanded by converting `(jalaliMonth, jalaliDay)` into each
+year inside the requested window — `expandRecurringDates`, implemented
+identically in `backend/apps/maintenance/domain/services/jalaliCalendar.py` and
+`frontend-web/src/features/maintenance/workCalendarMath.ts`. ۳۰ اسفند exists
+only in leap years, so in an ordinary year that occurrence is **skipped**
+rather than clamped onto the 29th — inventing a closure nobody declared would
+be worse than missing one.
+
+The backend converter is a hand-ported pure-arithmetic module (no `jdatetime`
+dependency) and is validated in `testJalaliCalendar.py` against externally
+known dates — 1357/11/22 = 1979-02-11, 1403/1/1 = 2024-03-20 and others — not
+against its own round trip, which a uniformly wrong converter would also pass.
+
+### The Jalali parts are derived, never supplied
+
+`SaveHolidayUseCase` computes `jalaliMonth`/`jalaliDay` from `onDate` and
+**ignores whatever the client sent**. The old web form posted zeros, which is
+how a holiday could be flagged recurring yet have no Jalali date to recur on.
+Migration `0019_backfillHolidayJalaliParts` repairs rows already saved that
+way; it is idempotent and its reverse is deliberately a no-op.
+
+### Stored rows vs. projected occurrences
+
+`listHolidays` answers two different questions, and the distinction matters
+because a projected occurrence carries **its source row's id**:
+
+| Call | Returns | `projected` |
+| --- | --- | --- |
+| no window | the stored rows | `false` — safe to delete |
+| `fromDate` **and** `toDate` | occurrences in that window, recurrences expanded | `true` on the projections |
+
+The holidays tab deliberately calls the windowless form, so every row it offers
+a «حذف» button for is real. The capacity grid calls the windowed form purely to
+label its days. Deleting a projected occurrence is never offered — it would
+silently delete the original.
+
+## Loading the official holidays
+
+```
+python manage.py seedIranHolidays [--calendar CODE] [--all-calendars] [--year 1406] [--dry-run]
+```
+
+Holidays **only** — unlike `seedDemo`, which also inserts 17 demo devices, 9
+locations and cost centres and is therefore unsafe to point at a real tenant.
+Defaults to the tenant default calendar and the current Jalali year, and is
+idempotent via the `(tenantId, calendarId, onDate)` unique constraint, so
+re-running it is harmless. Every row it writes is marked recurring, so in
+practice this is run **once** and the solar calendar is then correct forever.
+
+The ~14 lunar holidays (عید فطر, تاسوعا, عاشورا …) are still entered by hand
+each year from the holidays tab, and the command prints a reminder saying so.
+They move ~11 days a year against the solar calendar and depend on sighting the
+hilal, so no amount of arithmetic can project them.
+
+A GUI "load official holidays" button was considered and rejected: it is a
+once-per-installation action, and a button that does nothing on every
+subsequent press is clutter on a screen used all year.
 
 ## Tests
 
 | Suite | Count |
 | --- | --- |
 | `apps/maintenance/tests/testWorkCalendarRules.py` | 55 |
-| `backend/tests/integration/testWorkCalendarApi.py` | 33 |
-| `frontend-web/src/tests/workCalendar.test.ts` | 36 |
+| `apps/maintenance/tests/testJalaliCalendar.py` | 16 |
+| `apps/maintenance/tests/testSeedIranHolidays.py` | 12 |
+| `apps/maintenance/tests/testHolidayJalaliBackfill.py` | 6 |
+| `backend/tests/integration/testWorkCalendarApi.py` | 42 |
+| `frontend-web/src/tests/workCalendar.test.ts` | 48 |
 
 Both the API slice (5 mutants) and the frontend math (6 mutants) were mutation
-tested; every mutant was killed. Two of them earned their keep: the frontend
+tested; every mutant was killed. The recurrence work added a further 7 mutants
+— reusing the stored Gregorian date, clamping ۳۰ اسفند into ordinary years, an
+off-by-one leap-year test, dropping the `loadSpec` expansion, ignoring the
+`recursAnnually` flag, dropping the windowed expansion, and trusting the
+client's Jalali parts again — and all 7 were killed. Two of them earned their keep: the frontend
 round initially let "over capacity" outrank "closed", and the test that was
 supposed to protect that ordering never exercised it.
+
+## First run
+
+`run_dev` migrates the database but **never seeds it**, so a fresh install has
+no work calendar — and holidays, shifts and capacity all hang off one. The
+three tabs therefore say so plainly and offer a «تقویم جدید» button rather than
+presenting a disabled control that looks broken.
+
+The first calendar a tenant creates is pre-marked **tenant default**. This is
+not cosmetic: `resolveCalendarIdForLocation` walks a location's parents and
+then falls back to the tenant default, so a lone non-default calendar would
+never be resolved by any device and the feature would stay inert.
 
 ## Trying it
 
@@ -171,6 +275,13 @@ supposed to protect that ordering never exercised it.
 cd backend
 .\.venv\Scripts\python manage.py migrate
 .\.venv\Scripts\python manage.py seedDemo   # idempotent; run_dev does NOT seed
+```
+
+On a real tenant, use the holiday-only loader instead of `seedDemo`:
+
+```
+.\.venv\Scripts\python manage.py seedIranHolidays --dry-run
+.\.venv\Scripts\python manage.py seedIranHolidays
 ```
 
 Then open **نگهداری و تعمیرات → عملیات → تقویم کاری**.

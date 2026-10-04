@@ -14,6 +14,7 @@ import {
   pyWeekday,
   rollToWorkingDay,
   shiftDurationHours,
+  expandRecurringDates,
   type CalendarShape,
 } from "../features/maintenance/workCalendarMath";
 import {
@@ -22,6 +23,7 @@ import {
   toWorkCalendar,
   toWorkShift,
 } from "../features/maintenance/workCalendarService";
+import { createDemoWorkCalendarService } from "../features/maintenance/workCalendarDemoData";
 import { WEEKDAY_ORDER_IR } from "../shared/types/domain";
 
 /** A plant that rests on جمعه only, with Nowruz 1405 shut. */
@@ -301,5 +303,138 @@ describe("API mappers", () => {
     expect(plan.days[0].jobs[0].rolled).toBe(true);
     expect(plan.days[0].jobs[0].dueOn).toBe("2026-03-21");
     expect(capacityTone(plan.days[0])).toBe("ok");
+  });
+});
+
+describe("first-run flow", () => {
+  // Regression guard for the dead-end a fresh install used to hit: the plant
+  // migrates the database but never seeds it, so there is no work calendar,
+  // and holidays/shifts/capacity have nothing to attach to. The page must stay
+  // usable and the very first calendar must become the tenant default —
+  // otherwise `resolveCalendarIdForLocation` falls back to a default that does
+  // not exist and no device ever resolves a calendar.
+  it("makes a saved calendar immediately listable", async () => {
+    const service = createDemoWorkCalendarService();
+    const before = await service.listCalendars();
+    await service.saveCalendar({
+      code: "CAL-TEST",
+      name: "تقویم آزمایشی",
+      weekendDays: [4],
+      rollPolicy: "forward",
+      isDefault: false,
+    });
+    const after = await service.listCalendars();
+    expect(after).toHaveLength(before.length + 1);
+    expect(after.some((row) => row.code === "CAL-TEST")).toBe(true);
+  });
+
+  it("keeps exactly one tenant default when a new calendar claims it", async () => {
+    const service = createDemoWorkCalendarService();
+    await service.saveCalendar({
+      code: "CAL-CLAIM",
+      name: "تقویم پیش‌فرض تازه",
+      weekendDays: [4],
+      rollPolicy: "forward",
+      isDefault: true,
+    });
+    const rows = await service.listCalendars();
+    const defaults = rows.filter((row) => row.isDefault);
+    expect(defaults).toHaveLength(1);
+    expect(defaults[0].code).toBe("CAL-CLAIM");
+  });
+
+  it("gives a brand-new calendar a usable shape rather than undefined fields", async () => {
+    const service = createDemoWorkCalendarService();
+    const saved = await service.saveCalendar({ code: "CAL-BARE", name: "کمینه" });
+    expect(saved.timezone).toBe("Asia/Tehran");
+    expect(saved.weekendDays).toEqual([4]);
+    expect(saved.rollPolicy).toBe("forward");
+    expect(saved.shifts).toEqual([]);
+  });
+});
+
+describe("expandRecurringDates", () => {
+  it("follows the Jalali date, not the Gregorian one", () => {
+    // نوروز is 21 March in 1405/1406 but 20 March in 1407/1408. A naive
+    // repeat of the stored Gregorian date would be wrong half the time.
+    expect(expandRecurringDates(1, 1, "2026-01-01", "2030-12-31")).toEqual([
+      "2026-03-21",
+      "2027-03-21",
+      "2028-03-20",
+      "2029-03-20",
+      "2030-03-21",
+    ]);
+  });
+
+  it("skips ۳۰ اسفند in ordinary years instead of clamping it", () => {
+    // 1408 is a leap year; the surrounding ones are not.
+    expect(expandRecurringDates(12, 30, "2026-03-21", "2031-03-20")).toEqual(["2030-03-20"]);
+  });
+
+  it("keeps a mid-year holiday on its Jalali anniversary", () => {
+    expect(expandRecurringDates(11, 22, "2027-01-01", "2029-12-31")).toEqual([
+      "2027-02-11",
+      "2028-02-11",
+      "2029-02-10",
+    ]);
+  });
+
+  it("returns nothing for an inverted window or impossible parts", () => {
+    expect(expandRecurringDates(1, 1, "2027-01-01", "2026-01-01")).toEqual([]);
+    expect(expandRecurringDates(0, 1, "2026-01-01", "2030-01-01")).toEqual([]);
+    expect(expandRecurringDates(13, 1, "2026-01-01", "2030-01-01")).toEqual([]);
+    expect(expandRecurringDates(1, 0, "2026-01-01", "2030-01-01")).toEqual([]);
+  });
+
+  it("clips to the window rather than returning the whole year", () => {
+    expect(expandRecurringDates(1, 1, "2026-04-01", "2027-03-20")).toEqual([]);
+    expect(expandRecurringDates(1, 1, "2026-03-21", "2026-03-21")).toEqual(["2026-03-21"]);
+  });
+});
+
+describe("demo work calendar recurrence", () => {
+  it("projects a recurring holiday into a later year, matching the API", async () => {
+    const service = createDemoWorkCalendarService();
+    const rows = await service.listHolidays({
+      calendarId: "cal-main",
+      fromDate: "2029-03-01",
+      toDate: "2029-03-31",
+    });
+    const nowruz = rows.find((row) => row.onDate === "2029-03-20");
+    expect(nowruz).toBeDefined();
+    expect(nowruz?.name).toBe("نوروز");
+    expect(nowruz?.projected).toBe(true);
+  });
+
+  it("returns only real, deletable rows when no window is given", async () => {
+    const service = createDemoWorkCalendarService();
+    const rows = await service.listHolidays({ calendarId: "cal-main" });
+    expect(rows.every((row) => row.projected === false)).toBe(true);
+    expect(rows).toHaveLength(10);
+  });
+
+  it("treats a projected holiday as a closed day", async () => {
+    const service = createDemoWorkCalendarService();
+    const answer = await service.getWorkingDay({
+      onDate: "2029-03-20",
+      calendarId: "cal-main",
+    });
+    expect(answer.isWorkingDay).toBe(false);
+    expect(answer.isHoliday).toBe(true);
+  });
+
+  it("derives the Jalali parts on save instead of trusting the caller", async () => {
+    const service = createDemoWorkCalendarService();
+    const saved = await service.saveHoliday({
+      calendarId: "cal-main",
+      onDate: "2026-04-02",
+      name: "روز طبیعت",
+      kind: "official",
+      recursAnnually: true,
+      jalaliMonth: 99,
+      jalaliDay: 99,
+    });
+    expect(saved.jalaliMonth).toBe(1);
+    expect(saved.jalaliDay).toBe(13);
   });
 });

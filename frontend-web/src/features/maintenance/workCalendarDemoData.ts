@@ -20,8 +20,13 @@ import {
   isWorkingDay,
   isoDate,
   rollToWorkingDay,
+  MAX_ROLL_DAYS,
+  addDays,
+  expandRecurringDates,
+  parseIso,
   shiftDurationHours,
 } from "./workCalendarMath";
+import { isoToJalaliParts } from "../../core/localization/jalali";
 
 /**
  * Demo-mode work calendar (Phase 28).
@@ -125,16 +130,16 @@ const demoCalendars: WorkCalendar[] = [
 
 /** Fixed-date Iranian public holidays for 1405, as the backend seeds them. */
 const demoHolidays: CalendarHoliday[] = [
-  { id: "hol-1", calendarId: "cal-main", onDate: "2026-03-21", name: "نوروز", kind: "official", recursAnnually: true, jalaliMonth: 1, jalaliDay: 1 },
-  { id: "hol-2", calendarId: "cal-main", onDate: "2026-03-22", name: "نوروز", kind: "official", recursAnnually: true, jalaliMonth: 1, jalaliDay: 2 },
-  { id: "hol-3", calendarId: "cal-main", onDate: "2026-03-23", name: "نوروز", kind: "official", recursAnnually: true, jalaliMonth: 1, jalaliDay: 3 },
-  { id: "hol-4", calendarId: "cal-main", onDate: "2026-03-24", name: "نوروز", kind: "official", recursAnnually: true, jalaliMonth: 1, jalaliDay: 4 },
-  { id: "hol-5", calendarId: "cal-main", onDate: "2026-04-01", name: "روز جمهوری اسلامی", kind: "official", recursAnnually: true, jalaliMonth: 1, jalaliDay: 12 },
-  { id: "hol-6", calendarId: "cal-main", onDate: "2026-04-02", name: "روز طبیعت", kind: "official", recursAnnually: true, jalaliMonth: 1, jalaliDay: 13 },
-  { id: "hol-7", calendarId: "cal-main", onDate: "2026-06-04", name: "رحلت امام خمینی", kind: "official", recursAnnually: true, jalaliMonth: 3, jalaliDay: 14 },
-  { id: "hol-8", calendarId: "cal-main", onDate: "2026-06-05", name: "قیام ۱۵ خرداد", kind: "official", recursAnnually: true, jalaliMonth: 3, jalaliDay: 15 },
-  { id: "hol-9", calendarId: "cal-main", onDate: "2027-02-11", name: "پیروزی انقلاب اسلامی", kind: "official", recursAnnually: true, jalaliMonth: 11, jalaliDay: 22 },
-  { id: "hol-10", calendarId: "cal-main", onDate: "2027-03-20", name: "ملی‌شدن صنعت نفت", kind: "official", recursAnnually: true, jalaliMonth: 12, jalaliDay: 29 },
+  { id: "hol-1", calendarId: "cal-main", onDate: "2026-03-21", name: "نوروز", kind: "official", recursAnnually: true, jalaliMonth: 1, jalaliDay: 1, projected: false },
+  { id: "hol-2", calendarId: "cal-main", onDate: "2026-03-22", name: "نوروز", kind: "official", recursAnnually: true, jalaliMonth: 1, jalaliDay: 2, projected: false },
+  { id: "hol-3", calendarId: "cal-main", onDate: "2026-03-23", name: "نوروز", kind: "official", recursAnnually: true, jalaliMonth: 1, jalaliDay: 3, projected: false },
+  { id: "hol-4", calendarId: "cal-main", onDate: "2026-03-24", name: "نوروز", kind: "official", recursAnnually: true, jalaliMonth: 1, jalaliDay: 4, projected: false },
+  { id: "hol-5", calendarId: "cal-main", onDate: "2026-04-01", name: "روز جمهوری اسلامی", kind: "official", recursAnnually: true, jalaliMonth: 1, jalaliDay: 12, projected: false },
+  { id: "hol-6", calendarId: "cal-main", onDate: "2026-04-02", name: "روز طبیعت", kind: "official", recursAnnually: true, jalaliMonth: 1, jalaliDay: 13, projected: false },
+  { id: "hol-7", calendarId: "cal-main", onDate: "2026-06-04", name: "رحلت امام خمینی", kind: "official", recursAnnually: true, jalaliMonth: 3, jalaliDay: 14, projected: false },
+  { id: "hol-8", calendarId: "cal-main", onDate: "2026-06-05", name: "قیام ۱۵ خرداد", kind: "official", recursAnnually: true, jalaliMonth: 3, jalaliDay: 15, projected: false },
+  { id: "hol-9", calendarId: "cal-main", onDate: "2027-02-11", name: "پیروزی انقلاب اسلامی", kind: "official", recursAnnually: true, jalaliMonth: 11, jalaliDay: 22, projected: false },
+  { id: "hol-10", calendarId: "cal-main", onDate: "2027-03-20", name: "ملی‌شدن صنعت نفت", kind: "official", recursAnnually: true, jalaliMonth: 12, jalaliDay: 29, projected: false },
 ];
 
 /** A little synthetic PM demand so the capacity grid is not empty. */
@@ -151,13 +156,33 @@ const store = {
   holidays: clone(demoHolidays),
 };
 
-const shapeFor = (calendarId: string): CalendarShape => {
+/**
+ * Holidays in effect for a calendar over a window, recurrences included.
+ *
+ * Mirrors the backend `loadSpec`: stored rows always count, and rows flagged
+ * `recursAnnually` are additionally projected onto every Jalali anniversary
+ * inside the window. Without this the demo would show نوروز as a working day
+ * in every year but the one that happens to be seeded.
+ */
+const holidayDatesFor = (calendarId: string, fromIso?: string, toIso?: string): Set<string> => {
+  const rows = store.holidays.filter((row) => row.calendarId === calendarId);
+  const dates = new Set(rows.map((row) => row.onDate));
+  if (fromIso && toIso) {
+    for (const row of rows) {
+      if (!row.recursAnnually || !row.jalaliMonth || !row.jalaliDay) continue;
+      for (const iso of expandRecurringDates(row.jalaliMonth, row.jalaliDay, fromIso, toIso)) {
+        dates.add(iso);
+      }
+    }
+  }
+  return dates;
+};
+
+const shapeFor = (calendarId: string, fromIso?: string, toIso?: string): CalendarShape => {
   const calendar = store.calendars.find((row) => row.id === calendarId) ?? store.calendars[0];
   return {
     weekendDays: calendar?.weekendDays ?? [4],
-    holidays: new Set(
-      store.holidays.filter((row) => row.calendarId === calendar?.id).map((row) => row.onDate),
-    ),
+    holidays: holidayDatesFor(calendar?.id ?? calendarId, fromIso, toIso),
     rollPolicy: calendar?.rollPolicy ?? "forward",
   };
 };
@@ -213,16 +238,41 @@ export const createDemoWorkCalendarService = (): WorkCalendarService => ({
     store.holidays = store.holidays.filter((row) => row.calendarId !== calendarId);
   },
 
-  listHolidays: async ({ calendarId, fromDate, toDate }) =>
-    clone(
-      store.holidays
-        .filter((row) => row.calendarId === calendarId)
-        .filter((row) => (fromDate ? row.onDate >= fromDate : true))
-        .filter((row) => (toDate ? row.onDate <= toDate : true))
-        .sort((left, right) => left.onDate.localeCompare(right.onDate)),
-    ),
+  listHolidays: async ({ calendarId, fromDate, toDate }) => {
+    const rows = store.holidays.filter((row) => row.calendarId === calendarId);
+    // No window: the stored rows themselves, each with a real deletable id.
+    if (!fromDate || !toDate) {
+      return clone(
+        rows
+          .filter((row) => (fromDate ? row.onDate >= fromDate : true))
+          .filter((row) => (toDate ? row.onDate <= toDate : true))
+          .map((row) => ({ ...row, projected: false }))
+          .sort((left, right) => left.onDate.localeCompare(right.onDate)),
+      );
+    }
+    // Windowed: occurrences, with recurrences projected onto their anniversaries.
+    const seen = new Set<string>();
+    const items: CalendarHoliday[] = [];
+    for (const row of rows) {
+      if (row.onDate >= fromDate && row.onDate <= toDate) {
+        seen.add(row.onDate);
+        items.push({ ...row, projected: false });
+      }
+    }
+    for (const row of rows) {
+      if (!row.recursAnnually || !row.jalaliMonth || !row.jalaliDay) continue;
+      for (const iso of expandRecurringDates(row.jalaliMonth, row.jalaliDay, fromDate, toDate)) {
+        if (seen.has(iso)) continue;
+        seen.add(iso);
+        // Carries the source row's id: display only, never offer a delete.
+        items.push({ ...row, onDate: iso, projected: true });
+      }
+    }
+    return clone(items.sort((left, right) => left.onDate.localeCompare(right.onDate)));
+  },
 
   saveHoliday: async (input: SaveHolidayInput) => {
+    const parts = isoToJalaliParts(input.onDate);
     const saved: CalendarHoliday = {
       id: input.id || makeId("hol"),
       calendarId: input.calendarId,
@@ -230,8 +280,10 @@ export const createDemoWorkCalendarService = (): WorkCalendarService => ({
       name: input.name,
       kind: input.kind ?? "official",
       recursAnnually: input.recursAnnually ?? false,
-      jalaliMonth: input.jalaliMonth ?? 0,
-      jalaliDay: input.jalaliDay ?? 0,
+      // Derived, never taken from the caller — the server does the same.
+      jalaliMonth: parts ? parts[1] : 0,
+      jalaliDay: parts ? parts[2] : 0,
+      projected: false,
     };
     const index = store.holidays.findIndex((row) => row.id === saved.id);
     if (index >= 0) store.holidays[index] = saved;
@@ -278,10 +330,16 @@ export const createDemoWorkCalendarService = (): WorkCalendarService => ({
 
   getCapacityPlan: async ({ calendarId, fromDate, toDate }) => {
     const calendar = resolveCalendar(calendarId);
-    const shape = shapeFor(calendar.id);
     const today = isoDate(new Date());
     const start = fromDate || today;
     const end = toDate || isoDate(new Date(Date.now() + 29 * 86_400_000));
+    // Widen the recurrence window by the roll limit on both sides: work can be
+    // pushed off the end of the grid onto a day whose holiday status matters.
+    const shape = shapeFor(
+      calendar.id,
+      isoDate(addDays(parseIso(start), -MAX_ROLL_DAYS)),
+      isoDate(addDays(parseIso(end), MAX_ROLL_DAYS)),
+    );
 
     // Place the synthetic demand the same way the backend does: on the day
     // the calendar says the work will really be done.
@@ -365,7 +423,11 @@ export const createDemoWorkCalendarService = (): WorkCalendarService => ({
 
   getWorkingDay: async ({ onDate, calendarId }) => {
     const calendar = resolveCalendar(calendarId);
-    const shape = shapeFor(calendar.id);
+    const shape = shapeFor(
+      calendar.id,
+      isoDate(addDays(parseIso(onDate), -1)),
+      isoDate(addDays(parseIso(onDate), MAX_ROLL_DAYS + 1)),
+    );
     const planned = rollToWorkingDay(shape, onDate);
     const answer: WorkingDayAnswer = {
       calendarId: calendar.id,

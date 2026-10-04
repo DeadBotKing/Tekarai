@@ -7,6 +7,8 @@ import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { createWorkCalendarService } from "../features/maintenance/workCalendarService";
 import type { SaveCalendarInput } from "../features/maintenance/workCalendarService";
 import { createDemoWorkCalendarService } from "../features/maintenance/workCalendarDemoData";
+import { createRegistryService } from "../features/maintenance/registryService";
+import { createDemoRegistryService } from "../features/maintenance/registryDemoData";
 import { capacityTone, monthGridOffset } from "../features/maintenance/workCalendarMath";
 import {
   HOLIDAY_KINDS,
@@ -18,6 +20,7 @@ import {
   type HolidayKind,
   type RollPolicy,
   type ShiftKind,
+  type MaintenanceLocation,
   type WorkCalendar,
 } from "../shared/types/domain";
 import { Modal, Toast } from "../shared/components/overlays";
@@ -114,10 +117,18 @@ export function WorkCalendarPage(): JSX.Element {
     [api],
   );
 
+  const registry = useMemo(
+    () => (runtimeConfig.demoMode ? createDemoRegistryService() : createRegistryService(api)),
+    [api],
+  );
+
   const [tab, setTab] = useState<TabKey>("calendars");
+  const [sites, setSites] = useState<MaintenanceLocation[]>([]);
   const [calendars, setCalendars] = useState<WorkCalendar[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [holidays, setHolidays] = useState<CalendarHoliday[]>([]);
+  /** Occurrences in the displayed month, recurrences included — labels only. */
+  const [occurrences, setOccurrences] = useState<CalendarHoliday[]>([]);
   const [plan, setPlan] = useState<CapacityPlan | null>(null);
   const [month, setMonth] = useState<JalaliMonth>(currentJalaliMonth);
   const [loading, setLoading] = useState(true);
@@ -199,16 +210,41 @@ export function WorkCalendarPage(): JSX.Element {
     return () => controller.abort();
   }, [loadCalendars]);
 
+  // A calendar binds to a site, so the form needs the site list. It is only
+  // ever used to populate a picker, so a failure here must not break the page.
+  useEffect(() => {
+    const controller = new AbortController();
+    const run = async (): Promise<void> => {
+      try {
+        const rows = await registry.listLocations("", controller.signal);
+        setSites(rows.filter((row) => row.kind === "site"));
+      } catch {
+        setSites([]);
+      }
+    };
+    void run();
+    return () => controller.abort();
+  }, [registry]);
+
   // Holidays and the capacity plan both hang off the selected calendar, so they
   // reload together whenever it — or the month on display — changes.
   const loadDetail = useCallback(
     async (calendarId: string, fromDate: string, toDate: string, signal?: AbortSignal) => {
       try {
-        const [holidayRows, planRow] = await Promise.all([
+        // Two different questions, two different calls:
+        //  - windowless: the stored rows, which is what the holidays tab edits
+        //    and deletes. Every id here is real.
+        //  - windowed: the occurrences in the displayed month, with recurring
+        //    holidays projected onto their Jalali anniversary. These are what
+        //    the grid labels, and their ids belong to the source row, so they
+        //    must never be offered for deletion.
+        const [holidayRows, occurrenceRows, planRow] = await Promise.all([
           service.listHolidays({ calendarId }, signal),
+          service.listHolidays({ calendarId, fromDate, toDate }, signal),
           service.getCapacityPlan({ calendarId, fromDate, toDate }, signal),
         ]);
         setHolidays(holidayRows);
+        setOccurrences(occurrenceRows);
         setPlan(planRow);
       } catch (error) {
         if ((error as Error)?.name !== "AbortError") fail(error);
@@ -244,8 +280,8 @@ export function WorkCalendarPage(): JSX.Element {
   };
 
   const holidayByDate = useMemo(
-    () => new Map(holidays.map((holiday) => [holiday.onDate, holiday])),
-    [holidays],
+    () => new Map(occurrences.map((holiday) => [holiday.onDate, holiday])),
+    [occurrences],
   );
 
   /** Capacity for one ordinary open week — the headline figure of the page. */
@@ -259,6 +295,41 @@ export function WorkCalendarPage(): JSX.Element {
 
   // -- tabs ---------------------------------------------------------------------
 
+  /**
+   * Open the calendar form.
+   *
+   * The very first calendar a tenant creates is made the default, otherwise it
+   * belongs to nothing: `resolveCalendarIdForLocation` falls back to the tenant
+   * default, so a lone non-default calendar would never be found by a device
+   * or a location and the whole feature would stay inert.
+   */
+  const openCalendarForm = (): void => {
+    setCalendarForm({ ...emptyCalendarForm, isDefault: calendars.length === 0 });
+    setCalendarModal(true);
+  };
+
+  /**
+   * Holidays, shifts and capacity all hang off a calendar. Without one there is
+   * nothing to add them to — so say that plainly and offer the way out, rather
+   * than showing a disabled button that looks broken.
+   */
+  const renderNoCalendar = (): JSX.Element => (
+    <Card className="content-card" padding="md">
+      <EmptyState
+        icon="calendar"
+        title={t("calendar.needCalendar")}
+        description={t("calendar.needCalendarHint")}
+        action={
+          <PermissionGuard permission={PERMISSIONS.maintenanceDeviceManage}>
+            <Button variant="primary" icon="plus" onClick={openCalendarForm}>
+              {t("calendar.add")}
+            </Button>
+          </PermissionGuard>
+        }
+      />
+    </Card>
+  );
+
   const renderCalendars = (): JSX.Element => (
     <Card className="content-card" padding="md">
       <SectionHeader
@@ -268,10 +339,7 @@ export function WorkCalendarPage(): JSX.Element {
             <Button
               variant="primary"
               icon="plus"
-              onClick={() => {
-                setCalendarForm(emptyCalendarForm);
-                setCalendarModal(true);
-              }}
+              onClick={openCalendarForm}
             >
               {t("calendar.add")}
             </Button>
@@ -279,7 +347,11 @@ export function WorkCalendarPage(): JSX.Element {
         }
       />
       {calendars.length === 0 ? (
-        <EmptyState icon="calendar" title={t("calendar.empty")} />
+        <EmptyState
+          icon="calendar"
+          title={t("calendar.empty")}
+          description={t("calendar.needCalendarHint")}
+        />
       ) : (
         <div className="table-scroll">
           <table className="data-table">
@@ -325,7 +397,9 @@ export function WorkCalendarPage(): JSX.Element {
     </Card>
   );
 
-  const renderHolidays = (): JSX.Element => (
+  const renderHolidays = (): JSX.Element => {
+    if (!selected) return renderNoCalendar();
+    return (
     <Card className="content-card" padding="md">
       <SectionHeader
         title={t("calendar.tab.holidays")}
@@ -335,7 +409,6 @@ export function WorkCalendarPage(): JSX.Element {
             <Button
               variant="primary"
               icon="plus"
-              disabled={!selected}
               onClick={() => {
                 setHolidayForm({
                   onDate: todayIso(),
@@ -375,7 +448,19 @@ export function WorkCalendarPage(): JSX.Element {
                       {taxonomyLabel(t, "calendar.holidayKind.", holiday.kind)}
                     </Badge>
                   </td>
-                  <td>{holiday.recursAnnually ? "✓" : "—"}</td>
+                  <td>
+                    {holiday.recursAnnually && holiday.jalaliMonth ? (
+                      <Badge tone="info">
+                        {t("calendar.holiday.everyYearOn", {
+                          date: `${toPersianDigits(holiday.jalaliDay)} ${
+                            JALALI_MONTHS[holiday.jalaliMonth - 1]
+                          }`,
+                        })}
+                      </Badge>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   <td>
                     <PermissionGuard permission={PERMISSIONS.maintenanceDeviceManage}>
                       <Button
@@ -400,9 +485,12 @@ export function WorkCalendarPage(): JSX.Element {
         </div>
       )}
     </Card>
-  );
+    );
+  };
 
-  const renderShifts = (): JSX.Element => (
+  const renderShifts = (): JSX.Element => {
+    if (!selected) return renderNoCalendar();
+    return (
     <Card className="content-card" padding="md">
       <SectionHeader
         title={t("calendar.tab.shifts")}
@@ -411,7 +499,6 @@ export function WorkCalendarPage(): JSX.Element {
             <Button
               variant="primary"
               icon="plus"
-              disabled={!selected}
               onClick={() => setShiftModal(true)}
             >
               {t("calendar.shift.add")}
@@ -419,7 +506,7 @@ export function WorkCalendarPage(): JSX.Element {
           </PermissionGuard>
         }
       />
-      {!selected || selected.shifts.length === 0 ? (
+      {selected.shifts.length === 0 ? (
         <EmptyState icon="clock" title={t("calendar.shift.empty")} />
       ) : (
         <div className="table-scroll">
@@ -489,9 +576,13 @@ export function WorkCalendarPage(): JSX.Element {
         </div>
       )}
     </Card>
-  );
+    );
+  };
 
   const renderCapacity = (): JSX.Element => {
+    // Without a calendar there is no plan to wait for — showing a spinner here
+    // would simply hang forever.
+    if (!selected) return renderNoCalendar();
     if (!plan) return <LoadingState label={t("calendar.capacity.title")} />;
     const byDate = new Map(plan.days.map((day) => [day.onDate, day]));
     const offset = monthGridOffset(monthStartIso);
@@ -735,9 +826,14 @@ export function WorkCalendarPage(): JSX.Element {
               <Button
                 variant="primary"
                 loading={busy}
+                disabled={!calendarForm.code.trim() || !calendarForm.name.trim()}
                 onClick={() =>
                   void runWrite(async () => {
-                    await service.saveCalendar(calendarForm);
+                    await service.saveCalendar({
+                      ...calendarForm,
+                      code: calendarForm.code.trim(),
+                      name: calendarForm.name.trim(),
+                    });
                     setCalendarModal(false);
                   }, t("calendar.saved"))
                 }
@@ -750,12 +846,29 @@ export function WorkCalendarPage(): JSX.Element {
           <TextInput
             label={t("calendar.field.code")}
             value={calendarForm.code}
+            required
+            placeholder="CAL-MAIN"
             onChange={(event) => setCalendarForm({ ...calendarForm, code: event.target.value })}
           />
           <TextInput
             label={t("calendar.field.name")}
             value={calendarForm.name}
+            required
             onChange={(event) => setCalendarForm({ ...calendarForm, name: event.target.value })}
+          />
+          <SelectInput
+            label={t("calendar.field.site")}
+            value={calendarForm.locationId ?? ""}
+            onChange={(event) =>
+              setCalendarForm({ ...calendarForm, locationId: event.target.value })
+            }
+            options={[
+              { value: "", label: t("calendar.field.siteNone") },
+              ...sites.map((site) => ({
+                value: site.id,
+                label: site.path || `${site.code} — ${site.name}`,
+              })),
+            ]}
           />
           <TextInput
             label={t("calendar.field.timezone")}
@@ -822,6 +935,7 @@ export function WorkCalendarPage(): JSX.Element {
               <Button
                 variant="primary"
                 loading={busy}
+                disabled={!holidayForm.onDate.trim() || !holidayForm.name.trim()}
                 onClick={() =>
                   void runWrite(async () => {
                     if (!selected) return;
@@ -882,6 +996,7 @@ export function WorkCalendarPage(): JSX.Element {
               <Button
                 variant="primary"
                 loading={busy}
+                disabled={!shiftForm.code.trim() || !shiftForm.name.trim()}
                 onClick={() =>
                   void runWrite(async () => {
                     if (!selected) return;

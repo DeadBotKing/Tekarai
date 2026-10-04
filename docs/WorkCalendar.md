@@ -223,10 +223,28 @@ python manage.py seedIranHolidays [--calendar CODE] [--all-calendars] [--year 14
 
 Holidays **only** — unlike `seedDemo`, which also inserts 17 demo devices, 9
 locations and cost centres and is therefore unsafe to point at a real tenant.
-Defaults to the tenant default calendar and the current Jalali year, and is
-idempotent via the `(tenantId, calendarId, onDate)` unique constraint, so
-re-running it is harmless. Every row it writes is marked recurring, so in
-practice this is run **once** and the solar calendar is then correct forever.
+Defaults to the tenant default calendar and the current Jalali year. Every row
+it writes is marked recurring, so in practice this is run **once** and the
+solar calendar is then correct forever.
+
+Re-running it is harmless, and *harmless* here had to be earned. The first
+version matched existing holidays on `(tenantId, calendarId, onDate)` alone,
+which is the unique constraint — but ۱ فروردین ۱۴۰۵ and ۱ فروردین ۱۴۰۶ are
+different Gregorian dates, so `--year 1406` on a calendar already seeded for
+1405 cheerfully inserted a **second** نوروز rule that projected onto exactly
+the same days as the first, forever. Two identical lines in the holidays tab,
+neither of them wrong, both of them noise. The guard now also treats an
+existing *recurring* row for the same Jalali day as coverage, whatever year it
+is stored under:
+
+```
+manage.py seedIranHolidays --year 1405   ->  10 added, 0 already present
+manage.py seedIranHolidays --year 1406   ->   0 added, 10 already present
+manage.py seedIranHolidays --year 1408   ->   0 added, 10 already present
+```
+
+A hand-entered **one-off** on the same Jalali day does not suppress the
+official recurring row — only a recurring rule counts as coverage.
 
 The ~14 lunar holidays (عید فطر, تاسوعا, عاشورا …) are still entered by hand
 each year from the holidays tab, and the command prints a reminder saying so.
@@ -243,7 +261,7 @@ subsequent press is clutter on a screen used all year.
 | --- | --- |
 | `apps/maintenance/tests/testWorkCalendarRules.py` | 55 |
 | `apps/maintenance/tests/testJalaliCalendar.py` | 16 |
-| `apps/maintenance/tests/testSeedIranHolidays.py` | 12 |
+| `apps/maintenance/tests/testSeedIranHolidays.py` | 16 |
 | `apps/maintenance/tests/testHolidayJalaliBackfill.py` | 6 |
 | `backend/tests/integration/testWorkCalendarApi.py` | 42 |
 | `frontend-web/src/tests/workCalendar.test.ts` | 48 |

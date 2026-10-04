@@ -5,6 +5,14 @@ from __future__ import annotations
 from django.urls import path
 
 from apps.maintenance.presentation.api.views import openapiRegistration  # noqa: F401
+from apps.maintenance.presentation.api.views.performanceReviewViews import (
+    ComputeReviewView,
+    RaterScoreDetailView,
+    RaterScoreView,
+    ReviewCycleDetailView,
+    ReviewCycleListView,
+    ReviewResultsView,
+)
 from apps.maintenance.presentation.api.views.workCalendarViews import (
     CalendarHolidayDetailView,
     CalendarHolidayView,
@@ -238,6 +246,37 @@ urlpatterns = [
         "devices/<uuid:deviceId>/analytics",
         DeviceAnalyticsView.as_view(),
         name="deviceAnalytics",
+    ),
+    # -- Personnel performance review (Phase 29) ---------------------------------
+    path(
+        "performance-reviews/cycles",
+        ReviewCycleListView.as_view(),
+        name="reviewCycles",
+    ),
+    path(
+        "performance-reviews/scores",
+        RaterScoreView.as_view(),
+        name="reviewScores",
+    ),
+    path(
+        "performance-reviews/scores/<uuid:scoreId>",
+        RaterScoreDetailView.as_view(),
+        name="reviewScoreDetail",
+    ),
+    path(
+        "performance-reviews/compute",
+        ComputeReviewView.as_view(),
+        name="reviewCompute",
+    ),
+    path(
+        "performance-reviews/results",
+        ReviewResultsView.as_view(),
+        name="reviewResults",
+    ),
+    path(
+        "performance-reviews/cycles/<uuid:cycleId>",
+        ReviewCycleDetailView.as_view(),
+        name="reviewCycleDetail",
     ),
     # -- Work calendar, shifts, capacity (Phase 28) ------------------------------
     # Static segments are declared before the <uuid:> ones so "holidays" and

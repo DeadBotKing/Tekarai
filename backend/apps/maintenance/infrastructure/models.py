@@ -1227,3 +1227,132 @@ class ShiftAssignmentModel(models.Model):
 
     def __str__(self) -> str:  # pragma: no cover — debug helper
         return f"{self.personnelId}@{self.shiftId}"
+
+
+class PerformanceReviewCycleModel(models.Model):
+    """One appraisal round (دورهٔ ارزیابی) — Phase 29.
+
+    A cycle is the unit everything else hangs off: scores belong to a cycle,
+    results are computed per cycle, and a rater's standing is learned across
+    cycles. Keeping the weights on the cycle rather than in global settings
+    means a past review can always be recomputed under the rules it was
+    actually judged by, instead of silently changing when somebody retunes
+    the weights next year.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenantId = models.UUIDField(db_index=True)
+    code = models.CharField(max_length=60)
+    name = models.CharField(max_length=200)
+    fromDate = models.DateField()
+    toDate = models.DateField()
+    status = models.CharField(max_length=16, default="draft", db_index=True)
+    #: Share of the final mark taken from measured work rather than opinion.
+    systemWeightPercent = models.PositiveSmallIntegerField(default=30)
+    #: JSON object of role -> relative weight; empty means use the defaults.
+    roleWeights = models.TextField(blank=True, default="")
+    note = models.CharField(max_length=400, blank=True, default="")
+    createdAt = models.DateTimeField(db_index=True)
+    updatedAt = models.DateTimeField(null=True, blank=True)
+    deletedAt = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "MaintenancePerformanceCycle"
+        ordering = ["-fromDate", "name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenantId", "code"],
+                condition=models.Q(deletedAt__isnull=True),
+                name="uq_maintenance_perfcycle_tenant_code",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.code} — {self.name}"
+
+
+class PerformanceRaterScoreModel(models.Model):
+    """One manager's mark for one person in one cycle.
+
+    The unique constraint is the honesty mechanism: a role gets exactly one
+    score per person per cycle. Without it the same manager could submit
+    twice and double their own weight.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenantId = models.UUIDField(db_index=True)
+    cycleId = models.UUIDField(db_index=True)
+    personnelId = models.UUIDField(db_index=True)
+    raterRole = models.CharField(max_length=32, db_index=True)
+    #: Who submitted it, for the audit trail — a role is not a person.
+    raterUserId = models.UUIDField(null=True, blank=True)
+    raterName = models.CharField(max_length=200, blank=True, default="")
+    score = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    note = models.CharField(max_length=600, blank=True, default="")
+    submittedAt = models.DateTimeField(db_index=True)
+    updatedAt = models.DateTimeField(null=True, blank=True)
+    deletedAt = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "MaintenancePerformanceRaterScore"
+        ordering = ["raterRole"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenantId", "cycleId", "personnelId", "raterRole"],
+                condition=models.Q(deletedAt__isnull=True),
+                name="uq_maintenance_perfscore_cycle_person_role",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["tenantId", "cycleId", "personnelId"],
+                name="ix_perfscore_cycle_person",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.raterRole}: {self.score}"
+
+
+class PerformanceResultModel(models.Model):
+    """The computed outcome for one person in one cycle.
+
+    Stored rather than recomputed on every read for one reason: once a cycle
+    is closed the number has been shown to the person it describes, and it
+    must not drift afterwards because a work order was backdated or a weight
+    was retuned. ``breakdown`` keeps the full per-rater audit trail as JSON so
+    "why is my score this?" stays answerable years later.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenantId = models.UUIDField(db_index=True)
+    cycleId = models.UUIDField(db_index=True)
+    personnelId = models.UUIDField(db_index=True)
+    finalScore = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    humanScore = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    systemScore = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True
+    )
+    consensus = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    spread = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    raterCount = models.PositiveSmallIntegerField(default=0)
+    dampedCount = models.PositiveSmallIntegerField(default=0)
+    systemWeightPercent = models.PositiveSmallIntegerField(default=30)
+    #: JSON: per-rater weights, damping and the reason for each.
+    breakdown = models.TextField(blank=True, default="")
+    computedAt = models.DateTimeField(db_index=True)
+    deletedAt = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "MaintenancePerformanceResult"
+        ordering = ["-finalScore"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenantId", "cycleId", "personnelId"],
+                condition=models.Q(deletedAt__isnull=True),
+                name="uq_maintenance_perfresult_cycle_person",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.personnelId}: {self.finalScore}"

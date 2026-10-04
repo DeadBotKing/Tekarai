@@ -103,6 +103,62 @@ class SeedIranHolidaysTests(TestCase):
         self.assertEqual(len(self._holidays(calendar)), 0)
         self.assertIn("would add 10", output)
 
+    def testSeedingASecondYearAddsNothingBecauseTheRowsAlreadyRecur(self) -> None:
+        """The whole point of recurrence: one load covers every future year.
+
+        Matching only on `onDate` missed this, because 1 Farvardin 1405 and
+        1 Farvardin 1406 are different Gregorian dates — so a second run for
+        the next year quietly built a duplicate rule that fired on exactly
+        the same days forever.
+        """
+        calendar = self._calendar("CAL-MAIN", isDefault=True)
+        self._run(year=1405)
+        output = self._run(year=1406)
+        self.assertEqual(len(self._holidays(calendar)), 10)
+        self.assertIn("10 already present", output)
+
+    def testNoJalaliDayIsEverCoveredByTwoRecurringRules(self) -> None:
+        calendar = self._calendar("CAL-MAIN", isDefault=True)
+        for year in (1405, 1406, 1407, 1408):
+            self._run(year=year)
+        rules = [
+            (row.jalaliMonth, row.jalaliDay)
+            for row in self._holidays(calendar)
+            if row.recursAnnually
+        ]
+        self.assertEqual(len(rules), len(set(rules)))
+
+    def testADuplicateIsStillSkippedWhenTheFirstYearWasALeapYear(self) -> None:
+        """۳۰ اسفند is skipped in ordinary years, so the guard must not
+        mistake "absent because impossible" for "absent because missing"."""
+        calendar = self._calendar("CAL-MAIN", isDefault=True)
+        self._run(year=1408)  # leap
+        before = len(self._holidays(calendar))
+        self._run(year=1409)  # ordinary
+        self.assertEqual(len(self._holidays(calendar)), before)
+
+    def testAManuallyEnteredOneOffIsNotMistakenForARecurringRule(self) -> None:
+        """A non-recurring row must not suppress the official recurring one."""
+        calendar = self._calendar("CAL-MAIN", isDefault=True)
+        CalendarHolidayModel.objects.create(
+            tenantId=TENANT,
+            calendarId=calendar.id,
+            onDate=date(2027, 6, 5),  # 15 خرداد 1406, entered by hand, one-off
+            name="قیام ۱۵ خرداد",
+            kind="official",
+            recursAnnually=False,
+            jalaliMonth=3,
+            jalaliDay=15,
+            createdAt=djtz.now(),
+        )
+        self._run(year=1405)
+        recurring = [
+            row
+            for row in self._holidays(calendar)
+            if row.recursAnnually and (row.jalaliMonth, row.jalaliDay) == (3, 15)
+        ]
+        self.assertEqual(len(recurring), 1)
+
     def testDifferentJalaliYearsLandOnDifferentGregorianDates(self) -> None:
         """Proof the command converts rather than hardcoding 1405."""
         calendar = self._calendar("CAL-MAIN", isDefault=True)

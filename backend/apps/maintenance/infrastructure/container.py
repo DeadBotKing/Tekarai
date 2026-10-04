@@ -443,6 +443,19 @@ from apps.maintenance.application.useCases.assetHierarchyUseCases import (  # no
     ReinstateAssetUseCase,
     RetireAssetUseCase,
 )
+from apps.maintenance.application.useCases.performanceReviewUseCases import (  # noqa: E402
+    ComputeReviewCycleUseCase,
+    DeleteRaterScoreUseCase,
+    DeleteReviewCycleUseCase,
+    GetReviewResultsUseCase,
+    ListRaterScoresUseCase,
+    ListReviewCyclesUseCase,
+    SaveRaterScoreUseCase,
+    SaveReviewCycleUseCase,
+)
+from apps.maintenance.infrastructure.repositories.performanceReviewRepositoryImpl import (  # noqa: E402
+    PerformanceReviewRepositoryDjango,
+)
 from apps.maintenance.application.useCases.workCalendarUseCases import (  # noqa: E402
     DeleteCalendarEntryUseCase,
     GetCapacityPlanUseCase,
@@ -959,6 +972,49 @@ def applySyncBatchUseCase() -> ApplySyncBatchUseCase:
 
 def listSyncHistoryUseCase() -> ListSyncHistoryUseCase:
     return ListSyncHistoryUseCase(ledger=offlineSyncLedger(), **_kernelPorts())
+
+
+def performanceReviewRepository() -> PerformanceReviewRepositoryDjango:
+    return PerformanceReviewRepositoryDjango()
+
+
+def _performanceReviewDeps() -> dict:
+    return {
+        "reviewRepository": performanceReviewRepository(),
+        **_kernelPorts(),
+    }
+
+
+def listReviewCyclesUseCase() -> ListReviewCyclesUseCase:
+    return ListReviewCyclesUseCase(**_performanceReviewDeps())
+
+
+def saveReviewCycleUseCase() -> SaveReviewCycleUseCase:
+    return SaveReviewCycleUseCase(**_performanceReviewDeps())
+
+
+def deleteReviewCycleUseCase() -> DeleteReviewCycleUseCase:
+    return DeleteReviewCycleUseCase(**_performanceReviewDeps())
+
+
+def listRaterScoresUseCase() -> ListRaterScoresUseCase:
+    return ListRaterScoresUseCase(**_performanceReviewDeps())
+
+
+def saveRaterScoreUseCase() -> SaveRaterScoreUseCase:
+    return SaveRaterScoreUseCase(**_performanceReviewDeps())
+
+
+def deleteRaterScoreUseCase() -> DeleteRaterScoreUseCase:
+    return DeleteRaterScoreUseCase(**_performanceReviewDeps())
+
+
+def computeReviewCycleUseCase() -> ComputeReviewCycleUseCase:
+    return ComputeReviewCycleUseCase(**_performanceReviewDeps())
+
+
+def getReviewResultsUseCase() -> GetReviewResultsUseCase:
+    return GetReviewResultsUseCase(**_performanceReviewDeps())
 
 
 def workCalendarRepository() -> WorkCalendarRepositoryDjango:

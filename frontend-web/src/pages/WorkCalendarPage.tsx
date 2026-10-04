@@ -38,6 +38,7 @@ import {
   TextInput,
 } from "../shared/components/primitives";
 import { Icon } from "../shared/components/Icon";
+import { JalaliDatePicker } from "../shared/components/JalaliDatePicker";
 import {
   JALALI_MONTHS,
   JALALI_WEEKDAYS,
@@ -949,12 +950,10 @@ export function WorkCalendarPage(): JSX.Element {
             </>
           }
         >
-          <TextInput
+          <JalaliDatePicker
             label={t("calendar.holiday.date")}
             value={holidayForm.onDate}
-            placeholder="2026-03-21"
-            hint={holidayForm.onDate ? formatJalali(holidayForm.onDate) : undefined}
-            onChange={(event) => setHolidayForm({ ...holidayForm, onDate: event.target.value })}
+            onChange={(iso) => setHolidayForm({ ...holidayForm, onDate: iso })}
           />
           <TextInput
             label={t("calendar.holiday.name")}

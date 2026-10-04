@@ -10,8 +10,9 @@ future year without being re-entered. Lunar holidays (عاشورا, عید فط�
 every year on moon sighting and are deliberately not included; enter them per
 year from the holidays screen.
 
-Re-running is safe: holidays are matched on `(tenantId, calendarId, onDate)`,
-so an existing row is left alone rather than duplicated.
+Re-running is safe: a holiday is treated as already present when the calendar
+carries a row on the same date **or** a recurring row for the same Jalali day
+in any year, so an existing rule is left alone rather than duplicated.
 
     python manage.py seedIranHolidays
     python manage.py seedIranHolidays --calendar CAL-NORTH --year 1406
@@ -125,11 +126,23 @@ class Command(BaseCommand):
             if jDay > jalaliMonthLength(jalaliYear, jMonth):
                 continue
             onDate = jalaliToDate(jalaliYear, jMonth, jDay)
-            exists = CalendarHolidayModel.objects.filter(
+            onCalendar = CalendarHolidayModel.objects.filter(
                 tenantId=calendar.tenantId,
                 calendarId=calendar.id,
-                onDate=onDate,
                 deletedAt__isnull=True,
+            )
+            # Two different ways this day can already be covered.
+            #
+            # The obvious one is a row on the very same date. The one that
+            # actually bites is a *recurring* row for the same Jalali day
+            # stored under a different year: it already projects onto this
+            # date and every future one, so adding another would create a
+            # second rule that fires identically forever — two «نوروز» lines
+            # in the holidays tab, neither of them wrong, both of them noise.
+            # Matching on `onDate` alone cannot see it, because the dates
+            # differ by year.
+            exists = onCalendar.filter(onDate=onDate).exists() or onCalendar.filter(
+                recursAnnually=True, jalaliMonth=jMonth, jalaliDay=jDay
             ).exists()
             if exists:
                 skipped += 1

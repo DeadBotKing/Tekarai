@@ -53,7 +53,7 @@ const RETRY_INTERVAL_MS = 30_000;
 
 export function OfflineProvider({ children }: { children: ReactNode }): JSX.Element {
   const api = useApiClient();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, session } = useAuth();
   const service = useMemo(() => createFieldOpsService(api), [api]);
   const queue = useMemo(() => new OfflineQueue(createDefaultStore()), []);
   const engine = useMemo(() => new SyncEngine(queue, service), [queue, service]);
@@ -70,15 +70,19 @@ export function OfflineProvider({ children }: { children: ReactNode }): JSX.Elem
   // Storage is only touched once a session exists: the sign-in screen has
   // no queue to show, and opening IndexedDB there would be work done for a
   // user who may never log in.
+  const ownerId = session?.user.id ?? "";
   useEffect(() => {
     const unsubscribe = queue.subscribe(setOperations);
+    // Scope the queue to whoever is signed in *before* loading it, so a
+    // shared phone never shows — or sends — the previous shift's backlog.
+    queue.setOwner(ownerId);
     if (!isAuthenticated) return unsubscribe;
     void queue.load();
     void queue.getMeta<string>(LAST_SYNC_META_KEY).then((value) => {
       if (value) setLastSyncAt(value);
     });
     return unsubscribe;
-  }, [isAuthenticated, queue]);
+  }, [isAuthenticated, ownerId, queue]);
 
   const flush = useCallback(async (): Promise<SyncOutcome> => {
     if (!authenticated.current) {
@@ -157,6 +161,11 @@ export function OfflineProvider({ children }: { children: ReactNode }): JSX.Elem
         state: "pending",
         lastError: "",
         lastErrorCode: "",
+        // Asking by hand overrides the backoff: without clearing these the
+        // button looks broken, because the engine skips items whose retry
+        // window has not opened and re-parks anything already at the cap.
+        attempts: 0,
+        nextAttemptAt: "",
       });
       await flush();
     },

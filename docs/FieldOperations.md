@@ -210,6 +210,18 @@ opened. After `MAX_ATTEMPTS` (8) the item is parked instead of retried
 forever: a queue that spins against a server which will never accept it
 drains the battery and hides the real problem.
 
+**The queue belongs to one user.** Each item is stamped with the id of the
+technician who captured it; items owned by somebody else are neither listed
+nor sent, and wait for their owner to sign back in. Phones get handed over
+between shifts, and replaying one person's backlog under the next person's
+token would file their work against the wrong name and run it against the
+wrong permissions.
+
+**A manual retry overrides the backoff** — it resets `attempts` and clears
+`nextAttemptAt`. Without that the button is a lie: the engine skips items
+whose retry window has not opened, and an item already at the attempt cap
+re-parks on its first failure.
+
 **An expired session stops the flush.** A 401/403 from the transport sets
 `authRequired` and leaves the queue untouched *without* counting an attempt —
 the work never reached the server, so it must not be penalised. The UI asks

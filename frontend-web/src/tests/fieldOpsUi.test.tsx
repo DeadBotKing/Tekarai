@@ -206,6 +206,46 @@ describe("OfflineQueuePage — صف قابل دیدن و قابل ارسال", (
   });
 });
 
+describe("OfflineQueuePage — دکمهٔ «تلاش مجدد» باید واقعاً کار کند", () => {
+  it("overrides the backoff a failed item is sitting behind", async () => {
+    // The server fails the item once. The engine then holds it behind a
+    // delay — correct automatically, but the user asking by hand must not
+    // be told to wait: a button that does nothing gets pressed forever.
+    const posted: string[] = [];
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("maintenance/sync/history")) return envelope([]);
+      if (url.includes("maintenance/sync") && init?.method === "POST") {
+        const body = JSON.parse(String(init.body)) as {
+          operations: Array<{ clientRequestId: string; kind: string }>;
+        };
+        posted.push(body.operations[0]?.clientRequestId ?? "");
+        return envelope(
+          body.operations.map((operation) => ({
+            clientRequestId: operation.clientRequestId,
+            kind: operation.kind,
+            status: "failed",
+            errorMessage: "سرور موقتاً در دسترس نیست.",
+          })),
+        );
+      }
+      return envelope([]);
+    }) as unknown as typeof fetch;
+    vi.stubGlobal("fetch", fetcher);
+
+    renderInApp(<Enqueue />, "/app/maintenance/offline-queue");
+
+    await waitFor(() => expect(posted.length).toBe(1));
+    const sentOnce = posted.length;
+
+    const retryButton = await screen.findByRole("button", { name: fa("offline.retry") });
+    await userEvent.click(retryButton);
+
+    await waitFor(() => expect(posted.length).toBeGreaterThan(sentOnce));
+    vi.unstubAllGlobals();
+  });
+});
+
 describe("ScannerModal — وقتی دوربین نیست، کار متوقف نمی‌شود", () => {
   it("falls back to manual entry and resolves the code through the server", async () => {
     vi.stubGlobal("navigator", {

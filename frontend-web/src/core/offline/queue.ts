@@ -71,13 +71,33 @@ export class OfflineQueue {
     this.listeners.forEach((listener) => listener(snapshot));
   }
 
+  /**
+   * Whose queue this is. Set from the session on sign-in; an empty owner
+   * (sign-in screen) shows nothing rather than everything.
+   */
+  private owner = "";
+
+  setOwner(owner: string): void {
+    if (this.owner === owner) return;
+    this.owner = owner;
+    this.emit();
+  }
+
+  private readonly mine = (item: QueuedOperation): boolean =>
+    !item.owner || item.owner === this.owner;
+
   list(): QueuedOperation[] {
-    return [...this.cache];
+    return this.cache.filter(this.mine);
+  }
+
+  /** Items captured by somebody else, waiting for them to sign back in. */
+  countForeign(): number {
+    return this.cache.filter((item) => !this.mine(item)).length;
   }
 
   /** Items eligible for the next flush (rejected ones are parked). */
   pending(): QueuedOperation[] {
-    return this.cache.filter((item) => !isParked(item));
+    return this.cache.filter((item) => this.mine(item) && !isParked(item));
   }
 
   countPending(): number {
@@ -85,7 +105,7 @@ export class OfflineQueue {
   }
 
   countRejected(): number {
-    return this.cache.filter(isParked).length;
+    return this.cache.filter((item) => this.mine(item) && isParked(item)).length;
   }
 
   async enqueue(input: EnqueueInput): Promise<QueuedOperation> {
@@ -102,6 +122,7 @@ export class OfflineQueue {
       lastError: "",
       lastErrorCode: "",
       createdAt: now,
+      owner: this.owner,
     };
     await this.store.put(QUEUE_STORE, operation.clientRequestId, {
       ...operation,
@@ -130,7 +151,7 @@ export class OfflineQueue {
 
   /** Drop the permanently-refused items once the technician has seen them. */
   async clearRejected(): Promise<void> {
-    const rejected = this.cache.filter(isParked);
+    const rejected = this.cache.filter((item) => this.mine(item) && isParked(item));
     await Promise.all(
       rejected.map((item) => this.store.remove(QUEUE_STORE, item.clientRequestId)),
     );

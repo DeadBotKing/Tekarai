@@ -159,6 +159,7 @@ export function OfflineQueuePage(): JSX.Element {
     discard,
     retry,
     clearRejected,
+    queue,
   } = useOffline();
   const service = useMemo(() => createFieldOpsService(api), [api]);
   const [history, setHistory] = useState<SyncLedgerEntry[]>([]);
@@ -166,6 +167,8 @@ export function OfflineQueuePage(): JSX.Element {
 
   const pending = operations.filter((item) => !isParked(item));
   const rejected = operations.filter(isParked);
+  // Captured by a different user on this device; not ours to send.
+  const foreign = queue.countForeign();
 
   const loadHistory = useCallback(async (): Promise<void> => {
     try {
@@ -234,6 +237,12 @@ export function OfflineQueuePage(): JSX.Element {
             <span>{t("offline.rejectedSection")}</span>
             <strong>{rejected.length.toLocaleString("fa-IR")}</strong>
           </div>
+          {foreign > 0 && (
+            <div>
+              <span>{t("offline.foreignSection")}</span>
+              <strong>{foreign.toLocaleString("fa-IR")}</strong>
+            </div>
+          )}
           <div>
             <span>{t("offline.lastSync")}</span>
             <strong>{lastSyncAt ? moment(lastSyncAt) : t("offline.never")}</strong>

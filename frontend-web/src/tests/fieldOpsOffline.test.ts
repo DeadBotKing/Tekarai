@@ -481,3 +481,62 @@ describe("sessionStore — ماندگاری نشست انتخاب کاربر ا�
     expect(sessionStore.get()).toBeNull();
   });
 });
+
+describe("OfflineQueue — صف هر کاربر مال خودش است", () => {
+  let store = createMemoryStore();
+
+  beforeEach(() => {
+    store = createMemoryStore();
+  });
+
+  it("hides and never sends work captured by the previous shift", async () => {
+    const queue = new OfflineQueue(store);
+    queue.setOwner("tech-a");
+    await queue.enqueue({ kind: "workTimer.stop", payload: {}, label: "کار نفر اول" });
+
+    // Next shift signs in on the same phone.
+    queue.setOwner("tech-b");
+    expect(queue.list()).toHaveLength(0);
+    expect(queue.pending()).toHaveLength(0);
+    expect(queue.countForeign()).toBe(1);
+
+    let sent: QueuedOperation[] = [];
+    await engineFor(queue, [], (operations) => {
+      sent = operations;
+    }).flush();
+    expect(sent).toHaveLength(0);
+
+    // …and it is still there when its owner comes back.
+    queue.setOwner("tech-a");
+    expect(queue.pending()).toHaveLength(1);
+    expect(queue.countForeign()).toBe(0);
+  });
+
+  it("a manual retry clears the backoff instead of looking broken", async () => {
+    const queue = new OfflineQueue(store);
+    const item = await queue.enqueue({ kind: "meter.reading", payload: {}, label: "m" });
+    // State after a few transient failures: parked behind a long delay.
+    await queue.update(item.clientRequestId, {
+      state: "pending",
+      attempts: MAX_ATTEMPTS - 1,
+      nextAttemptAt: new Date(Date.now() + 25 * 60_000).toISOString(),
+    });
+
+    let sent: QueuedOperation[] = [];
+    await engineFor(queue, [], (operations) => {
+      sent = operations;
+    }).flush();
+    expect(sent).toHaveLength(0); // the backoff is respected…
+
+    // …until the user asks explicitly, which is what the button must do.
+    await queue.update(item.clientRequestId, {
+      state: "pending",
+      attempts: 0,
+      nextAttemptAt: "",
+    });
+    await engineFor(queue, [], (operations) => {
+      sent = operations;
+    }).flush();
+    expect(sent).toHaveLength(1);
+  });
+});

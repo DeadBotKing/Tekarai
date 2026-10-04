@@ -59,6 +59,14 @@ export interface QueuedOperation {
    * reconnect, which on a phone means a flat battery.
    */
   nextAttemptAt?: string;
+  /**
+   * Id of the user who captured it. Phones get shared between shifts, and
+   * replaying one technician's backlog under the next one's token would file
+   * their work against the wrong person — and run it against the wrong
+   * permissions. Items belonging to somebody else are neither listed nor
+   * sent; they wait for their owner to sign back in.
+   */
+  owner?: string;
 }
 
 export interface SyncOperationResult {

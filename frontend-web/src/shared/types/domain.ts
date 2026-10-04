@@ -367,6 +367,7 @@ export type LocationKind =
   | "floor"
   | "hall"
   | "line"
+  | "system"
   | "room"
   | "area"
   | (string & {});
@@ -384,15 +385,19 @@ export const EQUIPMENT_CRITICALITIES: EquipmentCriticality[] = [
   "medium",
   "low",
 ];
+/** Ordered site → building → floor → hall → line → system, then the
+ *  subdivisions a plant slots in wherever it needs them. */
 export const LOCATION_KINDS: LocationKind[] = [
   "site",
   "building",
   "floor",
   "hall",
   "line",
+  "system",
   "area",
   "room",
 ];
+export const ASSET_LEVELS: AssetLevel[] = ["mainEquipment", "subEquipment", "component"];
 export const PM_FREQUENCY_UNITS: PmFrequencyUnit[] = ["day", "week", "month", "runningHour"];
 export const DEVICE_ASSIGNMENT_ROLES: DeviceAssignmentRole[] = [
   "operator",
@@ -513,6 +518,92 @@ export interface DeviceAssignment {
   current: boolean;
 }
 
+/** تجهیز اصلی ← زیرتجهیز ← قطعه — the equipment half of the asset chain. */
+export type AssetLevel = "mainEquipment" | "subEquipment" | "component";
+
+/** One node of the asset tree: a location above, a device below. */
+export interface AssetTreeNode {
+  id: string;
+  nodeType: "location" | "device";
+  code: string;
+  name: string;
+  kind: string;
+  assetLevel: string;
+  status: string;
+  criticality: string;
+  path: string;
+  costCenterCode: string;
+  costCenterName: string;
+  installedOn: string;
+  retiredOn: string;
+  deviceCount: number;
+  children: AssetTreeNode[];
+}
+
+export interface AssetTree {
+  roots: AssetTreeNode[];
+  unplacedDevices: AssetTreeNode[];
+  counts: { locations: number; devices: number; unplacedDevices: number };
+}
+
+/** A link in an asset's upstream chain — a parent device or a location. */
+export interface AssetAncestorNode {
+  id: string;
+  code: string;
+  name: string;
+  nodeType: "location" | "device";
+  kind?: string;
+  assetLevel?: string;
+}
+
+export interface AssetAncestry {
+  device: {
+    id: string;
+    code: string;
+    name: string;
+    assetLevel: string;
+    status: string;
+    locationPath: string;
+    costCenterCode: string;
+    costCenterName: string;
+    installedOn: string;
+    retiredOn: string;
+  };
+  deviceChain: AssetAncestorNode[];
+  locationChain: AssetAncestorNode[];
+  children: Array<{
+    id: string;
+    code: string;
+    name: string;
+    assetLevel: string;
+    status: string;
+  }>;
+  descendantCount: number;
+  previousLocation: {
+    locationId?: string;
+    locationPath?: string;
+    movedOn?: string;
+    reason?: string;
+  };
+}
+
+/** One row of the transfer ledger. */
+export interface AssetMovement {
+  id: string;
+  deviceId: string;
+  fromLocationId: string;
+  fromLocationPath: string;
+  toLocationId: string;
+  toLocationPath: string;
+  fromParentDeviceId: string;
+  toParentDeviceId: string;
+  movedOn: string;
+  reason: string;
+  performedBy: string;
+  note: string;
+  createdAt: string;
+}
+
 export interface DeviceNameplate {
   manufacturer: string;
   modelNumber: string;
@@ -523,6 +614,9 @@ export interface DeviceNameplate {
   powerRating: string;
   electricalSpec: string;
   criticality: EquipmentCriticality;
+  assetLevel: string;
+  costCenterCode: string;
+  costCenterName: string;
   parentDeviceId: string;
   locationId: string;
   locationPath: string;

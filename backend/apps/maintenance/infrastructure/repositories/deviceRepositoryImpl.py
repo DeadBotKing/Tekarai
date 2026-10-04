@@ -150,8 +150,18 @@ class DeviceRepositoryDjango:
         "operatorUnit",
         "supplier",
         "notes",
+        "assetLevel",
+        "costCenterCode",
+        "costCenterName",
+        "retirementReason",
     )
-    NAMEPLATE_DATE_FIELDS = ("purchasedOn", "installedOn", "commissionedOn", "warrantyUntil")
+    NAMEPLATE_DATE_FIELDS = (
+        "purchasedOn",
+        "installedOn",
+        "commissionedOn",
+        "warrantyUntil",
+        "retiredOn",
+    )
     NAMEPLATE_DECIMAL_FIELDS = ("purchaseCost", "runningHours")
 
     def updateNameplate(
@@ -212,6 +222,9 @@ class DeviceRepositoryDjango:
         payload["locationId"] = str(model.locationId) if model.locationId else ""
         payload["locationPath"] = model.locationPath
         payload["parentDeviceId"] = str(model.parentDeviceId) if model.parentDeviceId else ""
+        payload["assetLevel"] = model.assetLevel or "mainEquipment"
+        payload["costCenterCode"] = model.costCenterCode
+        payload["costCenterName"] = model.costCenterName
         return payload
 
     @staticmethod
@@ -235,6 +248,146 @@ class DeviceRepositoryDjango:
                 tenantId=tenantId, parentDeviceId=deviceId, deletedAt__isnull=True
             )
         ]
+
+    # -- Phase 27 asset hierarchy ----------------------------------------------------
+    def parentMap(self, tenantId: uuid.UUID) -> dict[str, str | None]:
+        """Every live device's parent, as plain strings.
+
+        One query feeds all the cycle and ancestry arithmetic, which is pure
+        and lives in the domain layer.
+        """
+        return {
+            str(row["id"]): (str(row["parentDeviceId"]) if row["parentDeviceId"] else None)
+            for row in DeviceModel.objects.filter(
+                tenantId=tenantId, deletedAt__isnull=True
+            ).values("id", "parentDeviceId")
+        }
+
+    def hierarchyRows(self, tenantId: uuid.UUID) -> list[dict]:
+        """Flat list of live devices with just the columns a tree needs."""
+        return [
+            {
+                "id": str(row["id"]),
+                "code": row["code"],
+                "name": row["name"],
+                "status": row["status"],
+                "assetLevel": row["assetLevel"] or "mainEquipment",
+                "criticality": row["criticality"],
+                "parentDeviceId": (
+                    str(row["parentDeviceId"]) if row["parentDeviceId"] else ""
+                ),
+                "locationId": str(row["locationId"]) if row["locationId"] else "",
+                "locationPath": row["locationPath"],
+                "costCenterCode": row["costCenterCode"],
+                "costCenterName": row["costCenterName"],
+                "installedOn": row["installedOn"].isoformat() if row["installedOn"] else "",
+                "retiredOn": row["retiredOn"].isoformat() if row["retiredOn"] else "",
+            }
+            for row in DeviceModel.objects.filter(tenantId=tenantId, deletedAt__isnull=True)
+            .order_by("code")
+            .values(
+                "id",
+                "code",
+                "name",
+                "status",
+                "assetLevel",
+                "criticality",
+                "parentDeviceId",
+                "locationId",
+                "locationPath",
+                "costCenterCode",
+                "costCenterName",
+                "installedOn",
+                "retiredOn",
+            )
+        ]
+
+    def moveDevice(
+        self,
+        tenantId: uuid.UUID,
+        deviceId: uuid.UUID,
+        *,
+        toLocationId: uuid.UUID | None,
+        toLocationPath: str,
+        toParentDeviceId: uuid.UUID | None,
+        installedOn,
+        now: datetime,
+        assetLevel: str = "",
+    ) -> dict:
+        """Relocate one device and return the place it came from.
+
+        The caller turns that return value into the movement row, so the
+        previous location is captured by the same code path that overwrites
+        it — it cannot be forgotten.
+        """
+        model = DeviceModel.objects.filter(
+            id=deviceId, tenantId=tenantId, deletedAt__isnull=True
+        ).first()
+        if model is None:
+            return {}
+        previous = {
+            "fromLocationId": model.locationId,
+            "fromLocationPath": model.locationPath,
+            "fromParentDeviceId": model.parentDeviceId,
+        }
+        model.locationId = toLocationId
+        model.locationPath = toLocationPath
+        model.parentDeviceId = toParentDeviceId
+        if installedOn is not None:
+            model.installedOn = installedOn
+        if assetLevel:
+            model.assetLevel = assetLevel
+        model.updatedAt = now
+        model.save(
+            update_fields=[
+                "locationId",
+                "locationPath",
+                "parentDeviceId",
+                "installedOn",
+                "assetLevel",
+                "updatedAt",
+            ]
+        )
+        return previous
+
+    def retireDevice(
+        self,
+        tenantId: uuid.UUID,
+        deviceId: uuid.UUID,
+        *,
+        retiredOn,
+        reason: str,
+        now: datetime,
+    ) -> str:
+        """Mark an asset out of service; returns the status it held before."""
+        model = DeviceModel.objects.filter(
+            id=deviceId, tenantId=tenantId, deletedAt__isnull=True
+        ).first()
+        if model is None:
+            return ""
+        previousStatus = model.status
+        model.status = "retired"
+        model.retiredOn = retiredOn
+        model.retirementReason = reason
+        model.updatedAt = now
+        model.save(
+            update_fields=["status", "retiredOn", "retirementReason", "updatedAt"]
+        )
+        return previousStatus
+
+    def reinstateDevice(
+        self, tenantId: uuid.UUID, deviceId: uuid.UUID, *, status: str, now: datetime
+    ) -> bool:
+        """Undo a retirement — the date and reason are cleared with it."""
+        updated = DeviceModel.objects.filter(
+            id=deviceId, tenantId=tenantId, deletedAt__isnull=True
+        ).update(
+            status=status,
+            retiredOn=None,
+            retirementReason="",
+            updatedAt=now,
+        )
+        return bool(updated)
 
     def recordClosureDetails(
         self, tenantId: uuid.UUID, workOrderId: uuid.UUID, values: dict, now: datetime

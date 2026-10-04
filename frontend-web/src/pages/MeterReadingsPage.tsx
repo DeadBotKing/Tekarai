@@ -336,7 +336,7 @@ export function MeterReadingsPage(): JSX.Element {
   if (loading) return <LoadingState label={t("common.loading")} />;
 
   return (
-    <div className="page-stack" dir="rtl">
+    <div className="page-stack">
       <SectionHeader
         title={t("meter.title")}
         subtitle={t("meter.subtitle")}

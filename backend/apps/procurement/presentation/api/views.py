@@ -26,6 +26,11 @@ from apps.procurement.infrastructure.models import (
     SupplierModel,
     SupplierPartModel,
 )
+from apps.procurement.application.services.receiptRules import (
+    asQuantity,
+    guardOrderAcceptsDelivery,
+    guardReceiptLine,
+)
 from apps.sharedKernel.application.requestContext import currentContext
 from apps.sharedKernel.presentation.api.authentication import BearerSessionAuthentication
 from apps.sharedKernel.presentation.api.idempotency import IdempotencyMixin
@@ -364,15 +369,31 @@ class ReceiptListView(Base):
         t = tenant()
         raw = data.pop("lines")
         po = PurchaseOrderModel.objects.get(id=data["purchaseOrderId"], tenantId=t)
+        guardOrderAcceptsDelivery(po.status, po.number)
         rec = GoodsReceiptModel.objects.create(
             tenantId=t, number=f"GR-{uuid.uuid4().hex[:8].upper()}", status="posted", **data
         )
+        # Quantities already claimed by earlier lines of *this* receipt: each
+        # could pass on its own while together they exceed what was ordered.
+        pending: dict[str, Decimal] = {}
         for item in raw:
             line = PurchaseOrderLineModel.objects.get(
                 id=item["purchaseOrderLineId"], purchaseOrderId=po.id, tenantId=t
             )
-            qty = Decimal(str(item["quantity"]))
-            accepted = max(Decimal("0"), qty - Decimal(str(item.get("rejectedQuantity", 0))))
+            label = line.partName or line.partCode
+            # A refusal below aborts the atomic block, so the receipt row
+            # created above rolls back with it: nothing half-posted.
+            qty = asQuantity(item["quantity"], f"مقدار دریافتی «{label}»")
+            rejected = asQuantity(item.get("rejectedQuantity", 0), f"مقدار مردودی «{label}»")
+            accepted = guardReceiptLine(
+                label,
+                line.orderedQuantity,
+                line.receivedQuantity,
+                pending.get(str(line.id), Decimal("0")),
+                qty,
+                rejected,
+            )
+            pending[str(line.id)] = pending.get(str(line.id), Decimal("0")) + accepted
             GoodsReceiptLineModel.objects.create(
                 tenantId=t,
                 receiptId=rec.id,
@@ -380,7 +401,7 @@ class ReceiptListView(Base):
                 partId=line.partId,
                 quantity=qty,
                 unitCost=Decimal(str(item.get("unitCost", line.unitPrice))),
-                rejectedQuantity=item.get("rejectedQuantity", 0),
+                rejectedQuantity=rejected,
             )
             line.receivedQuantity += accepted
             line.save(update_fields=["receivedQuantity", "updatedAt"])

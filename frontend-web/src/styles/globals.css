@@ -4,7 +4,7 @@ html { background: var(--surface-0); }
 body { color: var(--text); background: var(--surface-0); font-family: var(--font-sans); font-size: 14px; font-weight: 400; font-optical-sizing: auto; font-feature-settings: "kern" 1, "liga" 1, "calt" 1; line-height: 1.65; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
 button, input, select, textarea { font: inherit; font-feature-settings: inherit; }
 strong, b, h1, h2, h3, h4, h5, h6 { font-weight: 720; }
-[dir="rtl"] { text-align: right; }
+[dir] { text-align: start; }
 [dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3, [dir="rtl"] h4, [dir="rtl"] strong, [dir="rtl"] .button, [dir="rtl"] .eyebrow { letter-spacing: 0; }
 input::placeholder, textarea::placeholder { font-weight: 400; }
 button, .button, .badge, .nav-item, .field__label { font-weight: 650; }
@@ -137,7 +137,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .cmms-report__table-head { padding: 16px 16px 0; }
 .cmms-report__table-wrap { overflow-x: auto; padding: 12px 16px 16px; }
 .cmms-report__table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.cmms-report__table th, .cmms-report__table td { text-align: right; padding: 8px 10px; border-bottom: 1px solid var(--border, #e5e7eb); }
+.cmms-report__table th, .cmms-report__table td { text-align: start; padding: 8px 10px; border-bottom: 1px solid var(--border, #e5e7eb); }
 .cmms-report__table th { font-weight: 600; color: var(--muted, #6b7280); background: var(--surface-muted, #f9fafb); }
 .cmms-report__table tbody tr:hover { background: var(--surface-muted, #f9fafb); }
 
@@ -167,7 +167,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .jdp__nav--year { display: inline-flex; align-items: center; justify-content: center; width: 34px; }
 .jdp__nav--year .icon + .icon { margin-inline-start: -8px; }
 .jdp__nav:hover { color: var(--primary); background: var(--primary-soft); }
-.jdp__weekdays, .jdp__grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.jdp__weekdays, .jdp__grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
 .jdp__weekday { display: grid; place-items: center; height: 28px; color: var(--text-muted, #667085); font-size: 12px; font-weight: 800; opacity: 1; }
 .jdp__cell { display: grid; place-items: center; height: 34px; color: var(--text-strong, #172033); background: transparent; border: 0; border-radius: 8px; cursor: pointer; font-family: var(--font-sans); font-size: 13px; font-weight: 650; line-height: 1; opacity: 1; visibility: visible; }
 .jdp__cell:hover { background: var(--surface-2); }
@@ -265,7 +265,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .device-detail-registry__grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-bottom:12px; }
 .device-detail-registry h3 { margin:0 0 8px; font-size:.92rem; }
 .device-detail-registry p { margin:0; line-height:1.9; color:var(--text-secondary, #626a7a); }
-.device-detail-registry ul { margin:0; padding-right:18px; color:var(--text-secondary, #626a7a); line-height:1.9; }
+.device-detail-registry ul { margin:0; padding-inline-start:18px; color:var(--text-secondary, #626a7a); line-height:1.9; }
 .device-detail-registry__pm-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
 .device-detail-registry__pm-grid > div { padding:10px; border:1px solid var(--border, #e6e8ee); border-radius:10px; }
 .device-detail-registry__pm-grid strong { font-size:.85rem; }
@@ -323,7 +323,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .weekly-report-summary .card strong { font-size: 16px; }
 .weekly-report-device { break-inside: avoid; }
 .weekly-report-device th, .weekly-report-device td { border-bottom: none; }
-.breakdown-sheet { direction: rtl; }
+.breakdown-sheet { text-align: start; }
 .breakdown-sheet__title { margin: 0 0 10px; font-size: 16px; font-weight: 800; text-align: center; }
 .breakdown-sheet__table { width: 100%; border-collapse: collapse; }
 .breakdown-sheet__table td { padding: 7px 10px; border: 1px solid var(--border); font-size: 12px; }
@@ -552,3 +552,82 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .pie-chart__legend strong { margin-inline-start: auto; color: var(--text-strong); font-size: 12px; }
 .layout-compact .pie-chart__center strong { font-size: 16px; }
 @media (max-width: 520px) { .pie-chart { flex-direction: column; gap: 12px; } .pie-chart__legend { min-width: 0; } }
+
+/* ===================================================================
+   Asset hierarchy tree (Phase 27)
+   One row per node, indented by depth. Indentation uses margin-inline-start
+   so the tree mirrors correctly when the frame flips to LTR; nothing here
+   needs an entry in rtl.css except the Latin codes, which are already
+   covered by the shared .plaintext rule.
+   =================================================================== */
+.asset-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: var(--space-3);
+}
+
+.asset-tree__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px var(--space-2);
+  border-radius: var(--radius-sm);
+  min-height: 34px;
+  transition: background-color 120ms ease;
+}
+
+.asset-tree__row:hover {
+  background: var(--surface-2);
+}
+
+.asset-tree__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.asset-tree__toggle:disabled {
+  cursor: default;
+  opacity: 0;
+}
+
+.asset-tree__code {
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.asset-tree__name {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* Let the name absorb the free space so the badges stay right-aligned. */
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.asset-tree__count,
+.asset-tree__cost {
+  font-size: 12px;
+  color: var(--text-3, var(--text-2));
+  white-space: nowrap;
+}
+
+.checkbox-field {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 13px;
+  white-space: nowrap;
+}

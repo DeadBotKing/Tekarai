@@ -51,6 +51,12 @@ from apps.maintenance.application.services.tenantResolver import (
     parseDateOrNone,
     resolveTenantId,
 )
+from apps.maintenance.domain.services.assetHierarchyRules import (
+    assertDepthWithinLimit,
+    assertLocationNesting,
+    assertNoCycle,
+    resolveChildLevel,
+)
 from apps.maintenance.domain.services.maintenanceAnalytics import (
     computeDeviceAnalytics,
     defaultWindow,
@@ -312,6 +318,14 @@ class SaveLocationUseCase(RegistryUseCaseBase):
         tenantId = resolveTenantId("")
         now = self.clock.nowUtc()
         parentId = uuid.UUID(command.parentId) if command.parentId else None
+        if parentId is not None:
+            parent = self.locationRepository.getById(tenantId, parentId)
+            if parent is None:
+                raise EntityNotFoundError("Parent location not found.")
+            # Catalogued kinds carry a rank, so a site filed under a production
+            # line is refused. A plant's own word («سوله») has no rank and is
+            # always allowed — the vocabulary stays open on purpose.
+            assertLocationNesting(parent.kind, parent.name, command.kind)
         if command.locationId:
             location = self.locationRepository.update(
                 tenantId,
@@ -1099,11 +1113,35 @@ class UpdateDeviceNameplateUseCase(RegistryUseCaseBase):
         elif "locationId" in values:
             values["locationId"] = None
         if values.get("parentDeviceId"):
-            parent = self.deviceRepository.getById(
-                tenantId, uuid.UUID(str(values["parentDeviceId"]))
-            )
+            parentId = str(values["parentDeviceId"])
+            parent = self.deviceRepository.getById(tenantId, uuid.UUID(parentId))
             if parent is None:
                 raise EntityNotFoundError("Parent device not found.")
+            # Before Phase 27 the repository silently dropped a device that was
+            # made its own parent and did nothing at all about longer loops, so
+            # A→B→A was writable and every ancestry walk after it hung. The
+            # guards below refuse the write and say why.
+            index = {
+                row["id"]: row for row in self.deviceRepository.hierarchyRows(tenantId)
+            }
+            parents = {key: (row["parentDeviceId"] or None) for key, row in index.items()}
+            assertNoCycle(command.deviceId, parentId, parents)
+            assertDepthWithinLimit(parentId, parents)
+            stated = "assetLevel" in values
+            childLevel = str(
+                values.get("assetLevel")
+                or index.get(command.deviceId, {}).get("assetLevel")
+                or ""
+            )
+            # An unstated default level is derived from the new parent rather
+            # than refused, so filing a machine under a line keeps working and
+            # classifies the machine at the same time.
+            values["assetLevel"] = resolveChildLevel(
+                index.get(parentId, {}).get("assetLevel", ""),
+                index.get(parentId, {}).get("name", ""),
+                childLevel,
+                stated=stated,
+            )
             values["parentDeviceId"] = parent.id
         elif "parentDeviceId" in values:
             values["parentDeviceId"] = None

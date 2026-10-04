@@ -435,7 +435,16 @@ from apps.maintenance.application.useCases.registryUseCases import (  # noqa: E4
     SaveSpecificationsUseCase,
     UpdateDeviceNameplateUseCase,
 )
+from apps.maintenance.application.useCases.assetHierarchyUseCases import (  # noqa: E402
+    GetAssetAncestryUseCase,
+    GetAssetTreeUseCase,
+    ListAssetMovementsUseCase,
+    MoveAssetUseCase,
+    ReinstateAssetUseCase,
+    RetireAssetUseCase,
+)
 from apps.maintenance.infrastructure.repositories.assetRegistryRepositoryImpl import (  # noqa: E402
+    AssetMovementRepositoryDjango,
     DeviceRegistryRepositoryDjango,
     LocationRepositoryDjango,
     MaintenanceAnalyticsRepositoryDjango,
@@ -468,6 +477,44 @@ def _registryDeps() -> dict:
         "analyticsRepository": maintenanceAnalyticsRepository(),
         **_kernelPorts(),
     }
+
+
+def assetMovementRepository() -> AssetMovementRepositoryDjango:
+    return AssetMovementRepositoryDjango()
+
+
+def _assetHierarchyDeps() -> dict:
+    return {
+        "deviceRepository": deviceRepository(),
+        "locationRepository": locationRepository(),
+        "movementRepository": assetMovementRepository(),
+        "historyRepository": deviceHistoryRepository(),
+        **_kernelPorts(),
+    }
+
+
+def getAssetTreeUseCase() -> GetAssetTreeUseCase:
+    return GetAssetTreeUseCase(**_assetHierarchyDeps())
+
+
+def getAssetAncestryUseCase() -> GetAssetAncestryUseCase:
+    return GetAssetAncestryUseCase(**_assetHierarchyDeps())
+
+
+def listAssetMovementsUseCase() -> ListAssetMovementsUseCase:
+    return ListAssetMovementsUseCase(**_assetHierarchyDeps())
+
+
+def moveAssetUseCase() -> MoveAssetUseCase:
+    return MoveAssetUseCase(**_assetHierarchyDeps())
+
+
+def retireAssetUseCase() -> RetireAssetUseCase:
+    return RetireAssetUseCase(**_assetHierarchyDeps())
+
+
+def reinstateAssetUseCase() -> ReinstateAssetUseCase:
+    return ReinstateAssetUseCase(**_assetHierarchyDeps())
 
 
 def saveLocationUseCase() -> SaveLocationUseCase:

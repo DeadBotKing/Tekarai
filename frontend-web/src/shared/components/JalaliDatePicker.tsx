@@ -114,7 +114,11 @@ export function JalaliDatePicker({
         spaceBelow >= estimatedHeight || rect.top < estimatedHeight
           ? rect.bottom + 6
           : Math.max(8, rect.top - estimatedHeight - 6);
-      const left = Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8));
+      // Align the popover with the edge the field starts from: the right in
+      // a right-to-left page, the left in a left-to-right one.
+      const isRtl = document.documentElement.dir === "rtl";
+      const preferred = isRtl ? rect.right - width : rect.left;
+      const left = Math.max(8, Math.min(preferred, window.innerWidth - width - 8));
       setPopoverPosition({ top, left });
     };
     placePopover();
@@ -225,25 +229,13 @@ export function JalaliDatePicker({
             <button
               type="button"
               className="jdp__nav jdp__nav--year"
-              aria-label="سال بعد"
-              title="سال بعد"
-              onClick={goNextYear}
+              aria-label="سال قبل"
+              title="سال قبل"
+              onClick={goPrevYear}
             >
-              <Icon name="chevronRight" size={13} />
-              <Icon name="chevronRight" size={13} />
+              <Icon name="chevronLeft" size={13} />
+              <Icon name="chevronLeft" size={13} />
             </button>
-            <button
-              type="button"
-              className="jdp__nav"
-              aria-label="ماه بعد"
-              title="ماه بعد"
-              onClick={goNextMonth}
-            >
-              <Icon name="chevronRight" size={16} />
-            </button>
-            <span className="jdp__title">
-              {JALALI_MONTHS[viewMonth - 1]} {toPersianDigits(viewYear)}
-            </span>
             <button
               type="button"
               className="jdp__nav"
@@ -253,15 +245,27 @@ export function JalaliDatePicker({
             >
               <Icon name="chevronLeft" size={16} />
             </button>
+            <span className="jdp__title">
+              {JALALI_MONTHS[viewMonth - 1]} {toPersianDigits(viewYear)}
+            </span>
+            <button
+              type="button"
+              className="jdp__nav"
+              aria-label="ماه بعد"
+              title="ماه بعد"
+              onClick={goNextMonth}
+            >
+              <Icon name="chevronRight" size={16} />
+            </button>
             <button
               type="button"
               className="jdp__nav jdp__nav--year"
-              aria-label="سال قبل"
-              title="سال قبل"
-              onClick={goPrevYear}
+              aria-label="سال بعد"
+              title="سال بعد"
+              onClick={goNextYear}
             >
-              <Icon name="chevronLeft" size={13} />
-              <Icon name="chevronLeft" size={13} />
+              <Icon name="chevronRight" size={13} />
+              <Icon name="chevronRight" size={13} />
             </button>
           </div>
 

@@ -149,15 +149,58 @@ LOCATION_LINE = "line"
 LOCATION_ROOM = "room"
 LOCATION_AREA = "area"
 
+LOCATION_SYSTEM = "system"
+
 LOCATION_KINDS = (
     LOCATION_SITE,
     LOCATION_BUILDING,
     LOCATION_FLOOR,
     LOCATION_HALL,
     LOCATION_LINE,
+    LOCATION_SYSTEM,
     LOCATION_ROOM,
     LOCATION_AREA,
 )
+
+#: Depth of each catalogued kind in the plant hierarchy
+#: (سایت ← ساختمان ← خط تولید ← سیستم). Floors, halls, rooms and areas are
+#: subdivisions that slot in where the plant puts them.
+#:
+#: Used only to refuse an *inverted* nesting — a site filed under a production
+#: line. A kind outside this map (a plant's own word, «سوله») carries no rank
+#: and is never refused: the vocabulary is deliberately open, and a rule that
+#: rejects what it does not recognise would make it closed again.
+LOCATION_KIND_RANK = {
+    LOCATION_SITE: 1,
+    LOCATION_BUILDING: 2,
+    LOCATION_FLOOR: 3,
+    LOCATION_HALL: 4,
+    LOCATION_LINE: 5,
+    LOCATION_SYSTEM: 6,
+    LOCATION_ROOM: 7,
+    LOCATION_AREA: 7,
+}
+
+# -- Asset levels (the equipment half of the hierarchy) ---------------------------
+# The location tree ends at a system; below it the chain continues through
+# devices: تجهیز اصلی ← زیرتجهیز ← قطعه.
+ASSET_MAIN_EQUIPMENT = "mainEquipment"
+ASSET_SUB_EQUIPMENT = "subEquipment"
+ASSET_COMPONENT = "component"
+
+ASSET_LEVELS = (
+    ASSET_MAIN_EQUIPMENT,
+    ASSET_SUB_EQUIPMENT,
+    ASSET_COMPONENT,
+)
+
+#: A child must sit strictly deeper than its parent: a component owns nothing,
+#: and a sub-assembly cannot own the machine it belongs to.
+ASSET_LEVEL_RANK = {
+    ASSET_MAIN_EQUIPMENT: 1,
+    ASSET_SUB_EQUIPMENT: 2,
+    ASSET_COMPONENT: 3,
+}
 
 # -- PM plan frequency units (Phase 26) --------------------------------------------
 FREQUENCY_DAY = "day"

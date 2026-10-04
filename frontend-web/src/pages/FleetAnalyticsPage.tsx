@@ -144,7 +144,7 @@ export function FleetAnalyticsPage(): JSX.Element {
   ];
 
   return (
-    <div className="page" dir="rtl">
+    <div className="page">
       <SectionHeader
         eyebrow={t("nav.maintenance")}
         title={t("registry.fleet.title")}

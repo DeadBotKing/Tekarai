@@ -1,4 +1,8 @@
 import type {
+  AssetAncestry,
+  AssetMovement,
+  AssetTree,
+  AssetTreeNode,
   DeviceAnalytics,
   DeviceAssignment,
   DeviceBomItem,
@@ -209,6 +213,9 @@ const emptyNameplate = (): DeviceNameplate => ({
   powerRating: "",
   electricalSpec: "",
   criticality: "medium",
+  assetLevel: "mainEquipment",
+  costCenterCode: "",
+  costCenterName: "",
   parentDeviceId: "",
   locationId: "",
   locationPath: "",
@@ -687,12 +694,14 @@ interface DemoStore {
   locations: MaintenanceLocation[];
   personnel: MaintenancePersonnel[];
   profiles: Record<string, DeviceProfile>;
+  movements: AssetMovement[];
 }
 
 const store: DemoStore = {
   locations: clone(demoLocations),
   personnel: clone(demoPersonnel),
   profiles: Object.fromEntries(demoDevices.map((device) => [device.id, buildProfile(device)])),
+  movements: [],
 };
 
 const locationPath = (locationId: string): string =>
@@ -885,7 +894,248 @@ const demoGetPmSchedule = (query: PmScheduleQuery = {}) => {
   return clone(items);
 }
 
+/** Mirrors the server's tree assembly closely enough that the page renders
+ *  the same shape with or without an API. */
+const buildDemoTree = (includeRetired: boolean): AssetTree => {
+  const devices = Object.values(store.profiles)
+    .map((profile) => ({ profile, nameplate: profile.nameplate }))
+    .filter(({ profile }) => includeRetired || profile.device.status !== "retired");
+
+  const deviceNode = (entry: (typeof devices)[number]): AssetTreeNode => ({
+    id: entry.profile.device.id,
+    nodeType: "device",
+    code: entry.profile.device.code,
+    name: entry.profile.device.name,
+    kind: "",
+    assetLevel: entry.nameplate.assetLevel || "mainEquipment",
+    status: entry.profile.device.status,
+    criticality: entry.nameplate.criticality,
+    path: entry.nameplate.locationPath,
+    costCenterCode: entry.nameplate.costCenterCode,
+    costCenterName: entry.nameplate.costCenterName,
+    installedOn: entry.nameplate.installedOn,
+    retiredOn: "",
+    deviceCount: 0,
+    children: [],
+  });
+
+  const deviceNodes = new Map(devices.map((entry) => [entry.profile.device.id, deviceNode(entry)]));
+  const attached = new Set<string>();
+  devices.forEach((entry) => {
+    const parentId = entry.nameplate.parentDeviceId;
+    const parent = parentId ? deviceNodes.get(parentId) : undefined;
+    const self = deviceNodes.get(entry.profile.device.id);
+    if (parent && self && parentId !== entry.profile.device.id) {
+      parent.children.push(self);
+      attached.add(entry.profile.device.id);
+    }
+  });
+
+  const locationNodes = new Map(
+    store.locations.map((location): [string, AssetTreeNode] => [
+      location.id,
+      {
+        id: location.id,
+        nodeType: "location",
+        code: location.code,
+        name: location.name,
+        kind: location.kind,
+        assetLevel: "",
+        status: "",
+        criticality: "",
+        path: location.path,
+        costCenterCode: "",
+        costCenterName: "",
+        installedOn: "",
+        retiredOn: "",
+        deviceCount: 0,
+        children: [],
+      },
+    ]),
+  );
+
+  devices.forEach((entry) => {
+    if (attached.has(entry.profile.device.id)) return;
+    const holder = locationNodes.get(entry.nameplate.locationId);
+    const self = deviceNodes.get(entry.profile.device.id);
+    if (holder && self) holder.children.push(self);
+  });
+
+  const roots: AssetTreeNode[] = [];
+  store.locations.forEach((location) => {
+    const node = locationNodes.get(location.id);
+    if (!node) return;
+    const parent = location.parentId ? locationNodes.get(location.parentId) : undefined;
+    if (parent && parent !== node) parent.children.push(node);
+    else roots.push(node);
+  });
+
+  const countDevices = (node: AssetTreeNode): number =>
+    node.children.reduce(
+      (total, child) =>
+        total + (child.nodeType === "device" ? 1 : 0) + countDevices(child),
+      0,
+    );
+  locationNodes.forEach((node) => {
+    node.deviceCount = countDevices(node);
+  });
+
+  const unplaced = devices
+    .filter(
+      (entry) =>
+        !attached.has(entry.profile.device.id) && !locationNodes.get(entry.nameplate.locationId),
+    )
+    .map((entry) => deviceNodes.get(entry.profile.device.id))
+    .filter((node): node is AssetTreeNode => Boolean(node));
+
+  return {
+    roots,
+    unplacedDevices: unplaced,
+    counts: {
+      locations: store.locations.length,
+      devices: devices.length,
+      unplacedDevices: unplaced.length,
+    },
+  };
+};
+
+const todayIso = (): string => new Date().toISOString().slice(0, 10);
+
 export const createDemoRegistryService = (): RegistryService => ({
+  getAssetTree: async (options = {}) => {
+    const tree = buildDemoTree(Boolean(options.includeRetired));
+    if (!options.rootId) return clone(tree);
+    const find = (nodes: AssetTreeNode[]): AssetTreeNode | undefined => {
+      for (const node of nodes) {
+        if (node.id === options.rootId) return node;
+        const hit = find(node.children);
+        if (hit) return hit;
+      }
+      return undefined;
+    };
+    const root = find(tree.roots);
+    return clone({ ...tree, roots: root ? [root] : [] });
+  },
+  getAssetAncestry: async (deviceId) => {
+    const profile = store.profiles[deviceId];
+    const nameplate = profile?.nameplate;
+    const chain: AssetAncestry["deviceChain"] = [];
+    let cursor = nameplate?.parentDeviceId ?? "";
+    const seen = new Set([deviceId]);
+    while (cursor && !seen.has(cursor) && store.profiles[cursor]) {
+      seen.add(cursor);
+      const parent = store.profiles[cursor];
+      chain.unshift({
+        id: parent.device.id,
+        code: parent.device.code,
+        name: parent.device.name,
+        nodeType: "device",
+        assetLevel: parent.nameplate.assetLevel,
+      });
+      cursor = parent.nameplate.parentDeviceId;
+    }
+    const locationChain: AssetAncestry["locationChain"] = [];
+    let locationCursor = nameplate?.locationId ?? "";
+    const seenLocations = new Set<string>();
+    while (locationCursor && !seenLocations.has(locationCursor)) {
+      seenLocations.add(locationCursor);
+      const location = store.locations.find((item) => item.id === locationCursor);
+      if (!location) break;
+      locationChain.unshift({
+        id: location.id,
+        code: location.code,
+        name: location.name,
+        nodeType: "location",
+        kind: location.kind,
+      });
+      locationCursor = location.parentId;
+    }
+    const previous = store.movements.filter((row) => row.deviceId === deviceId)[0];
+    return clone({
+      device: {
+        id: deviceId,
+        code: profile?.device.code ?? "",
+        name: profile?.device.name ?? "",
+        assetLevel: nameplate?.assetLevel ?? "mainEquipment",
+        status: profile?.device.status ?? "",
+        locationPath: nameplate?.locationPath ?? "",
+        costCenterCode: nameplate?.costCenterCode ?? "",
+        costCenterName: nameplate?.costCenterName ?? "",
+        installedOn: nameplate?.installedOn ?? "",
+        retiredOn: "",
+      },
+      deviceChain: chain,
+      locationChain,
+      children: Object.values(store.profiles)
+        .filter((item) => item.nameplate.parentDeviceId === deviceId)
+        .map((item) => ({
+          id: item.device.id,
+          code: item.device.code,
+          name: item.device.name,
+          assetLevel: item.nameplate.assetLevel,
+          status: item.device.status,
+        })),
+      descendantCount: Object.values(store.profiles).filter(
+        (item) => item.nameplate.parentDeviceId === deviceId,
+      ).length,
+      previousLocation: previous
+        ? {
+            locationId: previous.fromLocationId,
+            locationPath: previous.fromLocationPath,
+            movedOn: previous.movedOn,
+            reason: previous.reason,
+          }
+        : {},
+    });
+  },
+  listAssetMovements: async (deviceId) =>
+    clone(store.movements.filter((row) => row.deviceId === deviceId)),
+  moveAsset: async (deviceId, input) => {
+    const profile = store.profiles[deviceId];
+    const nameplate = profile?.nameplate;
+    const target = store.locations.find((item) => item.id === input.toLocationId);
+    const movement: AssetMovement = {
+      id: nextId("mov"),
+      deviceId,
+      fromLocationId: nameplate?.locationId ?? "",
+      fromLocationPath: nameplate?.locationPath ?? "",
+      toLocationId: target?.id ?? "",
+      toLocationPath: target?.path ?? "",
+      fromParentDeviceId: nameplate?.parentDeviceId ?? "",
+      toParentDeviceId: input.toParentDeviceId ?? "",
+      movedOn: input.movedOn || todayIso(),
+      reason: input.reason ?? "",
+      performedBy: input.performedBy ?? "",
+      note: input.note ?? "",
+      createdAt: new Date().toISOString(),
+    };
+    if (nameplate) {
+      if (target) {
+        nameplate.locationId = target.id;
+        nameplate.locationPath = target.path;
+      }
+      if (input.toParentDeviceId) nameplate.parentDeviceId = input.toParentDeviceId;
+      if (input.updateInstalledOn) nameplate.installedOn = movement.movedOn;
+    }
+    // Newest first, matching the server's ordering.
+    store.movements = [movement, ...store.movements];
+    return clone(movement);
+  },
+  retireAsset: async (deviceId, input) => {
+    const profile = store.profiles[deviceId];
+    if (profile) profile.device = { ...profile.device, status: "retired" };
+    return { retiredCount: 1, retiredOn: input.retiredOn || todayIso() };
+  },
+  reinstateAsset: async (deviceId, status) => {
+    const profile = store.profiles[deviceId];
+    if (profile) {
+      profile.device = {
+        ...profile.device,
+        status: (status || "operational") as DeviceProfile["device"]["status"],
+      };
+    }
+    return { status: status || "operational" };
+  },
   listLocations: async (search = "") =>
     clone(
       store.locations.filter((item) =>

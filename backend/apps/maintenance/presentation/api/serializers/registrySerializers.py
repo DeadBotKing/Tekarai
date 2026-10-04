@@ -8,6 +8,7 @@ from apps.maintenance.presentation.api.serializers.taxonomyFields import openVoc
 
 from apps.maintenance.domain.valueObjects.maintenanceState import (
     ASSET_CRITICALITIES,
+    ASSET_LEVELS,
     DEVICE_ASSIGNMENT_ROLES,
     LOCATION_KINDS,
     MAINTENANCE_DEPARTMENTS,
@@ -21,6 +22,7 @@ from apps.maintenance.domain.valueObjects.meterTypes import (
 DEPARTMENT_CHOICES = list(MAINTENANCE_DEPARTMENTS)
 CRITICALITY_CHOICES = list(ASSET_CRITICALITIES)
 LOCATION_KIND_CHOICES = list(LOCATION_KINDS)
+ASSET_LEVEL_CHOICES = list(ASSET_LEVELS)
 FREQUENCY_UNIT_CHOICES = list(PM_FREQUENCY_UNITS)
 ASSIGNMENT_ROLE_CHOICES = list(DEVICE_ASSIGNMENT_ROLES)
 TRIGGER_TYPE_CHOICES = list(PM_TRIGGER_TYPES)
@@ -162,6 +164,13 @@ class UpdateDeviceNameplateSerializer(serializers.Serializer):
         max_length=300, required=False, allow_blank=True, default=""
     )
     criticality = openVocabulary(CRITICALITY_CHOICES, default="medium")
+    assetLevel = openVocabulary(ASSET_LEVEL_CHOICES, default="mainEquipment")
+    costCenterCode = serializers.CharField(
+        max_length=60, required=False, allow_blank=True, default=""
+    )
+    costCenterName = serializers.CharField(
+        max_length=200, required=False, allow_blank=True, default=""
+    )
     parentDeviceId = serializers.CharField(required=False, allow_blank=True, default="")
     locationId = serializers.CharField(required=False, allow_blank=True, default="")
     operatorUnit = serializers.CharField(
@@ -200,3 +209,37 @@ class CloseWorkOrderDetailsSerializer(serializers.Serializer):
     labourHours = serializers.CharField(required=False, allow_blank=True, default="0")
     labourCost = serializers.CharField(required=False, allow_blank=True, default="0")
     partsCost = serializers.CharField(required=False, allow_blank=True, default="0")
+
+
+# =====================================================================================
+# Asset hierarchy (Phase 27)
+# =====================================================================================
+class MoveAssetSerializer(serializers.Serializer):
+    """Relocate an asset. Omitting a target leaves that side untouched; the
+    explicit ``clear*`` flags are how a caller detaches instead."""
+
+    toLocationId = serializers.CharField(required=False, allow_blank=True, default="")
+    toParentDeviceId = serializers.CharField(required=False, allow_blank=True, default="")
+    movedOn = serializers.CharField(required=False, allow_blank=True, default="")
+    reason = serializers.CharField(
+        max_length=300, required=False, allow_blank=True, default=""
+    )
+    performedBy = serializers.CharField(
+        max_length=160, required=False, allow_blank=True, default=""
+    )
+    note = serializers.CharField(required=False, allow_blank=True, default="")
+    updateInstalledOn = serializers.BooleanField(required=False, default=False)
+    clearLocation = serializers.BooleanField(required=False, default=False)
+    clearParent = serializers.BooleanField(required=False, default=False)
+
+
+class RetireAssetSerializer(serializers.Serializer):
+    retiredOn = serializers.CharField(required=False, allow_blank=True, default="")
+    reason = serializers.CharField(
+        max_length=300, required=False, allow_blank=True, default=""
+    )
+    retireChildren = serializers.BooleanField(required=False, default=False)
+
+
+class ReinstateAssetSerializer(serializers.Serializer):
+    status = serializers.CharField(required=False, allow_blank=True, default="operational")

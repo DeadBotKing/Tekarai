@@ -55,6 +55,7 @@ export const navigationConfig: NavigationItem[] = [
         children: [
           { id: "maintenanceDevices", label: "nav.cmmsDevices", icon: "cpu", route: "/app/maintenance/devices", permission: PERMISSIONS.maintenanceDeviceList },
           { id: "maintenanceRegistry", label: "nav.registry", icon: "grid", route: "/app/maintenance/registry", permission: PERMISSIONS.maintenanceDeviceList },
+          { id: "maintenanceAssetTree", label: "assets.tree.nav", icon: "layers", route: "/app/maintenance/asset-tree", permission: PERMISSIONS.maintenanceDeviceList },
           { id: "maintenanceLocations", label: "nav.registryLocations", icon: "building", route: "/app/maintenance/locations", permission: PERMISSIONS.maintenanceDeviceList },
           { id: "maintenancePersonnel", label: "nav.registryPersonnel", icon: "users", route: "/app/maintenance/personnel", permission: PERMISSIONS.maintenanceDeviceList },
         ],

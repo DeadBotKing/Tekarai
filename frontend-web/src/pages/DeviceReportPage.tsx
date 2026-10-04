@@ -111,7 +111,7 @@ export function DeviceReportPage(): JSX.Element {
       : 0;
 
   return (
-    <div className="page" dir="rtl">
+    <div className="page">
       <SectionHeader
         eyebrow={t("nav.maintenance")}
         title={

@@ -90,7 +90,7 @@ export function DataTable<T>({ columns, data, rowKey, search = "", pageSize = 6,
       <div className="table-toolbar__left">{selected.size > 0 && <span className="selection-count">{selected.size} {t("common.selected")}</span>}{bulkActions && selected.size > 0 && (typeof bulkActions === "function" ? bulkActions(selectedRows) : bulkActions)}</div>
       <div className="table-toolbar__right">
         {toolbar}
-        <div className="table-menu-wrap"><Button variant="ghost" size="sm" icon="table" onClick={() => setShowColumns((open) => !open)} aria-expanded={showColumns}>Columns</Button>{showColumns && <div className="table-menu" role="menu">{columns.filter((column) => column.hideable !== false).map((column) => <label key={column.key} className="table-menu__item"><input type="checkbox" checked={visibleKeys.has(column.key)} onChange={() => toggleColumn(column.key)} />{column.label}</label>)}</div>}</div>
+        <div className="table-menu-wrap"><Button variant="ghost" size="sm" icon="table" onClick={() => setShowColumns((open) => !open)} aria-expanded={showColumns}>{t("common.columns")}</Button>{showColumns && <div className="table-menu" role="menu">{columns.filter((column) => column.hideable !== false).map((column) => <label key={column.key} className="table-menu__item"><input type="checkbox" checked={visibleKeys.has(column.key)} onChange={() => toggleColumn(column.key)} />{column.label}</label>)}</div>}</div>
         <Button variant="ghost" size="sm" icon="download" onClick={() => downloadCsv(filteredData, visibleColumns, exportName)}>{t("common.export")}</Button>
       </div>
     </div>

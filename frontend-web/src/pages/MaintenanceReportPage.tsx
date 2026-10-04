@@ -150,7 +150,7 @@ export function MaintenanceReportPage(): JSX.Element {
   );
 
   return (
-    <div className="page cmms-report" dir="rtl">
+    <div className="page cmms-report">
       <SectionHeader
         eyebrow={t("nav.maintenance")}
         title="گزارش کلی نگهداری و تعمیرات"

@@ -205,7 +205,7 @@ export function OfflineQueuePage(): JSX.Element {
   };
 
   return (
-    <div className="page" dir="rtl">
+    <div className="page">
       <SectionHeader
         title={t("offline.queueTitle")}
         subtitle={t("offline.queueSubtitle")}

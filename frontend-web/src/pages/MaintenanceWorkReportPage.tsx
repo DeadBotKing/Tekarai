@@ -81,7 +81,7 @@ export default function MaintenanceWorkReportPage(): JSX.Element {
   const statusLabel = (status: string): string => t(`cmms.woStatus.${status}` as Parameters<typeof t>[0]);
 
   return (
-    <div className="page weekly-report-page" dir="rtl">
+    <div className="page weekly-report-page">
       <SectionHeader
         eyebrow="CMMS"
         title="گزارشنامه‌ی هفتگی‌ی کار"

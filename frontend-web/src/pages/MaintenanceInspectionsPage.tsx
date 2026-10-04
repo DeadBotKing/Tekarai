@@ -220,7 +220,7 @@ export default function MaintenanceInspectionsPage(): JSX.Element {
   const failedCount = runTemplate ? failedTemplateItems(runTemplate, runItems).length : 0;
 
   return (
-    <div className="page" dir="rtl">
+    <div className="page">
       <SectionHeader
         eyebrow={t("cmms.wave1.eyebrow")}
         title={t("cmms.wave1.title")}

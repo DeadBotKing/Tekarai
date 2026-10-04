@@ -1,9 +1,9 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { translate, type Direction, type Locale, type TranslationKey } from "./i18n";
+import { localeMeta, translate, type Direction, type Locale, type TranslationKey } from "./i18n";
 
-// v4: Persian content is the product default now, while the frame stays
-// LTR no matter what (see `direction` below). Bumping the key drops stale
-// persisted values from the earlier experimental builds.
+// v4: Persian is the product default and the frame now follows the locale —
+// Persian renders right-to-left, English and German left-to-right. Bumping
+// the key drops stale persisted values from the earlier experimental builds.
 const LOCALE_KEY = "tekarai.gui.locale.v4";
 
 const initialLocale = (): Locale => {
@@ -13,7 +13,7 @@ const initialLocale = (): Locale => {
   } catch {
     // Use the stable default when storage is unavailable.
   }
-  // فارسی برای همه — متن‌ها همه‌جا فارسی‌اند؛ قالب سایت همیشه LTR می‌ماند.
+  // فارسی برای همه — متن و قالب، هر دو.
   return "fa";
 };
 
@@ -29,10 +29,10 @@ const LocalizationContext = createContext<LocalizationContextValue | null>(null)
 
 export function LocalizationProvider({ children }: { children: ReactNode }): JSX.Element {
   const [locale, setLocaleState] = useState<Locale>(initialLocale);
-  // Product rule: the site layout is LTR regardless of the content language
-  // (متن فارسی، قالب چپ‌به‌راست). Pages that historically pin their own
-  // direction keep their explicit dir attribute.
-  const direction: Direction = "ltr";
+  // The layout mirrors with the language: Persian is read right-to-left, so
+  // the frame is too. Elements holding Latin content (codes, ids, URLs,
+  // charts) pin their own direction and stay readable either way.
+  const direction: Direction = localeMeta[locale].direction;
 
   useEffect(() => {
     const root = document.documentElement;

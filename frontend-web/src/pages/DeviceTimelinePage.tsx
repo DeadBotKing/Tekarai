@@ -103,7 +103,7 @@ export function DeviceTimelinePage(): JSX.Element {
   const items = timeline?.items ?? [];
 
   return (
-    <div className="page" dir="rtl">
+    <div className="page">
       <SectionHeader
         eyebrow={t("nav.maintenance")}
         title={

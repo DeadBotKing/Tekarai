@@ -58,6 +58,19 @@ class DeviceModel(models.Model):
     runningHours = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     notes = models.TextField(blank=True, default="")
 
+    # -- Phase 27 asset hierarchy ------------------------------------------------
+    # Where this record sits in تجهیز اصلی ← زیرتجهیز ← قطعه. Defaulted rather
+    # than nullable so every pre-existing row reads as a main asset, which is
+    # what it was before the level existed.
+    assetLevel = models.CharField(max_length=20, default="mainEquipment", db_index=True)
+    # Which budget carries this asset's repairs. Code and name are stored
+    # together so a report does not have to resolve a foreign context.
+    costCenterCode = models.CharField(max_length=60, blank=True, default="")
+    costCenterName = models.CharField(max_length=200, blank=True, default="")
+    # End of service. `status = retired` says it is out; this says when and why.
+    retiredOn = models.DateField(null=True, blank=True)
+    retirementReason = models.CharField(max_length=300, blank=True, default="")
+
     class Meta:
         db_table = "Device"
         ordering = ["-createdAt"]
@@ -316,6 +329,41 @@ class DeviceHistoryModel(models.Model):
 # stored as its own dated row so the reporting layer can count, average and
 # drill down instead of trusting a hand-maintained total.
 # =====================================================================================
+
+
+class AssetMovementModel(models.Model):
+    """Append-only record of every time a device changed its installed place.
+
+    The device row carries only *where it is now*. Without this ledger the
+    previous location is lost on the next move, and questions the plant
+    actually asks — "which line was this motor on last year?", "how often has
+    this pump been shuffled?" — have no answer. Both ends of the move are
+    denormalised (id plus the display path) so history stays readable even
+    after a location is renamed or removed.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenantId = models.UUIDField(db_index=True)
+    deviceId = models.UUIDField(db_index=True)
+    fromLocationId = models.UUIDField(null=True, blank=True)
+    fromLocationPath = models.CharField(max_length=800, blank=True, default="")
+    toLocationId = models.UUIDField(null=True, blank=True)
+    toLocationPath = models.CharField(max_length=800, blank=True, default="")
+    fromParentDeviceId = models.UUIDField(null=True, blank=True)
+    toParentDeviceId = models.UUIDField(null=True, blank=True)
+    movedOn = models.DateField(db_index=True)
+    reason = models.CharField(max_length=300, blank=True, default="")
+    performedBy = models.CharField(max_length=160, blank=True, default="")
+    note = models.TextField(blank=True, default="")
+    createdAt = models.DateTimeField(db_index=True)
+
+    class Meta:
+        db_table = "AssetMovement"
+        ordering = ["-movedOn", "-createdAt"]
+        indexes = [models.Index(fields=["tenantId", "deviceId", "-movedOn"])]
+
+    def __str__(self) -> str:  # pragma: no cover — debug helper
+        return f"move:{self.deviceId}:{self.movedOn}"
 
 
 class MaintenanceLocationModel(models.Model):

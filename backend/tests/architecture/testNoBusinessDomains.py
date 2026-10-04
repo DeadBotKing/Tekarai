@@ -144,6 +144,14 @@ class ContextOpeningRegisterTests(SimpleTestCase):
                 # allowed only inside the maintenance context.
                 if word == "Department" and "maintenance" in sourceFile.parts:
                     continue
+                # EVOLUTION NOTE (Phase 27): the Maintenance / CMMS context owns
+                # the explicit asset hierarchy — سایت ← ساختمان ← خط تولید ←
+                # سیستم ← تجهیز اصلی ← زیرتجهیز ← قطعه — together with asset
+                # levels, transfers and retirement. This is the CMMS equipment
+                # record, not the not-yet-opened fixed-asset/accounting context,
+                # and is allowed only inside the maintenance context.
+                if word == "Asset" and "maintenance" in sourceFile.parts:
+                    continue
                 self.assertNotIn(
                     word,
                     content,

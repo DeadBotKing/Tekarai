@@ -84,7 +84,7 @@ function TaskBoard({ tasks, onMove, onOpen }: { tasks: Task[]; onMove: (task: Ta
 }
 
 function TaskTimeline({ tasks }: { tasks: Task[] }): JSX.Element {
-  return <div className="task-timeline">{tasks.map((task) => <div className="task-timeline__row" key={task.id}><div className="task-timeline__label"><strong>{task.title}</strong><span>{task.project}</span></div><div className="task-timeline__track"><span className={`task-timeline__bar task-timeline__bar--${task.priority}`} style={{ left: `${Math.min(80, Math.max(0, Number(task.id.replace("task-", "")) * 3))}%`, width: `${task.status === "done" ? 20 : task.status === "inProgress" ? 30 : 18}%` }} /></div><span className="task-timeline__date">{formatJalali(task.dueDate, { style: "short" })}</span></div>)}</div>;
+  return <div className="task-timeline">{tasks.map((task) => <div className="task-timeline__row" key={task.id}><div className="task-timeline__label"><strong>{task.title}</strong><span>{task.project}</span></div><div className="task-timeline__track"><span className={`task-timeline__bar task-timeline__bar--${task.priority}`} style={{ insetInlineStart: `${Math.min(80, Math.max(0, Number(task.id.replace("task-", "")) * 3))}%`, width: `${task.status === "done" ? 20 : task.status === "inProgress" ? 30 : 18}%` }} /></div><span className="task-timeline__date">{formatJalali(task.dueDate, { style: "short" })}</span></div>)}</div>;
 }
 
 function TaskCalendar({ tasks }: { tasks: Task[] }): JSX.Element {

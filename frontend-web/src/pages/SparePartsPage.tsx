@@ -229,7 +229,7 @@ export function SparePartsPage(): JSX.Element {
       } },
   ], [t, reservationsTick]);
 
-  return <div className="page" dir="rtl">
+  return <div className="page">
     <SectionHeader eyebrow={t("nav.warehouse")} title={t("warehouse.title")} subtitle={t("warehouse.subtitle")} actions={<>
       <PermissionGuard permission={PERMISSIONS.maintenanceInventoryManage}>
         <Button variant="secondary" icon="upload" onClick={() => { setImportOpen(true); setImportReport(null); }}>{t("warehouse.import")}</Button>
@@ -295,7 +295,7 @@ export function SparePartsPage(): JSX.Element {
       </div>
     </Modal>
     <Modal open={Boolean(ledgerPart)} wide title={`${t("warehouse.ledger")} — ${ledgerPart?.code ?? ""}`} onClose={() => setLedgerPart(null)} footer={<Button variant="primary" onClick={() => setLedgerPart(null)}>{t("common.close")}</Button>}>
-      {ledgerPart && <div className="ledger" dir="rtl">
+      {ledgerPart && <div className="ledger">
         <p className="muted-cell">{t("warehouse.ledgerHint")} · <strong>{ledgerPart.name}</strong> — {t("warehouse.stock")}: <strong>{ledgerPart.quantityOnHand.toLocaleString()} {ledgerPart.unit}</strong></p>
         <PermissionGuard permission={PERMISSIONS.maintenanceInventoryManage}>
           <form className="ledger-form" onSubmit={(event) => { event.preventDefault(); submitTransaction(); }}>

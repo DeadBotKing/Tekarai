@@ -1006,7 +1006,7 @@ export function WorkOrdersPage(): JSX.Element {
   ];
 
   return (
-    <div className="page" dir="rtl">
+    <div className="page">
       <SectionHeader
         eyebrow={t("nav.maintenance")}
         title={t("cmms.wo.title")}

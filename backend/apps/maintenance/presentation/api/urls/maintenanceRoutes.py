@@ -5,6 +5,12 @@ from __future__ import annotations
 from django.urls import path
 
 from apps.maintenance.presentation.api.views import openapiRegistration  # noqa: F401
+from apps.maintenance.presentation.api.views.assetHierarchyViews import (
+    AssetAncestryView,
+    AssetMovementListView,
+    AssetRetirementView,
+    AssetTreeView,
+)
 from apps.maintenance.presentation.api.views.deviceViews import (
     DeviceDetailView,
     DeviceListView,
@@ -220,6 +226,23 @@ urlpatterns = [
         "devices/<uuid:deviceId>/analytics",
         DeviceAnalyticsView.as_view(),
         name="deviceAnalytics",
+    ),
+    # -- Asset hierarchy (Phase 27) ---------------------------------------------
+    path("assets/tree", AssetTreeView.as_view(), name="assetTree"),
+    path(
+        "devices/<uuid:deviceId>/ancestry",
+        AssetAncestryView.as_view(),
+        name="assetAncestry",
+    ),
+    path(
+        "devices/<uuid:deviceId>/movements",
+        AssetMovementListView.as_view(),
+        name="assetMovements",
+    ),
+    path(
+        "devices/<uuid:deviceId>/retirement",
+        AssetRetirementView.as_view(),
+        name="assetRetirement",
     ),
     path("analytics/fleet", FleetAnalyticsView.as_view(), name="fleetAnalytics"),
     path(

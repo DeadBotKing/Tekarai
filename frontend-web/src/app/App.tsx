@@ -11,6 +11,7 @@ import "../styles/chat.css";
 import "../styles/uiPolish.css";
 import "../styles/procurement.css";
 import "../styles/fieldOps.css";
+import "../styles/rtl.css";
 
 export function App(): JSX.Element {
   return <BrowserRouter><AppProviders><AppRouter /></AppProviders></BrowserRouter>;

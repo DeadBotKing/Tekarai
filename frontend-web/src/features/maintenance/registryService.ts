@@ -1,6 +1,10 @@
 import { ApiClient } from "../../core/api/apiClient";
 import { apiEndpoints } from "../../core/api/endpoints";
 import type {
+  AssetAncestry,
+  AssetMovement,
+  AssetTree,
+  AssetTreeNode,
   DeviceAnalytics,
   DeviceAssignment,
   DeviceAssignmentRole,
@@ -436,6 +440,107 @@ export const toAssignment = (dto: AssignmentDto): DeviceAssignment => ({
   current: Boolean(dto.current),
 });
 
+const toTreeNode = (raw: Record<string, unknown>): AssetTreeNode => ({
+  id: text(raw.id),
+  nodeType: text(raw.nodeType) === "device" ? "device" : "location",
+  code: text(raw.code),
+  name: text(raw.name),
+  kind: text(raw.kind),
+  assetLevel: text(raw.assetLevel),
+  status: text(raw.status),
+  criticality: text(raw.criticality),
+  path: text(raw.path),
+  costCenterCode: text(raw.costCenterCode),
+  costCenterName: text(raw.costCenterName),
+  installedOn: text(raw.installedOn),
+  retiredOn: text(raw.retiredOn),
+  deviceCount: num(raw.deviceCount),
+  children: Array.isArray(raw.children)
+    ? (raw.children as Record<string, unknown>[]).map(toTreeNode)
+    : [],
+});
+
+export const toAssetTree = (raw: Record<string, unknown>): AssetTree => {
+  const counts = (raw.counts ?? {}) as Record<string, unknown>;
+  return {
+    roots: Array.isArray(raw.roots)
+      ? (raw.roots as Record<string, unknown>[]).map(toTreeNode)
+      : [],
+    unplacedDevices: Array.isArray(raw.unplacedDevices)
+      ? (raw.unplacedDevices as Record<string, unknown>[]).map(toTreeNode)
+      : [],
+    counts: {
+      locations: num(counts.locations),
+      devices: num(counts.devices),
+      unplacedDevices: num(counts.unplacedDevices),
+    },
+  };
+};
+
+export const toAssetMovement = (raw: Record<string, unknown>): AssetMovement => ({
+  id: text(raw.id),
+  deviceId: text(raw.deviceId),
+  fromLocationId: text(raw.fromLocationId),
+  fromLocationPath: text(raw.fromLocationPath),
+  toLocationId: text(raw.toLocationId),
+  toLocationPath: text(raw.toLocationPath),
+  fromParentDeviceId: text(raw.fromParentDeviceId),
+  toParentDeviceId: text(raw.toParentDeviceId),
+  movedOn: text(raw.movedOn),
+  reason: text(raw.reason),
+  performedBy: text(raw.performedBy),
+  note: text(raw.note),
+  createdAt: text(raw.createdAt),
+});
+
+export const toAssetAncestry = (raw: Record<string, unknown>): AssetAncestry => {
+  const device = (raw.device ?? {}) as Record<string, unknown>;
+  const previous = (raw.previousLocation ?? {}) as Record<string, unknown>;
+  const chain = (value: unknown): AssetAncestry["deviceChain"] =>
+    Array.isArray(value)
+      ? (value as Record<string, unknown>[]).map((row) => ({
+          id: text(row.id),
+          code: text(row.code),
+          name: text(row.name),
+          nodeType: text(row.nodeType) === "device" ? "device" : "location",
+          kind: text(row.kind),
+          assetLevel: text(row.assetLevel),
+        }))
+      : [];
+  return {
+    device: {
+      id: text(device.id),
+      code: text(device.code),
+      name: text(device.name),
+      assetLevel: text(device.assetLevel),
+      status: text(device.status),
+      locationPath: text(device.locationPath),
+      costCenterCode: text(device.costCenterCode),
+      costCenterName: text(device.costCenterName),
+      installedOn: text(device.installedOn),
+      retiredOn: text(device.retiredOn),
+    },
+    deviceChain: chain(raw.deviceChain),
+    locationChain: chain(raw.locationChain),
+    children: Array.isArray(raw.children)
+      ? (raw.children as Record<string, unknown>[]).map((row) => ({
+          id: text(row.id),
+          code: text(row.code),
+          name: text(row.name),
+          assetLevel: text(row.assetLevel),
+          status: text(row.status),
+        }))
+      : [],
+    descendantCount: num(raw.descendantCount),
+    previousLocation: {
+      locationId: text(previous.locationId),
+      locationPath: text(previous.locationPath),
+      movedOn: text(previous.movedOn),
+      reason: text(previous.reason),
+    },
+  };
+};
+
 export const toNameplate = (raw: Record<string, unknown> | null | undefined): DeviceNameplate => ({
   manufacturer: text(raw?.manufacturer),
   modelNumber: text(raw?.modelNumber),
@@ -446,6 +551,9 @@ export const toNameplate = (raw: Record<string, unknown> | null | undefined): De
   powerRating: text(raw?.powerRating),
   electricalSpec: text(raw?.electricalSpec),
   criticality: (text(raw?.criticality) || "medium") as EquipmentCriticality,
+  assetLevel: text(raw?.assetLevel) || "mainEquipment",
+  costCenterCode: text(raw?.costCenterCode),
+  costCenterName: text(raw?.costCenterName),
   parentDeviceId: text(raw?.parentDeviceId),
   locationId: text(raw?.locationId),
   locationPath: text(raw?.locationPath),
@@ -726,7 +834,46 @@ export interface WorkOrderClosureInput {
   partsCost?: string;
 }
 
+export interface MoveAssetInput {
+  toLocationId?: string;
+  toParentDeviceId?: string;
+  movedOn?: string;
+  reason?: string;
+  performedBy?: string;
+  note?: string;
+  updateInstalledOn?: boolean;
+  clearLocation?: boolean;
+  clearParent?: boolean;
+}
+
+export interface RetireAssetInput {
+  retiredOn?: string;
+  reason?: string;
+  retireChildren?: boolean;
+}
+
 export interface RegistryService {
+  getAssetTree: (
+    options?: { rootId?: string; includeRetired?: boolean },
+    signal?: AbortSignal,
+  ) => Promise<AssetTree>;
+  getAssetAncestry: (deviceId: string, signal?: AbortSignal) => Promise<AssetAncestry>;
+  listAssetMovements: (deviceId: string, signal?: AbortSignal) => Promise<AssetMovement[]>;
+  moveAsset: (
+    deviceId: string,
+    input: MoveAssetInput,
+    signal?: AbortSignal,
+  ) => Promise<AssetMovement>;
+  retireAsset: (
+    deviceId: string,
+    input: RetireAssetInput,
+    signal?: AbortSignal,
+  ) => Promise<{ retiredCount: number; retiredOn: string }>;
+  reinstateAsset: (
+    deviceId: string,
+    status: string,
+    signal?: AbortSignal,
+  ) => Promise<{ status: string }>;
   listLocations: (search?: string, signal?: AbortSignal) => Promise<MaintenanceLocation[]>;
   createLocation: (input: SaveLocationInput, signal?: AbortSignal) => Promise<MaintenanceLocation>;
   updateLocation: (
@@ -817,6 +964,70 @@ export interface RegistryService {
 }
 
 export const createRegistryService = (api: ApiClient): RegistryService => ({
+  getAssetTree: async (options = {}, signal) => {
+    const raw = await api.get<Record<string, unknown>>(apiEndpoints.maintenance.assetTree, {
+      query: {
+        rootId: options.rootId ?? "",
+        includeRetired: options.includeRetired ? "true" : "",
+      },
+      signal,
+    });
+    return toAssetTree(raw ?? {});
+  },
+  getAssetAncestry: async (deviceId, signal) => {
+    const raw = await api.get<Record<string, unknown>>(
+      apiEndpoints.maintenance.deviceAncestry(deviceId),
+      { signal },
+    );
+    return toAssetAncestry(raw ?? {});
+  },
+  listAssetMovements: async (deviceId, signal) => {
+    const rows = await api.get<Record<string, unknown>[]>(
+      apiEndpoints.maintenance.deviceMovements(deviceId),
+      { signal },
+    );
+    return (rows ?? []).map(toAssetMovement);
+  },
+  moveAsset: async (deviceId, input, signal) => {
+    const raw = await api.post<Record<string, unknown>>(
+      apiEndpoints.maintenance.deviceMovements(deviceId),
+      {
+        toLocationId: input.toLocationId ?? "",
+        toParentDeviceId: input.toParentDeviceId ?? "",
+        movedOn: input.movedOn ?? "",
+        reason: input.reason ?? "",
+        performedBy: input.performedBy ?? "",
+        note: input.note ?? "",
+        updateInstalledOn: Boolean(input.updateInstalledOn),
+        clearLocation: Boolean(input.clearLocation),
+        clearParent: Boolean(input.clearParent),
+      },
+      { signal, retry: 0 },
+    );
+    return toAssetMovement(raw ?? {});
+  },
+  retireAsset: async (deviceId, input, signal) => {
+    const raw = await api.post<Record<string, unknown>>(
+      apiEndpoints.maintenance.deviceRetirement(deviceId),
+      {
+        retiredOn: input.retiredOn ?? "",
+        reason: input.reason ?? "",
+        retireChildren: Boolean(input.retireChildren),
+      },
+      { signal, retry: 0 },
+    );
+    return {
+      retiredCount: num(raw?.retiredCount),
+      retiredOn: text(raw?.retiredOn),
+    };
+  },
+  reinstateAsset: async (deviceId, status, signal) => {
+    const raw = await api.delete<Record<string, unknown>>(
+      apiEndpoints.maintenance.deviceRetirement(deviceId),
+      { signal, retry: 0, query: { status } },
+    );
+    return { status: text(raw?.status) || status };
+  },
   listLocations: async (search = "", signal) => {
     const dtos = await api.get<LocationDto[]>(apiEndpoints.maintenance.locations, {
       query: { search },

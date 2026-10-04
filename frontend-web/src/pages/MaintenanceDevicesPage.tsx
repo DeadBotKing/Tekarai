@@ -419,7 +419,7 @@ export function MaintenanceDevicesPage(): JSX.Element {
   const deviceTree = useMemo(() => buildDeviceTree(devices, treeOrders), [devices, treeOrders]);
 
   return (
-    <div className="page" dir="rtl">
+    <div className="page">
       <SectionHeader
         eyebrow={t("nav.maintenance")}
         title={t("cmms.devices.title")}

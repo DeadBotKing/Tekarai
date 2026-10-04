@@ -39,6 +39,8 @@ LOCATIONS = [
     {"code": "HALL-1", "name": "سالن تولید شماره ۱", "kind": "hall", "parent": "BLD-A"},
     {"code": "LINE-1", "name": "خط تولید ۱", "kind": "line", "parent": "HALL-1"},
     {"code": "LINE-2", "name": "خط تولید ۲", "kind": "line", "parent": "HALL-1"},
+    {"code": "SYS-HYD1", "name": "سیستم هیدرولیک خط ۱", "kind": "system", "parent": "LINE-1"},
+    {"code": "SYS-COOL1", "name": "سیستم خنک‌کاری خط ۱", "kind": "system", "parent": "LINE-1"},
     {"code": "BLD-B", "name": "ساختمان B — ابنیه‌فنی", "kind": "building", "parent": "SITE-01"},
     {"code": "BOILER", "name": "موتورخانه مرکزی", "kind": "room", "parent": "BLD-B"},
 ]
@@ -62,15 +64,35 @@ SPARE_PARTS = [
 ]
 
 DEVICES = [
-    {"code": "PRS-101", "name": "پرس هیدرولیک خط ۱", "department": "production", "status": "operational", "location": "LINE-1", "criticality": "high", "interval": 30, "manufacturer": "ماشین‌سازی تبریز", "model": "HP-320", "cost": "2500000000", "hours": "14200"},
-    {"code": "PRS-102", "name": "پرس هیدرولیک خط ۲", "department": "production", "status": "operational", "location": "LINE-2", "criticality": "high", "interval": 30, "manufacturer": "ماشین‌سازی تبریز", "model": "HP-320", "cost": "2500000000", "hours": "12850"},
-    {"code": "CNC-201", "name": "تراش CNC شماره ۱", "department": "production", "status": "maintenance", "location": "LINE-1", "criticality": "critical", "interval": 21, "manufacturer": "هیدن‌هاین", "model": "C640", "cost": "7400000000", "hours": "22100"},
-    {"code": "MLD-205", "name": "دستگاه تزریق پلاستیک", "department": "production", "status": "operational", "location": "LINE-2", "criticality": "high", "interval": 45, "manufacturer": "کروس‌مافو", "model": "GX-900", "cost": "5100000000", "hours": "18900"},
-    {"code": "CON-310", "name": "نوارنقاله انتقال مواد", "department": "production", "status": "operational", "location": "LINE-1", "criticality": "medium", "interval": 60, "manufacturer": "سنگین‌فلز", "model": "CV-1200", "cost": "860000000", "hours": "26000"},
-    {"code": "PMP-410", "name": "پمپ آب خنک‌کاری موتورخانه", "department": "utilities", "status": "operational", "location": "BOILER", "criticality": "high", "interval": 30, "manufacturer": "پمپ‌راد", "model": "CR-90", "cost": "1180000000", "hours": "31000"},
-    {"code": "BLR-420", "name": "بویلر بخار ۳ تن", "department": "utilities", "status": "operational", "location": "BOILER", "criticality": "critical", "interval": 14, "manufacturer": "ماشین‌سازی اراک", "model": "WS-3000", "cost": "9200000000", "hours": "28400"},
-    {"code": "GEN-450", "name": "دیزل ژنراتور اضطراری", "department": "utilities", "status": "standby", "location": "BLD-B", "criticality": "high", "interval": 30, "manufacturer": "کامینز", "model": "S6.7-G7", "cost": "3400000000", "hours": "3100"},
+    {"code": "PRS-101", "name": "پرس هیدرولیک خط ۱", "department": "production", "status": "operational", "location": "LINE-1", "criticality": "high", "interval": 30, "manufacturer": "ماشین‌سازی تبریز", "model": "HP-320", "cost": "2500000000", "hours": "14200", "costCenter": "CC-1100", "costCenterName": "تولید — خط ۱"},
+    {"code": "PRS-102", "name": "پرس هیدرولیک خط ۲", "department": "production", "status": "operational", "location": "LINE-2", "criticality": "high", "interval": 30, "manufacturer": "ماشین‌سازی تبریز", "model": "HP-320", "cost": "2500000000", "hours": "12850", "costCenter": "CC-1200", "costCenterName": "تولید — خط ۲"},
+    {"code": "CNC-201", "name": "تراش CNC شماره ۱", "department": "production", "status": "underMaintenance", "location": "LINE-1", "criticality": "critical", "interval": 21, "manufacturer": "هیدن‌هاین", "model": "C640", "cost": "7400000000", "hours": "22100", "costCenter": "CC-1100", "costCenterName": "تولید — خط ۱"},
+    {"code": "MLD-205", "name": "دستگاه تزریق پلاستیک", "department": "production", "status": "operational", "location": "LINE-2", "criticality": "high", "interval": 45, "manufacturer": "کروس‌مافو", "model": "GX-900", "cost": "5100000000", "hours": "18900", "costCenter": "CC-1200", "costCenterName": "تولید — خط ۲"},
+    {"code": "CON-310", "name": "نوارنقاله انتقال مواد", "department": "production", "status": "operational", "location": "LINE-1", "criticality": "medium", "interval": 60, "manufacturer": "سنگین‌فلز", "model": "CV-1200", "cost": "860000000", "hours": "26000", "costCenter": "CC-1100", "costCenterName": "تولید — خط ۱"},
+    {"code": "PMP-410", "name": "پمپ آب خنک‌کاری موتورخانه", "department": "utilities", "status": "operational", "location": "BOILER", "criticality": "high", "interval": 30, "manufacturer": "پمپ‌راد", "model": "CR-90", "cost": "1180000000", "hours": "31000", "costCenter": "CC-2100", "costCenterName": "تأسیسات"},
+    {"code": "BLR-420", "name": "بویلر بخار ۳ تن", "department": "utilities", "status": "operational", "location": "BOILER", "criticality": "critical", "interval": 14, "manufacturer": "ماشین‌سازی اراک", "model": "WS-3000", "cost": "9200000000", "hours": "28400", "costCenter": "CC-2100", "costCenterName": "تأسیسات"},
+    {"code": "GEN-450", "name": "دیزل ژنراتور اضطراری", "department": "utilities", "status": "outOfService", "location": "BLD-B", "criticality": "high", "interval": 30, "manufacturer": "کامینز", "model": "S6.7-G7", "cost": "3400000000", "hours": "3100", "costCenter": "CC-2200", "costCenterName": "برق اضطراری"},
 ]
+
+#: Sub-assemblies and components, filed under the machines they belong to.
+#: These complete the equipment half of the chain — تجهیز اصلی ← زیرتجهیز ←
+#: قطعه — which the location tree alone cannot express.
+SUB_ASSETS = [
+    {"code": "PRS-101-MTR", "name": "الکتروموتور پرس خط ۱", "department": "production", "status": "operational", "location": "SYS-HYD1", "criticality": "high", "interval": 90, "manufacturer": "موتوژن", "model": "3GB-132", "cost": "180000000", "hours": "14200", "level": "subEquipment", "costCenter": "CC-1100", "costCenterName": "تولید — خط ۱"},
+    {"code": "PRS-101-PMP", "name": "پمپ هیدرولیک پرس خط ۱", "department": "production", "status": "operational", "location": "SYS-HYD1", "criticality": "high", "interval": 60, "manufacturer": "بوش رکسروت", "model": "A10VSO", "cost": "320000000", "hours": "14200", "level": "subEquipment", "costCenter": "CC-1100", "costCenterName": "تولید — خط ۱"},
+    {"code": "PRS-101-BRG", "name": "یاتاقان محور اصلی پرس", "department": "production", "status": "operational", "location": "SYS-HYD1", "criticality": "medium", "interval": 180, "manufacturer": "SKF", "model": "6205-2RS", "cost": "1850000", "hours": "14200", "level": "component", "costCenter": "CC-1100", "costCenterName": "تولید — خط ۱"},
+    {"code": "CNC-201-SPN", "name": "اسپیندل تراش CNC", "department": "production", "status": "operational", "location": "LINE-1", "criticality": "critical", "interval": 120, "manufacturer": "هیدن‌هاین", "model": "SP-400", "cost": "940000000", "hours": "22100", "level": "subEquipment", "costCenter": "CC-1100", "costCenterName": "تولید — خط ۱"},
+]
+
+DEVICES = DEVICES + SUB_ASSETS
+
+#: child code → parent code.
+ASSET_PARENTS = {
+    "PRS-101-MTR": "PRS-101",
+    "PRS-101-PMP": "PRS-101",
+    "PRS-101-BRG": "PRS-101-MTR",
+    "CNC-201-SPN": "CNC-201",
+}
 
 PM_PLANS = [
     {"device": "PRS-101", "title": "تعویض روغن و سرویس هیدرولیک", "discipline": "mechanical", "every": 1, "unit": "month", "minutes": 180, "responsible": "مهندس رضا کریمی"},
@@ -185,6 +207,11 @@ class Command(BaseCommand):
                     "name": row["name"],
                     "location": locationPaths.get(row["location"], ""),
                     "locationId": locationIds.get(row["location"]),
+                    # The cached path must be seeded too: the transfer ledger
+                    # copies it as the move's origin, so leaving it blank
+                    # makes every first transfer look like it came from
+                    # nowhere.
+                    "locationPath": locationPaths.get(row["location"], ""),
                     "department": row["department"],
                     "status": row["status"],
                     "pmIntervalDays": row["interval"],
@@ -196,12 +223,48 @@ class Command(BaseCommand):
                     "runningHours": row["hours"],
                     "installedOn": date(2021, 3, 21),
                     "commissionedOn": date(2021, 4, 10),
+                    "assetLevel": row.get("level", "mainEquipment"),
+                    "costCenterCode": row.get("costCenter", ""),
+                    "costCenterName": row.get("costCenterName", ""),
                 },
             )
             record = DeviceModel.objects.get(tenantId=tenantId, code=row["code"])
             deviceIds[row["code"]] = record.id
             deviceMeta[row["code"]] = {"department": record.department, "name": record.name}
             created["devices"] += int(wasCreated)
+
+        # Backfill the cached location path on rows seeded before it was set.
+        for code, locationCode in ((row["code"], row["location"]) for row in DEVICES):
+            path = locationPaths.get(locationCode, "")
+            if path:
+                DeviceModel.objects.filter(
+                    tenantId=tenantId, code=code, locationPath=""
+                ).update(locationPath=path)
+
+        # Backfill the cost centre on rows seeded before the column existed.
+        # Only ever fills a blank, so a tenant's own value is never clobbered.
+        for row in DEVICES:
+            if not row.get("costCenter"):
+                continue
+            DeviceModel.objects.filter(
+                tenantId=tenantId, code=row["code"], costCenterCode=""
+            ).update(
+                costCenterCode=row["costCenter"],
+                costCenterName=row.get("costCenterName", ""),
+            )
+
+        # -- Asset hierarchy: sub-assemblies under their machines ---------------------
+        # Done in a second pass so every parent id already exists. Without
+        # this the demo shows a flat equipment list and the hierarchy page
+        # has nothing below the location tree to draw.
+        for childCode, parentCode in ASSET_PARENTS.items():
+            childId = deviceIds.get(childCode)
+            parentId = deviceIds.get(parentCode)
+            if childId is None or parentId is None or childId == parentId:
+                continue
+            DeviceModel.objects.filter(id=childId, parentDeviceId__isnull=True).update(
+                parentDeviceId=parentId
+            )
 
         # -- PM plans + one execution each -------------------------------------------
         planIds: dict[str, uuid.UUID] = {}

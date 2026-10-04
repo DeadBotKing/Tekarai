@@ -1,0 +1,272 @@
+/* Right-to-left corrections.
+ *
+ * The bulk of the stylesheet is already written with logical properties
+ * (inset-inline, margin-inline, text-align: start), so mirroring the frame
+ * costs almost nothing. What is collected here is the remainder — the places
+ * where a physical direction is *meant*, and where mirroring everything
+ * blindly would do damage:
+ *
+ *   1. Latin runs (codes, ids, emails, URLs, versions) must keep their own
+ *      left-to-right order inside Persian sentences.
+ *   2. Numbers, times and ranges must not have their punctuation reordered.
+ *   3. Charts keep a left-to-right time axis — the SVG geometry is fixed, so
+ *      flipping the HTML labels under it would slide them off their points.
+ *   4. Arrows that mean "forward/back" mirror; arrows that mean "up/down" or
+ *      that already encode the Persian reading order do not.
+ *
+ * Loaded last so these rules win over the base sheets.
+ */
+
+/* ------------------------------------------------------------------ *
+ * 1. Latin content keeps its own direction
+ * ------------------------------------------------------------------ */
+
+/* `isolate` is the important half: it stops a Latin run from dragging the
+ * surrounding Persian punctuation to the wrong end of the line. */
+code,
+kbd,
+samp,
+pre,
+.mono,
+[data-latin] {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* Values that are Latin by nature. A phone number or an IBAN rendered
+ * right-to-left is not merely ugly, it is a different number. */
+input[type="email"],
+input[type="url"],
+input[type="tel"],
+input[type="password"],
+input[type="number"],
+input[inputmode="numeric"],
+input[inputmode="decimal"],
+input[type="time"],
+.input--latin,
+.jdp__input {
+  direction: ltr;
+  text-align: start;
+}
+
+/* A free-text field may hold either language; let the first strong character
+ * decide, per field, as the user types. */
+[dir="rtl"] textarea,
+[dir="rtl"] input[type="text"],
+[dir="rtl"] input[type="search"],
+[dir="rtl"] input:not([type]) {
+  text-align: start;
+  unicode-bidi: plaintext;
+}
+
+/* Mixed Persian/Latin single lines — titles, breadcrumbs, table cells that
+ * may hold a machine code — resolve per line instead of per document. */
+[dir="rtl"] .breadcrumb,
+[dir="rtl"] .data-table td,
+[dir="rtl"] .data-table th,
+[dir="rtl"] .cmms-report__table td,
+[dir="rtl"] .list-row__title,
+[dir="rtl"] .toast,
+[dir="rtl"] .badge {
+  unicode-bidi: isolate;
+}
+
+/* ------------------------------------------------------------------ *
+ * 2. Tables
+ * ------------------------------------------------------------------ */
+
+/* `start` follows the direction instead of pinning a side. */
+[dir] .data-table th,
+[dir] .data-table td,
+[dir] .cmms-report__table th,
+[dir] .cmms-report__table td {
+  text-align: start;
+}
+
+/* Figures line up on the decimal point only when they share a direction and
+ * tabular figures. Alignment stays on the reading side so the column still
+ * reads as part of a right-to-left row. */
+/* Digits are left-to-right by their own bidi class, so isolation plus
+ * tabular figures is all a displayed number needs. Forcing `direction: ltr`
+ * on a *block* would also drag its text-align to the left and tear the value
+ * away from the caption it belongs to. */
+[dir] .metric-card__value,
+[dir] .bar-column__value,
+[dir] .numeric {
+  unicode-bidi: isolate;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Table figures are a column of pure numerals, where a stray separator
+ * ("10-20", "1.2.3") would otherwise be reordered. Here the pinned direction
+ * is wanted, and the alignment is restored on the next rule. */
+[dir] .data-table td.is-numeric,
+[dir] .data-table th.is-numeric {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-variant-numeric: tabular-nums;
+}
+
+[dir="rtl"] .data-table td.is-numeric,
+[dir="rtl"] .data-table th.is-numeric {
+  text-align: right;
+}
+
+/* ------------------------------------------------------------------ *
+ * 3. Charts keep a left-to-right axis
+ * ------------------------------------------------------------------ */
+
+/* The SVG is drawn with fixed coordinates, so its first point is always on
+ * the left. The label row underneath is plain HTML and would reverse in RTL,
+ * putting every label under the wrong point. Pinning the whole chart to LTR
+ * keeps geometry and labels together, and keeps bar charts and line charts
+ * telling time in the same direction. Individual labels stay isolated so
+ * Persian month names inside still shape correctly. */
+.chart,
+.chart__labels,
+.bars,
+.sparkline,
+.donut,
+.trend-chart,
+.chart-legend {
+  direction: ltr;
+}
+
+.chart__labels > span,
+.bar-column__label,
+.chart-legend span,
+.donut__center {
+  unicode-bidi: isolate;
+}
+
+/* The legend is prose, not geometry — it reads with the page. */
+[dir="rtl"] .chart-legend {
+  direction: rtl;
+}
+
+/* ------------------------------------------------------------------ *
+ * 4. Arrows and sliding panels
+ * ------------------------------------------------------------------ */
+
+/* Forward/back affordances mirror. Listed one by one on purpose: a blanket
+ * `.icon { transform: scaleX(-1) }` would also flip search, send, logout and
+ * external-link glyphs, which are not directional. */
+[dir="rtl"] .table-pagination__actions .icon,
+[dir="rtl"] .admin-nav__item .icon:last-child,
+[dir="rtl"] .sidebar-collapse .icon,
+[dir="rtl"] .task-card__advance .icon,
+[dir="rtl"] .breadcrumb .icon,
+[dir="rtl"] .quick-link .icon:last-child,
+[dir="rtl"] .wizard-nav .icon,
+[dir="rtl"] .jdp__nav .icon,
+[dir="rtl"] .cmms-header-actions .button .icon,
+[dir="rtl"] .auth-submit .icon {
+  transform: scaleX(-1);
+}
+
+/* The calendar grid itself is laid out by the document direction, so the
+ * first weekday lands on the reading edge without any help. */
+
+/* The step connector is a glyph, not an icon: swap it for its mirror. */
+[dir="rtl"] .pipeline-step:not(:last-child)::after {
+  content: "←";
+}
+
+/* The off-canvas sidebar hides toward whichever edge it sits on. */
+@media (max-width: 820px) {
+  [dir="rtl"] .sidebar {
+    transform: translateX(105%);
+  }
+
+  [dir="rtl"] .sidebar.is-mobile-open {
+    transform: translateX(0);
+  }
+}
+
+/* Drawers slide in from the inline-end edge, which swaps sides with the
+ * document direction. */
+[dir="rtl"] .drawer,
+[dir="rtl"] .side-panel {
+  animation-name: drawer-in-rtl;
+}
+
+@keyframes drawer-in-rtl {
+  from {
+    opacity: .7;
+    transform: translateX(-18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * 5. Leftovers that named a physical side
+ * ------------------------------------------------------------------ */
+
+/* Bullets belong on the side the text starts from. */
+[dir] .device-detail-registry ul {
+  padding-right: 0;
+  padding-inline-start: 18px;
+}
+
+/* Progress and meter fills grow from the reading edge. */
+[dir="rtl"] .progress__value,
+[dir="rtl"] .meter__fill,
+[dir="rtl"] .bar-stack > span:first-child {
+  transform-origin: right center;
+}
+
+/* Scroll shadows and gradient fades point the other way. */
+[dir="rtl"] .scroll-fade {
+  background: linear-gradient(to left, var(--surface-1), transparent);
+}
+
+/* Latin-only lines (copyright, build stamps, the footer) keep their internal
+ * order; without isolation the leading symbol jumps to the far end. */
+[dir="rtl"] .auth-copyright,
+[dir="rtl"] .app-footer span,
+[dir="rtl"] .brand-mark + strong {
+  unicode-bidi: isolate;
+}
+
+/* ------------------------------------------------------------------ *
+ * 6. Truncation and stacking
+ * ------------------------------------------------------------------ */
+
+/* A label that may hold either script and is clipped with an ellipsis must
+ * decide its direction from its own content, otherwise a Latin tenant name
+ * in an RTL page loses its *beginning* — "…anufacturing Group" instead of
+ * "Nordic Manufact…". `plaintext` sets the paragraph direction from the
+ * first strong character, per element, so the ellipsis lands at the end of
+ * the words either way. */
+.topbar__select select,
+.topbar__select option,
+.topbar__tenant,
+.topbar__tenant strong,
+.sidebar__tenant strong,
+.sidebar__tenant div span,
+.sidebar__brand span,
+.tenant-switcher__name,
+.context-metadata strong,
+.context-files code,
+.list-row__title,
+.truncate {
+  unicode-bidi: plaintext;
+}
+
+/* Stat tiles read as "number, then what it counts". Inline, the digit and
+ * the Persian caption collide into «۰تأمین‌کننده»; stacking them is what the
+ * design intended and it reads correctly in both directions. */
+.stats-grid > .card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stats-grid > .card strong {
+  font-size: 22px;
+  line-height: 1.2;
+}

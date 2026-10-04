@@ -23,6 +23,7 @@ from apps.maintenance.domain.services.maintenanceAnalytics import (
     WorkOrderReading,
 )
 from apps.maintenance.infrastructure.models import (
+    AssetMovementModel,
     DeviceAssignmentModel,
     DeviceBomModel,
     DeviceModel,
@@ -165,6 +166,33 @@ class LocationRepositoryDjango:
                 Q(name__icontains=search) | Q(code__icontains=search) | Q(path__icontains=search)
             )
         return [self.toDomain(model) for model in queryset]
+
+    def kindMap(self, tenantId: uuid.UUID) -> dict[str, str]:
+        """Every live location's kind, keyed by id — feeds the nesting guard."""
+        return {
+            str(row["id"]): row["kind"]
+            for row in MaintenanceLocationModel.objects.filter(
+                tenantId=tenantId, deletedAt__isnull=True
+            ).values("id", "kind")
+        }
+
+    def treeRows(self, tenantId: uuid.UUID) -> list[dict]:
+        """Flat list of live locations with the columns a tree render needs."""
+        return [
+            {
+                "id": str(row["id"]),
+                "code": row["code"],
+                "name": row["name"],
+                "kind": row["kind"],
+                "parentId": str(row["parentId"]) if row["parentId"] else "",
+                "path": row["path"],
+            }
+            for row in MaintenanceLocationModel.objects.filter(
+                tenantId=tenantId, deletedAt__isnull=True
+            )
+            .order_by("path")
+            .values("id", "code", "name", "kind", "parentId", "path")
+        ]
 
     def countDevices(self, tenantId: uuid.UUID) -> dict[str, int]:
         counts: dict[str, int] = {}
@@ -880,3 +908,92 @@ class MaintenanceAnalyticsRepositoryDjango:
             labourCost=model.labourCost,
             partsCost=model.partsCost,
         )
+
+
+class AssetMovementRepositoryDjango:
+    """The transfer ledger — append-only, never updated."""
+
+    def record(
+        self,
+        *,
+        tenantId: uuid.UUID,
+        deviceId: uuid.UUID,
+        fromLocationId: uuid.UUID | None,
+        fromLocationPath: str,
+        toLocationId: uuid.UUID | None,
+        toLocationPath: str,
+        fromParentDeviceId: uuid.UUID | None,
+        toParentDeviceId: uuid.UUID | None,
+        movedOn: date,
+        reason: str,
+        performedBy: str,
+        note: str,
+        now: datetime,
+    ) -> dict:
+        model = AssetMovementModel.objects.create(
+            tenantId=tenantId,
+            deviceId=deviceId,
+            fromLocationId=fromLocationId,
+            fromLocationPath=fromLocationPath,
+            toLocationId=toLocationId,
+            toLocationPath=toLocationPath,
+            fromParentDeviceId=fromParentDeviceId,
+            toParentDeviceId=toParentDeviceId,
+            movedOn=movedOn,
+            reason=reason,
+            performedBy=performedBy,
+            note=note,
+            createdAt=now,
+        )
+        return self.toPayload(model)
+
+    def listForDevice(self, tenantId: uuid.UUID, deviceId: uuid.UUID) -> list[dict]:
+        """Newest move first, so the row above the current place is where it was."""
+        return [
+            self.toPayload(model)
+            for model in AssetMovementModel.objects.filter(
+                tenantId=tenantId, deviceId=deviceId
+            )
+        ]
+
+    def previousLocation(self, tenantId: uuid.UUID, deviceId: uuid.UUID) -> dict:
+        """The place the device sat before its current one, or an empty dict.
+
+        Reads the newest move rather than a column on the device, so the
+        answer cannot drift away from the ledger that produced it.
+        """
+        model = (
+            AssetMovementModel.objects.filter(tenantId=tenantId, deviceId=deviceId)
+            .order_by("-movedOn", "-createdAt")
+            .first()
+        )
+        if model is None:
+            return {}
+        return {
+            "locationId": str(model.fromLocationId) if model.fromLocationId else "",
+            "locationPath": model.fromLocationPath,
+            "movedOn": model.movedOn.isoformat(),
+            "reason": model.reason,
+        }
+
+    @staticmethod
+    def toPayload(model: AssetMovementModel) -> dict:
+        return {
+            "id": str(model.id),
+            "deviceId": str(model.deviceId),
+            "fromLocationId": str(model.fromLocationId) if model.fromLocationId else "",
+            "fromLocationPath": model.fromLocationPath,
+            "toLocationId": str(model.toLocationId) if model.toLocationId else "",
+            "toLocationPath": model.toLocationPath,
+            "fromParentDeviceId": (
+                str(model.fromParentDeviceId) if model.fromParentDeviceId else ""
+            ),
+            "toParentDeviceId": (
+                str(model.toParentDeviceId) if model.toParentDeviceId else ""
+            ),
+            "movedOn": model.movedOn.isoformat(),
+            "reason": model.reason,
+            "performedBy": model.performedBy,
+            "note": model.note,
+            "createdAt": model.createdAt.isoformat(),
+        }

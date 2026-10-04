@@ -18,10 +18,13 @@ import {
   demoSpareParts,
 } from "../features/maintenance/registryDemoData";
 import {
+  ASSET_LEVELS,
   DEVICE_ASSIGNMENT_ROLES,
   EQUIPMENT_CRITICALITIES,
   MAINTENANCE_DEPARTMENTS,
   PM_FREQUENCY_UNITS,
+  type AssetAncestry,
+  type AssetMovement,
   type DeviceAnalytics,
   type DeviceAssignmentRole,
   type DeviceNameplate,
@@ -147,6 +150,20 @@ export function DeviceProfilePage(): JSX.Element {
   const [bomQuantity, setBomQuantity] = useState("1");
   const [bomNote, setBomNote] = useState("");
 
+  // -- Phase 27 asset hierarchy --------------------------------------------
+  const [ancestry, setAncestry] = useState<AssetAncestry | null>(null);
+  const [movements, setMovements] = useState<AssetMovement[]>([]);
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [moveLocationId, setMoveLocationId] = useState("");
+  const [moveDate, setMoveDate] = useState("");
+  const [moveReason, setMoveReason] = useState("");
+  const [moveBy, setMoveBy] = useState("");
+  const [moveUpdateInstalled, setMoveUpdateInstalled] = useState(false);
+  const [retireOpen, setRetireOpen] = useState(false);
+  const [retireDate, setRetireDate] = useState("");
+  const [retireReason, setRetireReason] = useState("");
+  const [retireChildren, setRetireChildren] = useState(false);
+  const [hierarchyBusy, setHierarchyBusy] = useState(false);
   const [quickLocationOpen, setQuickLocationOpen] = useState(false);
   const [quickPersonTarget, setQuickPersonTarget] = useState<number | null>(null);
   const [quickPartOpen, setQuickPartOpen] = useState(false);
@@ -182,6 +199,19 @@ export function DeviceProfilePage(): JSX.Element {
       setLocations(locationList);
       setPersonnel(personnelList);
       setFailed(false);
+      // The hierarchy is supporting detail: if it fails the profile still
+      // renders, it just shows no chain.
+      try {
+        const [chain, ledger] = await Promise.all([
+          registry.getAssetAncestry(deviceId),
+          registry.listAssetMovements(deviceId),
+        ]);
+        setAncestry(chain);
+        setMovements(ledger);
+      } catch {
+        setAncestry(null);
+        setMovements([]);
+      }
     } catch {
       setFailed(true);
     } finally {
@@ -228,7 +258,7 @@ export function DeviceProfilePage(): JSX.Element {
   if (loading) return <LoadingState label={t("registry.profile.loading")} />;
   if (failed || !profile || !nameplate) {
     return (
-      <div className="page" dir="rtl">
+      <div className="page">
         <EmptyState
           icon="warning"
           title={t("registry.profile.notFound")}
@@ -915,18 +945,22 @@ export function DeviceProfilePage(): JSX.Element {
           <span className="muted-cell">{t("registry.location.current")}</span>
           <strong>{profile.locationPath || device.location || t("registry.common.none")}</strong>
         </div>
-        <div>
-          <span className="muted-cell">{t("registry.location.site")}</span>
-          <strong>{profile.locationPath.split(" / ")[0] || t("registry.common.none")}</strong>
-        </div>
-        <div>
-          <span className="muted-cell">{t("registry.location.building")}</span>
-          <strong>{profile.locationPath.split(" / ")[1] || t("registry.common.none")}</strong>
-        </div>
-        <div>
-          <span className="muted-cell">{t("registry.location.room")}</span>
-          <strong>{profile.locationPath.split(" / ")[2] || t("registry.common.none")}</strong>
-        </div>
+        {/*
+          These used to be positional — path segment 0 was labelled "site", 1
+          "building", 2 "room". That only held for a three-deep tree; once a
+          plant models سایت ← ساختمان ← سالن ← خط ← سیستم, segment 2 is a hall
+          being labelled an اتاق. Each level is now read from the real
+          location chain and labelled with its own kind, and the list simply
+          ends wherever the plant's tree ends.
+        */}
+        {(ancestry?.locationChain ?? []).map((link) => (
+          <div key={link.id}>
+            <span className="muted-cell">
+              {taxonomyLabel(t, "registry.location.", link.kind ?? "")}
+            </span>
+            <strong>{link.name}</strong>
+          </div>
+        ))}
       </div>
       <div className="form-grid form-grid--compact">
         <QuickAddSelect
@@ -962,6 +996,277 @@ export function DeviceProfilePage(): JSX.Element {
       </PermissionGuard>
     </Card>
   );
+
+  const submitMove = async (): Promise<void> => {
+    if (!deviceId) return;
+    setHierarchyBusy(true);
+    try {
+      await registry.moveAsset(deviceId, {
+        toLocationId: moveLocationId,
+        movedOn: moveDate,
+        reason: moveReason,
+        performedBy: moveBy,
+        updateInstalledOn: moveUpdateInstalled,
+      });
+      setMoveOpen(false);
+      setMoveLocationId("");
+      setMoveReason("");
+      setMoveBy("");
+      setMoveUpdateInstalled(false);
+      setToast(t("assets.move.success"));
+      await load();
+    } catch (error) {
+      setToast((error as Error).message || t("error.networkBody"));
+    } finally {
+      setHierarchyBusy(false);
+    }
+  };
+
+  const submitRetire = async (): Promise<void> => {
+    if (!deviceId) return;
+    setHierarchyBusy(true);
+    try {
+      await registry.retireAsset(deviceId, {
+        retiredOn: retireDate,
+        reason: retireReason,
+        retireChildren,
+      });
+      setRetireOpen(false);
+      setRetireReason("");
+      setRetireChildren(false);
+      setToast(t("assets.retire.success"));
+      await load();
+    } catch (error) {
+      setToast((error as Error).message || t("error.networkBody"));
+    } finally {
+      setHierarchyBusy(false);
+    }
+  };
+
+  const submitReinstate = async (): Promise<void> => {
+    if (!deviceId) return;
+    setHierarchyBusy(true);
+    try {
+      await registry.reinstateAsset(deviceId, "operational");
+      setToast(t("assets.reinstate.success"));
+      await load();
+    } catch (error) {
+      setToast((error as Error).message || t("error.networkBody"));
+    } finally {
+      setHierarchyBusy(false);
+    }
+  };
+
+  /**
+   * The asset's place in the plant chain, and the two writes that change it.
+   *
+   * The device row only ever holds *where it is now*; the ledger below is
+   * what makes "محل نصب قبلی" answerable after the second transfer.
+   */
+  const renderHierarchy = (): JSX.Element => {
+    const isRetired = device.status === "retired";
+    const chain = [...(ancestry?.locationChain ?? []), ...(ancestry?.deviceChain ?? [])];
+    return (
+      <Card className="content-card" padding="md">
+        <SectionHeader
+          title={t("assets.tree.title")}
+          subtitle={t("assets.tree.subtitle")}
+          actions={
+            <PermissionGuard permission={PERMISSIONS.maintenanceDeviceManage}>
+              <div className="cmms-header-actions">
+                <Button
+                  variant="secondary"
+                  icon="layers"
+                  onClick={() => navigate("/app/maintenance/asset-tree")}
+                >
+                  {t("assets.tree.nav")}
+                </Button>
+                {isRetired ? (
+                  <Button
+                    variant="secondary"
+                    icon="refresh"
+                    loading={hierarchyBusy}
+                    onClick={submitReinstate}
+                  >
+                    {t("assets.reinstate.action")}
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      variant="secondary"
+                      icon="arrowLeft"
+                      onClick={() => {
+                        setMoveDate(todayIso());
+                        setMoveOpen(true);
+                      }}
+                    >
+                      {t("assets.move.action")}
+                    </Button>
+                    <Button
+                      variant="danger"
+                      icon="xCircle"
+                      onClick={() => {
+                        setRetireDate(todayIso());
+                        setRetireOpen(true);
+                      }}
+                    >
+                      {t("assets.retire.action")}
+                    </Button>
+                  </>
+                )}
+              </div>
+            </PermissionGuard>
+          }
+        />
+
+        <div className="registry-summary-grid">
+          <div>
+            <span className="muted-cell">{t("assets.level.label")}</span>
+            <strong>
+              {taxonomyLabel(t, "assets.level.", nameplate.assetLevel || "mainEquipment")}
+            </strong>
+          </div>
+          <div>
+            <span className="muted-cell">{t("assets.previousLocation")}</span>
+            <strong>
+              {ancestry?.previousLocation?.locationPath || t("assets.previousLocation.none")}
+            </strong>
+          </div>
+          <div>
+            <span className="muted-cell">{t("assets.installedOn")}</span>
+            <strong>
+              {nameplate.installedOn
+                ? formatJalali(nameplate.installedOn)
+                : t("registry.common.none")}
+            </strong>
+          </div>
+          <div>
+            <span className="muted-cell">{t("assets.costCenter")}</span>
+            <strong>
+              {nameplate.costCenterCode
+                ? `${nameplate.costCenterCode} — ${nameplate.costCenterName}`
+                : t("assets.costCenter.none")}
+            </strong>
+          </div>
+        </div>
+
+        {chain.length > 0 ? (
+          <div className="asset-chain">
+            <span className="muted-cell">{t("assets.upstream")}</span>
+            <div className="asset-chain__links">
+              {chain.map((node) => (
+                <span key={`${node.nodeType}-${node.id}`} className="asset-chain__link">
+                  <Icon name={node.nodeType === "device" ? "cpu" : "building"} size={13} />
+                  {node.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="muted-cell">{t("assets.upstream.none")}</p>
+        )}
+
+        <div className="form-grid form-grid--compact">
+          <SelectInput
+            label={t("assets.level.label")}
+            value={nameplate.assetLevel || "mainEquipment"}
+            onChange={(event) => patchNameplate({ assetLevel: event.target.value })}
+            options={ASSET_LEVELS.map((level) => ({
+              value: level,
+              label: taxonomyLabel(t, "assets.level.", level),
+            }))}
+          />
+          <TextInput
+            label={t("assets.costCenter.code")}
+            value={nameplate.costCenterCode}
+            onChange={(event) => patchNameplate({ costCenterCode: event.target.value })}
+          />
+          <TextInput
+            label={t("assets.costCenter.name")}
+            value={nameplate.costCenterName}
+            onChange={(event) => patchNameplate({ costCenterName: event.target.value })}
+          />
+        </div>
+        <PermissionGuard permission={PERMISSIONS.maintenanceDeviceManage}>
+          <div className="cmms-header-actions">
+            <Button variant="primary" icon="check" loading={saving} onClick={saveNameplate}>
+              {t("registry.common.save")}
+            </Button>
+          </div>
+        </PermissionGuard>
+
+        <SectionHeader
+          title={t("assets.children")}
+          subtitle={ancestry ? `${ancestry.descendantCount}` : ""}
+        />
+        {(ancestry?.children.length ?? 0) === 0 ? (
+          <EmptyState icon="cpu" title={t("assets.children.none")} />
+        ) : (
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>{t("registry.column.code")}</th>
+                <th>{t("registry.column.name")}</th>
+                <th>{t("assets.level.label")}</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {(ancestry?.children ?? []).map((child) => (
+                <tr key={child.id}>
+                  <td className="plaintext">{child.code}</td>
+                  <td>{child.name}</td>
+                  <td>{taxonomyLabel(t, "assets.level.", child.assetLevel)}</td>
+                  <td>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        navigate(`/app/maintenance/devices/${child.id}/profile`)
+                      }
+                    >
+                      {t("registry.openProfile")}
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        <SectionHeader
+          title={t("assets.movements.title")}
+          subtitle={t("assets.movements.subtitle")}
+        />
+        {movements.length === 0 ? (
+          <EmptyState icon="clock" title={t("assets.movements.empty")} />
+        ) : (
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>{t("assets.movements.date")}</th>
+                <th>{t("assets.movements.from")}</th>
+                <th>{t("assets.movements.to")}</th>
+                <th>{t("assets.movements.reason")}</th>
+                <th>{t("assets.movements.performedBy")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {movements.map((row) => (
+                <tr key={row.id}>
+                  <td>{formatJalali(row.movedOn)}</td>
+                  <td>{row.fromLocationPath || "—"}</td>
+                  <td>{row.toLocationPath || "—"}</td>
+                  <td>{row.reason || "—"}</td>
+                  <td>{row.performedBy || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Card>
+    );
+  };
 
   const renderPersonnel = (): JSX.Element => (
     <div className="registry-pm">
@@ -1309,7 +1614,7 @@ export function DeviceProfilePage(): JSX.Element {
   );
 
   return (
-    <div className="page" dir="rtl">
+    <div className="page">
       <SectionHeader
         eyebrow={t("registry.profile.title")}
         title={`${device.code} — ${device.name}`}
@@ -1372,7 +1677,12 @@ export function DeviceProfilePage(): JSX.Element {
       {tab === "specifications" && renderSpecifications()}
       {tab === "pm" && renderPm()}
       {tab === "parts" && renderParts()}
-      {tab === "location" && renderLocation()}
+      {tab === "location" && (
+        <>
+          {renderLocation()}
+          {renderHierarchy()}
+        </>
+      )}
       {tab === "personnel" && renderPersonnel()}
       {tab === "analytics" && renderAnalytics()}
 
@@ -1573,6 +1883,110 @@ export function DeviceProfilePage(): JSX.Element {
             />
           </>
         )}
+      </Modal>
+
+      <Modal
+        open={moveOpen}
+        title={t("assets.move.title")}
+        description={t("assets.movements.subtitle")}
+        onClose={() => setMoveOpen(false)}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setMoveOpen(false)}>
+              {t("registry.common.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              icon="check"
+              loading={hierarchyBusy}
+              disabled={!moveLocationId}
+              onClick={submitMove}
+            >
+              {t("assets.move.submit")}
+            </Button>
+          </>
+        }
+      >
+        <div className="form-grid form-grid--compact">
+          <SelectInput
+            label={t("assets.move.toLocation")}
+            value={moveLocationId}
+            onChange={(event) => setMoveLocationId(event.target.value)}
+            options={[
+              { value: "", label: t("registry.nameplate.noLocation") },
+              ...locations
+                .filter((location) => location.id !== nameplate.locationId)
+                .map((location) => ({ value: location.id, label: location.path })),
+            ]}
+          />
+          <JalaliDatePicker
+            label={t("assets.movements.date")}
+            value={moveDate}
+            onChange={setMoveDate}
+          />
+          <TextInput
+            label={t("assets.movements.reason")}
+            value={moveReason}
+            onChange={(event) => setMoveReason(event.target.value)}
+          />
+          <TextInput
+            label={t("assets.movements.performedBy")}
+            value={moveBy}
+            onChange={(event) => setMoveBy(event.target.value)}
+          />
+        </div>
+        <label className="checkbox-field">
+          <input
+            type="checkbox"
+            checked={moveUpdateInstalled}
+            onChange={(event) => setMoveUpdateInstalled(event.target.checked)}
+          />
+          <span>{t("assets.move.updateInstalledOn")}</span>
+        </label>
+      </Modal>
+
+      <Modal
+        open={retireOpen}
+        title={t("assets.retire.title")}
+        onClose={() => setRetireOpen(false)}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setRetireOpen(false)}>
+              {t("registry.common.cancel")}
+            </Button>
+            <Button
+              variant="danger"
+              icon="xCircle"
+              loading={hierarchyBusy}
+              onClick={submitRetire}
+            >
+              {t("assets.retire.submit")}
+            </Button>
+          </>
+        }
+      >
+        <div className="form-grid form-grid--compact">
+          <JalaliDatePicker
+            label={t("assets.retire.date")}
+            value={retireDate}
+            onChange={setRetireDate}
+          />
+          <TextInput
+            label={t("assets.retire.reason")}
+            value={retireReason}
+            onChange={(event) => setRetireReason(event.target.value)}
+          />
+        </div>
+        {(ancestry?.descendantCount ?? 0) > 0 ? (
+          <label className="checkbox-field">
+            <input
+              type="checkbox"
+              checked={retireChildren}
+              onChange={(event) => setRetireChildren(event.target.checked)}
+            />
+            <span>{t("assets.retire.withChildren")}</span>
+          </label>
+        ) : null}
       </Modal>
 
       <QuickLocationModal

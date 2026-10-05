@@ -22,9 +22,7 @@ class TimerAlreadyRunningError(ConflictError):
     code = "MAINT_TIMER_ALREADY_RUNNING"
     httpStatus = 409
 
-    def __init__(
-        self, message: str = "", *, fieldErrors: dict[str, str] | None = None
-    ) -> None:
+    def __init__(self, message: str = "", *, fieldErrors: dict[str, str] | None = None) -> None:
         super().__init__(message or "A timer is already running.")
         self.fieldErrors = fieldErrors or {}
 
@@ -40,9 +38,7 @@ class TimerNotRunningError(ConflictError):
     code = "MAINT_TIMER_NOT_RUNNING"
     httpStatus = 409
 
-    def __init__(
-        self, message: str = "", *, fieldErrors: dict[str, str] | None = None
-    ) -> None:
+    def __init__(self, message: str = "", *, fieldErrors: dict[str, str] | None = None) -> None:
         super().__init__(message or "This timer is not running.")
         self.fieldErrors = fieldErrors or {}
 

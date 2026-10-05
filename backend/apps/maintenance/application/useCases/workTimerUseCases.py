@@ -386,9 +386,7 @@ class CancelWorkTimerUseCase(WorkTimerUseCaseBase):
                 "Invalid timer id.", fieldErrors={"timerId": "invalid"}
             ) from error
         timer = self.timerRepository.discard(tenantId, identifier)
-        self.audit(
-            AUDIT_UPDATE, "WorkTimer", str(timer.id), tenantId, before=timer.snapshot()
-        )
+        self.audit(AUDIT_UPDATE, "WorkTimer", str(timer.id), tenantId, before=timer.snapshot())
         return timerDto(timer, now)
 
 
@@ -421,7 +419,4 @@ class GetMyRunningTimersUseCase(WorkTimerUseCaseBase):
         name = (query.technicianName or currentContext().actorName or "").strip()
         if not name:
             return []
-        return [
-            timerDto(item, now)
-            for item in self.timerRepository.listRunning(tenantId, name)
-        ]
+        return [timerDto(item, now) for item in self.timerRepository.listRunning(tenantId, name)]

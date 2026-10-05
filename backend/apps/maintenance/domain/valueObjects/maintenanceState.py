@@ -11,7 +11,6 @@ from dataclasses import dataclass
 from apps.sharedKernel.domain.errors import ValidationFailedError
 from apps.sharedKernel.domain.valueObjects import ValueObject
 
-
 # -- Open vocabularies (Phase 26.1) ------------------------------------------------
 #: Longest operator-defined label the database columns accept.
 OPEN_VOCABULARY_MAX_LENGTH = 24
@@ -402,9 +401,7 @@ class LocationKind(ValueObject):
 
     def __post_init__(self) -> None:
         if self.value not in LOCATION_KINDS:
-            raise ValidationFailedError(
-                "Invalid location kind.", fieldErrors={"kind": self.value}
-            )
+            raise ValidationFailedError("Invalid location kind.", fieldErrors={"kind": self.value})
 
     def __str__(self) -> str:
         return self.value

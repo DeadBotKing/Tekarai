@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import builtins
 import uuid
 from datetime import datetime
 from decimal import Decimal
@@ -120,7 +121,7 @@ class SparePartRepositoryDjango:
             )
         return self._part(model)
 
-    def list(self, tenantId: uuid.UUID, search: str = "") -> list[SparePart]:
+    def list(self, tenantId: uuid.UUID, search: str = "") -> builtins.list[SparePart]:
         queryset = SparePartModel.objects.filter(tenantId=tenantId, deletedAt__isnull=True)
         if search.strip():
             queryset = queryset.filter(
@@ -194,7 +195,7 @@ class SparePartRepositoryDjango:
 
     def listUsage(
         self, tenantId: uuid.UUID, workOrderId: uuid.UUID
-    ) -> list[WorkOrderPartUsage]:
+    ) -> builtins.list[WorkOrderPartUsage]:
         if not WorkOrderModel.objects.filter(
             id=workOrderId, tenantId=tenantId, deletedAt__isnull=True
         ).exists():
@@ -203,7 +204,6 @@ class SparePartRepositoryDjango:
             tenantId=tenantId, workOrderId=workOrderId
         ).order_by("-consumedAt")
         return [self._usage(item) for item in rows]
-
 
     # ---------- دفتر تراکنش انبار ----------
 
@@ -280,7 +280,7 @@ class SparePartRepositoryDjango:
 
     def listTransactions(
         self, tenantId: uuid.UUID, partId: uuid.UUID | None = None
-    ) -> list[PartTransaction]:
+    ) -> builtins.list[PartTransaction]:
         rows = PartTransactionModel.objects.filter(tenantId=tenantId)
         if partId is not None:
             rows = rows.filter(partId=partId)

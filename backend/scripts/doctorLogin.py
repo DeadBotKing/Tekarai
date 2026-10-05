@@ -118,7 +118,9 @@ def main() -> int:
             call_command("migrate", "--noinput", verbosity=1)
             tables = set(connection.introspection.table_names())
             missing = [table for table in required if table not in tables]
-            print(f"{OK if not missing else BAD} پس از migrate، جدول‌های ناموجود: {missing or 'ندارد'}")
+            print(
+                f"{OK if not missing else BAD} پس از migrate، جدول‌های ناموجود: {missing or 'ندارد'}"
+            )
         else:
             print("\nراهنما: این علت اصلی «Unexpected server error» است.")
             print("  python scripts/doctorLogin.py --fix        (یا --fix --sqlite)")

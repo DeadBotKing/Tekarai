@@ -388,9 +388,7 @@ class DepartmentRoutingTests(MaintenanceApiBase):
 
 class PmAutoGenerationTests(MaintenanceApiBase):
     def testGeneratePmCreatesRoutedPreventiveOrders(self) -> None:
-        overdue = self.createDevice(
-            code="PM-AUTO-1", department="mechanical", pmIntervalDays=10
-        )
+        overdue = self.createDevice(code="PM-AUTO-1", department="mechanical", pmIntervalDays=10)
         self.client.post(
             f"/api/v1/maintenance/devices/{overdue['id']}/pm",
             {"performedOn": "2020-01-01"},
@@ -414,9 +412,7 @@ class PmAutoGenerationTests(MaintenanceApiBase):
         self.assertEqual(auto["department"], "mechanical")
 
     def testGeneratePmIsIdempotentPerDevice(self) -> None:
-        overdue = self.createDevice(
-            code="PM-AUTO-2", department="electrical", pmIntervalDays=10
-        )
+        overdue = self.createDevice(code="PM-AUTO-2", department="electrical", pmIntervalDays=10)
         self.client.post(
             f"/api/v1/maintenance/devices/{overdue['id']}/pm",
             {"performedOn": "2020-01-01"},
@@ -584,9 +580,7 @@ class SparePartsInventoryTests(MaintenanceApiBase):
         self.assertEqual(saved["quantityOnHand"], "8.000")
         self.assertFalse(saved["lowStock"])
 
-        usage = self.client.get(
-            f"/api/v1/maintenance/work-orders/{order['id']}/parts", **self.auth
-        )
+        usage = self.client.get(f"/api/v1/maintenance/work-orders/{order['id']}/parts", **self.auth)
         self.assertEqual(usage.status_code, 200, usage.content)
         self.assertEqual(len(usage.json()["data"]), 1)
         self.assertEqual(usage.json()["data"][0]["note"], "تعویض دوره‌ای")

@@ -46,7 +46,9 @@ class OpenTaxonomyApiTests(TestCase):
 
     # -- location kind ---------------------------------------------------------
     def testLocationAcceptsAPlantDefinedKind(self) -> None:
-        response = self.postJson("/locations", {"code": "HALL-3", "name": "سوله شماره ۳", "kind": "سوله"})
+        response = self.postJson(
+            "/locations", {"code": "HALL-3", "name": "سوله شماره ۳", "kind": "سوله"}
+        )
         self.assertEqual(response.status_code, 201, response.content)
         self.assertEqual(response.json()["data"]["kind"], "سوله")
 
@@ -56,7 +58,9 @@ class OpenTaxonomyApiTests(TestCase):
         self.assertIn("سوله", kinds)
 
     def testLocationKindKeepsCanonicalSpelling(self) -> None:
-        response = self.postJson("/locations", {"code": "SITE-1", "name": "سایت مرکزی", "kind": "SITE"})
+        response = self.postJson(
+            "/locations", {"code": "SITE-1", "name": "سایت مرکزی", "kind": "SITE"}
+        )
         self.assertEqual(response.status_code, 201, response.content)
         self.assertEqual(response.json()["data"]["kind"], "site")
 
@@ -70,7 +74,9 @@ class OpenTaxonomyApiTests(TestCase):
     def testLocationRejectsEmptyAndOverlongKinds(self) -> None:
         blank = self.postJson("/locations", {"code": "X-1", "name": "بدون نوع", "kind": "   "})
         self.assertEqual(blank.status_code, 400, blank.content)
-        overlong = self.postJson("/locations", {"code": "X-2", "name": "نوع بلند", "kind": "x" * 25})
+        overlong = self.postJson(
+            "/locations", {"code": "X-2", "name": "نوع بلند", "kind": "x" * 25}
+        )
         self.assertEqual(overlong.status_code, 400, overlong.content)
 
     def testLocationRejectsControlCharactersInKind(self) -> None:

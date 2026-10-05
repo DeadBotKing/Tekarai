@@ -4,20 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('maintenance', '0001_initial'),
+        ("maintenance", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='devicemodel',
-            name='department',
-            field=models.CharField(default='general', max_length=24),
+            model_name="devicemodel",
+            name="department",
+            field=models.CharField(default="general", max_length=24),
         ),
         migrations.AddField(
-            model_name='workordermodel',
-            name='department',
-            field=models.CharField(db_index=True, default='general', max_length=24),
+            model_name="workordermodel",
+            name="department",
+            field=models.CharField(db_index=True, default="general", max_length=24),
         ),
     ]

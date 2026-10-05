@@ -2,6 +2,7 @@ import { NavLink } from "react-router-dom";
 import { faText as t } from "../../core/localization/i18n";
 import { useOptionalOffline } from "../../core/offline/offlineContext";
 import { Icon } from "./Icon";
+import { formatNumber } from "../../core/localization/format";
 
 /**
  * نشانگر اتصال و صف — the one always-visible truth about connectivity.
@@ -25,7 +26,7 @@ export function OfflineIndicator(): JSX.Element | null {
     ? t("offline.offline")
     : isSyncing
       ? t("offline.syncing")
-      : t("offline.pending", { count: pendingCount.toLocaleString("fa-IR") });
+      : t("offline.pending", { count: formatNumber(pendingCount, "fa") });
 
   return (
     <NavLink
@@ -36,7 +37,7 @@ export function OfflineIndicator(): JSX.Element | null {
     >
       <Icon name={!isOnline ? "cloud" : isSyncing ? "refresh" : "upload"} size={16} />
       <span>{label}</span>
-      {pendingCount > 0 && <strong>{pendingCount.toLocaleString("fa-IR")}</strong>}
+      {pendingCount > 0 && <strong>{formatNumber(pendingCount, "fa")}</strong>}
     </NavLink>
   );
 }

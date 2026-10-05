@@ -208,9 +208,7 @@ class ListMaintenanceAttachmentsUseCase(MaintenanceAttachmentUseCaseBase):
 class DownloadMaintenanceAttachmentUseCase(MaintenanceAttachmentUseCaseBase):
     requiredAction = "maintenance.attachment.view"
 
-    def perform(
-        self, query: DownloadMaintenanceAttachmentQuery
-    ) -> MaintenanceAttachmentDownload:
+    def perform(self, query: DownloadMaintenanceAttachmentQuery) -> MaintenanceAttachmentDownload:
         tenantId = resolveTenantId("")
         attachmentId = uuid.UUID(query.attachmentId)
         item = self.repository.getById(tenantId, attachmentId)

@@ -10,11 +10,9 @@ the workflow stays predictable (BR-WO-001).
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timedelta
 from decimal import Decimal
-from datetime import datetime
 from typing import Any
-
-from datetime import timedelta
 
 from apps.maintenance.domain.valueObjects.maintenanceState import (
     SLA_HOURS_BY_PRIORITY,
@@ -254,9 +252,7 @@ class WorkOrder(AggregateRoot):
         always passes through a review gate.
         """
         if not self.status.canTransitionTo(WO_PENDING_APPROVAL):
-            raise InvalidStateTransitionError(
-                f"Cannot submit for approval from '{self.status}'."
-            )
+            raise InvalidStateTransitionError(f"Cannot submit for approval from '{self.status}'.")
         previous = str(self.status)
         self.status = WorkOrderStatus(WO_PENDING_APPROVAL)
         if resolutionNote.strip():

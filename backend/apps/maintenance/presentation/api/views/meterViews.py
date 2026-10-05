@@ -154,9 +154,7 @@ class DeviceMeterReadingView(IdempotencyMixin, MeterView):
         dto = container.listMeterReadingsUseCase().execute(
             _listQuery(request, deviceId=str(deviceId))
         )
-        return Response(
-            successEnvelope([asDict(item) for item in dto.items], meta=dto.asMeta())
-        )
+        return Response(successEnvelope([asDict(item) for item in dto.items], meta=dto.asMeta()))
 
     def post(self, request: Request, deviceId: str) -> Response:
         serializer = RecordManualReadingSerializer(data=request.data)
@@ -181,9 +179,7 @@ class MeterReadingListView(MeterView):
 
     def get(self, request: Request) -> Response:
         dto = container.listMeterReadingsUseCase().execute(_listQuery(request))
-        return Response(
-            successEnvelope([asDict(item) for item in dto.items], meta=dto.asMeta())
-        )
+        return Response(successEnvelope([asDict(item) for item in dto.items], meta=dto.asMeta()))
 
 
 class MeterPointReadingView(MeterView):
@@ -193,9 +189,7 @@ class MeterPointReadingView(MeterView):
         dto = container.listMeterReadingsUseCase().execute(
             _listQuery(request, meterPointId=str(meterPointId))
         )
-        return Response(
-            successEnvelope([asDict(item) for item in dto.items], meta=dto.asMeta())
-        )
+        return Response(successEnvelope([asDict(item) for item in dto.items], meta=dto.asMeta()))
 
 
 class MeterPointSummaryView(MeterView):
@@ -266,9 +260,7 @@ class SensorIngestView(APIView):
         # 207-style semantics inside a 200: the batch itself was processed, and
         # each item reports its own fate. A single HTTP status cannot describe
         # "483 accepted, 2 duplicates, 1 rejected".
-        return Response(
-            successEnvelope([asDict(item) for item in dto.results], meta=dto.asMeta())
-        )
+        return Response(successEnvelope([asDict(item) for item in dto.results], meta=dto.asMeta()))
 
 
 class MeterPmStatusView(MeterView):
@@ -289,8 +281,7 @@ def _listQuery(
 ) -> ListMeterReadingsQuery:
     return ListMeterReadingsQuery(
         deviceId=deviceId or str(request.query_params.get("deviceId", "")).strip(),
-        meterPointId=meterPointId
-        or str(request.query_params.get("meterPointId", "")).strip(),
+        meterPointId=meterPointId or str(request.query_params.get("meterPointId", "")).strip(),
         captureMode=str(request.query_params.get("captureMode", "")).strip(),
         quality=str(request.query_params.get("quality", "")).strip(),
         fromMoment=str(request.query_params.get("from", "")).strip(),

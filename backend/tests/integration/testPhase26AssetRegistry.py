@@ -161,9 +161,9 @@ class PersonnelDirectoryTests(AssetRegistryApiBase):
         listed = self.client.get(f"{BASE}/personnel", **self.auth).json()["data"]
         self.assertEqual(len(listed), 2)
 
-        filtered = self.client.get(
-            f"{BASE}/personnel?specialty=electrical", **self.auth
-        ).json()["data"]
+        filtered = self.client.get(f"{BASE}/personnel?specialty=electrical", **self.auth).json()[
+            "data"
+        ]
         self.assertEqual(len(filtered), 1)
         self.assertEqual(filtered[0]["fullName"], "سارا احمدی")
         self.assertEqual(filtered[0]["skills"], ["تعویض یاتاقان", "هم‌محوری"])
@@ -207,9 +207,7 @@ class DeviceRegistryTests(AssetRegistryApiBase):
         )
         self.assertEqual(nameplate.status_code, 200, nameplate.content)
         self.assertEqual(nameplate.json()["data"]["manufacturer"], "گراندفوس")
-        self.assertEqual(
-            nameplate.json()["data"]["locationPath"], "سایت اصفهان / اتاق پمپ‌خانه"
-        )
+        self.assertEqual(nameplate.json()["data"]["locationPath"], "سایت اصفهان / اتاق پمپ‌خانه")
 
         specs = self.client.put(
             f"{BASE}/devices/{device['id']}/specifications",
@@ -287,9 +285,9 @@ class PmPlanTests(AssetRegistryApiBase):
             )
             self.assertEqual(response.status_code, 201, response.content)
 
-        plans = self.client.get(
-            f"{BASE}/devices/{device['id']}/pm-plans", **self.auth
-        ).json()["data"]
+        plans = self.client.get(f"{BASE}/devices/{device['id']}/pm-plans", **self.auth).json()[
+            "data"
+        ]
         self.assertEqual(len(plans), 7)
         self.assertEqual({plan["discipline"] for plan in plans}, set(disciplines))
         self.assertEqual(plans[0]["checklist"], ["بازدید چشمی", "ثبت گزارش"])
@@ -318,9 +316,9 @@ class PmPlanTests(AssetRegistryApiBase):
         )
         self.assertEqual(execution.status_code, 201, execution.content)
 
-        plans = self.client.get(
-            f"{BASE}/devices/{device['id']}/pm-plans", **self.auth
-        ).json()["data"]
+        plans = self.client.get(f"{BASE}/devices/{device['id']}/pm-plans", **self.auth).json()[
+            "data"
+        ]
         self.assertEqual(plans[0]["lastExecutedOn"], "2026-01-15")
         self.assertEqual(plans[0]["nextDueOn"], "2026-04-15")
 
@@ -344,9 +342,9 @@ class PmPlanTests(AssetRegistryApiBase):
 
         deleted = self.client.delete(f"{BASE}/pm-plans/{plan['id']}", **self.auth)
         self.assertEqual(deleted.status_code, 200, deleted.content)
-        remaining = self.client.get(
-            f"{BASE}/devices/{device['id']}/pm-plans", **self.auth
-        ).json()["data"]
+        remaining = self.client.get(f"{BASE}/devices/{device['id']}/pm-plans", **self.auth).json()[
+            "data"
+        ]
         self.assertEqual(remaining, [])
 
 
@@ -381,9 +379,7 @@ class BillOfMaterialsTests(AssetRegistryApiBase):
             format="json",
             **self.auth,
         )
-        removed = self.client.delete(
-            f"{BASE}/devices/{device['id']}/bom/{part['id']}", **self.auth
-        )
+        removed = self.client.delete(f"{BASE}/devices/{device['id']}/bom/{part['id']}", **self.auth)
         self.assertEqual(removed.status_code, 200, removed.content)
         profile = self.client.get(f"{BASE}/devices/{device['id']}/profile", **self.auth)
         self.assertEqual(profile.json()["data"]["bom"], [])
@@ -470,9 +466,9 @@ class AnalyticsTests(AssetRegistryApiBase):
             )
             self.assertEqual(consume.status_code, 201, consume.content)
 
-        analytics = self.client.get(
-            f"{BASE}/devices/{device['id']}/analytics", **self.auth
-        ).json()["data"]
+        analytics = self.client.get(f"{BASE}/devices/{device['id']}/analytics", **self.auth).json()[
+            "data"
+        ]
         consumption = analytics["partConsumption"][0]
         self.assertEqual(consumption["partCode"], "BRG-6205")
         self.assertEqual(consumption["usageCount"], 2)

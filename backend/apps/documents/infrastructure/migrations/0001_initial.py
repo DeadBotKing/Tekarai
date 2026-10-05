@@ -21,7 +21,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="DocumentModel",
             fields=[
-                ("id", models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, serialize=False)),
+                (
+                    "id",
+                    models.UUIDField(
+                        primary_key=True, default=uuid.uuid4, editable=False, serialize=False
+                    ),
+                ),
                 ("tenantId", models.UUIDField(db_index=True)),
                 ("name", models.CharField(max_length=300)),
                 ("contentType", models.CharField(blank=True, default="", max_length=200)),

@@ -3,7 +3,43 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:  # pragma: no cover - import-time contract for type checkers
+    # The team-sync factories below import their targets lazily inside the
+    # function body to keep this composition root free of an import cycle.
+    # Their return annotations still have to resolve for Ruff and Mypy, so the
+    # names are declared here and erased at runtime.
+    from apps.maintenance.application.useCases.teamSyncUseCases import (
+        CloseReservationUseCase,
+        CommitInspectionTemplateUseCase,
+        DeleteInspectionTemplateUseCase,
+        ListInspectionRecordsUseCase,
+        ListInspectionTemplatesUseCase,
+        ListReservationsUseCase,
+        SaveInspectionRecordUseCase,
+        SaveInspectionTemplateUseCase,
+        SaveReservationUseCase,
+    )
+    from apps.maintenance.infrastructure.repositories.teamSyncRepositoryImpl import (
+        InspectionSyncRepositoryImpl,
+        PartReservationRepositoryImpl,
+    )
+
+from apps.maintenance.application.commands.maintenanceCommands import (
+    ChangeDeviceStatusCommand,
+    ChangeWorkOrderStatusCommand,
+)
+from apps.maintenance.application.commands.sparePartCommands import (
+    ConsumeSparePartCommand,
+)
+from apps.maintenance.application.commands.timeCostCommands import (
+    LogLabourEntryCommand,
+)
+from apps.maintenance.application.queries.maintenanceQueries import (
+    GetDeviceQuery,
+    GetWorkOrderQuery,
+)
 from apps.maintenance.application.useCases.alertScanUseCases import (
     RunMaintenanceAlertScanUseCase,
 )
@@ -33,8 +69,15 @@ from apps.maintenance.application.useCases.meterReadingUseCases import (
     ListMeterPointsUseCase,
     ListMeterReadingsUseCase,
     RecordManualMeterReadingUseCase,
+    RecordManualReadingCommand,
     SaveMeterPointUseCase,
 )
+from apps.maintenance.application.useCases.offlineSyncUseCases import (
+    ApplySyncBatchUseCase,
+    ListSyncHistoryUseCase,
+    SyncHandler,
+)
+from apps.maintenance.application.useCases.scanUseCases import ResolveScanUseCase
 from apps.maintenance.application.useCases.sparePartUseCases import (
     ConsumeSparePartUseCase,
     CreateSparePartUseCase,
@@ -66,33 +109,6 @@ from apps.maintenance.application.useCases.workOrderUseCases import (
     SubmitWorkOrderUseCase,
     UpdateWorkOrderUseCase,
 )
-from apps.maintenance.infrastructure.repositories.costReportRepositoryImpl import (
-    MaintenanceCostRepositoryDjango,
-)
-from apps.maintenance.infrastructure.repositories.deviceHistoryRepositoryImpl import (
-    DeviceHistoryRepositoryDjango,
-)
-from apps.maintenance.infrastructure.repositories.deviceRepositoryImpl import (
-    DeviceRepositoryDjango,
-)
-from apps.maintenance.application.commands.maintenanceCommands import (
-    ChangeDeviceStatusCommand,
-    ChangeWorkOrderStatusCommand,
-)
-from apps.maintenance.application.commands.sparePartCommands import (
-    ConsumeSparePartCommand,
-)
-from apps.maintenance.application.commands.timeCostCommands import (
-    LogLabourEntryCommand,
-)
-from apps.maintenance.application.useCases.meterReadingUseCases import (
-    RecordManualReadingCommand,
-)
-from apps.maintenance.application.useCases.offlineSyncUseCases import (
-    ApplySyncBatchUseCase,
-    ListSyncHistoryUseCase,
-)
-from apps.maintenance.application.useCases.scanUseCases import ResolveScanUseCase
 from apps.maintenance.application.useCases.workTimerUseCases import (
     CancelWorkTimerUseCase,
     GetMyRunningTimersUseCase,
@@ -101,10 +117,6 @@ from apps.maintenance.application.useCases.workTimerUseCases import (
     StartWorkTimerUseCase,
     StopWorkTimerCommand,
     StopWorkTimerUseCase,
-)
-from apps.maintenance.application.queries.maintenanceQueries import (
-    GetDeviceQuery,
-    GetWorkOrderQuery,
 )
 from apps.maintenance.domain.exceptions.fieldOpsErrors import SyncConflictError
 from apps.maintenance.domain.valueObjects.fieldOpsTypes import (
@@ -117,12 +129,18 @@ from apps.maintenance.domain.valueObjects.fieldOpsTypes import (
     SYNC_WORK_ORDER_PART,
     SYNC_WORK_ORDER_STATUS,
 )
+from apps.maintenance.infrastructure.repositories.costReportRepositoryImpl import (
+    MaintenanceCostRepositoryDjango,
+)
+from apps.maintenance.infrastructure.repositories.deviceHistoryRepositoryImpl import (
+    DeviceHistoryRepositoryDjango,
+)
+from apps.maintenance.infrastructure.repositories.deviceRepositoryImpl import (
+    DeviceRepositoryDjango,
+)
 from apps.maintenance.infrastructure.repositories.fieldOpsRepositoryImpl import (
     OfflineSyncLedgerDjango,
     ScanResolutionRepositoryDjango,
-)
-from apps.maintenance.infrastructure.repositories.workTimerRepositoryImpl import (
-    WorkTimerRepositoryDjango,
 )
 from apps.maintenance.infrastructure.repositories.labourEntryRepositoryImpl import (
     LabourEntryRepositoryDjango,
@@ -142,6 +160,9 @@ from apps.maintenance.infrastructure.repositories.workOrderHistoryRepositoryImpl
 )
 from apps.maintenance.infrastructure.repositories.workOrderRepositoryImpl import (
     WorkOrderRepositoryDjango,
+)
+from apps.maintenance.infrastructure.repositories.workTimerRepositoryImpl import (
+    WorkTimerRepositoryDjango,
 )
 from apps.sharedKernel.infrastructure.wiring import sharedKernelProvider
 
@@ -301,21 +322,15 @@ def listWorkOrderPartUsageUseCase() -> ListWorkOrderPartUsageUseCase:
 
 # -- Time & cost tracking (ثبت زمان و هزینه) --------------------------------------
 def logLabourEntryUseCase() -> LogLabourEntryUseCase:
-    return LogLabourEntryUseCase(
-        labourEntryRepository=labourEntryRepository(), **_kernelPorts()
-    )
+    return LogLabourEntryUseCase(labourEntryRepository=labourEntryRepository(), **_kernelPorts())
 
 
 def listLabourEntriesUseCase() -> ListLabourEntriesUseCase:
-    return ListLabourEntriesUseCase(
-        labourEntryRepository=labourEntryRepository(), **_kernelPorts()
-    )
+    return ListLabourEntriesUseCase(labourEntryRepository=labourEntryRepository(), **_kernelPorts())
 
 
 def deleteLabourEntryUseCase() -> DeleteLabourEntryUseCase:
-    return DeleteLabourEntryUseCase(
-        labourEntryRepository=labourEntryRepository(), **_kernelPorts()
-    )
+    return DeleteLabourEntryUseCase(labourEntryRepository=labourEntryRepository(), **_kernelPorts())
 
 
 def getWorkOrderCostSummaryUseCase() -> GetWorkOrderCostSummaryUseCase:
@@ -398,18 +413,32 @@ def listWorkOrderHistoryUseCase() -> ListWorkOrderHistoryUseCase:
 
 
 def deviceMaintenanceReportUseCase() -> DeviceMaintenanceReportUseCase:
-    return DeviceMaintenanceReportUseCase(
-        deviceRepository=deviceRepository(), **_workOrderDeps()
-    )
+    return DeviceMaintenanceReportUseCase(deviceRepository=deviceRepository(), **_workOrderDeps())
 
 
 def getDeviceTimelineUseCase() -> GetDeviceTimelineUseCase:
-    return GetDeviceTimelineUseCase(
-        workOrderRepository=workOrderRepository(), **_deviceDeps()
-    )
+    return GetDeviceTimelineUseCase(workOrderRepository=workOrderRepository(), **_deviceDeps())
 
 
 # -- Phase 26: asset registry + analytics -----------------------------------------
+from apps.maintenance.application.useCases.assetHierarchyUseCases import (  # noqa: E402
+    GetAssetAncestryUseCase,
+    GetAssetTreeUseCase,
+    ListAssetMovementsUseCase,
+    MoveAssetUseCase,
+    ReinstateAssetUseCase,
+    RetireAssetUseCase,
+)
+from apps.maintenance.application.useCases.performanceReviewUseCases import (  # noqa: E402
+    ComputeReviewCycleUseCase,
+    DeleteRaterScoreUseCase,
+    DeleteReviewCycleUseCase,
+    GetReviewResultsUseCase,
+    ListRaterScoresUseCase,
+    ListReviewCyclesUseCase,
+    SaveRaterScoreUseCase,
+    SaveReviewCycleUseCase,
+)
 from apps.maintenance.application.useCases.pmScheduleUseCases import (  # noqa: E402
     GetPmScheduleUseCase,
 )
@@ -435,27 +464,6 @@ from apps.maintenance.application.useCases.registryUseCases import (  # noqa: E4
     SaveSpecificationsUseCase,
     UpdateDeviceNameplateUseCase,
 )
-from apps.maintenance.application.useCases.assetHierarchyUseCases import (  # noqa: E402
-    GetAssetAncestryUseCase,
-    GetAssetTreeUseCase,
-    ListAssetMovementsUseCase,
-    MoveAssetUseCase,
-    ReinstateAssetUseCase,
-    RetireAssetUseCase,
-)
-from apps.maintenance.application.useCases.performanceReviewUseCases import (  # noqa: E402
-    ComputeReviewCycleUseCase,
-    DeleteRaterScoreUseCase,
-    DeleteReviewCycleUseCase,
-    GetReviewResultsUseCase,
-    ListRaterScoresUseCase,
-    ListReviewCyclesUseCase,
-    SaveRaterScoreUseCase,
-    SaveReviewCycleUseCase,
-)
-from apps.maintenance.infrastructure.repositories.performanceReviewRepositoryImpl import (  # noqa: E402
-    PerformanceReviewRepositoryDjango,
-)
 from apps.maintenance.application.useCases.workCalendarUseCases import (  # noqa: E402
     DeleteCalendarEntryUseCase,
     GetCapacityPlanUseCase,
@@ -467,15 +475,18 @@ from apps.maintenance.application.useCases.workCalendarUseCases import (  # noqa
     SaveShiftUseCase,
     SaveWorkCalendarUseCase,
 )
-from apps.maintenance.infrastructure.repositories.workCalendarRepositoryImpl import (  # noqa: E402
-    WorkCalendarRepositoryDjango,
-)
 from apps.maintenance.infrastructure.repositories.assetRegistryRepositoryImpl import (  # noqa: E402
     AssetMovementRepositoryDjango,
     DeviceRegistryRepositoryDjango,
     LocationRepositoryDjango,
     MaintenanceAnalyticsRepositoryDjango,
     PersonnelRepositoryDjango,
+)
+from apps.maintenance.infrastructure.repositories.performanceReviewRepositoryImpl import (  # noqa: E402
+    PerformanceReviewRepositoryDjango,
+)
+from apps.maintenance.infrastructure.repositories.workCalendarRepositoryImpl import (  # noqa: E402
+    WorkCalendarRepositoryDjango,
 )
 
 
@@ -756,9 +767,7 @@ def getMeterPointSummaryUseCase() -> GetMeterPointSummaryUseCase:
 
 
 def getMeterPmStatusUseCase() -> GetMeterPmStatusUseCase:
-    return GetMeterPmStatusUseCase(
-        registryRepository=deviceRegistryRepository(), **_meterDeps()
-    )
+    return GetMeterPmStatusUseCase(registryRepository=deviceRegistryRepository(), **_meterDeps())
 
 
 # =====================================================================================
@@ -952,7 +961,7 @@ def _syncRecordMeterReading(payload: Mapping[str, object]) -> tuple[str, dict]:
     return dto.id, {"value": dto.value, "delta": dto.delta}
 
 
-def syncHandlers() -> dict[str, object]:
+def syncHandlers() -> dict[str, SyncHandler]:
     return {
         SYNC_WORK_ORDER_STATUS: _syncChangeWorkOrderStatus,
         SYNC_WORK_ORDER_LABOUR: _syncLogLabour,

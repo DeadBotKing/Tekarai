@@ -6,6 +6,7 @@ import dataclasses
 from typing import Any
 
 from django.http import HttpResponse
+from django.utils.http import content_disposition_header
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -90,11 +91,9 @@ class WorkOrderListView(IdempotencyMixin, APIView):
                     break
                 page += 1
             content = buildWorkOrdersExport(collected, exportFormat)
-            response = HttpResponse(
-                content, content_type=LIST_EXPORT_TYPES[exportFormat]
-            )
-            response["Content-Disposition"] = (
-                f'attachment; filename="work-orders.{exportFormat}"'
+            response = HttpResponse(content, content_type=LIST_EXPORT_TYPES[exportFormat])
+            response["Content-Disposition"] = content_disposition_header(
+                as_attachment=True, filename=f"work-orders.{exportFormat}"
             )
             return response
 
@@ -239,9 +238,7 @@ class WorkOrderHistoryView(APIView):
         dto = container.listWorkOrderHistoryUseCase().execute(
             ListWorkOrderHistoryQuery(workOrderId=str(workOrderId))
         )
-        return Response(
-            successEnvelope([asDict(item) for item in dto.items], meta=dto.asMeta())
-        )
+        return Response(successEnvelope([asDict(item) for item in dto.items], meta=dto.asMeta()))
 
 
 class WorkOrderStatusView(IdempotencyMixin, APIView):
@@ -264,7 +261,7 @@ class WorkOrderStatusView(IdempotencyMixin, APIView):
 class DeviceMaintenanceReportView(APIView):
     """Full maintenance history + stats for one device (Phase 23 reporting).
 
-    Returns JSON by default; ``?format=csv`` or ``?format=xlsx`` stream a
+    Returns JSON by default; ``?export=csv`` or ``?export=xlsx`` stream a
     Persian-labelled download. Optional ``fromDate``/``toDate`` (YYYY-MM-DD)
     bound the work orders by creation date. The printable PDF is produced by
     the frontend's browser-print report page from the same JSON payload.
@@ -292,7 +289,9 @@ class DeviceMaintenanceReportView(APIView):
             content = buildDeviceReportCsv(report)
             filename = f"maintenance-report-{report.device.code}.csv"
             response = HttpResponse(content, content_type="text/csv; charset=utf-8")
-            response["Content-Disposition"] = f'attachment; filename="{filename}"'
+            response["Content-Disposition"] = content_disposition_header(
+                as_attachment=True, filename=filename
+            )
             return response
 
         if exportFormat == "xlsx":
@@ -300,19 +299,20 @@ class DeviceMaintenanceReportView(APIView):
             filename = f"maintenance-report-{report.device.code}.xlsx"
             response = HttpResponse(
                 content,
-                content_type=(
-                    "application/vnd.openxmlformats-officedocument."
-                    "spreadsheetml.sheet"
-                ),
+                content_type=("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
             )
-            response["Content-Disposition"] = f'attachment; filename="{filename}"'
+            response["Content-Disposition"] = content_disposition_header(
+                as_attachment=True, filename=filename
+            )
             return response
 
         if exportFormat == "pdf":
             content = buildDeviceReportPdf(report)
             filename = f"maintenance-report-{report.device.code}.pdf"
             response = HttpResponse(content, content_type="application/pdf")
-            response["Content-Disposition"] = f'attachment; filename="{filename}"'
+            response["Content-Disposition"] = content_disposition_header(
+                as_attachment=True, filename=filename
+            )
             return response
 
         return Response(successEnvelope(asDict(report), meta=report.asMeta()))

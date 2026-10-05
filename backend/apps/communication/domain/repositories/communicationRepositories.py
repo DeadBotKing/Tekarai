@@ -6,6 +6,7 @@ The domain stays free of Django ORM, Redis, Channels and WebRTC (§37).
 
 from __future__ import annotations
 
+import builtins
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -328,7 +329,7 @@ class LetterRepository(Protocol):
 
     def list(
         self, tenantId: uuid.UUID, *, status: str = "", limit: int = 50
-    ) -> list[OfficialLetter]: ...
+    ) -> builtins.list[OfficialLetter]: ...
 
 
 # ---------------------------------------------------------------------------

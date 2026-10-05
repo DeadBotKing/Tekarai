@@ -34,7 +34,7 @@ class OpenVocabularyField(serializers.CharField):
         self.canonical: tuple[str, ...] = tuple(canonical)
         kwargs.setdefault("max_length", 24)
         kwargs.setdefault("trim_whitespace", True)
-        super().__init__(**kwargs)  # type: ignore[arg-type]
+        super().__init__(**kwargs)
 
     def to_internal_value(self, data: object) -> str:
         value = super().to_internal_value(data)

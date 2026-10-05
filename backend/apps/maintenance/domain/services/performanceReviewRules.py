@@ -44,14 +44,12 @@ entrench bias rather than remove it.
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from decimal import ROUND_HALF_UP, Decimal
+from typing import Protocol, runtime_checkable
 
 from apps.maintenance.domain.valueObjects.performanceState import (
-    REASON_DAMPED_ABOVE,
-    REASON_DAMPED_BELOW,
-    REASON_FULL_WEIGHT,
-    REASON_UNRELIABLE,
     DEFAULT_DAMPING_TOLERANCE,
     DEFAULT_RELIABILITY,
     DEFAULT_ROLE_WEIGHTS,
@@ -63,6 +61,10 @@ from apps.maintenance.domain.valueObjects.performanceState import (
     MIN_RELIABILITY,
     MIN_SPREAD,
     RATER_ROLES,
+    REASON_DAMPED_ABOVE,
+    REASON_DAMPED_BELOW,
+    REASON_FULL_WEIGHT,
+    REASON_UNRELIABLE,
     SCORE_MAX,
     SCORE_MIN,
     SYSTEM_METRIC_WEIGHTS,
@@ -94,12 +96,12 @@ def _round2(value: float) -> float:
     return float(Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
 
-def clampScore(value: float | int | None) -> float:
-    """Pull any number onto the 0..100 scale; ``None`` becomes 0."""
+def clampScore(value: object) -> float:
+    """Pull any number onto the 0..100 scale; ``None`` and non-numbers become 0."""
     if value is None:
         return float(SCORE_MIN)
     try:
-        number = float(value)
+        number = float(value)  # type: ignore[arg-type]  # guarded by the except below
     except (TypeError, ValueError):
         return float(SCORE_MIN)
     if number != number:  # NaN
@@ -107,7 +109,7 @@ def clampScore(value: float | int | None) -> float:
     return float(min(max(number, SCORE_MIN), SCORE_MAX))
 
 
-def median(values: list[float]) -> float:
+def median(values: Sequence[float]) -> float:
     """Middle value; mean of the middle two when the count is even."""
     if not values:
         return 0.0
@@ -119,7 +121,7 @@ def median(values: list[float]) -> float:
     return float((ordered[middle - 1] + ordered[middle]) / 2.0)
 
 
-def medianAbsoluteDeviation(values: list[float]) -> float:
+def medianAbsoluteDeviation(values: Sequence[float]) -> float:
     """Robust spread: the median of each value's distance from the median.
 
     Chosen over standard deviation because the outliers this engine exists to
@@ -206,7 +208,7 @@ class ReviewOutcome:
     notes: list[str] = field(default_factory=list)
 
 
-def roleWeight(raterRole: str, overrides: dict[str, int] | None = None) -> float:
+def roleWeight(raterRole: str, overrides: Mapping[str, object] | None = None) -> float:
     """Relative weight of a role, honouring a per-cycle override table.
 
     An unknown role is worth nothing rather than a default share: a typo in a
@@ -217,15 +219,15 @@ def roleWeight(raterRole: str, overrides: dict[str, int] | None = None) -> float
         for key, value in overrides.items():
             if key in DEFAULT_ROLE_WEIGHTS or key in RATER_ROLES:
                 try:
-                    table[key] = max(0, int(value))
+                    # Overrides arrive from stored cycle config, so the value is
+                    # untrusted; the except below is the contract, not a guard.
+                    table[key] = max(0, int(value))  # type: ignore[call-overload]
                 except (TypeError, ValueError):
                     continue
     return float(table.get(raterRole, 0))
 
 
-def dampingFactor(
-    deviation: float, tolerance: float = DEFAULT_DAMPING_TOLERANCE
-) -> float:
+def dampingFactor(deviation: float, tolerance: float = DEFAULT_DAMPING_TOLERANCE) -> float:
     """How much of a rater's weight survives their distance from consensus.
 
     ``deviation`` is a signed robust z-score. Inside the tolerance band the
@@ -240,9 +242,7 @@ def dampingFactor(
     return max(MIN_DAMPING_FACTOR, factor)
 
 
-def reliabilityFromHistory(
-    historicalDeviation: float | None, cycles: int
-) -> float:
+def reliabilityFromHistory(historicalDeviation: float | None, cycles: int) -> float:
     """Standing earned over past cycles, in (MIN_RELIABILITY .. 1.0].
 
     Full trust until there is enough history to justify less — a new rater is
@@ -262,9 +262,7 @@ def reliabilityFromHistory(
     return max(MIN_RELIABILITY, value)
 
 
-def systemScore(
-    metrics: SystemMetrics, weights: dict[str, int] | None = None
-) -> float | None:
+def systemScore(metrics: SystemMetrics, weights: dict[str, int] | None = None) -> float | None:
     """Blend the measured metrics into one 0..100 mark.
 
     Returns ``None`` when nothing was measured at all, which the caller must
@@ -283,13 +281,16 @@ def systemScore(
 
     total = 0.0
     weightSum = 0.0
-    for key, value in metrics.asDict().items():
-        if value is None:
+    for key, metricValue in metrics.asDict().items():
+        # Named apart from the `value` of the weight-parsing loop above: the
+        # two held different types under one name, which is how a weight could
+        # be silently read where a metric was meant.
+        if metricValue is None:
             continue
-        weight = float(table.get(key, 0))
+        weight = float(table.get(key, 0) or 0)
         if weight <= 0:
             continue
-        total += clampScore(value) * weight
+        total += clampScore(metricValue) * weight
         weightSum += weight
     if weightSum <= 0:
         return None
@@ -455,7 +456,22 @@ def scoreReview(
     )
 
 
-def rankOutcomes(outcomes: list[ReviewOutcome]) -> list[tuple[int, ReviewOutcome]]:
+@runtime_checkable
+class RankableOutcome(Protocol):
+    """The three fields `rankOutcomes` actually reads.
+
+    The parameter used to be typed `list[ReviewOutcome]` while a comment
+    explained that stored rows could be ranked too; callers duly passed
+    `SimpleNamespace` stand-ins and the annotation quietly lied. Stating the
+    structural requirement makes the documented contract the checked one.
+    """
+
+    personnelId: str
+    personnelName: str
+    finalScore: float
+
+
+def rankOutcomes[T: RankableOutcome](outcomes: Sequence[T]) -> list[tuple[int, T]]:
     """Order people by final score, highest first, with ties sharing a rank.
 
     Equal scores must share a rank: handing one of two identical performers
@@ -464,7 +480,7 @@ def rankOutcomes(outcomes: list[ReviewOutcome]) -> list[tuple[int, ReviewOutcome
     ordered = sorted(
         outcomes, key=lambda row: (-row.finalScore, row.personnelName, row.personnelId)
     )
-    ranked: list[tuple[int, ReviewOutcome]] = []
+    ranked: list[tuple[int, T]] = []
     previous: float | None = None
     rank = 0
     for index, outcome in enumerate(ordered, start=1):

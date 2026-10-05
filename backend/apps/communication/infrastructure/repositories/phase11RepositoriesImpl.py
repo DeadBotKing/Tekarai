@@ -6,6 +6,7 @@ leaks across tenants (§4). No business logic lives here (§79).
 
 from __future__ import annotations
 
+import builtins
 import uuid
 from datetime import UTC, datetime
 
@@ -399,7 +400,7 @@ class OfficialMessageRepositoryDjango:
 
     def list(
         self, tenantId: uuid.UUID, *, status: str = "", limit: int = 50
-    ) -> list[d.OfficialMessage]:
+    ) -> builtins.list[d.OfficialMessage]:
         qs = OfficialMessageModel.objects.filter(tenantId=tenantId)
         if status:
             qs = qs.filter(officialStatus=status)
@@ -451,7 +452,7 @@ class MessageReportRepositoryDjango:
 
     def list(
         self, tenantId: uuid.UUID, *, status: str = "", limit: int = 50
-    ) -> list[d.MessageReport]:
+    ) -> builtins.list[d.MessageReport]:
         qs = MessageReportModel.objects.filter(tenantId=tenantId)
         if status:
             qs = qs.filter(reportStatus=status)

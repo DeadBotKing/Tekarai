@@ -214,7 +214,9 @@ class ApplySyncBatchUseCase(UseCase):
     #: everyone the union of both.
     requiredAction = ""
 
-    def __init__(self, ledger: OfflineSyncLedger, handlers: Mapping[str, SyncHandler], **kwargs) -> None:
+    def __init__(
+        self, ledger: OfflineSyncLedger, handlers: Mapping[str, SyncHandler], **kwargs
+    ) -> None:
         super().__init__(**kwargs)
         self.ledger = ledger
         self.handlers = dict(handlers)
@@ -328,7 +330,9 @@ class ApplySyncBatchUseCase(UseCase):
                     tenantId,
                     key,
                     kind,
-                    status if status in (SYNC_STATUS_REJECTED, SYNC_STATUS_CONFLICT) else SYNC_STATUS_FAILED,
+                    status
+                    if status in (SYNC_STATUS_REJECTED, SYNC_STATUS_CONFLICT)
+                    else SYNC_STATUS_FAILED,
                     errorCode=code,
                     errorMessage=message,
                     actorName=actorName,
@@ -369,9 +373,7 @@ class ApplySyncBatchUseCase(UseCase):
         results: list[SyncOperationResultDto] = []
         for operation in command.operations:
             results.append(
-                self._runOne(
-                    tenantId, operation, now, command.deviceLabel.strip()[:120], actorName
-                )
+                self._runOne(tenantId, operation, now, command.deviceLabel.strip()[:120], actorName)
             )
         tally = {
             SYNC_STATUS_APPLIED: 0,

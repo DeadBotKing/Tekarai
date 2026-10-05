@@ -15,8 +15,15 @@ from typing import Any
 
 from django.core.exceptions import ImproperlyConfigured
 
-# Backend root (backend/)
-BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
+# Backend root (backend/).
+#
+# This file is backend/config/environment.py, so `backend/` is two parents up,
+# not three. The extra `.parent` resolved to the repository root, which meant
+# `backend/.env` -- the location README.md and backend/.env.example tell every
+# developer to use -- was never read: django-environ looked for `.env` beside
+# the repo root instead and silently fell back to defaults. The same off-by-one
+# scattered db.sqlite3, staticRoot/ and mediaRoot/ across the repository root.
+BASE_DIR: Path = Path(__file__).resolve().parent.parent
 
 #: Engines supported by the platform. ``mssql`` is the system of record;
 #: ``sqlite`` exists only for offline development and automated testing

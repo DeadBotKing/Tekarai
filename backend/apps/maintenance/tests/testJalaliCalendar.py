@@ -93,9 +93,7 @@ class ExpandRecurringDatesTests(TestCase):
         )
 
     def testExcludesAnOccurrenceJustOutsideTheWindow(self) -> None:
-        self.assertEqual(
-            expandRecurringDates(1, 1, date(2026, 3, 22), date(2026, 12, 31)), []
-        )
+        self.assertEqual(expandRecurringDates(1, 1, date(2026, 3, 22), date(2026, 12, 31)), [])
 
     def testWindowStraddlingNowruzStillFindsIt(self) -> None:
         """A Gregorian window spans two Jalali years around نوروز."""
@@ -118,9 +116,7 @@ class ExpandRecurringDatesTests(TestCase):
         self.assertEqual(expandRecurringDates(1, 0, date(2026, 1, 1), date(2027, 1, 1)), [])
 
     def testInvertedWindowYieldsNothing(self) -> None:
-        self.assertEqual(
-            expandRecurringDates(1, 1, date(2029, 1, 1), date(2026, 1, 1)), []
-        )
+        self.assertEqual(expandRecurringDates(1, 1, date(2029, 1, 1), date(2026, 1, 1)), [])
 
 
 class IranOfficialHolidayTableTests(TestCase):

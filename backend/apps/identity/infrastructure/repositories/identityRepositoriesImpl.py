@@ -6,6 +6,7 @@ demands it (BR-TEN-001). IntegrityErrors map to stable error codes.
 
 from __future__ import annotations
 
+import builtins
 import uuid
 from datetime import UTC, datetime
 
@@ -405,7 +406,9 @@ class AccessRepositoryDjango:
 
 
 class RoleRepositoryDjango:
-    def create(self, code: str, name: str, scopeType: str, actions: list[str]) -> uuid.UUID:
+    def create(
+        self, code: str, name: str, scopeType: str, actions: builtins.list[str]
+    ) -> uuid.UUID:
         try:
             role = RoleModel.objects.create(code=code, name=name, scopeType=scopeType)
         except IntegrityError as exc:
@@ -422,7 +425,9 @@ class RoleRepositoryDjango:
             )
         return role.id
 
-    def update(self, roleId: uuid.UUID, *, name: str | None, actions: list[str] | None) -> None:
+    def update(
+        self, roleId: uuid.UUID, *, name: str | None, actions: builtins.list[str] | None
+    ) -> None:
         if name is not None:
             RoleModel.objects.filter(id=roleId).update(name=name)
         if actions is not None:
@@ -451,7 +456,7 @@ class RoleRepositoryDjango:
         model = RoleModel.objects.filter(id=roleId).first()
         return self.toSummary(model) if model else None
 
-    def list(self) -> list[RoleSummary]:
+    def list(self) -> builtins.list[RoleSummary]:
         return [self.toSummary(m) for m in RoleModel.objects.all().order_by("code")]
 
     @staticmethod
@@ -630,7 +635,7 @@ class ServiceAccountRepositoryDjango:
     def existsByCode(self, tenantId: uuid.UUID, code: str) -> bool:
         return ServiceAccountModel.objects.filter(tenantId=tenantId, code=code.lower()).exists()
 
-    def list(self, tenantId: uuid.UUID) -> list[ServiceAccount]:
+    def list(self, tenantId: uuid.UUID) -> builtins.list[ServiceAccount]:
         models = ServiceAccountModel.objects.filter(tenantId=tenantId).order_by("code")
         return [self.toDomain(model) for model in models]
 

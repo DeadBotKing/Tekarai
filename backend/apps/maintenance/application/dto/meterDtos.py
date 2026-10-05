@@ -91,9 +91,7 @@ class MeterReadingListDto:
             "total": self.total,
             "page": self.page,
             "pageSize": self.pageSize,
-            "pageCount": (self.total + self.pageSize - 1) // self.pageSize
-            if self.pageSize
-            else 0,
+            "pageCount": (self.total + self.pageSize - 1) // self.pageSize if self.pageSize else 0,
         }
 
 
@@ -207,9 +205,7 @@ def meterPointDto(point: MeterPoint) -> MeterPointDto:
     )
 
 
-def meterReadingDto(
-    reading: MeterReading, point: MeterPoint | None = None
-) -> MeterReadingDto:
+def meterReadingDto(reading: MeterReading, point: MeterPoint | None = None) -> MeterReadingDto:
     return MeterReadingDto(
         id=str(reading.id),
         deviceId=str(reading.deviceId),

@@ -10,8 +10,8 @@ from rest_framework.views import APIView
 
 from apps.maintenance.application.commands.teamSyncCommands import (
     CloseReservationCommand,
-    DeleteInspectionTemplateCommand,
     CommitInspectionTemplateCommand,
+    DeleteInspectionTemplateCommand,
     ListInspectionRecordsQuery,
     ListInspectionTemplatesQuery,
     ListReservationsQuery,
@@ -71,7 +71,9 @@ class TeamReservationDetailView(APIView):
         serializer = CloseReservationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         result = container.closeReservationUseCase().execute(
-            CloseReservationCommand(reservationId=reservationId, status=str(serializer.validated_data["status"]))
+            CloseReservationCommand(
+                reservationId=reservationId, status=str(serializer.validated_data["status"])
+            )
         )
         return Response(successEnvelope(dataclasses.asdict(result)))
 

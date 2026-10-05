@@ -53,6 +53,19 @@ FRAMEWORK_HOOKS = {
 FUNCTION_EXEMPTIONS = FRAMEWORK_HOOKS
 MODULE_EXEMPTIONS = {"manage.py", "wsgi.py", "asgi.py", "urls.py"}
 
+#: DRF discovers per-field validators by name: a serializer field `quantity`
+#: is validated by a method that *must* be called `validate_quantity`. The
+#: name is chosen by the framework, not by us, exactly like the hooks above —
+#: it just cannot be listed literally because it varies with the field name.
+FRAMEWORK_HOOK_PATTERNS = (re.compile(r"^validate_[a-z][a-zA-Z0-9_]*$"),)
+
+
+def isFrameworkHook(name: str) -> bool:
+    """True when the framework, not Tekarai, dictates this method name."""
+    if name in FUNCTION_EXEMPTIONS:
+        return True
+    return any(pattern.match(name) for pattern in FRAMEWORK_HOOK_PATTERNS)
+
 
 def isFrameworkGenerated(sourceFile: Path) -> bool:
     """Django-generated migration files (0001_initial.py, 00XX_*.py)."""
@@ -79,7 +92,7 @@ class FunctionNamingTests(SimpleTestCase):
                 if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     if node.name.startswith("__") and node.name.endswith("__"):
                         continue
-                    if node.name in FUNCTION_EXEMPTIONS:
+                    if isFrameworkHook(node.name):
                         continue
                     self.assertTrue(
                         CAMEL_CASE_PATTERN.match(node.name),

@@ -10,6 +10,7 @@ on every machine (no system-font dependency).
 from __future__ import annotations
 
 import io
+from collections.abc import Sequence
 from pathlib import Path
 
 import arabic_reshaper
@@ -54,20 +55,36 @@ def fa(value: object) -> str:
 
 def _styles() -> tuple[ParagraphStyle, ParagraphStyle, ParagraphStyle, ParagraphStyle]:
     title = ParagraphStyle(
-        "faTitle", fontName=FONT_BOLD, fontSize=15, leading=21,
-        alignment=2, textColor=INK,
+        "faTitle",
+        fontName=FONT_BOLD,
+        fontSize=15,
+        leading=21,
+        alignment=2,
+        textColor=INK,
     )
     subtitle = ParagraphStyle(
-        "faSubtitle", fontName=FONT, fontSize=9.5, leading=14,
-        alignment=2, textColor=MUTED,
+        "faSubtitle",
+        fontName=FONT,
+        fontSize=9.5,
+        leading=14,
+        alignment=2,
+        textColor=MUTED,
     )
     header = ParagraphStyle(
-        "faHeader", fontName=FONT_BOLD, fontSize=8.5, leading=12,
-        alignment=2, textColor=colors.white,
+        "faHeader",
+        fontName=FONT_BOLD,
+        fontSize=8.5,
+        leading=12,
+        alignment=2,
+        textColor=colors.white,
     )
     cell = ParagraphStyle(
-        "faCell", fontName=FONT, fontSize=8, leading=12,
-        alignment=2, textColor=INK,
+        "faCell",
+        fontName=FONT,
+        fontSize=8,
+        leading=12,
+        alignment=2,
+        textColor=INK,
     )
     return title, subtitle, header, cell
 
@@ -75,8 +92,8 @@ def _styles() -> tuple[ParagraphStyle, ParagraphStyle, ParagraphStyle, Paragraph
 def buildPersianTablePdf(
     *,
     title: str,
-    columns: list[str],
-    rows: list[list[object]],
+    columns: Sequence[str],
+    rows: Sequence[Sequence[object]],
     subtitle: str = "",
     wide: bool | None = None,
 ) -> bytes:
@@ -115,9 +132,7 @@ def buildPersianTablePdf(
         [Paragraph(fa(col), headerStyle) for col in reversed(columns)]
     ]
     for row in rows:
-        tableData.append(
-            [Paragraph(fa(value), cellStyle) for value in reversed(row)]
-        )
+        tableData.append([Paragraph(fa(value), cellStyle) for value in reversed(row)])
 
     usable = doc.width
     colCount = max(len(columns), 1)
@@ -171,7 +186,7 @@ def buildPersianInfoGrid(headerPairs: list[tuple[str, object]], columns: int = 2
             row.append(Paragraph("", cellStyle))
         row.reverse()
     colCount = rowSpan
-    width = (210 * mm - 24 * mm)
+    width = 210 * mm - 24 * mm
     tableWidth = width
     table = Table(
         dataRows,

@@ -56,9 +56,7 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name="maintenanceattachmentmodel",
             constraint=models.CheckConstraint(
-                condition=models.Q(
-                    category__in=("failurePhoto", "manual", "invoice", "other")
-                ),
+                condition=models.Q(category__in=("failurePhoto", "manual", "invoice", "other")),
                 name="ck_maintenance_attachment_category",
             ),
         ),

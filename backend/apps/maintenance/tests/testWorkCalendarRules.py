@@ -119,7 +119,7 @@ class NextWorkingDayTests(SimpleTestCase):
         self.assertEqual(nextWorkingDay(irCalendar(), SATURDAY_DATE), SATURDAY_DATE)
 
     def testExclusiveAlwaysMovesAtLeastOneDay(self) -> None:
-        """"Schedule the next one" must not return the day just completed."""
+        """ "Schedule the next one" must not return the day just completed."""
         self.assertEqual(
             nextWorkingDay(irCalendar(), SATURDAY_DATE, inclusive=False),
             date(2026, 10, 4),
@@ -134,9 +134,7 @@ class NextWorkingDayTests(SimpleTestCase):
         self.assertEqual(nextWorkingDay(spec, FRIDAY_DATE), date(2026, 10, 12))
 
     def testPreviousWorkingDayWalksBackwards(self) -> None:
-        self.assertEqual(
-            previousWorkingDay(irCalendar(), FRIDAY_DATE), THURSDAY_DATE
-        )
+        self.assertEqual(previousWorkingDay(irCalendar(), FRIDAY_DATE), THURSDAY_DATE)
 
     def testACalendarWithNoWorkingDayReturnsTheDateUnchanged(self) -> None:
         """A seven-day weekend must not hang the scheduler."""
@@ -178,21 +176,15 @@ class WorkingDayCountingTests(SimpleTestCase):
         self.assertEqual(total, 6)
 
     def testInvertedRangeIsZeroNotNegative(self) -> None:
-        self.assertEqual(
-            workingDaysBetween(irCalendar(), date(2026, 10, 9), date(2026, 10, 3)), 0
-        )
+        self.assertEqual(workingDaysBetween(irCalendar(), date(2026, 10, 9), date(2026, 10, 3)), 0)
 
     def testHolidaysComeOutOfTheCount(self) -> None:
         spec = irCalendar(holidays=frozenset({date(2026, 10, 5)}))
-        self.assertEqual(
-            workingDaysBetween(spec, date(2026, 10, 3), date(2026, 10, 9)), 5
-        )
+        self.assertEqual(workingDaysBetween(spec, date(2026, 10, 3), date(2026, 10, 9)), 5)
 
     def testAddWorkingDaysSkipsClosures(self) -> None:
         """Three working days from چهارشنبه jumps the جمعه."""
-        self.assertEqual(
-            addWorkingDays(irCalendar(), date(2026, 10, 7), 3), date(2026, 10, 11)
-        )
+        self.assertEqual(addWorkingDays(irCalendar(), date(2026, 10, 7), 3), date(2026, 10, 11))
 
     def testAddZeroOrNegativeIsANoop(self) -> None:
         self.assertEqual(addWorkingDays(irCalendar(), SATURDAY_DATE, 0), SATURDAY_DATE)
@@ -366,9 +358,7 @@ class OvertimeTests(SimpleTestCase):
         self.assertEqual(hours, Decimal("0.00"))
 
     def testWorkWithNoShiftAtAllIsEntirelyOvertime(self) -> None:
-        hours = overtimeHours(
-            datetime(2026, 10, 9, 9, 0), datetime(2026, 10, 9, 14, 0), ()
-        )
+        hours = overtimeHours(datetime(2026, 10, 9, 9, 0), datetime(2026, 10, 9, 14, 0), ())
         self.assertEqual(hours, Decimal("5.00"))
 
     def testZeroLengthAndInvertedSpansAreZero(self) -> None:

@@ -10,6 +10,7 @@ from __future__ import annotations
 import dataclasses
 
 from django.http import HttpResponse
+from django.utils.http import content_disposition_header
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -127,8 +128,8 @@ class MaintenanceCostReportView(APIView):
         if exportFormat == "csv":
             content = buildCostReportCsv(report)
             response = HttpResponse(content, content_type="text/csv; charset=utf-8")
-            response["Content-Disposition"] = (
-                f'attachment; filename="maintenance-costs-{report.fromDate}.csv"'
+            response["Content-Disposition"] = content_disposition_header(
+                as_attachment=True, filename=f"maintenance-costs-{report.fromDate}.csv"
             )
             return response
 
@@ -138,16 +139,16 @@ class MaintenanceCostReportView(APIView):
                 content,
                 content_type=("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
             )
-            response["Content-Disposition"] = (
-                f'attachment; filename="maintenance-costs-{report.fromDate}.xlsx"'
+            response["Content-Disposition"] = content_disposition_header(
+                as_attachment=True, filename=f"maintenance-costs-{report.fromDate}.xlsx"
             )
             return response
 
         if exportFormat == "pdf":
             content = buildCostReportPdf(report)
             response = HttpResponse(content, content_type="application/pdf")
-            response["Content-Disposition"] = (
-                f'attachment; filename="maintenance-costs-{report.fromDate}.pdf"'
+            response["Content-Disposition"] = content_disposition_header(
+                as_attachment=True, filename=f"maintenance-costs-{report.fromDate}.pdf"
             )
             return response
 

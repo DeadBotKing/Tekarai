@@ -5,26 +5,6 @@ from __future__ import annotations
 from django.urls import path
 
 from apps.maintenance.presentation.api.views import openapiRegistration  # noqa: F401
-from apps.maintenance.presentation.api.views.performanceReviewViews import (
-    ComputeReviewView,
-    RaterScoreDetailView,
-    RaterScoreView,
-    ReviewCycleDetailView,
-    ReviewCycleListView,
-    ReviewResultsView,
-)
-from apps.maintenance.presentation.api.views.workCalendarViews import (
-    CalendarHolidayDetailView,
-    CalendarHolidayView,
-    CapacityPlanView,
-    ShiftAssignmentDetailView,
-    ShiftAssignmentView,
-    WorkCalendarDetailView,
-    WorkCalendarListView,
-    WorkingDayView,
-    WorkShiftDetailView,
-    WorkShiftView,
-)
 from apps.maintenance.presentation.api.views.assetHierarchyViews import (
     AssetAncestryView,
     AssetMovementListView,
@@ -39,6 +19,16 @@ from apps.maintenance.presentation.api.views.deviceViews import (
     DeviceStatusView,
     DeviceTimelineView,
     DuePmListView,
+)
+from apps.maintenance.presentation.api.views.fieldOpsViews import (
+    MyRunningTimersView,
+    OfflineSyncView,
+    ScanResolveView,
+    SyncHistoryView,
+    WorkOrderTimerListView,
+    WorkOrderTimerStartView,
+    WorkOrderTimerStopView,
+    WorkTimerDetailView,
 )
 from apps.maintenance.presentation.api.views.maintenanceAttachmentViews import (
     DeviceAttachmentView,
@@ -57,6 +47,14 @@ from apps.maintenance.presentation.api.views.meterViews import (
     MeterReadingCorrectionView,
     MeterReadingListView,
     SensorIngestView,
+)
+from apps.maintenance.presentation.api.views.performanceReviewViews import (
+    ComputeReviewView,
+    RaterScoreDetailView,
+    RaterScoreView,
+    ReviewCycleDetailView,
+    ReviewCycleListView,
+    ReviewResultsView,
 )
 from apps.maintenance.presentation.api.views.registryViews import (
     DeviceAnalyticsView,
@@ -92,21 +90,23 @@ from apps.maintenance.presentation.api.views.teamSyncViews import (
     TeamReservationDetailView,
     TeamReservationListView,
 )
-from apps.maintenance.presentation.api.views.fieldOpsViews import (
-    MyRunningTimersView,
-    OfflineSyncView,
-    ScanResolveView,
-    SyncHistoryView,
-    WorkOrderTimerListView,
-    WorkOrderTimerStartView,
-    WorkOrderTimerStopView,
-    WorkTimerDetailView,
-)
 from apps.maintenance.presentation.api.views.timeCostViews import (
     LabourEntryDetailView,
     MaintenanceCostReportView,
     WorkOrderCostSummaryView,
     WorkOrderLabourEntryView,
+)
+from apps.maintenance.presentation.api.views.workCalendarViews import (
+    CalendarHolidayDetailView,
+    CalendarHolidayView,
+    CapacityPlanView,
+    ShiftAssignmentDetailView,
+    ShiftAssignmentView,
+    WorkCalendarDetailView,
+    WorkCalendarListView,
+    WorkingDayView,
+    WorkShiftDetailView,
+    WorkShiftView,
 )
 from apps.maintenance.presentation.api.views.workOrderViews import (
     DeviceMaintenanceReportView,
@@ -309,9 +309,7 @@ urlpatterns = [
         name="shiftAssignmentDetail",
     ),
     path("work-calendars/capacity", CapacityPlanView.as_view(), name="capacityPlan"),
-    path(
-        "work-calendars/working-day", WorkingDayView.as_view(), name="workingDay"
-    ),
+    path("work-calendars/working-day", WorkingDayView.as_view(), name="workingDay"),
     path(
         "work-calendars/<uuid:calendarId>",
         WorkCalendarDetailView.as_view(),
@@ -483,5 +481,9 @@ urlpatterns = [
     path("scan", ScanResolveView.as_view(), name="scanResolve"),
     path("sync", OfflineSyncView.as_view(), name="offlineSync"),
     path("sync/history", SyncHistoryView.as_view(), name="offlineSyncHistory"),
-    path("team/inspection-records", TeamInspectionRecordListView.as_view(), name="teamInspectionRecordList"),
+    path(
+        "team/inspection-records",
+        TeamInspectionRecordListView.as_view(),
+        name="teamInspectionRecordList",
+    ),
 ]

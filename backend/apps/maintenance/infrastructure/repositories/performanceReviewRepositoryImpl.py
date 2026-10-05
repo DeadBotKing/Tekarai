@@ -44,9 +44,7 @@ class PerformanceReviewRepositoryDjango:
 
     # -- cycles ------------------------------------------------------------
     def listCycles(self, tenantId: uuid.UUID) -> list[dict]:
-        rows = PerformanceReviewCycleModel.objects.filter(
-            tenantId=tenantId, deletedAt__isnull=True
-        )
+        rows = PerformanceReviewCycleModel.objects.filter(tenantId=tenantId, deletedAt__isnull=True)
         counts = self._scoreCounts(tenantId, [row.id for row in rows])
         return [self._cycleDict(row, counts.get(row.id, 0)) for row in rows]
 
@@ -76,9 +74,9 @@ class PerformanceReviewRepositoryDjango:
             "updatedAt": now,
         }
         if cycleId:
-            PerformanceReviewCycleModel.objects.filter(
-                tenantId=tenantId, id=cycleId
-            ).update(**defaults)
+            PerformanceReviewCycleModel.objects.filter(tenantId=tenantId, id=cycleId).update(
+                **defaults
+            )
             row = PerformanceReviewCycleModel.objects.get(tenantId=tenantId, id=cycleId)
         else:
             row = PerformanceReviewCycleModel.objects.create(
@@ -198,9 +196,7 @@ class PerformanceReviewRepositoryDjango:
         excluded so a rater is never penalised twice for the same mark — once
         through damping and again through their own history.
         """
-        rows = PerformanceResultModel.objects.filter(
-            tenantId=tenantId, deletedAt__isnull=True
-        )
+        rows = PerformanceResultModel.objects.filter(tenantId=tenantId, deletedAt__isnull=True)
         if excludeCycleId is not None:
             rows = rows.exclude(cycleId=excludeCycleId)
 
@@ -333,9 +329,7 @@ class PerformanceReviewRepositoryDjango:
             personnelId = byName.get((row.get("assignedToName") or "").strip())
             if personnelId is None:
                 continue
-            bucket = orders.setdefault(
-                personnelId, {"total": 0, "completed": 0, "repeat": 0}
-            )
+            bucket = orders.setdefault(personnelId, {"total": 0, "completed": 0, "repeat": 0})
             bucket["total"] += 1
             if row.get("status") == WO_COMPLETED:
                 bucket["completed"] += 1

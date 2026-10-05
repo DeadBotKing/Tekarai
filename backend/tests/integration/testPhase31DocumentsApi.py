@@ -25,9 +25,7 @@ class DocumentsApiTest(TestCase):
         tokens = loginViaApi(self.client)
         self.auth = {"HTTP_AUTHORIZATION": f"Bearer {tokens['accessToken']}"}
 
-    def uploadDoc(
-        self, name: str = "دستورالعمل-ایمنی.pdf", category: str = "ایمنی"
-    ) -> dict:
+    def uploadDoc(self, name: str = "دستورالعمل-ایمنی.pdf", category: str = "ایمنی") -> dict:
         fileBody = io.BytesIO(b"%PDF-1.4 demo bytes for the document library")
         fileBody.name = name
         response = self.client.post(
@@ -50,9 +48,7 @@ class DocumentsApiTest(TestCase):
         names = [item["name"] for item in listing.json()["data"]]
         self.assertIn("دستورالعمل-ایمنی.pdf", names)
 
-        download = self.client.get(
-            f"/api/v1/documents/{uploaded['id']}/download", **self.auth
-        )
+        download = self.client.get(f"/api/v1/documents/{uploaded['id']}/download", **self.auth)
         self.assertEqual(download.status_code, 200, download.status_code)
         body = b"".join(download.streaming_content)
         self.assertTrue(body.startswith(b"%PDF"))
@@ -60,9 +56,7 @@ class DocumentsApiTest(TestCase):
         deleted = self.client.delete(f"/api/v1/documents/{uploaded['id']}", **self.auth)
         self.assertEqual(deleted.status_code, 200, deleted.content)
 
-        goneDownload = self.client.get(
-            f"/api/v1/documents/{uploaded['id']}/download", **self.auth
-        )
+        goneDownload = self.client.get(f"/api/v1/documents/{uploaded['id']}/download", **self.auth)
         self.assertEqual(goneDownload.status_code, 404)
 
     def testSearchFiltersByNameAndCategory(self) -> None:

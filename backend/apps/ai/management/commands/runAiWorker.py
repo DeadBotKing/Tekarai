@@ -49,7 +49,7 @@ class Command(BaseCommand):
         parser.add_argument("--limit", type=int, default=10, help="Jobs claimed per tick.")
         parser.add_argument("--tenant", type=str, default="", help="Restrict ticks to one tenant.")
 
-    def handle(self, *args, **options) -> None:  # noqa: ANN002/ANN003 — Django contract
+    def handle(self, *args, **options) -> None:  # noqa: ANN002, ANN003 — Django contract
         tenantId = options["tenant"] or None
         service = buildQueueService()
         if options["once"]:

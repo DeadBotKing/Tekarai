@@ -13,6 +13,10 @@ from apps.documents.application.commands import (
     UploadDocumentCommand,
 )
 from apps.documents.domain.entities.document import Document
+from apps.documents.domain.repositories.documentRepositories import (
+    DocumentFileStorage,
+    DocumentRepository,
+)
 from apps.maintenance.application.services.tenantResolver import resolveTenantId
 from apps.sharedKernel.application.requestContext import currentContext
 from apps.sharedKernel.application.useCase import (
@@ -68,7 +72,11 @@ def _dto(document: Document) -> DocumentDto:
     )
 
 
-class _DocumentUseCaseBase(UseCase):
+class DocumentUseCaseBase(UseCase):
+    # Injected by apps.documents.infrastructure.container at construction time.
+    repository: DocumentRepository
+    storage: DocumentFileStorage
+
     def _getOrRaise(self, tenantId: uuid.UUID, rawId: str) -> Document:
         try:
             documentId = rawId if isinstance(rawId, uuid.UUID) else uuid.UUID(str(rawId))
@@ -83,7 +91,7 @@ class _DocumentUseCaseBase(UseCase):
         return _dto(document)
 
 
-class ListDocumentsUseCase(_DocumentUseCaseBase):
+class ListDocumentsUseCase(DocumentUseCaseBase):
     requiredAction = "maintenance.document.view"
 
     def perform(self, query: ListDocumentsQuery) -> DocumentListDto:
@@ -98,7 +106,7 @@ class ListDocumentsUseCase(_DocumentUseCaseBase):
         return DocumentListDto(items=[_dto(d) for d in documents], totalCount=total)
 
 
-class GetDocumentStreamUseCase(_DocumentUseCaseBase):
+class GetDocumentStreamUseCase(DocumentUseCaseBase):
     requiredAction = "maintenance.document.view"
 
     def perform(self, query: DownloadDocumentQuery) -> DocumentFileResult:
@@ -111,7 +119,7 @@ class GetDocumentStreamUseCase(_DocumentUseCaseBase):
         )
 
 
-class UploadDocumentUseCase(_DocumentUseCaseBase):
+class UploadDocumentUseCase(DocumentUseCaseBase):
     requiredAction = "maintenance.document.upload"
 
     def perform(self, command: UploadDocumentCommand) -> DocumentDto:
@@ -143,11 +151,13 @@ class UploadDocumentUseCase(_DocumentUseCaseBase):
         except Exception:
             self.storage.delete(storedPath)
             raise
-        self.audit(AUDIT_CREATE, "Document", str(document.id), tenantId, after=_dto(document).__dict__)
+        self.audit(
+            AUDIT_CREATE, "Document", str(document.id), tenantId, after=_dto(document).__dict__
+        )
         return _dto(document)
 
 
-class DeleteDocumentUseCase(_DocumentUseCaseBase):
+class DeleteDocumentUseCase(DocumentUseCaseBase):
     requiredAction = "maintenance.document.manage"
 
     def perform(self, command: DeleteDocumentCommand) -> DocumentDto:

@@ -57,9 +57,7 @@ class DeviceTimelineBase(TestCase):
         return response.json()["data"]
 
     def timeline(self, deviceId: str):
-        response = self.client.get(
-            f"/api/v1/maintenance/devices/{deviceId}/timeline", **self.auth
-        )
+        response = self.client.get(f"/api/v1/maintenance/devices/{deviceId}/timeline", **self.auth)
         self.assertEqual(response.status_code, 200, response.content)
         return response.json()
 
@@ -69,9 +67,7 @@ class DeviceTimelineTests(DeviceTimelineBase):
         device = self.createDevice()
         anonymous = APIClient()
         self.assertEqual(
-            anonymous.get(
-                f"/api/v1/maintenance/devices/{device['id']}/timeline"
-            ).status_code,
+            anonymous.get(f"/api/v1/maintenance/devices/{device['id']}/timeline").status_code,
             401,
         )
 
@@ -159,8 +155,7 @@ class DeviceTimelineTests(DeviceTimelineBase):
     def testUnknownDeviceReturns404(self) -> None:
         self.assertEqual(
             self.client.get(
-                "/api/v1/maintenance/devices/"
-                "00000000-0000-0000-0000-000000000000/timeline",
+                "/api/v1/maintenance/devices/00000000-0000-0000-0000-000000000000/timeline",
                 **self.auth,
             ).status_code,
             404,

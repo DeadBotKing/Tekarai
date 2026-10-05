@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.test import SimpleTestCase
 
-from apps.procurement.application.services.receiptRules import (
+from apps.procurement.domain.services.receiptRules import (
     ReceiptQuantityError,
     acceptedQuantity,
     guardReceiptLine,
@@ -16,15 +16,15 @@ from apps.procurement.presentation.api.serializers import (
 
 
 class ProcurementContractTests(SimpleTestCase):
-    def test_supplier_requires_code_and_name(self):
+    def testSupplierRequiresCodeAndName(self):
         serializer = SupplierSerializer(data={"code": "", "name": ""})
         self.assertFalse(serializer.is_valid())
 
-    def test_requisition_requires_at_least_one_line(self):
+    def testRequisitionRequiresAtLeastOneLine(self):
         serializer = RequisitionSerializer(data={"priority": "normal", "lines": []})
         self.assertFalse(serializer.is_valid())
 
-    def test_requisition_accepts_quantity_and_estimated_cost(self):
+    def testRequisitionAcceptsQuantityAndEstimatedCost(self):
         serializer = RequisitionSerializer(
             data={
                 "requesterName": "تکنسین",
@@ -43,7 +43,7 @@ class ProcurementContractTests(SimpleTestCase):
         self.assertTrue(serializer.is_valid(), serializer.errors)
         self.assertEqual(serializer.validated_data["lines"][0]["quantity"], Decimal("2"))
 
-    def test_purchase_order_requires_supplier_and_lines(self):
+    def testPurchaseOrderRequiresSupplierAndLines(self):
         serializer = PurchaseOrderSerializer(
             data={"supplierId": "00000000-0000-0000-0000-000000000001", "lines": []}
         )
@@ -61,9 +61,7 @@ class ReceiptQuantityRuleTests(SimpleTestCase):
         self.assertEqual(remainingQuantity(Decimal("10"), Decimal("12")), Decimal("0"))
 
     def testEarlierLinesOfTheSameReceiptCountAgainstTheRemainder(self):
-        self.assertEqual(
-            remainingQuantity(Decimal("10"), Decimal("2"), Decimal("5")), Decimal("3")
-        )
+        self.assertEqual(remainingQuantity(Decimal("10"), Decimal("2"), Decimal("5")), Decimal("3"))
 
     def testRejectedGoodsDoNotEnterStock(self):
         accepted = acceptedQuantity(Decimal("10"), Decimal("3"), "بلبرینگ")
@@ -81,46 +79,70 @@ class ReceiptQuantityRuleTests(SimpleTestCase):
         # The bug: a ten-piece order accepting a thousand-piece delivery.
         with self.assertRaises(ReceiptQuantityError) as caught:
             guardReceiptLine(
-                "بلبرینگ", Decimal("10"), Decimal("0"), Decimal("0"),
-                Decimal("1000"), Decimal("0"),
+                "بلبرینگ",
+                Decimal("10"),
+                Decimal("0"),
+                Decimal("0"),
+                Decimal("1000"),
+                Decimal("0"),
             )
         self.assertIn("باقیماندهٔ سفارش", str(caught.exception))
 
     def testASecondDeliveryCannotOvershootTheRemainder(self):
         with self.assertRaises(ReceiptQuantityError):
             guardReceiptLine(
-                "بلبرینگ", Decimal("10"), Decimal("8"), Decimal("0"),
-                Decimal("3"), Decimal("0"),
+                "بلبرینگ",
+                Decimal("10"),
+                Decimal("8"),
+                Decimal("0"),
+                Decimal("3"),
+                Decimal("0"),
             )
 
     def testAFullyReceivedLineTakesNothingMore(self):
         with self.assertRaises(ReceiptQuantityError) as caught:
             guardReceiptLine(
-                "بلبرینگ", Decimal("10"), Decimal("10"), Decimal("0"),
-                Decimal("1"), Decimal("0"),
+                "بلبرینگ",
+                Decimal("10"),
+                Decimal("10"),
+                Decimal("0"),
+                Decimal("1"),
+                Decimal("0"),
             )
         self.assertIn("کامل تحویل شده", str(caught.exception))
 
     def testExactlyTheRemainderIsAllowed(self):
         accepted = guardReceiptLine(
-            "بلبرینگ", Decimal("10"), Decimal("7"), Decimal("0"),
-            Decimal("3"), Decimal("0"),
+            "بلبرینگ",
+            Decimal("10"),
+            Decimal("7"),
+            Decimal("0"),
+            Decimal("3"),
+            Decimal("0"),
         )
         self.assertEqual(accepted, Decimal("3"))
 
     def testRejectedPortionDoesNotCountAgainstTheOrder(self):
         # 12 delivered, 4 rejected ⇒ 8 into stock, which fits the remaining 8.
         accepted = guardReceiptLine(
-            "بلبرینگ", Decimal("10"), Decimal("2"), Decimal("0"),
-            Decimal("12"), Decimal("4"),
+            "بلبرینگ",
+            Decimal("10"),
+            Decimal("2"),
+            Decimal("0"),
+            Decimal("12"),
+            Decimal("4"),
         )
         self.assertEqual(accepted, Decimal("8"))
 
     def testMessagesNameThePartAndTheNumbers(self):
         with self.assertRaises(ReceiptQuantityError) as caught:
             guardReceiptLine(
-                "واشر مسی", Decimal("5"), Decimal("0"), Decimal("0"),
-                Decimal("9"), Decimal("0"),
+                "واشر مسی",
+                Decimal("5"),
+                Decimal("0"),
+                Decimal("0"),
+                Decimal("9"),
+                Decimal("0"),
             )
         message = str(caught.exception)
         self.assertIn("واشر مسی", message)

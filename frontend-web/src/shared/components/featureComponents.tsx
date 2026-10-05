@@ -4,6 +4,8 @@ import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import type { ActivityItem, DocumentRecord } from "../types/domain";
 import { Button, Card, ProgressBar, SelectInput } from "./primitives";
 import { Icon } from "./Icon";
+import { useFormat } from "../../core/localization/useFormat";
+import { taxonomyLabel } from "../../core/localization/taxonomyLabel";
 
 export function SearchBox({ value, onChange, placeholder, onSubmit, autoFocus = false }: { value: string; onChange: (value: string) => void; placeholder: string; onSubmit?: (value: string) => void; autoFocus?: boolean }): JSX.Element {
   const { t } = useLocalization();
@@ -17,7 +19,12 @@ export function FilterPanel({ children, onClear, onApply }: { children: ReactNod
 }
 
 export function ActivityFeed({ items, compact = false }: { items: ActivityItem[]; compact?: boolean }): JSX.Element {
-  return <div className={`activity-feed ${compact ? "activity-feed--compact" : ""}`}>{items.map((item) => <div className="activity-item" key={item.id}><span className={`activity-item__marker activity-item__marker--${item.tone}`}><Icon name={item.tone === "green" ? "check" : item.tone === "amber" ? "lightbulb" : item.tone === "purple" ? "file" : "activity"} size={14} /></span><div className="activity-item__body"><p><strong>{item.actor}</strong> {item.action} <strong>{item.resource}</strong></p><span>{item.timestamp}</span></div></div>)}</div>;
+  const { t } = useLocalization();
+  const format = useFormat();
+  // Audit rows arrive as raw enum codes ("LOGIN", "WorkOrder") and raw ISO
+  // timestamps. Unknown codes fall through to the code itself rather than
+  // rendering a dictionary key, because new resource types ship continuously.
+  return <div className={`activity-feed ${compact ? "activity-feed--compact" : ""}`}>{items.map((item) => <div className="activity-item" key={item.id}><span className={`activity-item__marker activity-item__marker--${item.tone}`}><Icon name={item.tone === "green" ? "check" : item.tone === "amber" ? "lightbulb" : item.tone === "purple" ? "file" : "activity"} size={14} /></span><div className="activity-item__body"><p><strong>{item.actor}</strong> {taxonomyLabel(t, "audit.action.", item.action)} <strong>{taxonomyLabel(t, "audit.resource.", item.resource)}</strong></p><span>{format.dateTime(item.timestamp, { fallback: "" })}</span></div></div>)}</div>;
 }
 
 export function Timeline({ events }: { events: { date: string; title: string; description: string; tone?: "blue" | "green" | "amber" }[] }): JSX.Element {

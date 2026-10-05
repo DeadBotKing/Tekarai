@@ -81,7 +81,7 @@ class Command(BaseCommand):
             help="Seconds between scans when --loop is set (default 3600).",
         )
 
-    def handle(self, *args, **options) -> None:  # noqa: ANN002/ANN003 — Django contract
+    def handle(self, *args, **options) -> None:  # noqa: ANN002, ANN003 — Django contract
         if not options["loop"]:
             self.stdout.write(str(scanTenants(options["tenant"], options["lead_days"])))
             return

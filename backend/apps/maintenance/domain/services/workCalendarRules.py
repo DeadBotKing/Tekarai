@@ -285,9 +285,7 @@ def shiftCapacityHours(shift: ShiftSpec, headcount: int | None = None) -> Decima
     return shift.durationHours * Decimal(max(0, people))
 
 
-def dailyCapacityHours(
-    shifts: tuple[ShiftSpec, ...], spec: CalendarSpec, day: date
-) -> Decimal:
+def dailyCapacityHours(shifts: tuple[ShiftSpec, ...], spec: CalendarSpec, day: date) -> Decimal:
     """Total technician-hours available on ``day``. Zero on a closed day."""
     return sum(
         (shiftCapacityHours(shift) for shift in shiftsOn(shifts, spec, day)),
@@ -314,9 +312,7 @@ def utilisationPercent(demandHours: Decimal, capacityHours: Decimal) -> Decimal:
 # =================================================================================
 
 
-def overtimeHours(
-    start: datetime, end: datetime, shifts: tuple[ShiftSpec, ...]
-) -> Decimal:
+def overtimeHours(start: datetime, end: datetime, shifts: tuple[ShiftSpec, ...]) -> Decimal:
     """Portion of a labour span that falls outside every shift window.
 
     Overtime here is a *scheduling* fact, not a payroll one: hours worked when

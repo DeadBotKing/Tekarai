@@ -203,10 +203,7 @@ class DeviceReportExportTests(MaintenanceReportBase):
         self.assertTrue(sheet.sheet_view.rightToLeft)
         # The device name and a work-order row title must both be present.
         allText = "\n".join(
-            str(cell.value)
-            for row in sheet.iter_rows()
-            for cell in row
-            if cell.value is not None
+            str(cell.value) for row in sheet.iter_rows() for cell in row if cell.value is not None
         )
         self.assertIn("پمپ خنک‌کننده", allText)
         self.assertIn("کار اکسل", allText)

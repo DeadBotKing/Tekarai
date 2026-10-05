@@ -13,12 +13,12 @@ from django.test import TestCase
 
 from apps.maintenance.infrastructure.models import (
     DeviceModel,
-    WorkOrderLabourEntryModel,
-    WorkOrderPartUsageModel,
     PmExecutionModel,
     PmPlanModel,
     SparePartModel,
+    WorkOrderLabourEntryModel,
     WorkOrderModel,
+    WorkOrderPartUsageModel,
 )
 from tests.support.phase6Helpers import seedPlatform
 

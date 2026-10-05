@@ -150,7 +150,11 @@ def registerMaintenanceEndpoints() -> None:
             permission="maintenance.workorder.logTime",
             errorCodes=MAINTENANCE_ERRORS,
             idempotent=True,
-            requestExample={"technicianName": "Reza Ahmadi", "hours": "2.5", "hourlyRate": "450000"},
+            requestExample={
+                "technicianName": "Reza Ahmadi",
+                "hours": "2.5",
+                "hourlyRate": "450000",
+            },
         ),
         EndpointSpec(
             method="DELETE",

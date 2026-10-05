@@ -32,9 +32,7 @@ def _list(targetType: str, targetId: str) -> Response:
         ListMaintenanceAttachmentsQuery(targetType=targetType, targetId=targetId)
     )
     return Response(
-        successEnvelope(
-            [dataclasses.asdict(item) for item in result.items], meta=result.asMeta()
-        )
+        successEnvelope([dataclasses.asdict(item) for item in result.items], meta=result.asMeta())
     )
 
 
@@ -84,7 +82,10 @@ class MaintenanceAttachmentDownloadView(APIView):
         result = container.downloadMaintenanceAttachmentUseCase().execute(
             DownloadMaintenanceAttachmentQuery(attachmentId=str(attachmentId))
         )
-        inline = result.metadata.mimeType.startswith("image/") or result.metadata.mimeType == "application/pdf"
+        inline = (
+            result.metadata.mimeType.startswith("image/")
+            or result.metadata.mimeType == "application/pdf"
+        )
         response = FileResponse(result.stream, content_type=result.metadata.mimeType)
         response["Content-Disposition"] = content_disposition_header(
             not inline, result.metadata.originalName

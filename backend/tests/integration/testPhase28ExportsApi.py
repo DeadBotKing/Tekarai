@@ -24,9 +24,7 @@ class MaintenanceExportsApiTests(TimeCostApiBase):
     # -- work orders ---------------------------------------------------------
 
     def testWorkOrdersExportCsv(self) -> None:
-        response = self.client.get(
-            "/api/v1/maintenance/work-orders?export=csv", **self.auth
-        )
+        response = self.client.get("/api/v1/maintenance/work-orders?export=csv", **self.auth)
         self.assertEqual(response.status_code, 200, response.content)
         self.assertIn("text/csv", response.headers["Content-Type"])
         content = bytes(response.content)
@@ -36,17 +34,13 @@ class MaintenanceExportsApiTests(TimeCostApiBase):
         self.assertIn("تعویض یاتاقان موتور", text)
 
     def testWorkOrdersExportXlsx(self) -> None:
-        response = self.client.get(
-            "/api/v1/maintenance/work-orders?export=xlsx", **self.auth
-        )
+        response = self.client.get("/api/v1/maintenance/work-orders?export=xlsx", **self.auth)
         self.assertEqual(response.status_code, 200, response.content)
         self.assertIn("spreadsheetml", response.headers["Content-Type"])
         self.assertTrue(bytes(response.content).startswith(XLSX_MAGIC))
 
     def testWorkOrdersExportPdf(self) -> None:
-        response = self.client.get(
-            "/api/v1/maintenance/work-orders?export=pdf", **self.auth
-        )
+        response = self.client.get("/api/v1/maintenance/work-orders?export=pdf", **self.auth)
         self.assertEqual(response.status_code, 200, response.content)
         self.assertEqual(response.headers["Content-Type"], "application/pdf")
         self.assertTrue(bytes(response.content).startswith(PDF_MAGIC))
@@ -93,9 +87,7 @@ class MaintenanceExportsApiTests(TimeCostApiBase):
 
     def testPmScheduleExportCsvAndPdf(self) -> None:
         self._createPlanWithExecution()
-        response = self.client.get(
-            "/api/v1/maintenance/pm-schedule?export=csv", **self.auth
-        )
+        response = self.client.get("/api/v1/maintenance/pm-schedule?export=csv", **self.auth)
         self.assertEqual(response.status_code, 200, response.content)
         text = bytes(response.content).decode("utf-8")
         self.assertIn("موعد", text)

@@ -118,9 +118,7 @@ class ScanResolutionRepositoryDjango:
         return self._part(model) if model else None
 
     def _locationBy(self, tenantId: uuid.UUID, intent: ScanIntent) -> ScanTarget | None:
-        base = MaintenanceLocationModel.objects.filter(
-            tenantId=tenantId, deletedAt__isnull=True
-        )
+        base = MaintenanceLocationModel.objects.filter(tenantId=tenantId, deletedAt__isnull=True)
         if intent.entityId is not None:
             model = base.filter(id=intent.entityId).first()
             return self._location(model) if model else None
@@ -233,7 +231,7 @@ class OfflineSyncLedgerDjango:
         ).delete()
 
     def recent(self, tenantId: uuid.UUID, limit: int = 50) -> list[SyncLedgerEntry]:
-        rows = OfflineSyncOperationModel.objects.filter(tenantId=tenantId).order_by(
-            "-receivedAt"
-        )[: max(1, min(int(limit), 200))]
+        rows = OfflineSyncOperationModel.objects.filter(tenantId=tenantId).order_by("-receivedAt")[
+            : max(1, min(int(limit), 200))
+        ]
         return [self._entry(item) for item in rows]

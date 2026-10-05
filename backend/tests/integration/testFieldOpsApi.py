@@ -67,9 +67,7 @@ class FieldOpsApiBase(TestCase):
             "priority": "normal",
         }
         payload.update(overrides)
-        response = self.client.post(
-            f"{BASE}/work-orders", payload, format="json", **self.auth
-        )
+        response = self.client.post(f"{BASE}/work-orders", payload, format="json", **self.auth)
         self.assertEqual(response.status_code, 201, response.content)
         return response.json()["data"]
 
@@ -201,16 +199,12 @@ class ScanResolutionApiTests(FieldOpsApiBase):
     def testUnknownCodeIs404(self) -> None:
         response = self.client.get(f"{BASE}/scan", {"code": "NOPE-1"}, **self.auth)
         self.assertEqual(response.status_code, 404, response.content)
-        self.assertEqual(
-            response.json()["errors"][0]["code"], "MAINT_SCAN_TARGET_NOT_FOUND"
-        )
+        self.assertEqual(response.json()["errors"][0]["code"], "MAINT_SCAN_TARGET_NOT_FOUND")
 
     def testUnreadableTextIs422(self) -> None:
         response = self.client.get(f"{BASE}/scan", {"code": "پمپ خط یک"}, **self.auth)
         self.assertEqual(response.status_code, 422, response.content)
-        self.assertEqual(
-            response.json()["errors"][0]["code"], "MAINT_SCAN_CODE_UNREADABLE"
-        )
+        self.assertEqual(response.json()["errors"][0]["code"], "MAINT_SCAN_CODE_UNREADABLE")
 
     def testAnotherTenantsLabelDoesNotResolve(self) -> None:
         """Tenant isolation: the row exists, but not for this tenant."""
@@ -237,9 +231,7 @@ class WorkTimerApiTests(FieldOpsApiBase):
         data = response.json()["data"]
         self.assertTrue(data["running"])
         self.assertEqual(data["endedAt"], "")
-        self.assertEqual(
-            WorkOrderModel.objects.get(id=orderId).status, "inProgress"
-        )
+        self.assertEqual(WorkOrderModel.objects.get(id=orderId).status, "inProgress")
 
     def testTimerInheritsTheSignedInTechniciansName(self) -> None:
         _deviceId, orderId = self.readyOrder()
@@ -251,9 +243,7 @@ class WorkTimerApiTests(FieldOpsApiBase):
         self.assertEqual(self.startTimer(orderId).status_code, 201)
         second = self.startTimer(orderId)
         self.assertEqual(second.status_code, 409, second.content)
-        self.assertEqual(
-            second.json()["errors"][0]["code"], "MAINT_TIMER_ALREADY_RUNNING"
-        )
+        self.assertEqual(second.json()["errors"][0]["code"], "MAINT_TIMER_ALREADY_RUNNING")
 
     def testTwoTechniciansMayWorkTheSameOrderAtOnce(self) -> None:
         _deviceId, orderId = self.readyOrder()
@@ -292,9 +282,7 @@ class WorkTimerApiTests(FieldOpsApiBase):
         _deviceId, orderId = self.readyOrder()
         started = (self.now - timedelta(hours=3)).isoformat()
         self.startTimer(orderId, startedAt=started)
-        response = self.stopTimer(
-            orderId, endedAt=self.now.isoformat(), pausedSeconds=1800
-        )
+        response = self.stopTimer(orderId, endedAt=self.now.isoformat(), pausedSeconds=1800)
         self.assertEqual(response.json()["data"]["hours"], "2.50")
 
     def testStoppingTwiceIs409(self) -> None:
@@ -304,9 +292,7 @@ class WorkTimerApiTests(FieldOpsApiBase):
         second = self.stopTimer(orderId)
         # No running timer left → «already stopped», a conflict, not a 404.
         self.assertEqual(second.status_code, 409, second.content)
-        self.assertEqual(
-            second.json()["errors"][0]["code"], "MAINT_TIMER_NOT_RUNNING"
-        )
+        self.assertEqual(second.json()["errors"][0]["code"], "MAINT_TIMER_NOT_RUNNING")
 
     def testStoppingByTimerIdAlsoWorks(self) -> None:
         _deviceId, orderId = self.readyOrder()
@@ -328,9 +314,7 @@ class WorkTimerApiTests(FieldOpsApiBase):
         self.startTimer(orderId, startedAt=started)
         response = self.stopTimer(orderId)
         self.assertEqual(response.status_code, 422, response.content)
-        self.assertEqual(
-            response.json()["errors"][0]["details"]["fields"]["endedAt"], "tooLong"
-        )
+        self.assertEqual(response.json()["errors"][0]["details"]["fields"]["endedAt"], "tooLong")
 
     def testCannotStartOnAnUnassignedOrder(self) -> None:
         device = self.createDevice("PUMP-301")
@@ -371,7 +355,9 @@ class WorkTimerApiTests(FieldOpsApiBase):
         _deviceId, orderId = self.readyOrder()
         anonymous = APIClient()
         self.assertEqual(
-            anonymous.post(f"{BASE}/work-orders/{orderId}/timer/start", {}, format="json").status_code,
+            anonymous.post(
+                f"{BASE}/work-orders/{orderId}/timer/start", {}, format="json"
+            ).status_code,
             401,
         )
 
@@ -449,9 +435,7 @@ class OfflineSyncApiTests(FieldOpsApiBase):
         second = self.sync(operations)
         self.assertEqual(first.json()["data"][0]["status"], "applied")
         self.assertEqual(second.json()["data"][0]["status"], "duplicate")
-        self.assertEqual(
-            second.json()["data"][0]["resultId"], first.json()["data"][0]["resultId"]
-        )
+        self.assertEqual(second.json()["data"][0]["resultId"], first.json()["data"][0]["resultId"])
         self.assertEqual(WorkOrderLabourEntryModel.objects.filter(workOrderId=orderId).count(), 1)
 
     def testAPartIsNeverConsumedTwiceByAReplay(self) -> None:
@@ -543,9 +527,7 @@ class OfflineSyncApiTests(FieldOpsApiBase):
         self.assertEqual(self.sync([stop]).json()["data"][0]["status"], "applied")
         retry = dict(stop, clientRequestId="stop-2")
         self.assertEqual(self.sync([retry]).json()["data"][0]["status"], "duplicate")
-        self.assertEqual(
-            WorkOrderLabourEntryModel.objects.filter(workOrderId=orderId).count(), 1
-        )
+        self.assertEqual(WorkOrderLabourEntryModel.objects.filter(workOrderId=orderId).count(), 1)
 
     def testDuplicateStartIsReportedAsDuplicate(self) -> None:
         _deviceId, orderId = self.readyOrder()
@@ -592,7 +574,9 @@ class OfflineSyncApiTests(FieldOpsApiBase):
 
     def testAnOversizedBatchIsRefused(self) -> None:
         operations = [
-            self.operation("workOrder.status", {"workOrderId": str(uuid.uuid4()), "target": "routed"})
+            self.operation(
+                "workOrder.status", {"workOrderId": str(uuid.uuid4()), "target": "routed"}
+            )
             for _ in range(201)
         ]
         response = self.sync(operations)
@@ -608,9 +592,7 @@ class OfflineSyncApiTests(FieldOpsApiBase):
             ]
         )
         self.assertEqual(response.json()["data"][0]["status"], "applied")
-        self.assertEqual(
-            DeviceModel.objects.get(id=device["id"]).status, "underMaintenance"
-        )
+        self.assertEqual(DeviceModel.objects.get(id=device["id"]).status, "underMaintenance")
 
     def testStaleDeviceStatusIsFlaggedAsAConflictInsteadOfOverwriting(self) -> None:
         """The scenario the baseline exists for.
@@ -643,9 +625,7 @@ class OfflineSyncApiTests(FieldOpsApiBase):
         item = response.json()["data"][0]
         self.assertEqual(item["status"], "conflict")
         self.assertEqual(item["errorCode"], "MAINT_SYNC_CONFLICT")
-        self.assertEqual(
-            DeviceModel.objects.get(id=device["id"]).status, "retired"
-        )
+        self.assertEqual(DeviceModel.objects.get(id=device["id"]).status, "retired")
         self.assertEqual(response.json()["meta"]["conflictCount"], 1)
 
     def testAMatchingBaselineAppliesNormally(self) -> None:
@@ -791,9 +771,7 @@ class OfflineSyncApiTests(FieldOpsApiBase):
         UserRoleModel.objects.filter(userId=admin.id).delete()
         requester = RoleModel.objects.filter(code="maintenanceRequester").first()
         self.assertIsNotNone(requester)
-        UserRoleModel.objects.create(
-            userId=admin.id, tenantId=self.tenantId, roleId=requester.id
-        )
+        UserRoleModel.objects.create(userId=admin.id, tenantId=self.tenantId, roleId=requester.id)
         cache.clear()
         tokens = loginViaApi(self.client)
         self.auth = {"HTTP_AUTHORIZATION": f"Bearer {tokens['accessToken']}"}

@@ -99,7 +99,9 @@ class CodeNormalisationTests(SimpleTestCase):
             normalizeMeterCode("pump hours")
 
     def testSensorKeyKeepsCaseButTrims(self) -> None:
-        self.assertEqual(normalizeSensorKey("  Plant/Line1/Pump01.Hours "), "Plant/Line1/Pump01.Hours")
+        self.assertEqual(
+            normalizeSensorKey("  Plant/Line1/Pump01.Hours "), "Plant/Line1/Pump01.Hours"
+        )
 
     def testSensorKeyRejectsControlCharacters(self) -> None:
         with self.assertRaises(ValidationFailedError):
@@ -228,9 +230,7 @@ class QualityTests(SimpleTestCase):
 class ReadingEntityTests(SimpleTestCase):
     def testProvenanceDistinguishesManualFromSensor(self) -> None:
         point = buildPoint()
-        manual = buildReading(
-            point, "10", NOW, captureMode=CAPTURE_MANUAL, recordedByName="رضا"
-        )
+        manual = buildReading(point, "10", NOW, captureMode=CAPTURE_MANUAL, recordedByName="رضا")
         sensor = buildReading(
             point, "10", NOW, captureMode=CAPTURE_SENSOR, sensorKey="Line1/Pump01.Hours"
         )

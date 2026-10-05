@@ -39,9 +39,7 @@ def forwards(apps, schemaEditor) -> None:  # noqa: ANN001 — migration contract
         # the resulting interval always satisfies ck_pm_plan_meter_interval.
         plan.metricInterval = plan.metricInterval or plan.frequencyEvery
         plan.metricUnit = plan.metricUnit or "ساعت"
-        plan.save(
-            update_fields=["triggerType", "metricType", "metricInterval", "metricUnit"]
-        )
+        plan.save(update_fields=["triggerType", "metricType", "metricInterval", "metricUnit"])
 
 
 def backwards(apps, schemaEditor) -> None:  # noqa: ANN001 — migration contract

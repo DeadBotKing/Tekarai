@@ -30,9 +30,7 @@ class SaveMeterPointSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=200, required=False, allow_blank=True, default="")
     unit = serializers.CharField(max_length=30, required=False, allow_blank=True, default="")
     kind = serializers.ChoiceField(choices=KIND_CHOICES, required=False, default="cumulative")
-    sensorKey = serializers.CharField(
-        max_length=120, required=False, allow_blank=True, default=""
-    )
+    sensorKey = serializers.CharField(max_length=120, required=False, allow_blank=True, default="")
     minimumValue = serializers.CharField(required=False, allow_blank=True, default="")
     maximumValue = serializers.CharField(required=False, allow_blank=True, default="")
     rolloverMaximum = serializers.CharField(required=False, allow_blank=True, default="")
@@ -50,38 +48,26 @@ class RecordManualReadingSerializer(serializers.Serializer):
     """
 
     meterPointId = serializers.CharField(required=False, allow_blank=True, default="")
-    meterCode = serializers.CharField(
-        max_length=48, required=False, allow_blank=True, default=""
-    )
+    meterCode = serializers.CharField(max_length=48, required=False, allow_blank=True, default="")
     value = serializers.CharField()
     capturedAt = serializers.CharField(required=False, allow_blank=True, default="")
-    note = serializers.CharField(
-        max_length=500, required=False, allow_blank=True, default=""
-    )
-    quality = serializers.ChoiceField(
-        choices=QUALITY_CHOICES, required=False, default="good"
-    )
+    note = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
+    quality = serializers.ChoiceField(choices=QUALITY_CHOICES, required=False, default="good")
 
 
 class SensorSampleSerializer(serializers.Serializer):
     """One sample inside a gateway batch."""
 
-    sensorKey = serializers.CharField(
-        max_length=120, required=False, allow_blank=True, default=""
-    )
+    sensorKey = serializers.CharField(max_length=120, required=False, allow_blank=True, default="")
     meterPointId = serializers.CharField(required=False, allow_blank=True, default="")
     value = serializers.CharField()
     capturedAt = serializers.CharField(required=False, allow_blank=True, default="")
-    quality = serializers.ChoiceField(
-        choices=QUALITY_CHOICES, required=False, default="good"
-    )
+    quality = serializers.ChoiceField(choices=QUALITY_CHOICES, required=False, default="good")
     #: Idempotency token. A retried batch must not double-count a counter.
     ingestionKey = serializers.CharField(
         max_length=128, required=False, allow_blank=True, default=""
     )
-    sourceRef = serializers.CharField(
-        max_length=160, required=False, allow_blank=True, default=""
-    )
+    sourceRef = serializers.CharField(max_length=160, required=False, allow_blank=True, default="")
 
 
 class IngestSensorReadingsSerializer(serializers.Serializer):

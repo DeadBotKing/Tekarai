@@ -6,6 +6,7 @@ import dataclasses
 from typing import Any
 
 from django.http import HttpResponse
+from django.utils.http import content_disposition_header
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -99,11 +100,9 @@ class PmScheduleView(RegistryView):
             )
 
             content = buildPmScheduleExport(items, exportFormat)
-            response = HttpResponse(
-                content, content_type=EXPORT_CONTENT_TYPES[exportFormat]
-            )
-            response["Content-Disposition"] = (
-                f'attachment; filename="pm-schedule.{exportFormat}"'
+            response = HttpResponse(content, content_type=EXPORT_CONTENT_TYPES[exportFormat])
+            response["Content-Disposition"] = content_disposition_header(
+                as_attachment=True, filename=f"pm-schedule.{exportFormat}"
             )
             return response
         return Response(successEnvelope([asDict(item) for item in items]))
@@ -117,9 +116,7 @@ class LocationListView(IdempotencyMixin, RegistryView):
         dto = container.listLocationsUseCase().execute(
             ListLocationsQuery(search=str(request.query_params.get("search", "")).strip())
         )
-        return Response(
-            successEnvelope([asDict(item) for item in dto.items], meta=dto.asMeta())
-        )
+        return Response(successEnvelope([asDict(item) for item in dto.items], meta=dto.asMeta()))
 
     def post(self, request: Request) -> Response:
         serializer = SaveLocationSerializer(data=request.data)
@@ -170,9 +167,7 @@ class PersonnelListView(IdempotencyMixin, RegistryView):
                 specialty=str(request.query_params.get("specialty", "")).strip(),
             )
         )
-        return Response(
-            successEnvelope([asDict(item) for item in dto.items], meta=dto.asMeta())
-        )
+        return Response(successEnvelope([asDict(item) for item in dto.items], meta=dto.asMeta()))
 
     def post(self, request: Request) -> Response:
         serializer = SavePersonnelSerializer(data=request.data)
@@ -321,9 +316,7 @@ class PmPlanDetailView(RegistryView):
         return Response(successEnvelope(asDict(dto)))
 
     def delete(self, request: Request, planId: str) -> Response:
-        payload = container.deletePmPlanUseCase().execute(
-            DeletePmPlanCommand(planId=str(planId))
-        )
+        payload = container.deletePmPlanUseCase().execute(DeletePmPlanCommand(planId=str(planId)))
         return Response(successEnvelope(payload))
 
 

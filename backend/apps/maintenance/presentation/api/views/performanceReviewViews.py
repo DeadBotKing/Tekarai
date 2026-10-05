@@ -70,9 +70,7 @@ class ReviewCycleDetailView(PerformanceReviewBaseView):
     """``DELETE performance-reviews/cycles/<id>`` — retire a round."""
 
     def delete(self, request: Request, cycleId: str) -> Response:
-        payload = container.deleteReviewCycleUseCase().execute(
-            CycleQuery(cycleId=str(cycleId))
-        )
+        payload = container.deleteReviewCycleUseCase().execute(CycleQuery(cycleId=str(cycleId)))
         return Response(successEnvelope(payload))
 
 

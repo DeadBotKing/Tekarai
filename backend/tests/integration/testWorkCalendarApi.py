@@ -56,9 +56,7 @@ class WorkCalendarApiTests(TestCase):
     def _location(self, code: str, name: str, kind: str, parent: uuid.UUID | None) -> uuid.UUID:
         from django.utils import timezone as djtz
 
-        parentRow = (
-            MaintenanceLocationModel.objects.filter(id=parent).first() if parent else None
-        )
+        parentRow = MaintenanceLocationModel.objects.filter(id=parent).first() if parent else None
         path = f"{parentRow.path} / {name}" if parentRow else name
         row = MaintenanceLocationModel.objects.create(
             tenantId=self.tenantId,
@@ -236,9 +234,7 @@ class WorkCalendarApiTests(TestCase):
         self._holiday(self.calendar, MONDAY, "x")
         self._shift(self.calendar, "SH-A", "06:00", "14:00", 2)
 
-        response = self.client.delete(
-            f"{BASE}/work-calendars/{self.calendar}", **self.auth
-        )
+        response = self.client.delete(f"{BASE}/work-calendars/{self.calendar}", **self.auth)
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(
@@ -247,9 +243,7 @@ class WorkCalendarApiTests(TestCase):
             ).exists()
         )
         self.assertFalse(
-            WorkShiftModel.objects.filter(
-                calendarId=self.calendar, deletedAt__isnull=True
-            ).exists()
+            WorkShiftModel.objects.filter(calendarId=self.calendar, deletedAt__isnull=True).exists()
         )
 
     # =============================================================================
@@ -349,9 +343,7 @@ class WorkCalendarApiTests(TestCase):
         self.assertEqual(data["plannedOn"], "2026-10-10")
 
     def testBackwardPolicyPullsTheJobEarlierInstead(self) -> None:
-        backward = self._calendar(
-            "CAL-BK", "عقب‌رو", None, rollPolicy="backward"
-        )
+        backward = self._calendar("CAL-BK", "عقب‌رو", None, rollPolicy="backward")
         response = self.client.get(
             f"{BASE}/work-calendars/working-day",
             {"calendarId": str(backward), "onDate": FRIDAY.isoformat()},
@@ -685,7 +677,6 @@ class WorkCalendarApiTests(TestCase):
 
     def testADeviceCoveredByAPlanIsNotCountedTwice(self) -> None:
         """Legacy pmIntervalDays must not double-book a planned device."""
-        from django.utils import timezone as djtz
 
         self._shift(self.calendar, "SH-A", "06:00", "14:00", crew=2)
         deviceId = self._device("DEV-1", self.line)
@@ -923,8 +914,6 @@ class RecurringHolidayTests(TestCase):
     def testDeletingTheSourceStopsEveryFutureOccurrence(self) -> None:
         saved = self._addHoliday(date(2026, 3, 21), "نوروز", recurs=True)
         self.assertTrue(self._workingDay(date(2027, 3, 21))["isHoliday"])
-        response = self.client.delete(
-            f"{BASE}/work-calendars/holidays/{saved['id']}", **self.auth
-        )
+        response = self.client.delete(f"{BASE}/work-calendars/holidays/{saved['id']}", **self.auth)
         self.assertIn(response.status_code, (200, 204))
         self.assertFalse(self._workingDay(date(2027, 3, 21))["isHoliday"])

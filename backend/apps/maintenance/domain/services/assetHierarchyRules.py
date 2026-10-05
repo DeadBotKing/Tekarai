@@ -160,9 +160,7 @@ def assertNoCycle(
     label: str = "این تجهیز",
 ) -> None:
     if wouldCreateCycle(nodeId, newParentId, parentOf):
-        raise AssetHierarchyError(
-            f"{label} نمی‌تواند زیرمجموعهٔ خودش یا یکی از زیرمجموعه‌هایش باشد."
-        )
+        raise AssetHierarchyError(f"{label} نمی‌تواند زیرمجموعهٔ خودش یا یکی از زیرمجموعه‌هایش باشد.")
 
 
 def assertDepthWithinLimit(
@@ -175,9 +173,7 @@ def assertDepthWithinLimit(
         return
     depth = len(ancestorChain(newParentId, parentOf, maxDepth=maxDepth)) + 2
     if depth > maxDepth:
-        raise AssetHierarchyError(
-            f"عمق سلسله‌مراتب از حد مجاز ({maxDepth} سطح) بیشتر می‌شود."
-        )
+        raise AssetHierarchyError(f"عمق سلسله‌مراتب از حد مجاز ({maxDepth} سطح) بیشتر می‌شود.")
 
 
 def descendantIds(
@@ -197,7 +193,7 @@ def descendantIds(
     for _ in range(maxDepth):
         nextFrontier: list[str] = []
         for parent in frontier:
-            for child in childrenOf.get(parent, ()):  # type: ignore[arg-type]
+            for child in childrenOf.get(parent, ()):
                 if child in seen:
                     continue
                 seen.add(child)

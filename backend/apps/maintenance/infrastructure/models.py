@@ -503,9 +503,7 @@ class PmPlanModel(models.Model):
     warningValue = models.DecimalField(decimal_places=3, default=0, max_digits=18)
     metricUnit = models.CharField(blank=True, default="", max_length=30)
     sensorKey = models.CharField(blank=True, default="", max_length=120)
-    lastMetricValue = models.DecimalField(
-        blank=True, null=True, decimal_places=3, max_digits=18
-    )
+    lastMetricValue = models.DecimalField(blank=True, null=True, decimal_places=3, max_digits=18)
     # The meter value at the last execution — the baseline a meter trigger
     # counts its next interval from.
     lastExecutedMeterValue = models.DecimalField(
@@ -528,9 +526,7 @@ class PmPlanModel(models.Model):
                 name="ck_pm_plan_frequency_positive",
             ),
             models.CheckConstraint(
-                condition=models.Q(
-                    frequencyUnit__in=("day", "week", "month", "runningHour")
-                ),
+                condition=models.Q(frequencyUnit__in=("day", "week", "month", "runningHour")),
                 name="ck_pm_plan_frequency_unit",
             ),
             models.CheckConstraint(
@@ -656,7 +652,9 @@ class PartReservationModel(models.Model):
     workOrderId = models.UUIDField(db_index=True)
     partCode = models.CharField(max_length=60, db_index=True)
     quantity = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    status = models.CharField(max_length=16, default="active", db_index=True)  # active/consumed/released
+    status = models.CharField(
+        max_length=16, default="active", db_index=True
+    )  # active/consumed/released
     reservedByName = models.CharField(max_length=160, blank=True, default="")
     createdAt = models.DateTimeField(auto_now_add=True, db_index=True)
     updatedAt = models.DateTimeField(null=True, blank=True)
@@ -763,9 +761,7 @@ class MeterPointModel(models.Model):
     minimumValue = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
     maximumValue = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
     rolloverMaximum = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
-    maximumStepPerHour = models.DecimalField(
-        max_digits=18, decimal_places=4, null=True, blank=True
-    )
+    maximumStepPerHour = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
     drivesRunningHours = models.BooleanField(default=False)
     active = models.BooleanField(default=True, db_index=True)
     # Denormalised current state, refreshed on append.
@@ -806,15 +802,13 @@ class MeterPointModel(models.Model):
                 name="ck_meter_point_range",
             ),
             models.CheckConstraint(
-                condition=models.Q(rolloverMaximum__isnull=True)
-                | models.Q(rolloverMaximum__gt=0),
+                condition=models.Q(rolloverMaximum__isnull=True) | models.Q(rolloverMaximum__gt=0),
                 name="ck_meter_point_rollover_positive",
             ),
             # Only a counter can roll over; a thermometer that "wraps" is a
             # configuration mistake that would silently fabricate consumption.
             models.CheckConstraint(
-                condition=models.Q(rolloverMaximum__isnull=True)
-                | models.Q(kind="cumulative"),
+                condition=models.Q(rolloverMaximum__isnull=True) | models.Q(kind="cumulative"),
                 name="ck_meter_point_rollover_cumulative_only",
             ),
             # Running hours accumulate; a gauge can never be their source.
@@ -1055,9 +1049,7 @@ class OfflineSyncOperationModel(models.Model):
                 name="uq_sync_operation_client_request",
             ),
             models.CheckConstraint(
-                condition=models.Q(
-                    status__in=("applied", "failed", "rejected", "conflict")
-                ),
+                condition=models.Q(status__in=("applied", "failed", "rejected", "conflict")),
                 name="ck_sync_operation_status",
             ),
         ]
@@ -1330,9 +1322,7 @@ class PerformanceResultModel(models.Model):
     personnelId = models.UUIDField(db_index=True)
     finalScore = models.DecimalField(max_digits=6, decimal_places=2, default=0)
     humanScore = models.DecimalField(max_digits=6, decimal_places=2, default=0)
-    systemScore = models.DecimalField(
-        max_digits=6, decimal_places=2, null=True, blank=True
-    )
+    systemScore = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     consensus = models.DecimalField(max_digits=6, decimal_places=2, default=0)
     spread = models.DecimalField(max_digits=6, decimal_places=2, default=0)
     raterCount = models.PositiveSmallIntegerField(default=0)

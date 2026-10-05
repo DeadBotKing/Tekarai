@@ -226,7 +226,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser) -> None:  # noqa: ANN001 — Django contract
         parser.add_argument("--tenant", default="", help="Tenant id (default: all tenants).")
 
-    def handle(self, *args, **options) -> None:  # noqa: ANN002/ANN003 — Django contract
+    def handle(self, *args, **options) -> None:  # noqa: ANN002, ANN003 — Django contract
         from apps.tenancy.infrastructure.models import TenantModel
 
         if options["tenant"]:

@@ -88,9 +88,7 @@ class Command(BaseCommand):
     )
 
     def add_arguments(self, parser) -> None:  # noqa: ANN001 — Django contract
-        parser.add_argument(
-            "--tenant", default="", help="Tenant id (default: all tenants)."
-        )
+        parser.add_argument("--tenant", default="", help="Tenant id (default: all tenants).")
         parser.add_argument(
             "--no-work-orders",
             action="store_true",
@@ -101,9 +99,7 @@ class Command(BaseCommand):
             action="store_true",
             help="Skip the low-stock scan.",
         )
-        parser.add_argument(
-            "--loop", action="store_true", help="Keep running on an interval."
-        )
+        parser.add_argument("--loop", action="store_true", help="Keep running on an interval.")
         parser.add_argument(
             "--interval",
             type=int,
@@ -111,7 +107,7 @@ class Command(BaseCommand):
             help="Seconds between scans when --loop is set (default 86400 — daily).",
         )
 
-    def handle(self, *args, **options) -> None:  # noqa: ANN002/ANN003 — Django contract
+    def handle(self, *args, **options) -> None:  # noqa: ANN002, ANN003 — Django contract
         kwargs = {
             "includeWorkOrders": not options["no_work_orders"],
             "includeLowStock": not options["no_stock"],

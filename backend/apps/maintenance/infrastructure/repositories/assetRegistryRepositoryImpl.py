@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import builtins
 import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from django.db.models import Q
@@ -36,6 +37,7 @@ from apps.maintenance.infrastructure.models import (
     WorkOrderModel,
     WorkOrderPartUsageModel,
 )
+from apps.sharedKernel.domain.coercion import asInt, asStringList
 from apps.sharedKernel.domain.errors import EntityNotFoundError
 
 MAX_LOCATION_DEPTH = 12
@@ -157,7 +159,7 @@ class LocationRepositoryDjango:
         ).first()
         return self.toDomain(model) if model else None
 
-    def list(self, tenantId: uuid.UUID, search: str = "") -> list[MaintenanceLocation]:
+    def list(self, tenantId: uuid.UUID, search: str = "") -> builtins.list[MaintenanceLocation]:
         queryset = MaintenanceLocationModel.objects.filter(
             tenantId=tenantId, deletedAt__isnull=True
         )
@@ -176,7 +178,7 @@ class LocationRepositoryDjango:
             ).values("id", "kind")
         }
 
-    def treeRows(self, tenantId: uuid.UUID) -> list[dict]:
+    def treeRows(self, tenantId: uuid.UUID) -> builtins.list[dict]:
         """Flat list of live locations with the columns a tree render needs."""
         return [
             {
@@ -221,18 +223,18 @@ class LocationRepositoryDjango:
         ).first()
         return f"{parent.path} / {name}" if parent else name
 
-    def _wouldCycle(
-        self, tenantId: uuid.UUID, locationId: uuid.UUID, parentId: uuid.UUID
-    ) -> bool:
+    def _wouldCycle(self, tenantId: uuid.UUID, locationId: uuid.UUID, parentId: uuid.UUID) -> bool:
         cursor: uuid.UUID | None = parentId
         for _ in range(MAX_LOCATION_DEPTH):
             if cursor is None:
                 return False
             if cursor == locationId:
                 return True
-            parent = MaintenanceLocationModel.objects.filter(
-                id=cursor, tenantId=tenantId
-            ).values_list("parentId", flat=True).first()
+            parent = (
+                MaintenanceLocationModel.objects.filter(id=cursor, tenantId=tenantId)
+                .values_list("parentId", flat=True)
+                .first()
+            )
             cursor = parent
         return False
 
@@ -274,8 +276,8 @@ class PersonnelRepositoryDjango:
         unit: str,
         phone: str,
         shift: str,
-        skills: list[str],
-        certifications: list[str],
+        skills: builtins.list[str],
+        certifications: builtins.list[str],
         active: bool,
         now: datetime,
     ) -> MaintenancePersonnel:
@@ -303,8 +305,8 @@ class PersonnelRepositoryDjango:
         unit: str,
         phone: str,
         shift: str,
-        skills: list[str],
-        certifications: list[str],
+        skills: builtins.list[str],
+        certifications: builtins.list[str],
         active: bool,
         now: datetime,
     ) -> MaintenancePersonnel:
@@ -340,7 +342,7 @@ class PersonnelRepositoryDjango:
 
     def list(
         self, tenantId: uuid.UUID, search: str = "", specialty: str = ""
-    ) -> list[MaintenancePersonnel]:
+    ) -> builtins.list[MaintenancePersonnel]:
         queryset = MaintenancePersonnelModel.objects.filter(
             tenantId=tenantId, deletedAt__isnull=True
         )
@@ -402,7 +404,7 @@ class DeviceRegistryRepositoryDjango:
                 label=str(row.get("label", "")).strip(),
                 value=str(row.get("value", "")).strip(),
                 unit=str(row.get("unit", "")).strip(),
-                sortOrder=int(row.get("sortOrder", index) or index),
+                sortOrder=asInt(row.get("sortOrder", index), index),
                 createdAt=now,
             )
             for index, row in enumerate(rows)
@@ -439,10 +441,10 @@ class DeviceRegistryRepositoryDjango:
             title=str(payload.get("title", "")).strip(),
             discipline=str(payload.get("discipline", "general")),
             description=str(payload.get("description", "")),
-            checklist=_joinLines(list(payload.get("checklist", []) or [])),
-            frequencyEvery=int(payload.get("frequencyEvery", 1) or 1),
+            checklist=_joinLines(asStringList(payload.get("checklist"))),
+            frequencyEvery=asInt(payload.get("frequencyEvery"), 1) or 1,
             frequencyUnit=str(payload.get("frequencyUnit", "month")),
-            estimatedMinutes=int(payload.get("estimatedMinutes", 0) or 0),
+            estimatedMinutes=asInt(payload.get("estimatedMinutes")),
             responsibleName=str(payload.get("responsibleName", "")),
             lastExecutedOn=payload.get("lastExecutedOn") or None,
             active=bool(payload.get("active", True)),
@@ -462,10 +464,10 @@ class DeviceRegistryRepositoryDjango:
         model.title = str(payload.get("title", model.title)).strip()
         model.discipline = str(payload.get("discipline", model.discipline))
         model.description = str(payload.get("description", model.description))
-        model.checklist = _joinLines(list(payload.get("checklist", []) or []))
-        model.frequencyEvery = int(payload.get("frequencyEvery", model.frequencyEvery) or 1)
+        model.checklist = _joinLines(asStringList(payload.get("checklist")))
+        model.frequencyEvery = asInt(payload.get("frequencyEvery"), model.frequencyEvery) or 1
         model.frequencyUnit = str(payload.get("frequencyUnit", model.frequencyUnit))
-        model.estimatedMinutes = int(payload.get("estimatedMinutes", model.estimatedMinutes) or 0)
+        model.estimatedMinutes = asInt(payload.get("estimatedMinutes"), model.estimatedMinutes)
         model.responsibleName = str(payload.get("responsibleName", model.responsibleName))
         model.active = bool(payload.get("active", model.active))
         for column, value in _triggerColumns(payload, model).items():
@@ -513,9 +515,7 @@ class DeviceRegistryRepositoryDjango:
         # The caller may state the value observed at execution; otherwise the
         # meter point's current reading is used.
         rawMeterValue = payload.get("meterValue")
-        meterValue: Decimal | None = (
-            rawMeterValue if isinstance(rawMeterValue, Decimal) else None
-        )
+        meterValue: Decimal | None = rawMeterValue if isinstance(rawMeterValue, Decimal) else None
         if meterValue is None and rawMeterValue not in (None, ""):
             meterValue = Decimal(str(rawMeterValue))
         if meterValue is None and domainPlan.isMeterDriven:
@@ -535,7 +535,7 @@ class DeviceRegistryRepositoryDjango:
             dueOn=dueOn,
             onTime=onTime,
             performedByName=str(payload.get("performedByName", "")),
-            durationMinutes=int(payload.get("durationMinutes", 0) or 0),
+            durationMinutes=asInt(payload.get("durationMinutes")),
             findings=str(payload.get("findings", "")),
             meterValue=meterValue,
             createdAt=now,
@@ -640,9 +640,7 @@ class DeviceRegistryRepositoryDjango:
         return self._toBomItem(model, part)
 
     def removeBomItem(self, tenantId: uuid.UUID, deviceId: uuid.UUID, partId: uuid.UUID) -> None:
-        DeviceBomModel.objects.filter(
-            tenantId=tenantId, deviceId=deviceId, partId=partId
-        ).delete()
+        DeviceBomModel.objects.filter(tenantId=tenantId, deviceId=deviceId, partId=partId).delete()
 
     def listBom(self, tenantId: uuid.UUID, deviceId: uuid.UUID) -> list[DeviceBomItem]:
         rows = list(DeviceBomModel.objects.filter(tenantId=tenantId, deviceId=deviceId))
@@ -711,9 +709,7 @@ class DeviceRegistryRepositoryDjango:
                 fromDate=model.fromDate,
                 toDate=model.toDate,
             )
-            for model in DeviceAssignmentModel.objects.filter(
-                tenantId=tenantId, deviceId=deviceId
-            )
+            for model in DeviceAssignmentModel.objects.filter(tenantId=tenantId, deviceId=deviceId)
         ]
 
     # -- mapping ----------------------------------------------------------------------
@@ -817,9 +813,7 @@ class MaintenanceAnalyticsRepositoryDjango:
         orders = WorkOrderModel.objects.filter(tenantId=tenantId, deletedAt__isnull=True)
         if deviceId is not None:
             orders = orders.filter(deviceId=deviceId)
-        orderMap = {
-            str(row["id"]): str(row["deviceId"]) for row in orders.values("id", "deviceId")
-        }
+        orderMap = {str(row["id"]): str(row["deviceId"]) for row in orders.values("id", "deviceId")}
         usages = WorkOrderPartUsageModel.objects.filter(
             tenantId=tenantId,
             workOrderId__in=[uuid.UUID(key) for key in orderMap],
@@ -877,11 +871,11 @@ class MaintenanceAnalyticsRepositoryDjango:
 
     @staticmethod
     def _startOfDay(value: date) -> datetime:
-        return datetime(value.year, value.month, value.day, tzinfo=timezone.utc)
+        return datetime(value.year, value.month, value.day, tzinfo=UTC)
 
     @staticmethod
     def _endOfDay(value: date) -> datetime:
-        return datetime(value.year, value.month, value.day, 23, 59, 59, tzinfo=timezone.utc)
+        return datetime(value.year, value.month, value.day, 23, 59, 59, tzinfo=UTC)
 
     @staticmethod
     def _toOrderReading(model: WorkOrderModel) -> WorkOrderReading:
@@ -951,9 +945,7 @@ class AssetMovementRepositoryDjango:
         """Newest move first, so the row above the current place is where it was."""
         return [
             self.toPayload(model)
-            for model in AssetMovementModel.objects.filter(
-                tenantId=tenantId, deviceId=deviceId
-            )
+            for model in AssetMovementModel.objects.filter(tenantId=tenantId, deviceId=deviceId)
         ]
 
     def previousLocation(self, tenantId: uuid.UUID, deviceId: uuid.UUID) -> dict:
@@ -988,9 +980,7 @@ class AssetMovementRepositoryDjango:
             "fromParentDeviceId": (
                 str(model.fromParentDeviceId) if model.fromParentDeviceId else ""
             ),
-            "toParentDeviceId": (
-                str(model.toParentDeviceId) if model.toParentDeviceId else ""
-            ),
+            "toParentDeviceId": (str(model.toParentDeviceId) if model.toParentDeviceId else ""),
             "movedOn": model.movedOn.isoformat(),
             "reason": model.reason,
             "performedBy": model.performedBy,

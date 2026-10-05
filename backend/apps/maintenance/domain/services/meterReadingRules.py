@@ -251,7 +251,7 @@ def evaluateMeterTrigger(
     currentValue: Decimal | None,
     warningLead: Decimal | None = None,
 ) -> TriggerEvaluation:
-    """"Every N meter units since the last execution."
+    """ "Every N meter units since the last execution."
 
     ``baseline`` is the meter value recorded at the last execution. When a plan
     has never been executed, the first reading ever taken on the point becomes
@@ -288,7 +288,7 @@ def evaluateConditionTrigger(
     warningValue: Decimal | None,
     currentValue: Decimal | None,
 ) -> TriggerEvaluation:
-    """"When the value crosses a threshold" — condition-based maintenance.
+    """ "When the value crosses a threshold" — condition-based maintenance.
 
     The warning level is checked with the same operator, so a ``<=`` trigger
     (bearing oil level dropping) warns *before* it trips, exactly like a ``>=``

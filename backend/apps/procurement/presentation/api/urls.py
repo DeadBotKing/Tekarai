@@ -1,8 +1,10 @@
 from django.urls import path
 
 from .views import (
+    ApprovalHistoryView,
     InvoiceListView,
     ProcurementDashboardView,
+    ProcurementSupplierPerformanceView,
     PurchaseOrderDetailView,
     PurchaseOrderListView,
     ReceiptListView,
@@ -12,8 +14,6 @@ from .views import (
     SupplierDetailView,
     SupplierListView,
     SupplierPartsView,
-    ApprovalHistoryView,
-    ProcurementSupplierPerformanceView,
 )
 
 urlpatterns = [

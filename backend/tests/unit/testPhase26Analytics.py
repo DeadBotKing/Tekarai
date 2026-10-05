@@ -8,7 +8,7 @@ units* were consumed.
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from unittest import TestCase
 
@@ -28,7 +28,7 @@ from apps.maintenance.domain.valueObjects.maintenanceState import (
     PmFrequency,
 )
 
-UTC = timezone.utc
+UTC = UTC
 
 
 def moment(day: int, hour: int = 8) -> datetime:
@@ -216,9 +216,7 @@ class DeviceAnalyticsTests(TestCase):
 
     def testCostsAreSummedAcrossOrders(self) -> None:
         orders = [
-            correctiveOrder(
-                "wo-1", 2, labourCost=Decimal("1500000"), partsCost=Decimal("2400000")
-            ),
+            correctiveOrder("wo-1", 2, labourCost=Decimal("1500000"), partsCost=Decimal("2400000")),
             correctiveOrder("wo-2", 9, labourCost=Decimal("500000"), partsCost=Decimal("0")),
         ]
         analytics = computeDeviceAnalytics(
@@ -315,11 +313,14 @@ class TechnicianAndTrendTests(TestCase):
     def testTrendCoversEveryMonthInTheWindow(self) -> None:
         orders = [correctiveOrder("wo-1", 4)]
         buckets = buildTrend(orders, date(2026, 1, 1), date(2026, 4, 30))
-        self.assertEqual([bucket.label for bucket in buckets], [
-            "2026-01",
-            "2026-02",
-            "2026-03",
-            "2026-04",
-        ])
+        self.assertEqual(
+            [bucket.label for bucket in buckets],
+            [
+                "2026-01",
+                "2026-02",
+                "2026-03",
+                "2026-04",
+            ],
+        )
         self.assertEqual(buckets[2].failures, 1)
         self.assertEqual(buckets[0].failures, 0)

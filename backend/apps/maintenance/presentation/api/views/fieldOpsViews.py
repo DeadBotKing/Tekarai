@@ -181,9 +181,7 @@ class OfflineSyncView(FieldOpsView):
             )
         )
         return Response(
-            successEnvelope(
-                [asDict(item) for item in result.results], meta=result.asMeta()
-            )
+            successEnvelope([asDict(item) for item in result.results], meta=result.asMeta())
         )
 
 

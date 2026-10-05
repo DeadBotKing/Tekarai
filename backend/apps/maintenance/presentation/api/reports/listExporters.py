@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import csv
 import io
+from collections.abc import Sequence
 
 from apps.maintenance.presentation.api.reports import pdfUtils
 from apps.maintenance.presentation.api.reports import reportLabels as L
@@ -20,7 +21,7 @@ EXPORT_CONTENT_TYPES = {
 }
 
 
-def _xlsxBytes(title: str, columns: list[str], rows: list[list[object]]) -> bytes:
+def _xlsxBytes(title: str, columns: Sequence[str], rows: Sequence[Sequence[object]]) -> bytes:
     from openpyxl import Workbook
     from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     from openpyxl.utils import get_column_letter
@@ -72,7 +73,7 @@ def _xlsxBytes(title: str, columns: list[str], rows: list[list[object]]) -> byte
     return stream.getvalue()
 
 
-def _csvBytes(columns: list[str], rows: list[list[object]]) -> bytes:
+def _csvBytes(columns: Sequence[str], rows: Sequence[Sequence[object]]) -> bytes:
     buffer = io.StringIO()
     writer = csv.writer(buffer)
     writer.writerow(columns)
@@ -80,13 +81,13 @@ def _csvBytes(columns: list[str], rows: list[list[object]]) -> bytes:
     return b"\xef\xbb\xbf" + buffer.getvalue().encode("utf-8")
 
 
-def _build(kind: str, *, title: str, columns: list[str], rows: list[list[object]], wide: bool) -> bytes:
+def _build(
+    kind: str, *, title: str, columns: Sequence[str], rows: Sequence[Sequence[object]], wide: bool
+) -> bytes:
     if kind == "xlsx":
         return _xlsxBytes(title, columns, rows)
     if kind == "pdf":
-        return pdfUtils.buildPersianTablePdf(
-            title=title, columns=columns, rows=rows, wide=wide
-        )
+        return pdfUtils.buildPersianTablePdf(title=title, columns=columns, rows=rows, wide=wide)
     return _csvBytes(columns, rows)
 
 

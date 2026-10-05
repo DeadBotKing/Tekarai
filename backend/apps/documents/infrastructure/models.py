@@ -9,7 +9,7 @@ from django.db import models
 from django.utils import timezone
 
 
-def documentStoragePath(instance: "DocumentModel", filename: str) -> str:
+def documentStoragePath(instance: DocumentModel, filename: str) -> str:
     """Route uploads under media/documents/<tenant>/<documentId>/<filename>."""
     return str(Path("documents") / str(instance.tenantId) / str(instance.id) / filename)
 

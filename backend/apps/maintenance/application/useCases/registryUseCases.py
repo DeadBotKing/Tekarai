@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, date
 from decimal import Decimal
 
 from apps.maintenance.application.dto.maintenanceDtos import deviceDtoFromDomain
@@ -473,9 +473,7 @@ class ListPersonnelUseCase(RegistryUseCaseBase):
         return PersonnelListDto(
             items=[
                 personnelDto(person)
-                for person in self.personnelRepository.list(
-                    tenantId, query.search, query.specialty
-                )
+                for person in self.personnelRepository.list(tenantId, query.search, query.specialty)
             ]
         )
 
@@ -564,10 +562,8 @@ class SavePmPlanUseCase(RegistryUseCaseBase):
             "metricType": metricType,
             "metricInterval": interval if interval is not None else Decimal("0"),
             "thresholdOperator": command.thresholdOperator or ">=",
-            "thresholdValue": planDecimal(command.thresholdValue, "thresholdValue")
-            or Decimal("0"),
-            "warningValue": planDecimal(command.warningValue, "warningValue")
-            or Decimal("0"),
+            "thresholdValue": planDecimal(command.thresholdValue, "thresholdValue") or Decimal("0"),
+            "warningValue": planDecimal(command.warningValue, "warningValue") or Decimal("0"),
             "metricUnit": command.metricUnit.strip(),
             "sensorKey": normalizeSensorKey(command.sensorKey),
         }
@@ -597,9 +593,7 @@ class DeletePmPlanUseCase(RegistryUseCaseBase):
 
     def perform(self, command: DeletePmPlanCommand) -> dict[str, str]:
         tenantId = resolveTenantId("")
-        self.registryRepository.deletePlan(
-            tenantId, uuid.UUID(command.planId), self.clock.nowUtc()
-        )
+        self.registryRepository.deletePlan(tenantId, uuid.UUID(command.planId), self.clock.nowUtc())
         self.audit(
             AUDIT_DELETE, resourceType="PmPlan", resourceId=command.planId, tenantId=tenantId
         )
@@ -703,7 +697,9 @@ class SaveAssignmentsUseCase(RegistryUseCaseBase):
         self.requireDevice(tenantId, command.deviceId)
         rows = [
             {
-                "personnelId": uuid.UUID(str(row["personnelId"])) if row.get("personnelId") else None,
+                "personnelId": uuid.UUID(str(row["personnelId"]))
+                if row.get("personnelId")
+                else None,
                 "personnelName": row.get("personnelName", ""),
                 "role": row.get("role", "technician"),
                 "unit": row.get("unit", ""),
@@ -728,27 +724,22 @@ class SaveAssignmentsUseCase(RegistryUseCaseBase):
 # =====================================================================================
 # Analytics
 # =====================================================================================
-class GetDeviceAnalyticsUseCase(RegistryUseCaseBase):
-    """Recompute every metric for one device from its dated rows."""
+class DeviceAnalyticsComputation(RegistryUseCaseBase):
+    """Shared device-metric computation for the analytics and profile use cases.
 
-    requiredAction = PERMISSION_REGISTRY_VIEW
-
-    def perform(self, query: GetDeviceAnalyticsQuery) -> DeviceAnalyticsDto:
-        tenantId = resolveTenantId("")
-        now = self.clock.nowUtc()
-        fromDate, toDate = self.resolveWindow(query.fromDate, query.toDate, now.date())
-        deviceId = uuid.UUID(query.deviceId)
-        self.requireDevice(tenantId, query.deviceId)
-        return analyticsDto(
-            self._compute(tenantId, deviceId, fromDate, toDate, now.date())
-        )
+    These helpers used to live on `GetDeviceAnalyticsUseCase`, and
+    `GetDeviceProfileUseCase` subclassed it purely to reuse them. That made
+    the profile use case a non-substitutable subtype -- it accepts a
+    different query and returns a different DTO -- so any caller holding a
+    `GetDeviceAnalyticsUseCase` could be handed an object that breaks the
+    declared contract. The reusable part now sits in its own base class and
+    the two use cases are siblings.
+    """
 
     def _compute(self, tenantId, deviceId, fromDate, toDate, asOf):  # noqa: ANN001, ANN202
         orders = self.analyticsRepository.readWorkOrders(tenantId, deviceId, fromDate, toDate)
         usage = self.analyticsRepository.readPartUsage(tenantId, deviceId, fromDate, toDate)
-        executions = self.analyticsRepository.readPmExecutions(
-            tenantId, deviceId, fromDate, toDate
-        )
+        executions = self.analyticsRepository.readPmExecutions(tenantId, deviceId, fromDate, toDate)
         plans = self.registryRepository.listPlans(tenantId, deviceId)
         scheduled = self._expectedPmRuns(plans, fromDate, toDate)
         overdue = sum(1 for plan in plans if plan.isOverdue(asOf))
@@ -778,7 +769,21 @@ class GetDeviceAnalyticsUseCase(RegistryUseCaseBase):
         return expected
 
 
-class GetDeviceProfileUseCase(GetDeviceAnalyticsUseCase):
+class GetDeviceAnalyticsUseCase(DeviceAnalyticsComputation):
+    """Recompute every metric for one device from its dated rows."""
+
+    requiredAction = PERMISSION_REGISTRY_VIEW
+
+    def perform(self, query: GetDeviceAnalyticsQuery) -> DeviceAnalyticsDto:
+        tenantId = resolveTenantId("")
+        now = self.clock.nowUtc()
+        fromDate, toDate = self.resolveWindow(query.fromDate, query.toDate, now.date())
+        deviceId = uuid.UUID(query.deviceId)
+        self.requireDevice(tenantId, query.deviceId)
+        return analyticsDto(self._compute(tenantId, deviceId, fromDate, toDate, now.date()))
+
+
+class GetDeviceProfileUseCase(DeviceAnalyticsComputation):
     """The complete equipment file: master data + registry lists + analytics."""
 
     requiredAction = PERMISSION_REGISTRY_VIEW
@@ -874,9 +879,7 @@ class GetFleetAnalyticsUseCase(RegistryUseCaseBase):
         fromDate, toDate = self.resolveWindow(query.fromDate, query.toDate, asOf)
 
         devices = self.deviceRepository.list(
-            DeviceFilters(
-                tenantId=tenantId, department=query.department, page=1, pageSize=100
-            )
+            DeviceFilters(tenantId=tenantId, department=query.department, page=1, pageSize=100)
         ).items
 
         allOrders = self.analyticsRepository.readWorkOrders(tenantId, None, fromDate, toDate)
@@ -1063,9 +1066,7 @@ class GetPartUsageReportUseCase(RegistryUseCaseBase):
             fromDate=fromDate.isoformat(),
             toDate=toDate.isoformat(),
             totalUsageCount=len(usages),
-            totalQuantity=str(
-                sum((Decimal(item.quantity or 0) for item in usages), Decimal("0"))
-            ),
+            totalQuantity=str(sum((Decimal(item.quantity or 0) for item in usages), Decimal("0"))),
             devices=rows,
         )
 
@@ -1121,17 +1122,13 @@ class UpdateDeviceNameplateUseCase(RegistryUseCaseBase):
             # made its own parent and did nothing at all about longer loops, so
             # A→B→A was writable and every ancestry walk after it hung. The
             # guards below refuse the write and say why.
-            index = {
-                row["id"]: row for row in self.deviceRepository.hierarchyRows(tenantId)
-            }
+            index = {row["id"]: row for row in self.deviceRepository.hierarchyRows(tenantId)}
             parents = {key: (row["parentDeviceId"] or None) for key, row in index.items()}
             assertNoCycle(command.deviceId, parentId, parents)
             assertDepthWithinLimit(parentId, parents)
             stated = "assetLevel" in values
             childLevel = str(
-                values.get("assetLevel")
-                or index.get(command.deviceId, {}).get("assetLevel")
-                or ""
+                values.get("assetLevel") or index.get(command.deviceId, {}).get("assetLevel") or ""
             )
             # An unstated default level is derived from the new parent rather
             # than refused, so filing a machine under a line keeps working and
@@ -1196,7 +1193,6 @@ class RecordClosureDetailsUseCase(RegistryUseCaseBase):
 def _parseMoment(value: str):  # noqa: ANN202 — datetime | None
     """Accept an ISO datetime or a bare ISO date; anything else becomes None."""
     from datetime import datetime as _datetime
-    from datetime import timezone as _timezone
 
     if not value:
         return None
@@ -1207,7 +1203,5 @@ def _parseMoment(value: str):  # noqa: ANN202 — datetime | None
         parsedDate = parseDateOrNone(value)
         if parsedDate is None:
             return None
-        return _datetime(
-            parsedDate.year, parsedDate.month, parsedDate.day, tzinfo=_timezone.utc
-        )
-    return parsed if parsed.tzinfo else parsed.replace(tzinfo=_timezone.utc)
+        return _datetime(parsedDate.year, parsedDate.month, parsedDate.day, tzinfo=UTC)
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)

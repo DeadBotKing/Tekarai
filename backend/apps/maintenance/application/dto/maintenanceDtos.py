@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 from apps.maintenance.domain.entities.device import Device
 from apps.maintenance.domain.entities.deviceHistory import DeviceHistoryEntry
@@ -173,7 +173,7 @@ class DeviceMaintenanceReportDto:
 
     device: DeviceDto
     workOrders: list[WorkOrderDto] = field(default_factory=list)
-    summary: "DeviceReportSummaryDto | None" = None
+    summary: DeviceReportSummaryDto | None = None
     generatedAt: str = ""
     fromDate: str = ""
     toDate: str = ""
@@ -230,7 +230,7 @@ def deviceDtoFromDomain(device: Device, asOf: date) -> DeviceDto:
 
 
 def workOrderDtoFromDomain(order: WorkOrder, now: datetime | None = None) -> WorkOrderDto:
-    referenceNow = now or datetime.now(tz=timezone.utc)
+    referenceNow = now or datetime.now(tz=UTC)
     dueAt = order.slaDueAt()
     return WorkOrderDto(
         id=str(order.id),
@@ -259,7 +259,9 @@ def workOrderDtoFromDomain(order: WorkOrder, now: datetime | None = None) -> Wor
         failureReportedAt=order.failureReportedAt.isoformat() if order.failureReportedAt else "",
         repairStartedAt=order.repairStartedAt.isoformat() if order.repairStartedAt else "",
         repairFinishedAt=order.repairFinishedAt.isoformat() if order.repairFinishedAt else "",
-        returnedToServiceAt=order.returnedToServiceAt.isoformat() if order.returnedToServiceAt else "",
+        returnedToServiceAt=order.returnedToServiceAt.isoformat()
+        if order.returnedToServiceAt
+        else "",
         downtimeMinutes=order.downtimeMinutes,
         labourHours=str(order.labourHours),
         labourCost=str(order.labourCost),

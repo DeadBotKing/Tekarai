@@ -13,6 +13,7 @@ import { ActivityFeed } from "../shared/components/featureComponents";
 import { Modal, Toast } from "../shared/components/overlays";
 import { Avatar, Badge, Button, Card, CardHeader, PermissionGuard, SectionHeader, StatusBadge, TextInput } from "../shared/components/primitives";
 import { Icon } from "../shared/components/Icon";
+import { formatDate } from "../core/localization/format";
 
 interface UserRecord { id: string; name: string; email: string; role: string; status: "active" | "pending" | "archived"; lastActive: string; access: string; }
 const users: UserRecord[] = [
@@ -57,7 +58,7 @@ function Users({ reloadToken = 0 }: { reloadToken?: number }): JSX.Element {
     if (runtimeConfig.demoMode) return;
     setLoading(true);
     service.listUsers()
-      .then((rows) => setItems(rows.map((row) => ({ id: row.id, name: row.displayName || row.username, email: row.email, role: row.username, status: (row.status === "active" ? "active" : row.status === "pending" ? "pending" : "archived") as UserRecord["status"], lastActive: row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "", access: "" }))))
+      .then((rows) => setItems(rows.map((row) => ({ id: row.id, name: row.displayName || row.username, email: row.email, role: row.username, status: (row.status === "active" ? "active" : row.status === "pending" ? "pending" : "archived") as UserRecord["status"], lastActive: formatDate(row.createdAt, "fa", { style: "short", fallback: "" }), access: "" }))))
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
   }, [service, reloadToken]);

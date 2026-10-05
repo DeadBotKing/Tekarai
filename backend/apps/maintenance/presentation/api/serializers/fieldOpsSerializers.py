@@ -27,9 +27,7 @@ class StartWorkTimerSerializer(serializers.Serializer):
     #: Present only when the start was captured offline and is being replayed.
     startedAt = serializers.CharField(required=False, allow_blank=True, default="")
     hourlyRate = serializers.CharField(required=False, allow_blank=True, default="0")
-    note = serializers.CharField(
-        max_length=500, required=False, allow_blank=True, default=""
-    )
+    note = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
     capturedOffline = serializers.BooleanField(required=False, default=False)
 
 
@@ -41,9 +39,7 @@ class StopWorkTimerSerializer(serializers.Serializer):
         max_length=160, required=False, allow_blank=True, default=""
     )
     endedAt = serializers.CharField(required=False, allow_blank=True, default="")
-    note = serializers.CharField(
-        max_length=500, required=False, allow_blank=True, default=""
-    )
+    note = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
     #: Breaks the technician took inside the span (lunch, waiting for a crane).
     pausedSeconds = serializers.IntegerField(required=False, default=0, min_value=0)
     capturedOffline = serializers.BooleanField(required=False, default=False)

@@ -183,13 +183,11 @@ class WorkTimerRepositoryDjango:
             rows = rows.filter(technicianName=technicianName.strip())
         return [self._entity(item) for item in rows.order_by("-startedAt")]
 
-    def listForWorkOrder(
-        self, tenantId: uuid.UUID, workOrderId: uuid.UUID
-    ) -> list[WorkTimer]:
+    def listForWorkOrder(self, tenantId: uuid.UUID, workOrderId: uuid.UUID) -> list[WorkTimer]:
         self._workOrderOr404(tenantId, workOrderId)
-        rows = WorkTimerModel.objects.filter(
-            tenantId=tenantId, workOrderId=workOrderId
-        ).order_by("-startedAt")
+        rows = WorkTimerModel.objects.filter(tenantId=tenantId, workOrderId=workOrderId).order_by(
+            "-startedAt"
+        )
         return [self._entity(item) for item in rows]
 
     def lastStoppedFor(

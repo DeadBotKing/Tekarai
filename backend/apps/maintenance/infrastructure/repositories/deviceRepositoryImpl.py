@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import builtins
 import uuid
 from datetime import datetime
 from decimal import Decimal
@@ -69,7 +70,7 @@ class DeviceRepositoryDjango:
     def countByTenant(self, tenantId: uuid.UUID) -> int:
         return DeviceModel.objects.filter(tenantId=tenantId, deletedAt__isnull=True).count()
 
-    def listDueForPm(self, tenantId: uuid.UUID) -> list[Device]:
+    def listDueForPm(self, tenantId: uuid.UUID) -> builtins.list[Device]:
         queryset = DeviceModel.objects.filter(
             tenantId=tenantId,
             deletedAt__isnull=True,
@@ -240,7 +241,7 @@ class DeviceRepositoryDjango:
             deletedAt__isnull=True,
         ).exists()
 
-    def listChildren(self, tenantId: uuid.UUID, deviceId: uuid.UUID) -> list[Device]:
+    def listChildren(self, tenantId: uuid.UUID, deviceId: uuid.UUID) -> builtins.list[Device]:
         """Sub-assemblies whose parent is this device (motor, gearbox, panel…)."""
         return [
             self.toDomain(model)
@@ -258,12 +259,12 @@ class DeviceRepositoryDjango:
         """
         return {
             str(row["id"]): (str(row["parentDeviceId"]) if row["parentDeviceId"] else None)
-            for row in DeviceModel.objects.filter(
-                tenantId=tenantId, deletedAt__isnull=True
-            ).values("id", "parentDeviceId")
+            for row in DeviceModel.objects.filter(tenantId=tenantId, deletedAt__isnull=True).values(
+                "id", "parentDeviceId"
+            )
         }
 
-    def hierarchyRows(self, tenantId: uuid.UUID) -> list[dict]:
+    def hierarchyRows(self, tenantId: uuid.UUID) -> builtins.list[dict]:
         """Flat list of live devices with just the columns a tree needs."""
         return [
             {
@@ -273,9 +274,7 @@ class DeviceRepositoryDjango:
                 "status": row["status"],
                 "assetLevel": row["assetLevel"] or "mainEquipment",
                 "criticality": row["criticality"],
-                "parentDeviceId": (
-                    str(row["parentDeviceId"]) if row["parentDeviceId"] else ""
-                ),
+                "parentDeviceId": (str(row["parentDeviceId"]) if row["parentDeviceId"] else ""),
                 "locationId": str(row["locationId"]) if row["locationId"] else "",
                 "locationPath": row["locationPath"],
                 "costCenterCode": row["costCenterCode"],
@@ -370,9 +369,7 @@ class DeviceRepositoryDjango:
         model.retiredOn = retiredOn
         model.retirementReason = reason
         model.updatedAt = now
-        model.save(
-            update_fields=["status", "retiredOn", "retirementReason", "updatedAt"]
-        )
+        model.save(update_fields=["status", "retiredOn", "retirementReason", "updatedAt"])
         return previousStatus
 
     def reinstateDevice(

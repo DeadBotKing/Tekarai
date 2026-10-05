@@ -12,7 +12,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="SparePartModel",
             fields=[
-                ("id", models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                    ),
+                ),
                 ("tenantId", models.UUIDField(db_index=True)),
                 ("code", models.CharField(max_length=60)),
                 ("name", models.CharField(max_length=200)),
@@ -28,7 +33,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="WorkOrderPartUsageModel",
             fields=[
-                ("id", models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                    ),
+                ),
                 ("tenantId", models.UUIDField(db_index=True)),
                 ("workOrderId", models.UUIDField(db_index=True)),
                 ("partId", models.UUIDField(db_index=True)),

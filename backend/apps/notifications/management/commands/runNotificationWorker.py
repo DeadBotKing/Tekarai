@@ -48,7 +48,7 @@ class Command(BaseCommand):
         parser.add_argument("--interval", type=int, default=5, help="Seconds between ticks.")
         parser.add_argument("--limit", type=int, default=100, help="Batch size per phase.")
 
-    def handle(self, *args, **options) -> None:  # noqa: ANN002/ANN003 — Django contract
+    def handle(self, *args, **options) -> None:  # noqa: ANN002, ANN003 — Django contract
         if options["once"]:
             self.stdout.write(str(tick(limit=options["limit"])))
             return

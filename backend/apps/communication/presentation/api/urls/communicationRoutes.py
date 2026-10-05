@@ -140,9 +140,7 @@ urlpatterns = [
     path(
         "attachments/preflight", AttachmentPreflightView.as_view(), name="commAttachmentPreflight"
     ),
-    path(
-        "attachments/upload", AttachmentUploadView.as_view(), name="commAttachmentUpload"
-    ),
+    path("attachments/upload", AttachmentUploadView.as_view(), name="commAttachmentUpload"),
     path("sync", OfflineSyncView.as_view(), name="commOfflineSync"),
     path("retention/runs", RetentionRunView.as_view(), name="commRetentionRun"),
     path(

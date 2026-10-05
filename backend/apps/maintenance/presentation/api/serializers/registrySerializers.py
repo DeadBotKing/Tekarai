@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from apps.maintenance.presentation.api.serializers.taxonomyFields import openVocabulary
-
 from apps.maintenance.domain.valueObjects.maintenanceState import (
     ASSET_CRITICALITIES,
     ASSET_LEVELS,
@@ -18,6 +16,7 @@ from apps.maintenance.domain.valueObjects.meterTypes import (
     PM_TRIGGER_TYPES,
     THRESHOLD_OPERATORS,
 )
+from apps.maintenance.presentation.api.serializers.taxonomyFields import openVocabulary
 
 DEPARTMENT_CHOICES = list(MAINTENANCE_DEPARTMENTS)
 CRITICALITY_CHOICES = list(ASSET_CRITICALITIES)
@@ -86,21 +85,15 @@ class SavePmPlanSerializer(serializers.Serializer):
     triggerType = serializers.ChoiceField(
         choices=TRIGGER_TYPE_CHOICES, required=False, default="calendar"
     )
-    metricType = serializers.CharField(
-        max_length=48, required=False, allow_blank=True, default=""
-    )
+    metricType = serializers.CharField(max_length=48, required=False, allow_blank=True, default="")
     metricInterval = serializers.CharField(required=False, allow_blank=True, default="")
     thresholdOperator = serializers.ChoiceField(
         choices=THRESHOLD_OPERATOR_CHOICES, required=False, default=">="
     )
     thresholdValue = serializers.CharField(required=False, allow_blank=True, default="")
     warningValue = serializers.CharField(required=False, allow_blank=True, default="")
-    metricUnit = serializers.CharField(
-        max_length=30, required=False, allow_blank=True, default=""
-    )
-    sensorKey = serializers.CharField(
-        max_length=120, required=False, allow_blank=True, default=""
-    )
+    metricUnit = serializers.CharField(max_length=30, required=False, allow_blank=True, default="")
+    sensorKey = serializers.CharField(max_length=120, required=False, allow_blank=True, default="")
 
 
 class RecordPmExecutionSerializer(serializers.Serializer):
@@ -116,9 +109,7 @@ class RecordPmExecutionSerializer(serializers.Serializer):
 
 class SaveBomItemSerializer(serializers.Serializer):
     partId = serializers.CharField()
-    position = serializers.CharField(
-        max_length=160, required=False, allow_blank=True, default=""
-    )
+    position = serializers.CharField(max_length=160, required=False, allow_blank=True, default="")
     standardQuantity = serializers.CharField(required=False, default="1")
     note = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
 
@@ -150,9 +141,7 @@ class UpdateDeviceNameplateSerializer(serializers.Serializer):
     serialNumber = serializers.CharField(
         max_length=200, required=False, allow_blank=True, default=""
     )
-    assetType = serializers.CharField(
-        max_length=160, required=False, allow_blank=True, default=""
-    )
+    assetType = serializers.CharField(max_length=160, required=False, allow_blank=True, default="")
     manufactureYear = serializers.CharField(
         max_length=10, required=False, allow_blank=True, default=""
     )
@@ -189,9 +178,7 @@ class UpdateDeviceNameplateSerializer(serializers.Serializer):
 class CloseWorkOrderDetailsSerializer(serializers.Serializer):
     """Failure, downtime and cost facts captured when a repair is closed."""
 
-    failureType = serializers.CharField(
-        max_length=24, required=False, allow_blank=True, default=""
-    )
+    failureType = serializers.CharField(max_length=24, required=False, allow_blank=True, default="")
     failedComponent = serializers.CharField(
         max_length=200, required=False, allow_blank=True, default=""
     )
@@ -221,9 +208,7 @@ class MoveAssetSerializer(serializers.Serializer):
     toLocationId = serializers.CharField(required=False, allow_blank=True, default="")
     toParentDeviceId = serializers.CharField(required=False, allow_blank=True, default="")
     movedOn = serializers.CharField(required=False, allow_blank=True, default="")
-    reason = serializers.CharField(
-        max_length=300, required=False, allow_blank=True, default=""
-    )
+    reason = serializers.CharField(max_length=300, required=False, allow_blank=True, default="")
     performedBy = serializers.CharField(
         max_length=160, required=False, allow_blank=True, default=""
     )
@@ -235,9 +220,7 @@ class MoveAssetSerializer(serializers.Serializer):
 
 class RetireAssetSerializer(serializers.Serializer):
     retiredOn = serializers.CharField(required=False, allow_blank=True, default="")
-    reason = serializers.CharField(
-        max_length=300, required=False, allow_blank=True, default=""
-    )
+    reason = serializers.CharField(max_length=300, required=False, allow_blank=True, default="")
     retireChildren = serializers.BooleanField(required=False, default=False)
 
 

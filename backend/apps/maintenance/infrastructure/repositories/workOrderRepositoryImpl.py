@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import builtins
 import uuid
 from datetime import datetime
 
@@ -192,10 +193,10 @@ class WorkOrderRepositoryDjango:
             partsCost=model.partsCost,
         )
 
-    def listAlertRows(self, tenantId: uuid.UUID) -> list[WorkOrderAlertRow]:
-        rows = WorkOrderModel.objects.filter(
-            tenantId=tenantId, deletedAt__isnull=True
-        ).order_by("-createdAt")[:500]
+    def listAlertRows(self, tenantId: uuid.UUID) -> builtins.list[WorkOrderAlertRow]:
+        rows = WorkOrderModel.objects.filter(tenantId=tenantId, deletedAt__isnull=True).order_by(
+            "-createdAt"
+        )[:500]
         return [
             WorkOrderAlertRow(
                 id=model.id,
@@ -209,4 +210,3 @@ class WorkOrderRepositoryDjango:
             )
             for model in rows
         ]
-

@@ -11,6 +11,14 @@ Phase 22 adds a full workflow layer on top of the original lifecycle:
 from __future__ import annotations
 
 import uuid
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # pragma: no cover - annotation-only import
+    # `datetime` is imported inside the function bodies that need it; the
+    # module-level annotation below still has to resolve for the linters.
+    from datetime import datetime
+
+from datetime import UTC
 
 from apps.maintenance.application.commands.maintenanceCommands import (
     ApproveWorkOrderCommand,
@@ -134,9 +142,7 @@ class SubmitWorkOrderUseCase(UseCase):
         # A submitted order inherits the device's owning department unless the
         # requester explicitly overrides it.
         department = (
-            MaintenanceDepartment(command.department)
-            if command.department
-            else device.department
+            MaintenanceDepartment(command.department) if command.department else device.department
         )
         now = self.clock.nowUtc()
         order = WorkOrder.submit(
@@ -527,8 +533,8 @@ class DeviceMaintenanceReportUseCase(WorkOrderUseCaseBase):
         super().__init__(*args, **kwargs)  # type: ignore[arg-type]
         self.deviceRepository = deviceRepository
 
-    def perform(self, query: "DeviceMaintenanceReportQuery") -> "DeviceMaintenanceReportDto":
-        from datetime import datetime, time, timezone
+    def perform(self, query: DeviceMaintenanceReportQuery) -> DeviceMaintenanceReportDto:
+        from datetime import datetime, time
 
         from django.utils.dateparse import parse_date
 
@@ -545,11 +551,11 @@ class DeviceMaintenanceReportUseCase(WorkOrderUseCaseBase):
         if query.fromDate:
             parsed = parse_date(query.fromDate)
             if parsed is not None:
-                createdFrom = datetime.combine(parsed, time.min, tzinfo=timezone.utc)
+                createdFrom = datetime.combine(parsed, time.min, tzinfo=UTC)
         if query.toDate:
             parsed = parse_date(query.toDate)
             if parsed is not None:
-                createdTo = datetime.combine(parsed, time.max, tzinfo=timezone.utc)
+                createdTo = datetime.combine(parsed, time.max, tzinfo=UTC)
 
         # Pull every matching order (report, not a paginated list): walk pages.
         collected: list[WorkOrder] = []
@@ -584,9 +590,7 @@ class DeviceMaintenanceReportUseCase(WorkOrderUseCaseBase):
         )
 
 
-def _buildReportSummary(
-    orders: "list[WorkOrder]", now: "datetime"
-) -> "DeviceReportSummaryDto":
+def _buildReportSummary(orders: list[WorkOrder], now: datetime) -> DeviceReportSummaryDto:
     from apps.maintenance.domain.valueObjects.maintenanceState import (
         WO_CANCELLED,
         WO_COMPLETED,

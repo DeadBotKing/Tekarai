@@ -27,16 +27,16 @@ from apps.maintenance.application.queries.maintenanceQueries import (
     ListDevicesQuery,
     ListDuePmQuery,
 )
-from apps.maintenance.application.services.tenantResolver import (
-    parseDateOrToday,
-    resolveTenantId,
-)
 from apps.maintenance.application.services.deviceHistory import (
     DEVICE_HISTORY_PM_COMPLETED,
     DEVICE_HISTORY_REGISTERED,
     DEVICE_HISTORY_STATUS_CHANGED,
     DEVICE_HISTORY_UPDATED,
     recordDeviceHistory,
+)
+from apps.maintenance.application.services.tenantResolver import (
+    parseDateOrToday,
+    resolveTenantId,
 )
 from apps.maintenance.domain.entities.device import Device
 from apps.maintenance.domain.repositories.maintenanceRepositories import (

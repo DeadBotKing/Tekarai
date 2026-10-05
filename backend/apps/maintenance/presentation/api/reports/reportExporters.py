@@ -42,18 +42,14 @@ def buildDeviceReportCsv(report: DeviceMaintenanceReportDto) -> bytes:
     device = report.device
     writer.writerow(["گزارش تاریخچه‌ی نگهداری دستگاه"])
     writer.writerow(["کد دستگاه", device.code, "نام دستگاه", device.name])
-    writer.writerow(
-        ["محل", device.location, "واحد", L.departmentLabel(device.department)]
-    )
+    writer.writerow(["محل", device.location, "واحد", L.departmentLabel(device.department)])
     writer.writerow(
         ["وضعیت", L.deviceStatusLabel(device.status), "دوره‌ی PM (روز)", device.pmIntervalDays]
     )
     writer.writerow(
         ["آخرین PM", L.formatDate(device.lastPmDate), "PM بعدی", L.formatDate(device.nextDueDate)]
     )
-    writer.writerow(
-        ["از تاریخ", report.fromDate or "—", "تا تاریخ", report.toDate or "—"]
-    )
+    writer.writerow(["از تاریخ", report.fromDate or "—", "تا تاریخ", report.toDate or "—"])
     writer.writerow(["زمان تولید گزارش", L.formatDateTime(report.generatedAt)])
     writer.writerow([])
 
@@ -65,7 +61,10 @@ def buildDeviceReportCsv(report: DeviceMaintenanceReportDto) -> bytes:
         writer.writerow(["تکمیل‌شده", summary.completedOrders])
         writer.writerow(["دارای تأخیر", summary.overdueOrders])
         writer.writerow(
-            ["میانگین زمان تعمیر (ساعت)", summary.mttrHours if summary.mttrHours is not None else "—"]
+            [
+                "میانگین زمان تعمیر (ساعت)",
+                summary.mttrHours if summary.mttrHours is not None else "—",
+            ]
         )
         writer.writerow([])
 

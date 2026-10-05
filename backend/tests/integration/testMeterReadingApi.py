@@ -97,9 +97,7 @@ class MeterPointApiTests(MeterApiBase):
         self.assertEqual(point["kind"], "cumulative")
         self.assertTrue(point["drivesRunningHours"])
 
-        listing = self.client.get(
-            f"{BASE}/devices/{device['id']}/meter-points", **self.auth
-        )
+        listing = self.client.get(f"{BASE}/devices/{device['id']}/meter-points", **self.auth)
         self.assertEqual(listing.status_code, 200, listing.content)
         self.assertEqual(len(listing.json()["data"]), 1)
 
@@ -112,7 +110,9 @@ class MeterPointApiTests(MeterApiBase):
 
     def testMeterCodeIsUppercasedAndUniquePerDevice(self) -> None:
         device = self.createDevice()
-        created = self.createPoint(device["id"], code="pump.kwh", sensorKey="", kind="cumulative", drivesRunningHours=False)
+        created = self.createPoint(
+            device["id"], code="pump.kwh", sensorKey="", kind="cumulative", drivesRunningHours=False
+        )
         self.assertEqual(created["code"], "PUMP.KWH")
 
         duplicate = self.client.post(
@@ -197,9 +197,7 @@ class ManualReadingApiTests(MeterApiBase):
     def testDecimalPrecisionSurvivesTheRoundTrip(self) -> None:
         device = self.createDevice()
         self.createPoint(device["id"], code="PUMP.KWH", sensorKey="", drivesRunningHours=False)
-        response = self.recordManual(
-            device["id"], "124578901.2345", meterCode="PUMP.KWH"
-        )
+        response = self.recordManual(device["id"], "124578901.2345", meterCode="PUMP.KWH")
         self.assertEqual(response.json()["data"]["value"], "124578901.2345")
 
     def testSecondReadingCarriesTheDelta(self) -> None:
@@ -216,15 +214,11 @@ class ManualReadingApiTests(MeterApiBase):
         device = self.createDevice()
         self.createPoint(device["id"])
         self.recordManual(device["id"], "8400", capturedAt=self.now.isoformat())
-        self.assertEqual(
-            DeviceModel.objects.get(id=device["id"]).runningHours, Decimal("8400.00")
-        )
+        self.assertEqual(DeviceModel.objects.get(id=device["id"]).runningHours, Decimal("8400.00"))
         self.recordManual(
             device["id"], "8460", capturedAt=(self.now + timedelta(hours=60)).isoformat()
         )
-        self.assertEqual(
-            DeviceModel.objects.get(id=device["id"]).runningHours, Decimal("8460.00")
-        )
+        self.assertEqual(DeviceModel.objects.get(id=device["id"]).runningHours, Decimal("8460.00"))
 
     def testBackwardsCounterIsKeptButFlaggedSuspect(self) -> None:
         device = self.createDevice()
@@ -267,9 +261,7 @@ class ManualReadingApiTests(MeterApiBase):
         device = self.createDevice()
         self.createPoint(device["id"])
         future = datetime.now(tz=UTC) + timedelta(hours=2)
-        response = self.recordManual(
-            device["id"], "8400", capturedAt=future.isoformat()
-        )
+        response = self.recordManual(device["id"], "8400", capturedAt=future.isoformat())
         self.assertEqual(response.status_code, 422, response.content)
 
     def testUnknownMeterCodeIsNotFound(self) -> None:
@@ -312,9 +304,7 @@ class SensorIngestApiTests(MeterApiBase):
         self.assertEqual(body["meta"]["accepted"], 2)
         self.assertEqual(body["meta"]["rejected"], 0)
         self.assertEqual(body["data"][1]["delta"], "1.0000")
-        self.assertEqual(
-            MeterReadingModel.objects.filter(captureMode="sensor").count(), 2
-        )
+        self.assertEqual(MeterReadingModel.objects.filter(captureMode="sensor").count(), 2)
 
     def testReplayingTheSameBatchIsIdempotent(self) -> None:
         """A gateway retry must never double-count a counter."""
@@ -374,9 +364,7 @@ class SensorIngestApiTests(MeterApiBase):
         meta = response.json()["meta"]
         self.assertEqual(meta["accepted"], 2)
         self.assertEqual(meta["rejected"], 1)
-        self.assertEqual(
-            response.json()["data"][1]["errorCode"], "MAINT_METER_POINT_NOT_BOUND"
-        )
+        self.assertEqual(response.json()["data"][1]["errorCode"], "MAINT_METER_POINT_NOT_BOUND")
 
     def testAtomicBatchRollsEverythingBack(self) -> None:
         device = self.createDevice()
@@ -470,9 +458,9 @@ class CorrectionTests(MeterApiBase):
     def testCorrectionAppendsAndSupersedesInsteadOfEditing(self) -> None:
         device = self.createDevice()
         self.createPoint(device["id"])
-        wrong = self.recordManual(
-            device["id"], "84000", capturedAt=self.now.isoformat()
-        ).json()["data"]
+        wrong = self.recordManual(device["id"], "84000", capturedAt=self.now.isoformat()).json()[
+            "data"
+        ]
 
         corrected = self.client.post(
             f"{BASE}/meter-readings/{wrong['id']}/correct",
@@ -527,9 +515,9 @@ class CorrectionTests(MeterApiBase):
     def testASupersededReadingStopsDrivingLaterDeltas(self) -> None:
         device = self.createDevice()
         self.createPoint(device["id"])
-        wrong = self.recordManual(
-            device["id"], "84000", capturedAt=self.now.isoformat()
-        ).json()["data"]
+        wrong = self.recordManual(device["id"], "84000", capturedAt=self.now.isoformat()).json()[
+            "data"
+        ]
         self.client.post(
             f"{BASE}/meter-readings/{wrong['id']}/correct",
             {"value": "8400", "note": "اصلاح"},
@@ -565,18 +553,12 @@ class ReadingQueryTests(MeterApiBase):
             ]
         )
 
-        manual = self.client.get(
-            f"{BASE}/meter-readings?captureMode=manual", **self.auth
-        )
+        manual = self.client.get(f"{BASE}/meter-readings?captureMode=manual", **self.auth)
         self.assertEqual(manual.json()["meta"]["total"], 3)
-        sensor = self.client.get(
-            f"{BASE}/meter-readings?captureMode=sensor", **self.auth
-        )
+        sensor = self.client.get(f"{BASE}/meter-readings?captureMode=sensor", **self.auth)
         self.assertEqual(sensor.json()["meta"]["total"], 1)
 
-        paged = self.client.get(
-            f"{BASE}/meter-readings?pageSize=2&page=1", **self.auth
-        )
+        paged = self.client.get(f"{BASE}/meter-readings?pageSize=2&page=1", **self.auth)
         self.assertEqual(len(paged.json()["data"]), 2)
         self.assertEqual(paged.json()["meta"]["total"], 4)
 
@@ -600,9 +582,7 @@ class ReadingQueryTests(MeterApiBase):
                 },
             ]
         )
-        response = self.client.get(
-            f"{BASE}/meter-points/{point['id']}/summary", **self.auth
-        )
+        response = self.client.get(f"{BASE}/meter-points/{point['id']}/summary", **self.auth)
         self.assertEqual(response.status_code, 200, response.content)
         summary = response.json()["data"]
         self.assertEqual(summary["readingCount"], 3)
@@ -628,9 +608,9 @@ class ReadingQueryTests(MeterApiBase):
                 meterCode="BEARING_TEMP",
                 capturedAt=(self.now + timedelta(hours=index)).isoformat(),
             )
-        summary = self.client.get(
-            f"{BASE}/meter-points/{point['id']}/summary", **self.auth
-        ).json()["data"]
+        summary = self.client.get(f"{BASE}/meter-points/{point['id']}/summary", **self.auth).json()[
+            "data"
+        ]
         self.assertEqual(summary["totalConsumption"], "")
         self.assertEqual(summary["minimumValue"], "70.0000")
         self.assertEqual(summary["maximumValue"], "74.0000")
@@ -654,9 +634,7 @@ class TenantIsolationTests(MeterApiBase):
 
         listing = self.client.get(f"{BASE}/meter-readings", **self.auth)
         self.assertEqual(listing.json()["meta"]["total"], 0)
-        detail = self.client.get(
-            f"{BASE}/meter-points/{point['id']}/summary", **self.auth
-        )
+        detail = self.client.get(f"{BASE}/meter-points/{point['id']}/summary", **self.auth)
         self.assertEqual(detail.status_code, 404, detail.content)
 
 
@@ -726,9 +704,9 @@ class MeterDrivenPmTests(MeterApiBase):
         self.assertEqual(status[0]["status"], "due")
         self.assertEqual(status[0]["planId"], plan["id"])
 
-        listed = self.client.get(
-            f"{BASE}/devices/{device['id']}/pm-plans", **self.auth
-        ).json()["data"]
+        listed = self.client.get(f"{BASE}/devices/{device['id']}/pm-plans", **self.auth).json()[
+            "data"
+        ]
         self.assertTrue(listed[0]["overdue"], "a due meter plan must report as overdue")
 
     def testExecutingAMeterPlanStartsANewCycle(self) -> None:
@@ -785,9 +763,7 @@ class MeterDrivenPmTests(MeterApiBase):
                 }
             ]
         )
-        status = self.client.get(
-            f"{BASE}/meter-pm-status?status=due", **self.auth
-        ).json()["data"]
+        status = self.client.get(f"{BASE}/meter-pm-status?status=due", **self.auth).json()["data"]
         self.assertEqual(len(status), 1)
         self.assertEqual(status[0]["metricType"], "VIBRATION")
 
@@ -836,9 +812,7 @@ class DerivedRunningHoursTests(MeterApiBase):
         device = self.createDevice()
         response = self.nameplate(device["id"], runningHours="1200")
         self.assertEqual(response.status_code, 200, response.content)
-        self.assertEqual(
-            DeviceModel.objects.get(id=device["id"]).runningHours, Decimal("1200.00")
-        )
+        self.assertEqual(DeviceModel.objects.get(id=device["id"]).runningHours, Decimal("1200.00"))
         self.assertFalse(response.json()["data"]["runningHoursDerived"])
 
     def testNameplateCannotOverwriteMeterDrivenHours(self) -> None:

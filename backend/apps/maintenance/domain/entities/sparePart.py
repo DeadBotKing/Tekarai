@@ -47,9 +47,9 @@ class WorkOrderPartUsage:
 
 
 # --- Part transaction ledger (دفتر تراکنش انبار) ---------------------------
-PART_TRANSACTION_RECEIPT = "RECEIPT"   # رسید — ورود کالا
-PART_TRANSACTION_ISSUE = "ISSUE"       # حواله — خروج کالا
-PART_TRANSACTION_RETURN = "RETURN"     # برگشت — بازگشت کالا
+PART_TRANSACTION_RECEIPT = "RECEIPT"  # رسید — ورود کالا
+PART_TRANSACTION_ISSUE = "ISSUE"  # حواله — خروج کالا
+PART_TRANSACTION_RETURN = "RETURN"  # برگشت — بازگشت کالا
 PART_TRANSACTION_ADJUSTMENT = "ADJUSTMENT"  # تعدیل / انبارگردانی (علامت‌دار)
 PART_TRANSACTION_TYPES = (
     PART_TRANSACTION_RECEIPT,

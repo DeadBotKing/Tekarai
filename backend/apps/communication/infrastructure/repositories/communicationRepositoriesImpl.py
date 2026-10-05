@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import builtins
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -1109,7 +1110,7 @@ class LetterRepositoryDjango:
 
     def list(
         self, tenantId: uuid.UUID, *, status: str = "", limit: int = 50
-    ) -> list[OfficialLetter]:
+    ) -> builtins.list[OfficialLetter]:
         queryset = OfficialLetterModel.objects.filter(tenantId=tenantId)
         if status:
             queryset = queryset.filter(letterStatus=status)

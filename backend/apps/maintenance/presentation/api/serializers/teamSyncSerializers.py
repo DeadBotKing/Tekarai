@@ -23,7 +23,9 @@ class SaveInspectionTemplateSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=200)
     description = serializers.CharField(default="", required=False)
     deviceCode = serializers.CharField(max_length=60, default="", required=False)
-    checks = serializers.ListField(child=serializers.CharField(max_length=200), default=list, required=False)
+    checks = serializers.ListField(
+        child=serializers.CharField(max_length=200), default=list, required=False
+    )
 
 
 class SaveInspectionRecordSerializer(serializers.Serializer):
@@ -31,6 +33,10 @@ class SaveInspectionRecordSerializer(serializers.Serializer):
     templateId = serializers.CharField(max_length=64)
     workOrderId = serializers.CharField(max_length=64)
     deviceId = serializers.CharField(max_length=64)
-    passedChecks = serializers.ListField(child=serializers.CharField(max_length=200), default=list, required=False)
-    failedChecks = serializers.ListField(child=serializers.CharField(max_length=200), default=list, required=False)
+    passedChecks = serializers.ListField(
+        child=serializers.CharField(max_length=200), default=list, required=False
+    )
+    failedChecks = serializers.ListField(
+        child=serializers.CharField(max_length=200), default=list, required=False
+    )
     performedByName = serializers.CharField(max_length=160, default="", required=False)

@@ -65,7 +65,9 @@ class CreateSparePartSerializer(serializers.Serializer):
     code = serializers.CharField(max_length=60)
     name = serializers.CharField(max_length=200)
     unit = serializers.CharField(max_length=30, required=False, default="عدد")
-    quantityOnHand = serializers.DecimalField(max_digits=14, decimal_places=3, min_value=Decimal("0"))
+    quantityOnHand = serializers.DecimalField(
+        max_digits=14, decimal_places=3, min_value=Decimal("0")
+    )
     minimumStock = serializers.DecimalField(
         max_digits=14, decimal_places=3, min_value=Decimal("0"), required=False, default=0
     )
@@ -78,7 +80,9 @@ class CreateSparePartSerializer(serializers.Serializer):
 class UpdateSparePartSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=200)
     unit = serializers.CharField(max_length=30, required=False, default="عدد")
-    quantityOnHand = serializers.DecimalField(max_digits=14, decimal_places=3, min_value=Decimal("0"))
+    quantityOnHand = serializers.DecimalField(
+        max_digits=14, decimal_places=3, min_value=Decimal("0")
+    )
     minimumStock = serializers.DecimalField(
         max_digits=14, decimal_places=3, min_value=Decimal("0"), required=False, default=0
     )
@@ -156,9 +160,7 @@ class LogLabourEntrySerializer(serializers.Serializer):
     """One technician work log: ساعت‌کار تکنسین + نرخ ساعتی."""
 
     technicianName = serializers.CharField(max_length=160)
-    hours = serializers.DecimalField(
-        max_digits=10, decimal_places=2, min_value=Decimal("0.01")
-    )
+    hours = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal("0.01"))
     hourlyRate = serializers.DecimalField(
         max_digits=16, decimal_places=2, min_value=Decimal("0"), required=False, default=0
     )
@@ -179,9 +181,7 @@ class CostReportQuerySerializer(serializers.Serializer):
 
 
 class RecordPartTransactionSerializer(serializers.Serializer):
-    transactionType = serializers.ChoiceField(
-        choices=["RECEIPT", "ISSUE", "RETURN", "ADJUSTMENT"]
-    )
+    transactionType = serializers.ChoiceField(choices=["RECEIPT", "ISSUE", "RETURN", "ADJUSTMENT"])
     # برای تعدیل (انبارگردانی) مقدار علامت‌دار مجاز است؛ بقیه فقط مثبت.
     quantity = serializers.DecimalField(max_digits=14, decimal_places=3)
     note = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")

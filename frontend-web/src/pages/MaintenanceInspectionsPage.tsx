@@ -39,6 +39,7 @@ import {
   TextInput,
 } from "../shared/components/primitives";
 import { faText } from "../core/localization/i18n";
+import { formatDateTime } from "../core/localization/format";
 
 const t = faText;
 
@@ -189,7 +190,7 @@ export default function MaintenanceInspectionsPage(): JSX.Element {
           const date = new Date(row.at);
           return Number.isNaN(date.getTime())
             ? row.at
-            : `${date.toLocaleDateString("fa-IR")} ${date.toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" })}`;
+            : formatDateTime(date, "fa", { style: "short" });
         },
       },
       { key: "template", label: t("cmms.wave1.colTitle"), accessor: titleOf },

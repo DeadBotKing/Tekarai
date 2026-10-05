@@ -1,4 +1,5 @@
 import { useId, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useFormat } from "../../core/localization/useFormat";
 
 interface ChartProps {
   data: number[];
@@ -29,11 +30,12 @@ export function LineChart({ data, labels = [], color = "#2878ff", height = 180, 
 }
 
 export function BarChart({ data, labels = [], color = "#2878ff", ariaLabel, onBarClick, barColors }: ChartProps & { onBarClick?: (index: number) => void; barColors?: string[] }): JSX.Element {
+  const format = useFormat();
   const max = Math.max(...data, 1);
   return <div className="chart chart--bar" role="img" aria-label={ariaLabel}><div className="bars">{data.map((value, index) => {
     const fill = barColors?.[index] ?? color;
     const clickable = Boolean(onBarClick);
-    return <div className={`bar-column${clickable ? " bar-column--clickable" : ""}`} key={`${labels[index] ?? index}`} {...(clickable ? { role: "button", tabIndex: 0, onClick: () => onBarClick?.(index), onKeyDown: (event: ReactKeyboardEvent) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onBarClick?.(index); } }, "aria-label": `${labels[index] ?? index}: ${value}` } : {})}><span className="bar-column__value">{value}</span><div className="bar" style={{ height: `${Math.max(5, (value / max) * 100)}%`, "--bar-fill": fill } as CSSProperties} /><span className="bar-column__label">{labels[index] ?? index + 1}</span></div>;
+    return <div className={`bar-column${clickable ? " bar-column--clickable" : ""}`} key={`${labels[index] ?? index}`} {...(clickable ? { role: "button", tabIndex: 0, onClick: () => onBarClick?.(index), onKeyDown: (event: ReactKeyboardEvent) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onBarClick?.(index); } }, "aria-label": `${labels[index] ?? index}: ${value}` } : {})}><span className="bar-column__value">{format.number(value, { maximumFractionDigits: 2 })}</span><div className="bar" style={{ height: `${Math.max(5, (value / max) * 100)}%`, "--bar-fill": fill } as CSSProperties} /><span className="bar-column__label">{labels[index] ?? index + 1}</span></div>;
   })}</div></div>;
 }
 
@@ -41,7 +43,8 @@ export function DonutChart({ value, label, color = "#2878ff", size = 132, ariaLa
   const radius = 46;
   const circumference = 2 * Math.PI * radius;
   const safeValue = Math.max(0, Math.min(100, value));
-  return <div className="donut" role="img" aria-label={ariaLabel} style={{ width: size, height: size }}><svg viewBox="0 0 120 120"><circle className="donut__track" cx="60" cy="60" r={radius} /><circle className="donut__value" cx="60" cy="60" r={radius} stroke={color} strokeDasharray={circumference} strokeDashoffset={circumference - (safeValue / 100) * circumference} /></svg><div className="donut__center"><strong>{safeValue}%</strong><span>{label}</span></div></div>;
+  const format = useFormat();
+  return <div className="donut" role="img" aria-label={ariaLabel} style={{ width: size, height: size }}><svg viewBox="0 0 120 120"><circle className="donut__track" cx="60" cy="60" r={radius} /><circle className="donut__value" cx="60" cy="60" r={radius} stroke={color} strokeDasharray={circumference} strokeDashoffset={circumference - (safeValue / 100) * circumference} /></svg><div className="donut__center"><strong>{format.percent(safeValue, { maximumFractionDigits: 1 })}</strong><span>{label}</span></div></div>;
 }
 
 export function Sparkline({ data, color = "#2878ff", ariaLabel }: { data: number[]; color?: string; ariaLabel: string }): JSX.Element {

@@ -90,9 +90,7 @@ class MeterPointRepositoryDjango:
         model = self._live(tenantId).filter(id=pointId).first()
         return self.toPoint(model) if model else None
 
-    def getByCode(
-        self, tenantId: uuid.UUID, deviceId: uuid.UUID, code: str
-    ) -> MeterPoint | None:
+    def getByCode(self, tenantId: uuid.UUID, deviceId: uuid.UUID, code: str) -> MeterPoint | None:
         model = self._live(tenantId).filter(deviceId=deviceId, code=code).first()
         return self.toPoint(model) if model else None
 
@@ -135,9 +133,7 @@ class MeterPointRepositoryDjango:
             )
         return [self.toPoint(model) for model in query[:limit]]
 
-    def runningHoursPoint(
-        self, tenantId: uuid.UUID, deviceId: uuid.UUID
-    ) -> MeterPoint | None:
+    def runningHoursPoint(self, tenantId: uuid.UUID, deviceId: uuid.UUID) -> MeterPoint | None:
         model = (
             self._live(tenantId)
             .filter(deviceId=deviceId, drivesRunningHours=True, active=True)
@@ -280,9 +276,7 @@ class MeterReadingRepositoryDjango:
         model = MeterReadingModel.objects.filter(tenantId=tenantId, id=readingId).first()
         return self.toReading(model) if model else None
 
-    def findByIngestionKey(
-        self, tenantId: uuid.UUID, ingestionKey: str
-    ) -> MeterReading | None:
+    def findByIngestionKey(self, tenantId: uuid.UUID, ingestionKey: str) -> MeterReading | None:
         if not ingestionKey:
             return None
         model = MeterReadingModel.objects.filter(
@@ -384,9 +378,7 @@ class MeterReadingRepositoryDjango:
             sensor=Count("id", filter=Q(captureMode=CAPTURE_SENSOR)),
             suspect=Count("id", filter=Q(quality=QUALITY_SUSPECT)),
         )
-        trusted = base.filter(
-            supersededByReadingId__isnull=True, quality__in=TRUSTED_QUALITIES
-        )
+        trusted = base.filter(supersededByReadingId__isnull=True, quality__in=TRUSTED_QUALITIES)
         stats = trusted.aggregate(
             minimum=Min("value"),
             maximum=Max("value"),
@@ -416,9 +408,7 @@ class MeterReadingRepositoryDjango:
             averageValue=_quantisedOrNone(average),
             # A consumption total only means something for a counter.
             totalConsumption=(
-                _quantisedOrNone(stats["consumption"])
-                if point.kind == METER_CUMULATIVE
-                else None
+                _quantisedOrNone(stats["consumption"]) if point.kind == METER_CUMULATIVE else None
             ),
             firstCapturedAt=firstRow.capturedAt if firstRow else None,
             lastCapturedAt=lastRow.capturedAt if lastRow else None,
@@ -536,9 +526,7 @@ class MeterReadingRepositoryDjango:
         )
 
     # -- PM trigger support ------------------------------------------------------
-    def currentValuesByCode(
-        self, tenantId: uuid.UUID, deviceId: uuid.UUID
-    ) -> dict[str, Decimal]:
+    def currentValuesByCode(self, tenantId: uuid.UUID, deviceId: uuid.UUID) -> dict[str, Decimal]:
         """Latest trusted value of every active meter point on a device."""
         return {
             row.code: row.lastValue

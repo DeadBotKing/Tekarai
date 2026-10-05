@@ -22,7 +22,9 @@ class PmScheduleApiTests(AssetRegistryApiBase):
     def iso(self, offsetDays: int) -> str:
         return (self.TODAY + datetime.timedelta(days=offsetDays)).isoformat()
 
-    def registerPlanOn(self, deviceId: str, title: str = "سرویس ماهانه", discipline: str = "electrical") -> dict:
+    def registerPlanOn(
+        self, deviceId: str, title: str = "سرویس ماهانه", discipline: str = "electrical"
+    ) -> dict:
         response = self.client.post(
             f"{self.BASE}/devices/{deviceId}/pm-plans",
             {
@@ -96,9 +98,7 @@ class PmScheduleApiTests(AssetRegistryApiBase):
         self.executePlan(plan["id"], performedOn=self.iso(45))
 
         items = self.fetchSchedule()
-        self.assertFalse(
-            any(item.get("planId") == plan["id"] for item in items), items
-        )
+        self.assertFalse(any(item.get("planId") == plan["id"] for item in items), items)
 
     def testNeverExecutedPlanTravelsUndated(self) -> None:
         device = self.createDevice()
@@ -167,6 +167,4 @@ class PmScheduleApiTests(AssetRegistryApiBase):
         self.assertEqual(response.status_code, 200, response.content)
 
         items = self.fetchSchedule(f"?toDate={self.iso(9)}")  # due is today+10
-        self.assertFalse(
-            any(item.get("deviceId") == device["id"] for item in items), items
-        )
+        self.assertFalse(any(item.get("deviceId") == device["id"] for item in items), items)

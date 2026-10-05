@@ -181,6 +181,4 @@ class DevicePmRemindersView(IdempotencyMixin, APIView):
                 leadDays=int(request.data.get("leadDays", 3) or 3),
             )
         )
-        return Response(
-            successEnvelope([asDict(item) for item in dto.items], meta=dto.asMeta())
-        )
+        return Response(successEnvelope([asDict(item) for item in dto.items], meta=dto.asMeta()))

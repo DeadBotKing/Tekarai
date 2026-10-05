@@ -59,17 +59,20 @@ export const parseImportFile = async (file: File): Promise<ImportRow[]> => {
     return parseCsvRows(await file.text());
   }
   if (/\.(xlsx|xls)$/i.test(file.name)) {
-    // `/* @vite-ignore */` + indirect specifier: without the optional xlsx
-    // package the dev server must still boot (CSV flow keeps working); only
-    // the Excel branch raises this clear, actionable error.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let xlsx: any;
+    // A *static* specifier, so Vite emits xlsx as its own lazy chunk instead
+    // of leaving a bare `import("xlsx")` in the output. The previous
+    // `/* @vite-ignore */` + indirect-specifier form was never resolvable by
+    // a browser, which meant Excel import failed in every production build
+    // and reported it as "run npm install" — advice the user cannot act on.
+    //
+    // The chunk is still only fetched when someone actually picks a
+    // spreadsheet; the CSV path above never touches it.
+    let xlsx: typeof import("xlsx");
     try {
-      const specifier = "xlsx";
-      xlsx = await import(/* @vite-ignore */ specifier);
+      xlsx = await import("xlsx");
     } catch {
       throw new Error(
-        "برای import فایل اکسل، پکیج xlsx لازم است — یک‌بار دستور npm install را در پوشه‌ی frontend-web اجرا کنید.",
+        "بارگذاری پردازشگر فایل اکسل ناموفق بود. اتصال شبکه را بررسی کنید یا همان داده را با فرمت CSV وارد کنید.",
       );
     }
     const workbook = xlsx.read(new Uint8Array(await file.arrayBuffer()), { type: "array" });

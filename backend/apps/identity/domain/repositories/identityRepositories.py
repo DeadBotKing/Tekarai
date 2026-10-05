@@ -6,6 +6,7 @@ Protocols implemented by infrastructure with the ORM.
 
 from __future__ import annotations
 
+import builtins
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
@@ -128,15 +129,19 @@ class RoleSummary:
 
 @runtime_checkable
 class RoleRepository(Protocol):
-    def create(self, code: str, name: str, scopeType: str, actions: list[str]) -> uuid.UUID: ...
+    def create(
+        self, code: str, name: str, scopeType: str, actions: builtins.list[str]
+    ) -> uuid.UUID: ...
 
-    def update(self, roleId: uuid.UUID, *, name: str | None, actions: list[str] | None) -> None: ...
+    def update(
+        self, roleId: uuid.UUID, *, name: str | None, actions: builtins.list[str] | None
+    ) -> None: ...
 
     def delete(self, roleId: uuid.UUID) -> None: ...
 
     def getById(self, roleId: uuid.UUID) -> RoleSummary | None: ...
 
-    def list(self) -> list[RoleSummary]: ...
+    def list(self) -> builtins.list[RoleSummary]: ...
 
 
 @runtime_checkable
@@ -185,7 +190,7 @@ class ServiceAccountRepository(Protocol):
 
     def existsByCode(self, tenantId: uuid.UUID, code: str) -> bool: ...
 
-    def list(self, tenantId: uuid.UUID) -> list[ServiceAccount]: ...
+    def list(self, tenantId: uuid.UUID) -> builtins.list[ServiceAccount]: ...
 
 
 @runtime_checkable

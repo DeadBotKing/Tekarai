@@ -293,9 +293,7 @@ def summariseTechnicians(orders: list[WorkOrderReading]) -> list[TechnicianStat]
                 openOrders=sum(1 for row in rows if not row.isClosed),
                 labourHours=_round(sum(float(row.labourHours or 0) for row in rows)),
                 averageRepairHours=(
-                    _round(sum(repairDurations) / len(repairDurations))
-                    if repairDurations
-                    else None
+                    _round(sum(repairDurations) / len(repairDurations)) if repairDurations else None
                 ),
             )
         )
@@ -340,8 +338,10 @@ def buildTrend(
                 cost=cost.get(key, Decimal("0")),
             )
         )
-        cursor = date(cursor.year + 1, 1, 1) if cursor.month == 12 else date(
-            cursor.year, cursor.month + 1, 1
+        cursor = (
+            date(cursor.year + 1, 1, 1)
+            if cursor.month == 12
+            else date(cursor.year, cursor.month + 1, 1)
         )
         guard += 1
     return buckets
@@ -405,15 +405,18 @@ def computeDeviceAnalytics(
             if order.rootCause:
                 rootCauses[order.rootCause.strip()[:120]] += 1
 
+    # The walrus binds the narrowed, non-None value so `max(...)` below is safe:
+    # the previous form recomputed the expression and left the element type
+    # `datetime | None`, which would raise on an all-None batch.
     failureMoments = [
-        order.failureReportedAt or order.createdAt
+        moment
         for order in failures
-        if (order.failureReportedAt or order.createdAt)
+        if (moment := order.failureReportedAt or order.createdAt) is not None
     ]
     repairMoments = [
-        order.repairFinishedAt or order.closedAt
+        moment
         for order in orders
-        if (order.repairFinishedAt or order.closedAt)
+        if (moment := order.repairFinishedAt or order.closedAt) is not None
     ]
 
     return DeviceAnalytics(

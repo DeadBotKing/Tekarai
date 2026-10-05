@@ -11,7 +11,15 @@ from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.maintenance.infrastructure.models import PartTransactionModel, SparePartModel
+from apps.maintenance.application.services.inventoryContract import (
+    recordGoodsReceipt,
+    recordSupplierReturn,
+)
+from apps.procurement.domain.services.receiptRules import (
+    asQuantity,
+    guardOrderAcceptsDelivery,
+    guardReceiptLine,
+)
 from apps.procurement.infrastructure.models import (
     GoodsReceiptLineModel,
     GoodsReceiptModel,
@@ -25,11 +33,6 @@ from apps.procurement.infrastructure.models import (
     SupplierInvoiceModel,
     SupplierModel,
     SupplierPartModel,
-)
-from apps.procurement.application.services.receiptRules import (
-    asQuantity,
-    guardOrderAcceptsDelivery,
-    guardReceiptLine,
 )
 from apps.sharedKernel.application.requestContext import currentContext
 from apps.sharedKernel.presentation.api.authentication import BearerSessionAuthentication
@@ -63,12 +66,12 @@ def row(obj, extra=None):
     return data
 
 
-def list_view(model, request, search_fields=()):
+def listView(model, request, searchFields=()):
     qs = model.objects.filter(tenantId=tenant())
     search = str(request.query_params.get("search", "")).strip()
-    if search and search_fields:
+    if search and searchFields:
         query = Q()
-        for field in search_fields:
+        for field in searchFields:
             query |= Q(**{f"{field}__icontains": search})
         qs = qs.filter(query)
     return [row(item) for item in qs[:500]]
@@ -112,7 +115,7 @@ class Base(IdempotencyMixin, APIView):
 class SupplierListView(Base):
     def get(self, request):
         return Response(
-            successEnvelope(list_view(SupplierModel, request, ("code", "name", "contactName")))
+            successEnvelope(listView(SupplierModel, request, ("code", "name", "contactName")))
         )
 
     def post(self, request):
@@ -131,7 +134,8 @@ class SupplierDetailView(Base):
         s = SupplierSerializer(data=request.data, partial=True)
         s.is_valid(raise_exception=True)
         obj = SupplierModel.objects.get(id=supplierId, tenantId=tenant())
-        [setattr(obj, k, v) for k, v in s.validated_data.items()]
+        for field, value in s.validated_data.items():
+            setattr(obj, field, value)
         obj.save()
         return Response(successEnvelope(row(obj)))
 
@@ -165,7 +169,7 @@ class SupplierPartsView(Base):
         return Response(successEnvelope(row(obj)), status=201)
 
 
-def requisition_detail(obj):
+def requisitionDetail(obj):
     return row(
         obj,
         {
@@ -190,7 +194,7 @@ class RequisitionListView(Base):
         return Response(
             successEnvelope(
                 [
-                    requisition_detail(x)
+                    requisitionDetail(x)
                     for x in PurchaseRequisitionModel.objects.filter(tenantId=tenant())[:500]
                 ]
             )
@@ -231,7 +235,7 @@ class RequisitionListView(Base):
             )
         obj.totalEstimated = total
         obj.save(update_fields=["totalEstimated", "updatedAt"])
-        return Response(successEnvelope(requisition_detail(obj)), status=201)
+        return Response(successEnvelope(requisitionDetail(obj)), status=201)
 
 
 class RequisitionActionView(Base):
@@ -262,10 +266,10 @@ class RequisitionActionView(Base):
             actorName=str(getattr(currentContext(), "actorId", "")),
             comment=note,
         )
-        return Response(successEnvelope(requisition_detail(obj)))
+        return Response(successEnvelope(requisitionDetail(obj)))
 
 
-def po_detail(obj):
+def purchaseOrderDetail(obj):
     return row(
         obj,
         {
@@ -289,7 +293,10 @@ class PurchaseOrderListView(Base):
     def get(self, request):
         return Response(
             successEnvelope(
-                [po_detail(x) for x in PurchaseOrderModel.objects.filter(tenantId=tenant())[:500]]
+                [
+                    purchaseOrderDetail(x)
+                    for x in PurchaseOrderModel.objects.filter(tenantId=tenant())[:500]
+                ]
             )
         )
 
@@ -325,14 +332,16 @@ class PurchaseOrderListView(Base):
             PurchaseRequisitionModel.objects.filter(id=obj.requisitionId, tenantId=t).update(
                 status="ordered"
             )
-        return Response(successEnvelope(po_detail(obj)), status=201)
+        return Response(successEnvelope(purchaseOrderDetail(obj)), status=201)
 
 
 class PurchaseOrderDetailView(Base):
     def get(self, request, purchaseOrderId):
         return Response(
             successEnvelope(
-                po_detail(PurchaseOrderModel.objects.get(id=purchaseOrderId, tenantId=tenant()))
+                purchaseOrderDetail(
+                    PurchaseOrderModel.objects.get(id=purchaseOrderId, tenantId=tenant())
+                )
             )
         )
 
@@ -350,7 +359,7 @@ class PurchaseOrderDetailView(Base):
             action=action,
             comment=str(request.data.get("comment", "")),
         )
-        return Response(successEnvelope(po_detail(obj)))
+        return Response(successEnvelope(purchaseOrderDetail(obj)))
 
 
 class ReceiptListView(Base):
@@ -405,19 +414,13 @@ class ReceiptListView(Base):
             )
             line.receivedQuantity += accepted
             line.save(update_fields=["receivedQuantity", "updatedAt"])
-            part = SparePartModel.objects.get(id=line.partId, tenantId=t)
-            part.quantityOnHand += accepted
-            part.unitCost = Decimal(str(item.get("unitCost", line.unitPrice)))
-            part.save(update_fields=["quantityOnHand", "unitCost", "updatedAt"])
-            PartTransactionModel.objects.create(
+            # Stock movement goes through maintenance's public application
+            # contract: it owns the ledger and takes the row lock.
+            recordGoodsReceipt(
                 tenantId=t,
-                partId=part.id,
-                partCode=part.code,
-                partName=part.name,
-                unit=part.unit,
-                transactionType="RECEIPT",
+                partId=line.partId,
                 quantity=accepted,
-                balanceAfter=part.quantityOnHand,
+                unitCost=Decimal(str(item.get("unitCost", line.unitPrice))),
                 reference=rec.number,
                 note="رسید خرید",
             )
@@ -466,30 +469,26 @@ class ReturnListView(Base):
         )
         for item in raw:
             qty = Decimal(str(item["quantity"]))
-            part = SparePartModel.objects.get(id=item["partId"], tenantId=t)
-            if part.quantityOnHand < qty:
-                raise serializers.ValidationError("موجودی برای برگشت کافی نیست")
-            part.quantityOnHand -= qty
-            part.save(update_fields=["quantityOnHand", "updatedAt"])
+            partId = item["partId"]
             PurchaseReturnLineModel.objects.create(
                 tenantId=t,
                 returnId=obj.id,
-                partId=part.id,
+                partId=partId,
                 quantity=qty,
                 unitCost=item.get("unitCost", 0),
             )
-            PartTransactionModel.objects.create(
-                tenantId=t,
-                partId=part.id,
-                partCode=part.code,
-                partName=part.name,
-                unit=part.unit,
-                transactionType="RETURN",
-                quantity=-qty,
-                balanceAfter=part.quantityOnHand,
-                reference=obj.number,
-                note="برگشت به تأمین‌کننده",
-            )
+            # The contract takes the row lock and refuses an overdraw itself,
+            # so the old read-then-check-then-write race is gone.
+            try:
+                recordSupplierReturn(
+                    tenantId=t,
+                    partId=partId,
+                    quantity=qty,
+                    reference=obj.number,
+                    note="برگشت به تأمین‌کننده",
+                )
+            except ValueError as error:
+                raise serializers.ValidationError("موجودی برای برگشت کافی نیست") from error
         return Response(successEnvelope(row(obj)), status=201)
 
 
@@ -536,28 +535,40 @@ class ProcurementDashboardView(Base):
             )
         )
 
+
 class ApprovalHistoryView(Base):
     """Immutable approval trail for requisitions and purchase orders."""
+
     def get(self, request, documentType, documentId):
         if documentType not in {"requisition", "purchaseOrder"}:
             return Response(successEnvelope({"error": "unknown document type"}), status=400)
-        items = ProcurementApprovalModel.objects.filter(tenantId=tenant(), documentType=documentType, documentId=documentId)
+        items = ProcurementApprovalModel.objects.filter(
+            tenantId=tenant(), documentType=documentType, documentId=documentId
+        )
         return Response(successEnvelope([row(item) for item in items]))
 
 
 class ProcurementSupplierPerformanceView(Base):
     """Supplier delivery and purchasing summary for the current tenant."""
+
     def get(self, request):
         t = tenant()
         result = []
         for supplier in SupplierModel.objects.filter(tenantId=t, status="active"):
             orders = list(PurchaseOrderModel.objects.filter(tenantId=t, supplierId=supplier.id))
             received = [x for x in orders if x.status == "received"]
-            on_time = sum(1 for x in received if not x.expectedDate or x.updatedAt.date() <= x.expectedDate)
-            result.append({
-                "supplierId": str(supplier.id), "supplierName": supplier.name,
-                "orders": len(orders), "receivedOrders": len(received),
-                "onTimeOrders": on_time, "onTimeRate": round((on_time / len(received)) * 100, 1) if received else 0,
-                "averageLeadTimeDays": supplier.defaultLeadTimeDays,
-            })
+            on_time = sum(
+                1 for x in received if not x.expectedDate or x.updatedAt.date() <= x.expectedDate
+            )
+            result.append(
+                {
+                    "supplierId": str(supplier.id),
+                    "supplierName": supplier.name,
+                    "orders": len(orders),
+                    "receivedOrders": len(received),
+                    "onTimeOrders": on_time,
+                    "onTimeRate": round((on_time / len(received)) * 100, 1) if received else 0,
+                    "averageLeadTimeDays": supplier.defaultLeadTimeDays,
+                }
+            )
         return Response(successEnvelope(result))

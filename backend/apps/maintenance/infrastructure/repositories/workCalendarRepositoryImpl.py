@@ -8,8 +8,8 @@ plain dict (for the API) or one of the pure value objects from
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
-from datetime import date, datetime, time, timedelta, timezone
 
 from apps.maintenance.domain.services.jalaliCalendar import expandRecurringDates
 from apps.maintenance.domain.services.workCalendarRules import (
@@ -26,6 +26,7 @@ from apps.maintenance.infrastructure.models import (
     WorkCalendarModel,
     WorkShiftModel,
 )
+from apps.sharedKernel.domain.coercion import asInt
 
 
 def _timeToText(value: time) -> str:
@@ -54,9 +55,9 @@ class WorkCalendarRepositoryDjango:
 
     # -- calendars ----------------------------------------------------------------
     def listCalendars(self, tenantId: uuid.UUID) -> list[dict]:
-        rows = WorkCalendarModel.objects.filter(
-            tenantId=tenantId, deletedAt__isnull=True
-        ).order_by("-isDefault", "name")
+        rows = WorkCalendarModel.objects.filter(tenantId=tenantId, deletedAt__isnull=True).order_by(
+            "-isDefault", "name"
+        )
         locationNames = self._locationNames(tenantId)
         return [self._calendarDict(row, locationNames) for row in rows]
 
@@ -84,9 +85,7 @@ class WorkCalendarRepositoryDjango:
             WorkCalendarModel.objects.filter(tenantId=tenantId, id=calendarId).update(**defaults)
             row = WorkCalendarModel.objects.get(tenantId=tenantId, id=calendarId)
         else:
-            row = WorkCalendarModel.objects.create(
-                tenantId=tenantId, createdAt=now, **defaults
-            )
+            row = WorkCalendarModel.objects.create(tenantId=tenantId, createdAt=now, **defaults)
         if row.isDefault:
             # Exactly one tenant-wide default, enforced here rather than by a
             # constraint: partial-unique-on-boolean is not portable, and the
@@ -257,9 +256,7 @@ class WorkCalendarRepositoryDjango:
             CalendarHolidayModel.objects.filter(tenantId=tenantId, id=holidayId).update(**defaults)
             row = CalendarHolidayModel.objects.get(tenantId=tenantId, id=holidayId)
         else:
-            row = CalendarHolidayModel.objects.create(
-                tenantId=tenantId, createdAt=now, **defaults
-            )
+            row = CalendarHolidayModel.objects.create(tenantId=tenantId, createdAt=now, **defaults)
         return self._holidayDict(row)
 
     def deleteHoliday(self, tenantId: uuid.UUID, holidayId: uuid.UUID, now: datetime) -> bool:
@@ -373,9 +370,7 @@ class WorkCalendarRepositoryDjango:
             "toDate": row.toDate.isoformat() if row.toDate else "",
         }
 
-    def deleteAssignment(
-        self, tenantId: uuid.UUID, assignmentId: uuid.UUID, now: datetime
-    ) -> bool:
+    def deleteAssignment(self, tenantId: uuid.UUID, assignmentId: uuid.UUID, now: datetime) -> bool:
         return bool(
             ShiftAssignmentModel.objects.filter(
                 tenantId=tenantId, id=assignmentId, deletedAt__isnull=True
@@ -391,7 +386,7 @@ class WorkCalendarRepositoryDjango:
         """
         if not shiftIds:
             return {}
-        today = datetime.now(timezone.utc).date()
+        today = datetime.now(UTC).date()
         counts: dict[uuid.UUID, int] = {}
         rows = ShiftAssignmentModel.objects.filter(
             tenantId=tenantId, shiftId__in=shiftIds, deletedAt__isnull=True, fromDate__lte=today
@@ -490,9 +485,9 @@ class WorkCalendarRepositoryDjango:
 
         deviceRows = {
             row["id"]: row
-            for row in DeviceModel.objects.filter(
-                tenantId=tenantId, deletedAt__isnull=True
-            ).values("id", "code", "name", "pmIntervalDays", "lastPmDate", "status")
+            for row in DeviceModel.objects.filter(tenantId=tenantId, deletedAt__isnull=True).values(
+                "id", "code", "name", "pmIntervalDays", "lastPmDate", "status"
+            )
         }
 
         jobs: list[dict] = []
@@ -562,10 +557,7 @@ class WorkCalendarRepositoryDjango:
         conservative default for an unestimated job, and a zero would instead
         claim the job is free.
         """
-        try:
-            value = int(minutes or 0)
-        except (TypeError, ValueError):
-            return None
+        value = asInt(minutes)
         if value <= 0:
             return None
         return (Decimal(value) / Decimal("60")).quantize(Decimal("0.01"))

@@ -290,9 +290,7 @@ class MeterUseCaseBase(UseCase):
                 fieldErrors={"meterCode": "required"},
             )
         device = self.requireDevice(tenantId, deviceId)
-        point = self.pointRepository.getByCode(
-            tenantId, device.id, normalizeMeterCode(code)
-        )
+        point = self.pointRepository.getByCode(tenantId, device.id, normalizeMeterCode(code))
         if point is None:
             raise EntityNotFoundError("Meter point")
         return point
@@ -358,18 +356,14 @@ class SaveMeterPointUseCase(MeterUseCaseBase):
             "minimumValue": optionalDecimal(command.minimumValue, "minimumValue"),
             "maximumValue": optionalDecimal(command.maximumValue, "maximumValue"),
             "rolloverMaximum": optionalDecimal(command.rolloverMaximum, "rolloverMaximum"),
-            "maximumStepPerHour": optionalDecimal(
-                command.maximumStepPerHour, "maximumStepPerHour"
-            ),
+            "maximumStepPerHour": optionalDecimal(command.maximumStepPerHour, "maximumStepPerHour"),
             "drivesRunningHours": command.drivesRunningHours,
             "active": command.active,
         }
 
         if command.meterPointId:
             existing = self.requirePoint(tenantId, command.meterPointId)
-            point = self.pointRepository.update(
-                tenantId, existing.id, payload, now
-            )
+            point = self.pointRepository.update(tenantId, existing.id, payload, now)
             self.audit(
                 AUDIT_UPDATE,
                 "MeterPoint",
@@ -384,9 +378,7 @@ class SaveMeterPointUseCase(MeterUseCaseBase):
             payload["kind"] = ensureMeterKind(command.kind or METER_CUMULATIVE)
             payload["name"] = payload["name"] or str(payload["code"])
             point = self.pointRepository.create(tenantId, device.id, payload, now)
-            self.audit(
-                AUDIT_CREATE, "MeterPoint", str(point.id), tenantId, after=point.snapshot()
-            )
+            self.audit(AUDIT_CREATE, "MeterPoint", str(point.id), tenantId, after=point.snapshot())
             self._pendingEvents.append(
                 DomainEvent(
                     name="meterPointDefined",
@@ -434,9 +426,7 @@ class DeleteMeterPointUseCase(MeterUseCaseBase):
         now = self.clock.nowUtc()
         point = self.requirePoint(tenantId, command.meterPointId)
         self.pointRepository.softDelete(tenantId, point.id, now)
-        self.audit(
-            AUDIT_DELETE, "MeterPoint", str(point.id), tenantId, before=point.snapshot()
-        )
+        self.audit(AUDIT_DELETE, "MeterPoint", str(point.id), tenantId, before=point.snapshot())
 
 
 # =====================================================================================
@@ -672,13 +662,9 @@ class IngestSensorReadingsUseCase(MeterAppendMixin, MeterUseCaseBase):
                 )
             point = self.pointRepository.getBySensorKey(tenantId, key)
             if point is None:
-                raise MeterPointNotBoundError(
-                    f"No meter point is bound to sensor key '{key}'."
-                )
+                raise MeterPointNotBoundError(f"No meter point is bound to sensor key '{key}'.")
             if not point.active:
-                raise MeterPointNotBoundError(
-                    f"Meter point for sensor key '{key}' is inactive."
-                )
+                raise MeterPointNotBoundError(f"Meter point for sensor key '{key}' is inactive.")
 
         value = MeterValue.parse(sample.value).amount
         capturedAt = parseMoment(sample.capturedAt, now) or now
@@ -688,14 +674,11 @@ class IngestSensorReadingsUseCase(MeterAppendMixin, MeterUseCaseBase):
         # double-counting a counter. A *different* value under the same key is
         # a gateway bug and is surfaced, never silently absorbed.
         if sample.ingestionKey:
-            existing = self.readingRepository.findByIngestionKey(
-                tenantId, sample.ingestionKey
-            )
+            existing = self.readingRepository.findByIngestionKey(tenantId, sample.ingestionKey)
             if existing is not None:
                 if existing.value != value or existing.meterPointId != point.id:
                     raise MeterIngestionConflictError(
-                        f"Ingestion key '{sample.ingestionKey}' already stored a "
-                        f"different reading."
+                        f"Ingestion key '{sample.ingestionKey}' already stored a different reading."
                     )
                 return IngestResultDto(
                     index=index,
@@ -767,9 +750,7 @@ class CorrectMeterReadingUseCase(MeterAppendMixin, MeterUseCaseBase):
         if original is None:
             raise EntityNotFoundError("Meter reading")
         if original.isSuperseded:
-            raise MeterReadingAlreadyCorrectedError(
-                "This reading has already been corrected."
-            )
+            raise MeterReadingAlreadyCorrectedError("This reading has already been corrected.")
 
         point = self.requirePoint(tenantId, str(original.meterPointId))
         correction, locked = self.appendReading(

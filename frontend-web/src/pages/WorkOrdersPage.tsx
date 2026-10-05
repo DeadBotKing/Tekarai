@@ -58,6 +58,7 @@ import { isConnectivityFailure } from "../core/offline/offlineActions";
 import { WorkTimerPanel } from "../features/maintenance/WorkTimerPanel";
 import { ScannerModal } from "../features/scanning/ScannerModal";
 import { QrLabelModal } from "../features/scanning/QrLabelModal";
+import { formatNumber } from "../core/localization/format";
 
 const WO_STATUSES: WorkOrderStatus[] = [
   "submitted",
@@ -2011,8 +2012,8 @@ export function WorkOrdersPage(): JSX.Element {
                 <tr><td>علائم</td><td>{reportOrder.failureSymptom || "—"}</td></tr>
                 <tr><td>علت ریشه‌ای</td><td>{reportOrder.rootCause || "—"}</td></tr>
                 <tr><td>اقدام انجام‌شده</td><td>{reportOrder.actionTaken || reportOrder.resolutionNote || "—"}</td></tr>
-                <tr><td>اتمام تعمیر / توقف</td><td>{`${reportOrder.repairFinishedAt ? reportOrder.repairFinishedAt.slice(0, 10) : "—"}${reportOrder.downtimeMinutes ? ` — ${reportOrder.downtimeMinutes.toLocaleString()} دقیقه توقف` : ""}`}</td></tr>
-                <tr><td>ساعت و هزینه</td><td>{`${(reportOrder.labourHours ?? 0).toLocaleString()} ساعت / دستمزد ${(reportOrder.labourCost ?? 0).toLocaleString()} + قطعات ${(reportOrder.partsCost ?? 0).toLocaleString()} ریال`}</td></tr>
+                <tr><td>اتمام تعمیر / توقف</td><td>{`${reportOrder.repairFinishedAt ? reportOrder.repairFinishedAt.slice(0, 10) : "—"}${reportOrder.downtimeMinutes ? ` — ${formatNumber(reportOrder.downtimeMinutes, "fa")} دقیقه توقف` : ""}`}</td></tr>
+                <tr><td>ساعت و هزینه</td><td>{`${formatNumber((reportOrder.labourHours ?? 0), "fa")} ساعت / دستمزد ${formatNumber((reportOrder.labourCost ?? 0), "fa")} + قطعات ${formatNumber((reportOrder.partsCost ?? 0), "fa")} ریال`}</td></tr>
                 <tr><td>تکنسین</td><td>{reportOrder.assignedToName || "—"}</td></tr>
                 <tr><td>خروج از ابتدای گزارشنامه</td><td> </td></tr>
               </tbody>

@@ -143,9 +143,7 @@ def dateToJalali(value: date) -> tuple[int, int, int]:
     return gregorianToJalali(value.year, value.month, value.day)
 
 
-def expandRecurringDates(
-    jalaliMonth: int, jalaliDay: int, start: date, end: date
-) -> list[date]:
+def expandRecurringDates(jalaliMonth: int, jalaliDay: int, start: date, end: date) -> list[date]:
     """Every Gregorian date on which a fixed Jalali month/day falls in a window.
 
     A holiday pinned to ۱ فروردین recurs on a different Gregorian date each

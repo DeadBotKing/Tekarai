@@ -30,13 +30,9 @@ class MaintenanceAttachmentRepositoryDjango:
             uploadedAt=model.uploadedAt,
         )
 
-    def targetExists(
-        self, tenantId: uuid.UUID, targetType: str, targetId: uuid.UUID
-    ) -> bool:
+    def targetExists(self, tenantId: uuid.UUID, targetType: str, targetId: uuid.UUID) -> bool:
         model = DeviceModel if targetType == "device" else WorkOrderModel
-        return model.objects.filter(
-            id=targetId, tenantId=tenantId, deletedAt__isnull=True
-        ).exists()
+        return model.objects.filter(id=targetId, tenantId=tenantId, deletedAt__isnull=True).exists()
 
     def create(
         self,
@@ -72,9 +68,7 @@ class MaintenanceAttachmentRepositoryDjango:
         ).order_by("-uploadedAt")
         return [self._toDomain(item) for item in rows]
 
-    def getById(
-        self, tenantId: uuid.UUID, attachmentId: uuid.UUID
-    ) -> MaintenanceAttachment | None:
+    def getById(self, tenantId: uuid.UUID, attachmentId: uuid.UUID) -> MaintenanceAttachment | None:
         model = MaintenanceAttachmentModel.objects.filter(
             id=attachmentId, tenantId=tenantId, deletedAt__isnull=True
         ).first()

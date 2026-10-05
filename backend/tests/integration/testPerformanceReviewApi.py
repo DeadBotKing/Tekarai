@@ -181,9 +181,7 @@ class PerformanceReviewApiTests(TestCase):
             **self.auth,
         )
         self.assertEqual(response.status_code, 422, response.content)
-        self.assertEqual(
-            PerformanceReviewCycleModel.objects.filter(code="REV-JALALI").count(), 0
-        )
+        self.assertEqual(PerformanceReviewCycleModel.objects.filter(code="REV-JALALI").count(), 0)
 
     def testTheGregorianEquivalentOfThatPeriodIsAccepted(self) -> None:
         """1405/1/1 .. 1405/6/31 really is 2026-03-21 .. 2026-09-22."""
@@ -204,9 +202,7 @@ class PerformanceReviewApiTests(TestCase):
     def testDeletingACycleTakesItsScoresWithIt(self) -> None:
         cycleId = self._cycle()
         self._submit(cycleId, self.javad, "unitHead", 70)
-        response = self.client.delete(
-            f"{BASE}/performance-reviews/cycles/{cycleId}", **self.auth
-        )
+        response = self.client.delete(f"{BASE}/performance-reviews/cycles/{cycleId}", **self.auth)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             PerformanceRaterScoreModel.objects.filter(
@@ -226,9 +222,7 @@ class PerformanceReviewApiTests(TestCase):
         self._submit(cycleId, self.javad, "unitHead", 70)
         PerformanceReviewCycleModel.objects.filter(id=cycleId).update(status="closed")
 
-        response = self.client.delete(
-            f"{BASE}/performance-reviews/cycles/{cycleId}", **self.auth
-        )
+        response = self.client.delete(f"{BASE}/performance-reviews/cycles/{cycleId}", **self.auth)
         self.assertEqual(response.status_code, 422, response.content)
         # Nothing was taken away on the way to refusing.
         self.assertEqual(
@@ -238,9 +232,7 @@ class PerformanceReviewApiTests(TestCase):
             1,
         )
         self.assertTrue(
-            PerformanceReviewCycleModel.objects.filter(
-                id=cycleId, deletedAt__isnull=True
-            ).exists()
+            PerformanceReviewCycleModel.objects.filter(id=cycleId, deletedAt__isnull=True).exists()
         )
 
     def testReopeningLetsADeleteThroughAgain(self) -> None:
@@ -321,9 +313,7 @@ class PerformanceReviewApiTests(TestCase):
             **self.auth,
         )
 
-        result = PerformanceResultModel.objects.get(
-            cycleId=cycleId, personnelId=self.javad
-        )
+        result = PerformanceResultModel.objects.get(cycleId=cycleId, personnelId=self.javad)
         # 8/10 completed, 9/10 PM on time, no repeat failures.
         self.assertIsNotNone(result.systemScore)
         self.assertGreater(float(result.systemScore), 80.0)
@@ -341,9 +331,7 @@ class PerformanceReviewApiTests(TestCase):
             format="json",
             **self.auth,
         )
-        result = PerformanceResultModel.objects.get(
-            cycleId=cycleId, personnelId=self.mina
-        )
+        result = PerformanceResultModel.objects.get(cycleId=cycleId, personnelId=self.mina)
         breakdown = json.loads(result.breakdown)
         self.assertEqual(breakdown["systemMetrics"]["reworkPenalty"], 50.0)
 
@@ -361,9 +349,7 @@ class PerformanceReviewApiTests(TestCase):
             format="json",
             **self.auth,
         )
-        result = PerformanceResultModel.objects.get(
-            cycleId=cycleId, personnelId=self.javad
-        )
+        result = PerformanceResultModel.objects.get(cycleId=cycleId, personnelId=self.javad)
         # No measurable work in the window: opinion carries the whole mark
         # rather than the person being scored zero for work they did do.
         self.assertIsNone(result.systemScore)
@@ -394,9 +380,7 @@ class PerformanceReviewApiTests(TestCase):
         )
         self.assertEqual(response.status_code, 200, response.content)
 
-        result = PerformanceResultModel.objects.get(
-            cycleId=cycleId, personnelId=self.javad
-        )
+        result = PerformanceResultModel.objects.get(cycleId=cycleId, personnelId=self.javad)
         self.assertEqual(result.raterCount, 6)
         self.assertEqual(result.dampedCount, 2)
         # Near the honest cluster, not near the midpoint of the two extremes.
@@ -404,9 +388,7 @@ class PerformanceReviewApiTests(TestCase):
         self.assertLess(float(result.finalScore), 76.0)
 
         breakdown = json.loads(result.breakdown)
-        damped = {
-            row["raterRole"] for row in breakdown["raters"] if row["damped"]
-        }
+        damped = {row["raterRole"] for row in breakdown["raters"] if row["damped"]}
         self.assertEqual(damped, {"productionManager", "technicalManager"})
         # Every discounted rater carries a written reason — an employee asking
         # "why?" has to get an answer.
@@ -428,9 +410,7 @@ class PerformanceReviewApiTests(TestCase):
             **self.auth,
         )
         breakdown = json.loads(
-            PerformanceResultModel.objects.get(
-                cycleId=cycleId, personnelId=self.javad
-            ).breakdown
+            PerformanceResultModel.objects.get(cycleId=cycleId, personnelId=self.javad).breakdown
         )
         for row in breakdown["raters"]:
             self.assertGreater(
@@ -515,9 +495,7 @@ class PerformanceReviewApiTests(TestCase):
         payload = self.client.get(
             f"{BASE}/performance-reviews/results?cycleId={cycleId}", **self.auth
         ).json()["data"]
-        mina = next(
-            row for row in payload["unrated"] if row["personnelName"] == "مینا رستمی"
-        )
+        mina = next(row for row in payload["unrated"] if row["personnelName"] == "مینا رستمی")
         self.assertIsNotNone(mina["systemScore"])
         self.assertEqual(mina["raterCount"], 0)
 
@@ -556,9 +534,7 @@ class PerformanceReviewApiTests(TestCase):
     def testAnotherTenantsMarksAreInvisible(self) -> None:
         cycleId = self._cycle()
         self._submit(cycleId, self.javad, "unitHead", 70)
-        PerformanceRaterScoreModel.objects.filter(cycleId=cycleId).update(
-            tenantId=uuid.uuid4()
-        )
+        PerformanceRaterScoreModel.objects.filter(cycleId=cycleId).update(tenantId=uuid.uuid4())
         listed = self.client.get(
             f"{BASE}/performance-reviews/scores?cycleId={cycleId}", **self.auth
         ).json()["data"]
@@ -566,12 +542,8 @@ class PerformanceReviewApiTests(TestCase):
 
     def testEndpointsRefuseAnonymousCallers(self) -> None:
         anonymous = APIClient()
+        self.assertEqual(anonymous.get(f"{BASE}/performance-reviews/cycles").status_code, 401)
         self.assertEqual(
-            anonymous.get(f"{BASE}/performance-reviews/cycles").status_code, 401
-        )
-        self.assertEqual(
-            anonymous.post(
-                f"{BASE}/performance-reviews/compute", {}, format="json"
-            ).status_code,
+            anonymous.post(f"{BASE}/performance-reviews/compute", {}, format="json").status_code,
             401,
         )

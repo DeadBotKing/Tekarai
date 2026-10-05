@@ -40,9 +40,7 @@ class DocumentRepositoryImpl:
     ) -> tuple[list[Document], int]:
         queryset = DocumentModel.objects.filter(tenantId=tenantId, deletedAt__isnull=True)
         if search:
-            queryset = queryset.filter(
-                Q(name__icontains=search) | Q(description__icontains=search)
-            )
+            queryset = queryset.filter(Q(name__icontains=search) | Q(description__icontains=search))
         if category:
             queryset = queryset.filter(category__iexact=category)
         total = queryset.count()

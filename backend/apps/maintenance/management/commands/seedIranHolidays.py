@@ -21,7 +21,7 @@ in any year, so an existing rule is left alone rather than duplicated.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from django.core.management.base import BaseCommand, CommandError
 
@@ -70,7 +70,7 @@ class Command(BaseCommand):
         jalaliYear = int(options.get("year") or 0)
 
         if jalaliYear <= 0:
-            jalaliYear = dateToJalali(datetime.now(timezone.utc).date())[0]
+            jalaliYear = dateToJalali(datetime.now(UTC).date())[0]
         if not 1300 <= jalaliYear <= 1500:
             raise CommandError(f"Jalali year {jalaliYear} is outside a sensible range.")
 
@@ -81,7 +81,7 @@ class Command(BaseCommand):
                 "(نگهداری و تعمیرات → تقویم کاری), then re-run."
             )
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         totalWritten = 0
         totalSkipped = 0
 
@@ -90,8 +90,7 @@ class Command(BaseCommand):
             totalWritten += written
             totalSkipped += skipped
             self.stdout.write(
-                f"  {calendar.code or calendar.id}: "
-                f"{written} added, {skipped} already present"
+                f"  {calendar.code or calendar.id}: {written} added, {skipped} already present"
             )
 
         verb = "would add" if dryRun else "added"
@@ -141,9 +140,12 @@ class Command(BaseCommand):
             # in the holidays tab, neither of them wrong, both of them noise.
             # Matching on `onDate` alone cannot see it, because the dates
             # differ by year.
-            exists = onCalendar.filter(onDate=onDate).exists() or onCalendar.filter(
-                recursAnnually=True, jalaliMonth=jMonth, jalaliDay=jDay
-            ).exists()
+            exists = (
+                onCalendar.filter(onDate=onDate).exists()
+                or onCalendar.filter(
+                    recursAnnually=True, jalaliMonth=jMonth, jalaliDay=jDay
+                ).exists()
+            )
             if exists:
                 skipped += 1
                 continue

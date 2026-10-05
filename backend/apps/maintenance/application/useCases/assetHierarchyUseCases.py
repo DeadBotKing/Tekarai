@@ -362,9 +362,7 @@ class GetAssetAncestryUseCase(AssetHierarchyUseCaseBase):
             locationId = index.get(key, {}).get("locationId", "")
 
         locationRows = {item["id"]: item for item in self.locationRepository.treeRows(tenantId)}
-        locationParents = {
-            key: (item["parentId"] or None) for key, item in locationRows.items()
-        }
+        locationParents = {key: (item["parentId"] or None) for key, item in locationRows.items()}
         locationChain: list[dict] = []
         if locationId and locationId in locationRows:
             keys = [locationId, *ancestorChain(locationId, locationParents)]
@@ -575,9 +573,7 @@ class RetireAssetUseCase(AssetHierarchyUseCaseBase):
         retiredOn = parseDateOrNone(str(command.retiredOn or "")) or now.date()
         installed = row["installedOn"]
         if installed and retiredOn.isoformat() < installed:
-            raise AssetHierarchyError(
-                "تاریخ خروج از رده نمی‌تواند پیش از تاریخ نصب باشد."
-            )
+            raise AssetHierarchyError("تاریخ خروج از رده نمی‌تواند پیش از تاریخ نصب باشد.")
 
         childrenOf: dict[str, list[str]] = {}
         for key, item in index.items():
@@ -653,9 +649,7 @@ class ReinstateAssetUseCase(AssetHierarchyUseCaseBase):
         status = str(command.status or "operational")
         if status not in LIVE_STATUSES:
             raise AssetHierarchyError("وضعیت بازگشت به کار معتبر نیست.")
-        self.deviceRepository.reinstateDevice(
-            tenantId, uuid.UUID(deviceId), status=status, now=now
-        )
+        self.deviceRepository.reinstateDevice(tenantId, uuid.UUID(deviceId), status=status, now=now)
         self.recordHistory(
             tenantId,
             uuid.UUID(deviceId),

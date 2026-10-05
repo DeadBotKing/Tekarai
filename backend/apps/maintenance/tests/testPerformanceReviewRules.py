@@ -21,14 +21,14 @@ from apps.maintenance.domain.services.performanceReviewRules import (
     systemScore,
 )
 from apps.maintenance.domain.valueObjects.performanceState import (
-    REASON_CODES,
-    REASON_DAMPED_ABOVE,
-    REASON_DAMPED_BELOW,
-    REASON_FULL_WEIGHT,
     DEFAULT_ROLE_WEIGHTS,
     MIN_DAMPING_FACTOR,
     MIN_RATERS_FOR_DAMPING,
     RATER_ROLES,
+    REASON_CODES,
+    REASON_DAMPED_ABOVE,
+    REASON_DAMPED_BELOW,
+    REASON_FULL_WEIGHT,
 )
 
 
@@ -133,6 +133,7 @@ class SystemScoreTests(unittest.TestCase):
                 reworkPenalty=60,
             )
         )
+        assert value is not None  # narrows the Optional for the type checker
         self.assertAlmostEqual(value, 84.5, places=1)
 
     def testNothingMeasuredIsNoneNotZero(self) -> None:
@@ -148,6 +149,7 @@ class SystemScoreTests(unittest.TestCase):
         withPmZeroed = systemScore(
             SystemMetrics(pmCompliance=0, onTimeCompletion=90, completionRate=90)
         )
+        assert withoutPm is not None and withPmZeroed is not None
         self.assertEqual(withoutPm, 90.0)
         self.assertLess(withPmZeroed, withoutPm)
 
@@ -184,9 +186,7 @@ class JavadScenarioTests(unittest.TestCase):
         byRole = {row.raterRole: row for row in outcome.raters}
         # The unit head started on a *smaller* base weight than the technical
         # manager (16 vs 18) and still ends up counting for more.
-        self.assertGreater(
-            byRole["unitHead"].contribution, byRole["technicalManager"].contribution
-        )
+        self.assertGreater(byRole["unitHead"].contribution, byRole["technicalManager"].contribution)
         self.assertGreater(
             byRole["unitHead"].contribution, byRole["productionManager"].contribution
         )
@@ -241,12 +241,8 @@ class JavadScenarioTests(unittest.TestCase):
         byRole = {row.raterRole: row for row in outcome.raters}
         # Codes, not prose — the interface decides the wording and the
         # language. The percentage rides along so the UI need not recompute it.
-        self.assertTrue(
-            byRole["technicalManager"].reason.startswith(f"{REASON_DAMPED_BELOW}:")
-        )
-        self.assertTrue(
-            byRole["productionManager"].reason.startswith(f"{REASON_DAMPED_ABOVE}:")
-        )
+        self.assertTrue(byRole["technicalManager"].reason.startswith(f"{REASON_DAMPED_BELOW}:"))
+        self.assertTrue(byRole["productionManager"].reason.startswith(f"{REASON_DAMPED_ABOVE}:"))
         self.assertEqual(byRole["unitHead"].reason, REASON_FULL_WEIGHT)
         # The number after the colon is the percentage of weight removed.
         self.assertEqual(
@@ -272,11 +268,11 @@ class JavadScenarioTests(unittest.TestCase):
             pmCompliance=92, onTimeCompletion=88, completionRate=95, reworkPenalty=80
         )
         outcome = scoreReview("p-javad", self._raters(), metrics)
-        self.assertIsNotNone(outcome.systemScoreValue)
+        systemScoreValue = outcome.systemScoreValue
+        self.assertIsNotNone(systemScoreValue)
+        assert systemScoreValue is not None
         self.assertEqual(outcome.systemWeightPercent, 30)
-        expected = (
-            outcome.systemScoreValue * 30 + outcome.humanScore * 70
-        ) / 100.0
+        expected = (systemScoreValue * 30 + outcome.humanScore * 70) / 100.0
         self.assertAlmostEqual(outcome.finalScore, expected, places=1)
 
     def testAGoodRecordLiftsAManWhoseManagerDislikesHim(self) -> None:
@@ -302,9 +298,7 @@ class GuardTests(unittest.TestCase):
         self.assertIn("tooFewRatersToDamp", outcome.notes)
 
     def testDampingSwitchesOnAtTheThreshold(self) -> None:
-        raters = [
-            RaterScore(role, 70) for role in RATER_ROLES[: MIN_RATERS_FOR_DAMPING]
-        ]
+        raters = [RaterScore(role, 70) for role in RATER_ROLES[:MIN_RATERS_FOR_DAMPING]]
         self.assertTrue(scoreReview("p-1", raters).dampingApplied)
 
     def testUnanimityDampensNobody(self) -> None:
@@ -355,9 +349,7 @@ class GuardTests(unittest.TestCase):
 
     def testSystemWeightIsHeldInsideItsBounds(self) -> None:
         metrics = SystemMetrics(pmCompliance=100)
-        high = scoreReview(
-            "p-1", [RaterScore("unitHead", 0)], metrics, systemWeightPercent=500
-        )
+        high = scoreReview("p-1", [RaterScore("unitHead", 0)], metrics, systemWeightPercent=500)
         self.assertEqual(high.systemWeightPercent, 100)
         self.assertEqual(high.finalScore, 100.0)
 
@@ -374,9 +366,7 @@ class GuardTests(unittest.TestCase):
 
 class RankingTests(unittest.TestCase):
     def makeOutcome(self, personnelId: str, score: float, name: str = ""):
-        return scoreReview(
-            personnelId, [RaterScore("unitHead", score)], personnelName=name
-        )
+        return scoreReview(personnelId, [RaterScore("unitHead", score)], personnelName=name)
 
     def testHighestFirst(self) -> None:
         ranked = rankOutcomes(

@@ -9,11 +9,11 @@ from decimal import Decimal
 from apps.maintenance.application.commands.teamSyncCommands import (
     CloseReservationCommand,
     CommitInspectionTemplateCommand,
+    DeleteInspectionTemplateCommand,
     ListInspectionRecordsQuery,
     ListInspectionTemplatesQuery,
     ListReservationsQuery,
     SaveInspectionRecordCommand,
-    DeleteInspectionTemplateCommand,
     SaveInspectionTemplateCommand,
     SaveReservationCommand,
 )
@@ -144,6 +144,7 @@ def _uuid(value: str, field: str) -> uuid.UUID:
 
 # --------------------------- reservations ---------------------------
 
+
 class ReservationUseCaseBase(UseCase):
     def __init__(self, repository: PartReservationRepository, **kwargs) -> None:
         super().__init__(**kwargs)
@@ -156,7 +157,9 @@ class ListReservationsUseCase(ReservationUseCaseBase):
     def perform(self, query: ListReservationsQuery) -> PartReservationListDto:
         tenantId = resolveTenantId("")
         workOrderId = _uuid(query.workOrderId, "workOrderId") if query.workOrderId else None
-        items = [_reservationDto(item) for item in self.repository.listForTenant(tenantId, workOrderId)]
+        items = [
+            _reservationDto(item) for item in self.repository.listForTenant(tenantId, workOrderId)
+        ]
         return PartReservationListDto(items=items, totalCount=len(items))
 
 
@@ -172,12 +175,20 @@ class SaveReservationUseCase(ReservationUseCaseBase):
                 workOrderId=_uuid(command.workOrderId, "workOrderId"),
                 partCode=command.partCode.strip(),
                 quantity=_quantity(command.quantity),
-                status=command.status if command.status in ("active", "consumed", "released") else "active",
+                status=command.status
+                if command.status in ("active", "consumed", "released")
+                else "active",
                 reservedByName=command.reservedByName,
                 createdAt="",
             )
         )
-        self.audit(AUDIT_UPDATE, "PartReservation", saved.id, tenantId, after=_reservationDto(saved).__dict__)
+        self.audit(
+            AUDIT_UPDATE,
+            "PartReservation",
+            saved.id,
+            tenantId,
+            after=_reservationDto(saved).__dict__,
+        )
         return _reservationDto(saved)
 
 
@@ -188,14 +199,23 @@ class CloseReservationUseCase(ReservationUseCaseBase):
         tenantId = resolveTenantId("")
         if command.status not in ("consumed", "released"):
             raise ValidationFailedError("status must be consumed or released")
-        result = self.repository.close(tenantId, command.reservationId, command.status, self.clock.nowUtc())
+        result = self.repository.close(
+            tenantId, command.reservationId, command.status, self.clock.nowUtc()
+        )
         if result is None:
             raise ValidationFailedError("Reservation not found")
-        self.audit(AUDIT_UPDATE, "PartReservation", result.id, tenantId, after=_reservationDto(result).__dict__)
+        self.audit(
+            AUDIT_UPDATE,
+            "PartReservation",
+            result.id,
+            tenantId,
+            after=_reservationDto(result).__dict__,
+        )
         return _reservationDto(result)
 
 
 # --------------------------- inspections ---------------------------
+
 
 class InspectionUseCaseBase(UseCase):
     def __init__(self, repository: InspectionSyncRepository, **kwargs) -> None:
@@ -235,7 +255,13 @@ class SaveInspectionTemplateUseCase(InspectionUseCaseBase):
                 isCommitted=existing.isCommitted if existing else True,
             )
         )
-        self.audit(AUDIT_CREATE, "InspectionTemplate", saved.id, tenantId, after=_templateDto(saved).__dict__)
+        self.audit(
+            AUDIT_CREATE,
+            "InspectionTemplate",
+            saved.id,
+            tenantId,
+            after=_templateDto(saved).__dict__,
+        )
         return _templateDto(saved)
 
 
@@ -247,7 +273,13 @@ class CommitInspectionTemplateUseCase(InspectionUseCaseBase):
         result = self.repository.commitTemplate(tenantId, command.templateId)
         if result is None:
             raise ValidationFailedError("Template not found")
-        self.audit(AUDIT_UPDATE, "InspectionTemplate", result.id, tenantId, after=_templateDto(result).__dict__)
+        self.audit(
+            AUDIT_UPDATE,
+            "InspectionTemplate",
+            result.id,
+            tenantId,
+            after=_templateDto(result).__dict__,
+        )
         return _templateDto(result)
 
 
@@ -276,7 +308,9 @@ class SaveInspectionRecordUseCase(InspectionUseCaseBase):
                 id=command.id,
                 tenantId=tenantId,
                 templateId=command.templateId,
-                workOrderId=(_uuid(command.workOrderId, "workOrderId") if command.workOrderId else None),
+                workOrderId=(
+                    _uuid(command.workOrderId, "workOrderId") if command.workOrderId else None
+                ),
                 deviceId=_uuid(command.deviceId, "deviceId"),
                 passedChecks=tuple(command.passedChecks),
                 failedChecks=tuple(command.failedChecks),
@@ -284,7 +318,9 @@ class SaveInspectionRecordUseCase(InspectionUseCaseBase):
                 createdAt="",
             )
         )
-        self.audit(AUDIT_CREATE, "InspectionRecord", saved.id, tenantId, after=_recordDto(saved).__dict__)
+        self.audit(
+            AUDIT_CREATE, "InspectionRecord", saved.id, tenantId, after=_recordDto(saved).__dict__
+        )
         return _recordDto(saved)
 
 

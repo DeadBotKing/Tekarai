@@ -105,7 +105,7 @@ class AssetHierarchyApiTests(TestCase):
         return self.client.post(url, payload, format="json", **self.auth)
 
     # -- the tree ------------------------------------------------------------
-    def test_treeNestsLocationsAndDevicesIntoOneChain(self) -> None:
+    def testTreeNestsLocationsAndDevicesIntoOneChain(self) -> None:
         response = self.client.get(f"{BASE}/assets/tree", **self.auth)
         self.assertEqual(response.status_code, 200)
         roots = response.json()["data"]["roots"]
@@ -129,32 +129,30 @@ class AssetHierarchyApiTests(TestCase):
         self.assertEqual(motor["code"], "MTR-01")
         self.assertEqual(motor["children"][0]["code"], "BRG-01")
 
-    def test_treeRollsUpDeviceCounts(self) -> None:
+    def testTreeRollsUpDeviceCounts(self) -> None:
         response = self.client.get(f"{BASE}/assets/tree", **self.auth)
         site = response.json()["data"]["roots"][0]
         # Three devices sit somewhere beneath the site.
         self.assertEqual(site["deviceCount"], 3)
 
-    def test_treeCanBeScopedToOneSubtree(self) -> None:
-        response = self.client.get(
-            f"{BASE}/assets/tree?rootId={self.line.id}", **self.auth
-        )
+    def testTreeCanBeScopedToOneSubtree(self) -> None:
+        response = self.client.get(f"{BASE}/assets/tree?rootId={self.line.id}", **self.auth)
         roots = response.json()["data"]["roots"]
         self.assertEqual([node["code"] for node in roots], ["LINE-01"])
 
-    def test_treeHidesRetiredAssetsUnlessAsked(self) -> None:
+    def testTreeHidesRetiredAssetsUnlessAsked(self) -> None:
         self._post(
             f"{BASE}/devices/{self.bearing.id}/retirement",
             {"retiredOn": "2026-02-01", "reason": "فرسودگی"},
         )
         hidden = self.client.get(f"{BASE}/assets/tree", **self.auth).json()["data"]
         self.assertEqual(hidden["counts"]["devices"], 2)
-        shown = self.client.get(
-            f"{BASE}/assets/tree?includeRetired=true", **self.auth
-        ).json()["data"]
+        shown = self.client.get(f"{BASE}/assets/tree?includeRetired=true", **self.auth).json()[
+            "data"
+        ]
         self.assertEqual(shown["counts"]["devices"], 3)
 
-    def test_treeListsDevicesThatHaveNoLocation(self) -> None:
+    def testTreeListsDevicesThatHaveNoLocation(self) -> None:
         DeviceModel.objects.create(
             tenantId=self.tenantId,
             code="SPARE-01",
@@ -165,50 +163,44 @@ class AssetHierarchyApiTests(TestCase):
             createdAt=self._now(),
         )
         data = self.client.get(f"{BASE}/assets/tree", **self.auth).json()["data"]
-        self.assertEqual(
-            [node["code"] for node in data["unplacedDevices"]], ["SPARE-01"]
-        )
+        self.assertEqual([node["code"] for node in data["unplacedDevices"]], ["SPARE-01"])
 
     # -- ancestry ------------------------------------------------------------
-    def test_ancestryReturnsTheUpstreamChainRootFirst(self) -> None:
-        response = self.client.get(
-            f"{BASE}/devices/{self.bearing.id}/ancestry", **self.auth
-        )
+    def testAncestryReturnsTheUpstreamChainRootFirst(self) -> None:
+        response = self.client.get(f"{BASE}/devices/{self.bearing.id}/ancestry", **self.auth)
         self.assertEqual(response.status_code, 200)
         data = response.json()["data"]
-        self.assertEqual(
-            [node["code"] for node in data["deviceChain"]], ["PRESS-01", "MTR-01"]
-        )
+        self.assertEqual([node["code"] for node in data["deviceChain"]], ["PRESS-01", "MTR-01"])
         self.assertEqual(
             [node["code"] for node in data["locationChain"]],
             ["SITE-01", "BLD-01", "LINE-01", "SYS-01"],
         )
 
-    def test_ancestryCarriesTheCostCentre(self) -> None:
-        data = self.client.get(
-            f"{BASE}/devices/{self.machine.id}/ancestry", **self.auth
-        ).json()["data"]
+    def testAncestryCarriesTheCostCentre(self) -> None:
+        data = self.client.get(f"{BASE}/devices/{self.machine.id}/ancestry", **self.auth).json()[
+            "data"
+        ]
         self.assertEqual(data["device"]["costCenterCode"], "CC-100")
         self.assertEqual(data["device"]["costCenterName"], "تولید")
 
-    def test_ancestryCountsChildrenAndDescendants(self) -> None:
-        data = self.client.get(
-            f"{BASE}/devices/{self.machine.id}/ancestry", **self.auth
-        ).json()["data"]
+    def testAncestryCountsChildrenAndDescendants(self) -> None:
+        data = self.client.get(f"{BASE}/devices/{self.machine.id}/ancestry", **self.auth).json()[
+            "data"
+        ]
         self.assertEqual([node["code"] for node in data["children"]], ["MTR-01"])
         self.assertEqual(data["descendantCount"], 2)
 
-    def test_anUnplacedComponentInheritsItsParentsLocationChain(self) -> None:
+    def testAnUnplacedComponentInheritsItsParentsLocationChain(self) -> None:
         self.bearing.locationId = None
         self.bearing.locationPath = ""
         self.bearing.save(update_fields=["locationId", "locationPath"])
-        data = self.client.get(
-            f"{BASE}/devices/{self.bearing.id}/ancestry", **self.auth
-        ).json()["data"]
+        data = self.client.get(f"{BASE}/devices/{self.bearing.id}/ancestry", **self.auth).json()[
+            "data"
+        ]
         self.assertEqual(data["locationChain"][-1]["code"], "SYS-01")
 
     # -- transfers -----------------------------------------------------------
-    def test_movingAnAssetKeepsWhereItCameFrom(self) -> None:
+    def testMovingAnAssetKeepsWhereItCameFrom(self) -> None:
         response = self._post(
             f"{BASE}/devices/{self.machine.id}/movements",
             {
@@ -231,17 +223,17 @@ class AssetHierarchyApiTests(TestCase):
         self.assertEqual(movement.movedOn, date(2026, 3, 5))
         self.assertEqual(movement.reason, "تغییر چیدمان خط")
 
-    def test_theLedgerAnswersWhereItWasBefore(self) -> None:
+    def testTheLedgerAnswersWhereItWasBefore(self) -> None:
         self._post(
             f"{BASE}/devices/{self.machine.id}/movements",
             {"toLocationId": str(self.otherLine.id), "movedOn": "2026-03-05"},
         )
-        data = self.client.get(
-            f"{BASE}/devices/{self.machine.id}/ancestry", **self.auth
-        ).json()["data"]
+        data = self.client.get(f"{BASE}/devices/{self.machine.id}/ancestry", **self.auth).json()[
+            "data"
+        ]
         self.assertEqual(data["previousLocation"]["locationPath"], self.system.path)
 
-    def test_everyTransferIsKeptNotOverwritten(self) -> None:
+    def testEveryTransferIsKeptNotOverwritten(self) -> None:
         self._post(
             f"{BASE}/devices/{self.machine.id}/movements",
             {"toLocationId": str(self.otherLine.id), "movedOn": "2026-03-05"},
@@ -250,26 +242,24 @@ class AssetHierarchyApiTests(TestCase):
             f"{BASE}/devices/{self.machine.id}/movements",
             {"toLocationId": str(self.line.id), "movedOn": "2026-04-05"},
         )
-        rows = self.client.get(
-            f"{BASE}/devices/{self.machine.id}/movements", **self.auth
-        ).json()["data"]
+        rows = self.client.get(f"{BASE}/devices/{self.machine.id}/movements", **self.auth).json()[
+            "data"
+        ]
         self.assertEqual(len(rows), 2)
         # Newest first, so the top row is the move that is currently in force.
         self.assertEqual(rows[0]["movedOn"], "2026-04-05")
         self.assertEqual(rows[0]["fromLocationPath"], self.otherLine.path)
         self.assertEqual(rows[1]["fromLocationPath"], self.system.path)
 
-    def test_aTransferAppearsOnTheDeviceTimeline(self) -> None:
+    def testATransferAppearsOnTheDeviceTimeline(self) -> None:
         self._post(
             f"{BASE}/devices/{self.machine.id}/movements",
             {"toLocationId": str(self.otherLine.id), "reason": "بازچینش"},
         )
-        entry = DeviceHistoryModel.objects.get(
-            deviceId=self.machine.id, action="relocated"
-        )
+        entry = DeviceHistoryModel.objects.get(deviceId=self.machine.id, action="relocated")
         self.assertIn(self.otherLine.path, entry.note)
 
-    def test_installationDateIsUpdatedOnlyWhenAsked(self) -> None:
+    def testInstallationDateIsUpdatedOnlyWhenAsked(self) -> None:
         self._post(
             f"{BASE}/devices/{self.machine.id}/movements",
             {"toLocationId": str(self.otherLine.id), "movedOn": "2026-03-05"},
@@ -288,7 +278,7 @@ class AssetHierarchyApiTests(TestCase):
         self.machine.refresh_from_db()
         self.assertEqual(self.machine.installedOn, date(2026, 4, 5))
 
-    def test_aTransferThatChangesNothingIsRefused(self) -> None:
+    def testATransferThatChangesNothingIsRefused(self) -> None:
         response = self._post(
             f"{BASE}/devices/{self.machine.id}/movements",
             {"toLocationId": str(self.system.id)},
@@ -296,7 +286,7 @@ class AssetHierarchyApiTests(TestCase):
         self.assertEqual(response.status_code, 422)
         self.assertEqual(AssetMovementModel.objects.count(), 0)
 
-    def test_movingUnderOwnDescendantIsRefusedByTheLevelLadder(self) -> None:
+    def testMovingUnderOwnDescendantIsRefusedByTheLevelLadder(self) -> None:
         response = self._post(
             f"{BASE}/devices/{self.machine.id}/movements",
             {"toParentDeviceId": str(self.bearing.id)},
@@ -306,7 +296,7 @@ class AssetHierarchyApiTests(TestCase):
         self.assertIsNone(self.machine.parentDeviceId)
         self.assertEqual(AssetMovementModel.objects.count(), 0)
 
-    def test_movingUnderOwnDescendantIsRefusedWhenLevelsDoNotSayNo(self) -> None:
+    def testMovingUnderOwnDescendantIsRefusedWhenLevelsDoNotSayNo(self) -> None:
         """The cycle guard, isolated.
 
         Between catalogued levels a loop is already impossible — the ladder
@@ -327,7 +317,7 @@ class AssetHierarchyApiTests(TestCase):
         self.assertIsNone(top.parentDeviceId)
         self.assertEqual(AssetMovementModel.objects.count(), 0)
 
-    def test_anAssetCannotBeMovedUnderItself(self) -> None:
+    def testAnAssetCannotBeMovedUnderItself(self) -> None:
         loner = self._device("GEN-03", "ژنراتور تک", "دستگاه", self.system)
         response = self._post(
             f"{BASE}/devices/{loner.id}/movements",
@@ -337,7 +327,7 @@ class AssetHierarchyApiTests(TestCase):
         loner.refresh_from_db()
         self.assertIsNone(loner.parentDeviceId)
 
-    def test_aComponentMayNotOwnASubAssembly(self) -> None:
+    def testAComponentMayNotOwnASubAssembly(self) -> None:
         """The level ladder, isolated from the cycle guard.
 
         The target component sits in a different branch, so no loop is
@@ -357,7 +347,7 @@ class AssetHierarchyApiTests(TestCase):
         self.assertEqual(self.motor.parentDeviceId, self.machine.id)
         self.assertEqual(AssetMovementModel.objects.count(), 0)
 
-    def test_anUnclassifiedAssetIsDemotedRatherThanRefused(self) -> None:
+    def testAnUnclassifiedAssetIsDemotedRatherThanRefused(self) -> None:
         """`mainEquipment` is the default every legacy row carries.
 
         Treating it as a firm claim would have refused every parent/child
@@ -374,7 +364,7 @@ class AssetHierarchyApiTests(TestCase):
         self.assertEqual(otherMachine.parentDeviceId, self.machine.id)
         self.assertEqual(otherMachine.assetLevel, "subEquipment")
 
-    def test_derivationStepsDownOnlyOneRung(self) -> None:
+    def testDerivationStepsDownOnlyOneRung(self) -> None:
         stray = self._device("CMP-07", "قطعهٔ آزاد", "mainEquipment", self.otherLine)
         self._post(
             f"{BASE}/devices/{stray.id}/movements",
@@ -384,7 +374,7 @@ class AssetHierarchyApiTests(TestCase):
         # Under a زیرتجهیز, an unclassified asset becomes a قطعه.
         self.assertEqual(stray.assetLevel, "component")
 
-    def test_aStatedLevelIsNeverSilentlyRewritten(self) -> None:
+    def testAStatedLevelIsNeverSilentlyRewritten(self) -> None:
         stray = self._device("MTR-08", "الکتروموتور", "subEquipment", self.otherLine)
         self._post(
             f"{BASE}/devices/{stray.id}/movements",
@@ -393,7 +383,7 @@ class AssetHierarchyApiTests(TestCase):
         stray.refresh_from_db()
         self.assertEqual(stray.assetLevel, "subEquipment")
 
-    def test_aLegalDeepeningIsAccepted(self) -> None:
+    def testALegalDeepeningIsAccepted(self) -> None:
         # The mirror image of the two tests above: one rung down, so it lands.
         stray = self._device("MTR-09", "الکتروموتور یدکی", "subEquipment", self.otherLine)
         response = self._post(
@@ -404,7 +394,7 @@ class AssetHierarchyApiTests(TestCase):
         stray.refresh_from_db()
         self.assertEqual(stray.parentDeviceId, self.machine.id)
 
-    def test_reParentingASubAssemblyIsRecorded(self) -> None:
+    def testReParentingASubAssemblyIsRecorded(self) -> None:
         other = self._device("PRESS-02", "پرس ۲", "mainEquipment", self.otherLine)
         response = self._post(
             f"{BASE}/devices/{self.motor.id}/movements",
@@ -417,7 +407,7 @@ class AssetHierarchyApiTests(TestCase):
         self.assertEqual(movement.fromParentDeviceId, self.machine.id)
         self.assertEqual(movement.toParentDeviceId, other.id)
 
-    def test_anUnknownLocationIsRejected(self) -> None:
+    def testAnUnknownLocationIsRejected(self) -> None:
         response = self._post(
             f"{BASE}/devices/{self.machine.id}/movements",
             {"toLocationId": str(uuid.uuid4())},
@@ -425,7 +415,7 @@ class AssetHierarchyApiTests(TestCase):
         self.assertEqual(response.status_code, 404)
 
     # -- retirement ----------------------------------------------------------
-    def test_retiringRecordsTheDateAndReason(self) -> None:
+    def testRetiringRecordsTheDateAndReason(self) -> None:
         response = self._post(
             f"{BASE}/devices/{self.bearing.id}/retirement",
             {"retiredOn": "2026-05-01", "reason": "فرسودگی کامل"},
@@ -436,7 +426,7 @@ class AssetHierarchyApiTests(TestCase):
         self.assertEqual(self.bearing.retiredOn, date(2026, 5, 1))
         self.assertEqual(self.bearing.retirementReason, "فرسودگی کامل")
 
-    def test_retiringIsRefusedWhileLiveChildrenHangOffIt(self) -> None:
+    def testRetiringIsRefusedWhileLiveChildrenHangOffIt(self) -> None:
         response = self._post(
             f"{BASE}/devices/{self.machine.id}/retirement", {"retiredOn": "2026-05-01"}
         )
@@ -444,7 +434,7 @@ class AssetHierarchyApiTests(TestCase):
         self.machine.refresh_from_db()
         self.assertEqual(self.machine.status, "operational")
 
-    def test_theWholeSubtreeCanBeRetiredTogether(self) -> None:
+    def testTheWholeSubtreeCanBeRetiredTogether(self) -> None:
         response = self._post(
             f"{BASE}/devices/{self.machine.id}/retirement",
             {"retiredOn": "2026-05-01", "retireChildren": True},
@@ -455,7 +445,7 @@ class AssetHierarchyApiTests(TestCase):
             device.refresh_from_db()
             self.assertEqual(device.status, "retired")
 
-    def test_retirementCannotPredateInstallation(self) -> None:
+    def testRetirementCannotPredateInstallation(self) -> None:
         response = self._post(
             f"{BASE}/devices/{self.bearing.id}/retirement", {"retiredOn": "2020-01-01"}
         )
@@ -463,7 +453,7 @@ class AssetHierarchyApiTests(TestCase):
         self.bearing.refresh_from_db()
         self.assertEqual(self.bearing.status, "operational")
 
-    def test_aRetiredAssetMayNotBeMoved(self) -> None:
+    def testARetiredAssetMayNotBeMoved(self) -> None:
         self._post(f"{BASE}/devices/{self.bearing.id}/retirement", {})
         response = self._post(
             f"{BASE}/devices/{self.bearing.id}/movements",
@@ -472,12 +462,12 @@ class AssetHierarchyApiTests(TestCase):
         self.assertEqual(response.status_code, 422)
         self.assertEqual(AssetMovementModel.objects.count(), 0)
 
-    def test_retiringTwiceIsRefused(self) -> None:
+    def testRetiringTwiceIsRefused(self) -> None:
         self._post(f"{BASE}/devices/{self.bearing.id}/retirement", {})
         response = self._post(f"{BASE}/devices/{self.bearing.id}/retirement", {})
         self.assertEqual(response.status_code, 422)
 
-    def test_reinstatingClearsTheRetirementFacts(self) -> None:
+    def testReinstatingClearsTheRetirementFacts(self) -> None:
         self._post(
             f"{BASE}/devices/{self.bearing.id}/retirement",
             {"retiredOn": "2026-05-01", "reason": "فرسودگی"},
@@ -494,7 +484,7 @@ class AssetHierarchyApiTests(TestCase):
         self.assertIsNone(self.bearing.retiredOn)
         self.assertEqual(self.bearing.retirementReason, "")
 
-    def test_reinstatingRefusesAnInvalidStatus(self) -> None:
+    def testReinstatingRefusesAnInvalidStatus(self) -> None:
         self._post(f"{BASE}/devices/{self.bearing.id}/retirement", {})
         response = self.client.delete(
             f"{BASE}/devices/{self.bearing.id}/retirement",
@@ -565,7 +555,7 @@ class AssetHierarchyGuardTests(TestCase):
             f"{BASE}/devices/{deviceId}/nameplate", payload, format="json", **self.auth
         )
 
-    def test_aDeviceCannotBeMadeItsOwnParentThroughTheNameplate(self) -> None:
+    def testADeviceCannotBeMadeItsOwnParentThroughTheNameplate(self) -> None:
         # Previously the repository quietly swallowed this write, leaving the
         # user staring at a form that claimed to have saved something it
         # had thrown away. Now it is refused out loud.
@@ -574,7 +564,7 @@ class AssetHierarchyGuardTests(TestCase):
         self.loose.refresh_from_db()
         self.assertIsNone(self.loose.parentDeviceId)
 
-    def test_aTwoStepLoopIsRefusedThroughTheNameplate(self) -> None:
+    def testATwoStepLoopIsRefusedThroughTheNameplate(self) -> None:
         """Isolates the cycle guard from the level ladder.
 
         Both devices carry a plant-specific level, so the ladder abstains and
@@ -582,14 +572,12 @@ class AssetHierarchyGuardTests(TestCase):
         did: A→B→A landed, and every ancestry walk after it ran until
         something timed out.
         """
-        response = self._patch(
-            self.looseParent.id, {"parentDeviceId": str(self.looseChild.id)}
-        )
+        response = self._patch(self.looseParent.id, {"parentDeviceId": str(self.looseChild.id)})
         self.assertEqual(response.status_code, 422)
         self.looseParent.refresh_from_db()
         self.assertIsNone(self.looseParent.parentDeviceId)
 
-    def test_theNameplateDerivesAnUnstatedLevelFromTheNewParent(self) -> None:
+    def testTheNameplateDerivesAnUnstatedLevelFromTheNewParent(self) -> None:
         """The pre-Phase-27 flow — "set this device's parent" — still works,
         and now classifies the child as a side effect."""
         from django.utils import timezone
@@ -610,7 +598,7 @@ class AssetHierarchyGuardTests(TestCase):
         self.assertEqual(unrelated.parentDeviceId, self.parent.id)
         self.assertEqual(unrelated.assetLevel, "subEquipment")
 
-    def test_aLevelChangeIsValidatedAgainstTheNewParent(self) -> None:
+    def testALevelChangeIsValidatedAgainstTheNewParent(self) -> None:
         # Promoting a sub-assembly to a main asset while it still hangs off a
         # main asset would put two equal rungs on top of each other.
         response = self._patch(
@@ -621,7 +609,7 @@ class AssetHierarchyGuardTests(TestCase):
         self.child.refresh_from_db()
         self.assertEqual(self.child.assetLevel, "subEquipment")
 
-    def test_theCostCentreCanBeWrittenThroughTheNameplate(self) -> None:
+    def testTheCostCentreCanBeWrittenThroughTheNameplate(self) -> None:
         response = self._patch(
             self.child.id, {"costCenterCode": "CC-200", "costCenterName": "تأسیسات"}
         )
@@ -630,13 +618,13 @@ class AssetHierarchyGuardTests(TestCase):
         self.assertEqual(self.child.costCenterCode, "CC-200")
         self.assertEqual(self.child.costCenterName, "تأسیسات")
 
-    def test_theAssetLevelCanBeWrittenThroughTheNameplate(self) -> None:
+    def testTheAssetLevelCanBeWrittenThroughTheNameplate(self) -> None:
         response = self._patch(self.child.id, {"assetLevel": "component"})
         self.assertEqual(response.status_code, 200)
         self.child.refresh_from_db()
         self.assertEqual(self.child.assetLevel, "component")
 
-    def test_anInvertedLocationNestingIsRefused(self) -> None:
+    def testAnInvertedLocationNestingIsRefused(self) -> None:
         from django.utils import timezone
 
         line = MaintenanceLocationModel.objects.create(
@@ -654,11 +642,9 @@ class AssetHierarchyGuardTests(TestCase):
             **self.auth,
         )
         self.assertEqual(response.status_code, 422)
-        self.assertFalse(
-            MaintenanceLocationModel.objects.filter(code="S-1").exists()
-        )
+        self.assertFalse(MaintenanceLocationModel.objects.filter(code="S-1").exists())
 
-    def test_aPlantsOwnWordIsStillAccepted(self) -> None:
+    def testAPlantsOwnWordIsStillAccepted(self) -> None:
         from django.utils import timezone
 
         site = MaintenanceLocationModel.objects.create(

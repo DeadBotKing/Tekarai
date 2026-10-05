@@ -180,9 +180,7 @@ class WorkCalendarUseCaseBase(UseCase):
             tenantId, uuid.UUID(locationId) if locationId else None
         )
         if resolved is None:
-            raise EntityNotFoundError(
-                "No work calendar is configured for this tenant."
-            )
+            raise EntityNotFoundError("No work calendar is configured for this tenant.")
         return resolved
 
     def resolveWindow(self, fromDate: str, toDate: str) -> tuple[date, date]:
@@ -277,7 +275,7 @@ class GetWorkingDayUseCase(WorkCalendarUseCaseBase):
 
 
 @dataclass
-class _DayBucket:
+class DayBucket:
     """Mutable accumulator for one day of the plan."""
 
     demandHours: Decimal = Decimal("0")
@@ -312,7 +310,7 @@ class GetCapacityPlanUseCase(WorkCalendarUseCaseBase):
         totalCapacity = Decimal("0")
         overloaded = 0
         while cursor <= end:
-            bucket = buckets.get(cursor, _DayBucket())
+            bucket = buckets.get(cursor, DayBucket())
             capacity = dailyCapacityHours(shifts, spec, cursor)
             working = isWorkingDay(spec, cursor)
             utilisation = utilisationPercent(bucket.demandHours, capacity)
@@ -356,7 +354,7 @@ class GetCapacityPlanUseCase(WorkCalendarUseCaseBase):
         self, tenantId: uuid.UUID, spec: CalendarSpec, start: date, end: date
     ) -> dict:
         """Bucket every PM due in the window onto the day it will be worked."""
-        buckets: dict[date, _DayBucket] = {}
+        buckets: dict[date, DayBucket] = {}
         for job in self.calendarRepository.listPmDemand(tenantId, start, end):
             due = job.get("dueOn")
             if due is None:
@@ -365,7 +363,7 @@ class GetCapacityPlanUseCase(WorkCalendarUseCaseBase):
             if planned < start or planned > end:
                 # Rolled out of the window — it is someone else's day.
                 continue
-            bucket = buckets.setdefault(planned, _DayBucket())
+            bucket = buckets.setdefault(planned, DayBucket())
             hours = job.get("estimatedHours") or DEFAULT_JOB_HOURS
             bucket.demandHours += Decimal(str(hours))
             bucket.jobs.append(
@@ -396,16 +394,12 @@ class SaveWorkCalendarUseCase(WorkCalendarUseCaseBase):
         if not command.code.strip() or not command.name.strip():
             raise WorkCalendarError("A calendar needs a code and a name.")
         if command.rollPolicy not in ROLL_POLICIES:
-            raise WorkCalendarError(
-                f"Unknown roll policy «{command.rollPolicy}»."
-            )
+            raise WorkCalendarError(f"Unknown roll policy «{command.rollPolicy}».")
         weekend = tuple(command.weekendDays)
         if len(set(weekend)) >= 7:
             # Every day off is not a calendar, it is a closed plant; refusing
             # it here is kinder than letting every later roll silently no-op.
-            raise WorkCalendarError(
-                "A calendar must leave at least one working day in the week."
-            )
+            raise WorkCalendarError("A calendar must leave at least one working day in the week.")
         values = {
             "id": command.id or None,
             "code": command.code.strip(),
@@ -419,7 +413,9 @@ class SaveWorkCalendarUseCase(WorkCalendarUseCaseBase):
             "note": command.note,
         }
         saved = self.calendarRepository.saveCalendar(tenantId, values, now)
-        self.audit(AUDIT_CREATE, resourceType="WorkCalendar", resourceId=saved["id"], tenantId=tenantId)
+        self.audit(
+            AUDIT_CREATE, resourceType="WorkCalendar", resourceId=saved["id"], tenantId=tenantId
+        )
         return saved
 
 
@@ -456,7 +452,9 @@ class SaveHolidayUseCase(WorkCalendarUseCaseBase):
             "jalaliDay": jalaliDay,
         }
         saved = self.calendarRepository.saveHoliday(tenantId, values, now)
-        self.audit(AUDIT_CREATE, resourceType="CalendarHoliday", resourceId=saved["id"], tenantId=tenantId)
+        self.audit(
+            AUDIT_CREATE, resourceType="CalendarHoliday", resourceId=saved["id"], tenantId=tenantId
+        )
         return saved
 
 
@@ -488,7 +486,9 @@ class SaveShiftUseCase(WorkCalendarUseCaseBase):
             "active": command.active,
         }
         saved = self.calendarRepository.saveShift(tenantId, values, now)
-        self.audit(AUDIT_CREATE, resourceType="WorkShift", resourceId=saved["id"], tenantId=tenantId)
+        self.audit(
+            AUDIT_CREATE, resourceType="WorkShift", resourceId=saved["id"], tenantId=tenantId
+        )
         return saved
 
 
@@ -513,7 +513,9 @@ class SaveShiftAssignmentUseCase(WorkCalendarUseCaseBase):
             "toDate": toDate,
         }
         saved = self.calendarRepository.saveAssignment(tenantId, values, now)
-        self.audit(AUDIT_CREATE, resourceType="ShiftAssignment", resourceId=saved["id"], tenantId=tenantId)
+        self.audit(
+            AUDIT_CREATE, resourceType="ShiftAssignment", resourceId=saved["id"], tenantId=tenantId
+        )
         return saved
 
 
@@ -536,5 +538,10 @@ class DeleteCalendarEntryUseCase(WorkCalendarUseCaseBase):
             raise WorkCalendarError(f"Unknown entry kind «{command.kind}».")
         if not remover(tenantId, entityId, now):
             raise EntityNotFoundError("Calendar entry not found.")
-        self.audit(AUDIT_DELETE, resourceType=f"WorkCalendar:{command.kind}", resourceId=command.id, tenantId=tenantId)
+        self.audit(
+            AUDIT_DELETE,
+            resourceType=f"WorkCalendar:{command.kind}",
+            resourceId=command.id,
+            tenantId=tenantId,
+        )
         return {"id": command.id, "kind": command.kind, "deleted": True}

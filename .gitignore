@@ -1,4 +1,4 @@
-﻿# ============================================================
+# ============================================================
 # Tekarai — Enterprise Operations Platform
 # Root .gitignore
 # ============================================================
@@ -94,6 +94,12 @@ mediafiles/
 media_root/
 /media/
 /static/
+# The settings default to BASE_DIR/"mediaRoot" and BASE_DIR/"staticRoot"
+# (config/settings/base.py). Only the snake_case and all-lowercase spellings
+# were listed here, and git is case-sensitive on Linux/CI — which is how 14
+# uploaded tenant documents ended up committed to the repository.
+mediaRoot/
+staticRoot/
 # collected output only — source assets stay tracked
 !**/static/src/
 

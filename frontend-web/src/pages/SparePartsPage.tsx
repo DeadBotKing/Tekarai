@@ -17,6 +17,7 @@ import { DataTable, type DataTableColumn } from "../shared/components/DataTable"
 import { Modal, Toast } from "../shared/components/overlays";
 import { Badge, Button, Card, CardHeader, PermissionGuard, SectionHeader, SelectInput, TextInput } from "../shared/components/primitives";
 import { Icon } from "../shared/components/Icon";
+import { formatNumber } from "../core/localization/format";
 
 export const demoParts: SparePart[] = [
   { id: "sp-1", code: "SAL-4021", name: "بلبرینگ 6204", unit: "عدد", quantityOnHand: 42, minimumStock: 20, unitCost: 185_000, lowStock: false, createdAt: "1405/05/12", updatedAt: "" },
@@ -214,9 +215,9 @@ export function SparePartsPage(): JSX.Element {
     { key: "code", label: t("registry.code"), accessor: (row) => row.code, sortable: true, width: "14%", render: (row) => <strong>{row.code}</strong> },
     { key: "name", label: t("registry.name"), accessor: (row) => row.name, sortable: true },
     { key: "unit", label: t("warehouse.unit"), accessor: (row) => row.unit, sortable: true, width: "10%" },
-    { key: "quantityOnHand", label: t("warehouse.stock"), accessor: (row) => row.quantityOnHand, sortable: true, width: "12%", render: (row) => <strong>{row.quantityOnHand.toLocaleString()}</strong> },
+    { key: "quantityOnHand", label: t("warehouse.stock"), accessor: (row) => row.quantityOnHand, sortable: true, width: "12%", render: (row) => <strong>{formatNumber(row.quantityOnHand, "fa")}</strong> },
     { key: "minimumStock", label: t("warehouse.minimum"), accessor: (row) => row.minimumStock, sortable: true, width: "12%" },
-    { key: "unitCost", label: t("warehouse.unitCost"), accessor: (row) => row.unitCost, sortable: true, width: "14%", render: (row) => `${row.unitCost.toLocaleString()} ${t("warehouse.currency")}` },
+    { key: "unitCost", label: t("warehouse.unitCost"), accessor: (row) => row.unitCost, sortable: true, width: "14%", render: (row) => `${formatNumber(row.unitCost, "fa")} ${t("warehouse.currency")}` },
     { key: "state", label: t("project.status"), accessor: (row) => (lowStock(row) ? "low" : "ok"), sortable: true, width: "12%", render: (row) => lowStock(row) ? <Badge tone="warning" dot>{t("warehouse.lowStock")}</Badge> : <Badge tone="success" dot>{t("warehouse.inStock")}</Badge> },
     ...(runtimeConfig.demoMode || undefined ? [{ key: "action" as const, label: t("project.actions"), hideable: false, render: (row: SparePart) => <span className="row-actions"><PermissionGuard permission={PERMISSIONS.maintenanceInventoryManage}><Button variant="ghost" size="sm" icon="edit" onClick={() => openEdit(row)}>{t("common.edit")}</Button></PermissionGuard>
       <Button variant="ghost" size="sm" icon="book" title={t("warehouse.ledger")} onClick={() => openLedger(row)} aria-label={`${t("warehouse.ledger")} ${row.code}`}> </Button>
@@ -241,8 +242,8 @@ export function SparePartsPage(): JSX.Element {
     <div className="file-stats">
       <div><span>{t("warehouse.totalParts")}</span><strong>{parts.length}</strong></div>
       <div><span>{t("warehouse.lowStock")}</span><strong>{lowCount}</strong></div>
-      <div><span>{t("warehouse.stockValue")}</span><strong>{totalValue.toLocaleString()}</strong></div>
-      <div><span>{t("warehouse.totalStock")}</span><strong>{parts.reduce((sum, part) => sum + part.quantityOnHand, 0).toLocaleString()}</strong></div>
+      <div><span>{t("warehouse.stockValue")}</span><strong>{formatNumber(totalValue, "fa")}</strong></div>
+      <div><span>{t("warehouse.totalStock")}</span><strong>{formatNumber(parts.reduce((sum, part) => sum + part.quantityOnHand, 0), "fa")}</strong></div>
     </div>
     {(() => {
       const suggestions = buildReorderSuggestions(parts);
@@ -296,7 +297,7 @@ export function SparePartsPage(): JSX.Element {
     </Modal>
     <Modal open={Boolean(ledgerPart)} wide title={`${t("warehouse.ledger")} — ${ledgerPart?.code ?? ""}`} onClose={() => setLedgerPart(null)} footer={<Button variant="primary" onClick={() => setLedgerPart(null)}>{t("common.close")}</Button>}>
       {ledgerPart && <div className="ledger">
-        <p className="muted-cell">{t("warehouse.ledgerHint")} · <strong>{ledgerPart.name}</strong> — {t("warehouse.stock")}: <strong>{ledgerPart.quantityOnHand.toLocaleString()} {ledgerPart.unit}</strong></p>
+        <p className="muted-cell">{t("warehouse.ledgerHint")} · <strong>{ledgerPart.name}</strong> — {t("warehouse.stock")}: <strong>{formatNumber(ledgerPart.quantityOnHand, "fa")} {ledgerPart.unit}</strong></p>
         <PermissionGuard permission={PERMISSIONS.maintenanceInventoryManage}>
           <form className="ledger-form" onSubmit={(event) => { event.preventDefault(); submitTransaction(); }}>
             <SelectInput label={t("warehouse.ledgerType")} value={txForm.transactionType} onChange={(event) => setTxForm({ ...txForm, transactionType: event.target.value as PartTransactionType })} options={[
@@ -326,8 +327,8 @@ export function SparePartsPage(): JSX.Element {
             <tbody>
               {ledgerRows.map((row) => <tr key={row.id}>
                 <td><Badge tone={row.quantity >= 0 ? "success" : "warning"} dot>{row.typeLabel}</Badge></td>
-                <td><strong dir="ltr">{row.quantity > 0 ? `+${row.quantity.toLocaleString()}` : row.quantity.toLocaleString()}</strong> <span className="muted-cell">{row.unit}</span></td>
-                <td><strong>{row.balanceAfter.toLocaleString()}</strong> <span className="muted-cell">{row.unit}</span></td>
+                <td><strong dir="ltr">{row.quantity > 0 ? `+${formatNumber(row.quantity, "fa")}` : formatNumber(row.quantity, "fa")}</strong> <span className="muted-cell">{row.unit}</span></td>
+                <td><strong>{formatNumber(row.balanceAfter, "fa")}</strong> <span className="muted-cell">{row.unit}</span></td>
                 <td className="muted-cell">{row.reference || "—"}</td>
                 <td className="muted-cell">{row.note || "—"}</td>
                 <td className="muted-cell">{row.createdAt.slice(0, 10)}</td>

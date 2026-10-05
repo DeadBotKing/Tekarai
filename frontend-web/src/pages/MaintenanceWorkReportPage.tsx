@@ -18,6 +18,7 @@ import { Badge, Button, Card, SectionHeader } from "../shared/components/primiti
 import { JalaliDatePicker } from "../shared/components/JalaliDatePicker";
 import { Toast } from "../shared/components/overlays";
 import { formatJalali } from "../core/localization/jalali";
+import { formatNumber } from "../core/localization/format";
 
 const downloadCsv = (content: string, fileName: string): void => {
   const blob = new Blob(["﻿" + content], { type: "text/csv;charset=utf-8" });
@@ -121,9 +122,9 @@ export default function MaintenanceWorkReportPage(): JSX.Element {
       <div className="weekly-report-summary metric-grid">
         <Card padding="md"><span>کل اقدام‌ها</span><strong>{summary.totalOrders}</strong></Card>
         <Card padding="md"><span>تکمیل‌شده</span><strong>{summary.completedOrders}</strong></Card>
-        <Card padding="md"><span>مجموع توقف</span><strong>{summary.totalDowntimeMinutes.toLocaleString()} دقیقه</strong></Card>
-        <Card padding="md"><span>مجموع ساعت تعمیر</span><strong>{summary.totalLabourHours.toLocaleString()} ساعت</strong></Card>
-        <Card padding="md"><span>هزینه‌ی کل (ریال)</span><strong>{summary.totalCost.toLocaleString()}</strong></Card>
+        <Card padding="md"><span>مجموع توقف</span><strong>{formatNumber(summary.totalDowntimeMinutes, "fa")} دقیقه</strong></Card>
+        <Card padding="md"><span>مجموع ساعت تعمیر</span><strong>{formatNumber(summary.totalLabourHours, "fa")} ساعت</strong></Card>
+        <Card padding="md"><span>هزینه‌ی کل (ریال)</span><strong>{formatNumber(summary.totalCost, "fa")}</strong></Card>
       </div>
 
       {groups.length === 0 && (
@@ -141,7 +142,7 @@ export default function MaintenanceWorkReportPage(): JSX.Element {
               <Badge tone="success" dot>{group.completedCount} تکمیل</Badge>{" "}
               <Badge tone="warning" dot>{group.totalDowntimeMinutes} دقیقه توقف</Badge>{" "}
               <Badge tone="purple" dot>{group.totalLabourHours} ساعت تعمیر</Badge>{" "}
-              <Badge tone="neutral" dot>{group.totalRepairCost.toLocaleString()} ریال</Badge>
+              <Badge tone="neutral" dot>{formatNumber(group.totalRepairCost, "fa")} ریال</Badge>
             </span>
           </div>
           <table className="weekly-report-table" style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -167,11 +168,11 @@ export default function MaintenanceWorkReportPage(): JSX.Element {
                     </Badge>
                   </td>
                   <td style={td}>{formatJalali(order.createdAt)}</td>
-                  <td style={td}>{order.downtimeMinutes ? order.downtimeMinutes.toLocaleString() : "—"}</td>
-                  <td style={td}>{order.labourHours ? order.labourHours.toLocaleString() : "—"}</td>
+                  <td style={td}>{order.downtimeMinutes ? formatNumber(order.downtimeMinutes, "fa") : "—"}</td>
+                  <td style={td}>{order.labourHours ? formatNumber(order.labourHours, "fa") : "—"}</td>
                   <td style={td}>
                     {(order.labourCost || order.partsCost)
-                      ? ((order.labourCost ?? 0) + (order.partsCost ?? 0)).toLocaleString()
+                      ? formatNumber((order.labourCost ?? 0) + (order.partsCost ?? 0), "fa")
                       : "—"}
                   </td>
                 </tr>

@@ -11,18 +11,20 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('maintenance', '0015_fieldOperations'),
+        ("maintenance", "0015_fieldOperations"),
     ]
 
     operations = [
         migrations.RemoveConstraint(
-            model_name='offlinesyncoperationmodel',
-            name='ck_sync_operation_status',
+            model_name="offlinesyncoperationmodel",
+            name="ck_sync_operation_status",
         ),
         migrations.AddConstraint(
-            model_name='offlinesyncoperationmodel',
-            constraint=models.CheckConstraint(condition=models.Q(('status__in', ('applied', 'failed', 'rejected', 'conflict'))), name='ck_sync_operation_status'),
+            model_name="offlinesyncoperationmodel",
+            constraint=models.CheckConstraint(
+                condition=models.Q(("status__in", ("applied", "failed", "rejected", "conflict"))),
+                name="ck_sync_operation_status",
+            ),
         ),
     ]

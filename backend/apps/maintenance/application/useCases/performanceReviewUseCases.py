@@ -16,8 +16,8 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from types import SimpleNamespace
 from datetime import date
+from types import SimpleNamespace
 
 from apps.maintenance.application.services.tenantResolver import (
     parseDateOrNone,
@@ -187,9 +187,7 @@ class SaveReviewCycleUseCase(PerformanceReviewUseCaseBase):
             try:
                 numeric = float(value)
             except (TypeError, ValueError) as exc:
-                raise PerformanceReviewError(
-                    f"The weight for «{role}» must be a number."
-                ) from exc
+                raise PerformanceReviewError(f"The weight for «{role}» must be a number.") from exc
             if numeric < 0:
                 raise PerformanceReviewError("A rater weight cannot be negative.")
             roleWeights[role] = numeric
@@ -238,9 +236,7 @@ class DeleteReviewCycleUseCase(PerformanceReviewUseCaseBase):
                 "A closed cycle cannot be deleted; its results have already "
                 "been published. Reopen it first if it was closed in error."
             )
-        removed = self.reviewRepository.deleteCycle(
-            tenantId, uuid.UUID(cycle["id"]), now
-        )
+        removed = self.reviewRepository.deleteCycle(tenantId, uuid.UUID(cycle["id"]), now)
         if not removed:
             raise EntityNotFoundError("That review cycle no longer exists.")
         self.audit(
@@ -295,9 +291,7 @@ class SaveRaterScoreUseCase(PerformanceReviewUseCaseBase):
         except (TypeError, ValueError) as exc:
             raise PerformanceReviewError("A mark must be a number.") from exc
         if not SCORE_MIN <= score <= SCORE_MAX:
-            raise PerformanceReviewError(
-                f"A mark must be between {SCORE_MIN} and {SCORE_MAX}."
-            )
+            raise PerformanceReviewError(f"A mark must be between {SCORE_MIN} and {SCORE_MAX}.")
         try:
             personnelId = uuid.UUID(str(command.personnelId))
         except (TypeError, ValueError) as exc:

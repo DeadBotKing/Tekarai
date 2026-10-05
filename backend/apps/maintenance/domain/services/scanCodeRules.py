@@ -31,15 +31,11 @@ from apps.maintenance.domain.valueObjects.fieldOpsTypes import (
 
 #: Deep links this system prints. The ``app/`` prefix is optional because the
 #: router mounts the same pages with and without it in demo mode.
-_DEVICE_LINK = re.compile(
-    r"/(?:app/)?maintenance/devices/(?P<id>[0-9a-fA-F-]{8,36})(?:/|$|\?|#)"
-)
+_DEVICE_LINK = re.compile(r"/(?:app/)?maintenance/devices/(?P<id>[0-9a-fA-F-]{8,36})(?:/|$|\?|#)")
 _WORK_ORDER_LINK = re.compile(
     r"/(?:app/)?maintenance/work-orders/(?P<id>[0-9a-fA-F-]{8,36})(?:/|$|\?|#)"
 )
-_PART_LINK = re.compile(
-    r"/(?:app/)?maintenance/spare-parts/(?P<id>[0-9a-fA-F-]{8,36})(?:/|$|\?|#)"
-)
+_PART_LINK = re.compile(r"/(?:app/)?maintenance/spare-parts/(?P<id>[0-9a-fA-F-]{8,36})(?:/|$|\?|#)")
 _LOCATION_LINK = re.compile(
     r"/(?:app/)?maintenance/locations/(?P<id>[0-9a-fA-F-]{8,36})(?:/|$|\?|#)"
 )

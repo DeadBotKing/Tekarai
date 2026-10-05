@@ -22,12 +22,10 @@ class DeviceHistoryRepositoryDjango:
             createdAt=entry.createdAt,
         )
 
-    def listForDevice(
-        self, tenantId: uuid.UUID, deviceId: uuid.UUID
-    ) -> list[DeviceHistoryEntry]:
-        rows = DeviceHistoryModel.objects.filter(
-            tenantId=tenantId, deviceId=deviceId
-        ).order_by("createdAt")
+    def listForDevice(self, tenantId: uuid.UUID, deviceId: uuid.UUID) -> list[DeviceHistoryEntry]:
+        rows = DeviceHistoryModel.objects.filter(tenantId=tenantId, deviceId=deviceId).order_by(
+            "createdAt"
+        )
         return [self.toDomain(row) for row in rows]
 
     @staticmethod

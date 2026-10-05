@@ -67,3 +67,13 @@ export const useLocalization = (): LocalizationContextValue => {
   if (!context) throw new Error("useLocalization must be used inside LocalizationProvider");
   return context;
 };
+
+/**
+ * The active locale without demanding a provider.
+ *
+ * Presentational primitives (charts, badges) need the locale only to pick a
+ * digit shape. Making them throw outside a provider would turn a cosmetic
+ * concern into a crash in isolated unit tests and in Storybook-style usage,
+ * so they fall back to the product default instead.
+ */
+export const useLocaleOrDefault = (): Locale => useContext(LocalizationContext)?.locale ?? "fa";

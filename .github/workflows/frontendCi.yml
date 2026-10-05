@@ -1,0 +1,66 @@
+# ============================================================================
+# Tekarai — Frontend Continuous Integration
+#
+# The repository shipped a backend quality gate but nothing guarded
+# frontend-web, so a type error, a failing test or a broken build could reach
+# main unnoticed. This mirrors backendCi.yml: same trigger shape, same
+# fail-fast-disabled matrix, and the gates the frontend already defines as
+# npm scripts (`typecheck`, `test`, `build`).
+# ============================================================================
+name: frontendCi
+
+on:
+  push:
+    branches: [main]
+    paths: ["frontend-web/**", ".github/workflows/frontendCi.yml"]
+  pull_request:
+    paths: ["frontend-web/**", ".github/workflows/frontendCi.yml"]
+
+jobs:
+  qualityGate:
+    name: Quality Gate (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node-version: ["20.x"]
+
+    defaults:
+      run:
+        working-directory: frontend-web
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: frontend-web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Tests
+        # The suite must run against the mocked API. A real VITE_API_BASE_URL
+        # makes several specs attempt live network calls and fail with
+        # SYS_NETWORK_ERROR, so demo mode is pinned explicitly here rather
+        # than inherited from whatever .env happens to exist.
+        run: npm test
+        env:
+          VITE_DEMO_MODE: "true"
+
+      - name: Build
+        run: npm run build
+
+      - name: Audit production dependencies
+        # Advisory-only: a new upstream advisory should surface in the log
+        # without blocking an unrelated pull request.
+        run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true

@@ -62,7 +62,9 @@ def _recordEntity(model: InspectionRecordModel) -> InspectionRecord:
 class PartReservationRepositoryImpl:
     """PartReservationRepository (domain protocol)."""
 
-    def listForTenant(self, tenantId: uuid.UUID, workOrderId: uuid.UUID | None = None) -> list[PartReservation]:
+    def listForTenant(
+        self, tenantId: uuid.UUID, workOrderId: uuid.UUID | None = None
+    ) -> list[PartReservation]:
         query = PartReservationModel.objects.filter(tenantId=tenantId, deletedAt__isnull=True)
         if workOrderId:
             query = query.filter(workOrderId=workOrderId)
@@ -83,7 +85,9 @@ class PartReservationRepositoryImpl:
         )
         return _reservationEntity(model)
 
-    def close(self, tenantId: uuid.UUID, reservationId: str, status: str, closedAt: datetime) -> PartReservation | None:
+    def close(
+        self, tenantId: uuid.UUID, reservationId: str, status: str, closedAt: datetime
+    ) -> PartReservation | None:
         try:
             model = PartReservationModel.objects.get(
                 id=reservationId, tenantId=tenantId, deletedAt__isnull=True
@@ -122,17 +126,15 @@ class InspectionSyncRepositoryImpl:
         return _templateEntity(model)
 
     def getTemplate(self, tenantId: uuid.UUID, templateId: str) -> InspectionTemplate | None:
-        model = (
-            InspectionTemplateModel.objects.filter(id=templateId, tenantId=tenantId, deletedAt__isnull=True)
-            .first()
-        )
+        model = InspectionTemplateModel.objects.filter(
+            id=templateId, tenantId=tenantId, deletedAt__isnull=True
+        ).first()
         return _templateEntity(model) if model else None
 
     def commitTemplate(self, tenantId: uuid.UUID, templateId: str) -> InspectionTemplate | None:
-        model = (
-            InspectionTemplateModel.objects.filter(id=templateId, tenantId=tenantId, deletedAt__isnull=True)
-            .first()
-        )
+        model = InspectionTemplateModel.objects.filter(
+            id=templateId, tenantId=tenantId, deletedAt__isnull=True
+        ).first()
         if not model:
             return None
         if not model.isCommitted:
@@ -156,7 +158,9 @@ class InspectionSyncRepositoryImpl:
         )
         return _recordEntity(model)
 
-    def listRecords(self, tenantId: uuid.UUID, workOrderId: uuid.UUID | None = None) -> list[InspectionRecord]:
+    def listRecords(
+        self, tenantId: uuid.UUID, workOrderId: uuid.UUID | None = None
+    ) -> list[InspectionRecord]:
         query = InspectionRecordModel.objects.filter(tenantId=tenantId)
         if workOrderId:
             query = query.filter(workOrderId=workOrderId)

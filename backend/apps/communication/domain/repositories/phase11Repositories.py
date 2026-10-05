@@ -7,6 +7,7 @@ implementations live in infrastructure (§47/§54). Every method takes an explic
 
 from __future__ import annotations
 
+import builtins
 import uuid
 from typing import Protocol, runtime_checkable
 
@@ -88,7 +89,7 @@ class OfficialMessageRepository(Protocol):
         *,
         status: str = "",
         limit: int = 50,
-    ) -> list[OfficialMessage]: ...
+    ) -> builtins.list[OfficialMessage]: ...
 
 
 @runtime_checkable
@@ -97,7 +98,7 @@ class MessageReportRepository(Protocol):
     def getById(self, tenantId: uuid.UUID, reportId: uuid.UUID) -> MessageReport | None: ...
     def list(
         self, tenantId: uuid.UUID, *, status: str = "", limit: int = 50
-    ) -> list[MessageReport]: ...
+    ) -> builtins.list[MessageReport]: ...
 
 
 @runtime_checkable

@@ -2,11 +2,15 @@
 
 ## سریع‌ترین راه — `run_dev.cmd`
 
-```
-run_dev.cmd -UseSqlite
+```powershell
+.\run_dev.cmd -UseSqlite
 ```
 
 یا فقط روی `run_dev.cmd` دوبار کلیک کنید.
+
+> `.\` در ابتدای نام الزامی است. PowerShell از پوشهٔ جاری دستور اجرا نمی‌کند و
+> بدون آن خطای `CommandNotFoundException` می‌دهد. این محدودیت ربطی به امضای
+> دیجیتال ندارد و برای `.cmd` هیچ مشکلی ایجاد نمی‌کند.
 
 این فایل همهٔ ماجرای «اسکریپت امضا نشده» را دور می‌زند. ویندوز اجرای مستقیم
 `run_dev.ps1` را رد می‌کند مگر اینکه امضای دیجیتال داشته باشد یا سیاست امنیتی
@@ -17,10 +21,10 @@ run_dev.cmd -UseSqlite
 
 تمام سوئیچ‌های `run_dev.ps1` عیناً منتقل می‌شوند:
 
-```
-run_dev.cmd                 اتصال به SQL Server (پیش‌فرض)
-run_dev.cmd -UseSqlite      بدون نیاز به دیتابیس سرور
-run_dev.cmd -DemoMode       ورود آفلاین نمایشی
+```powershell
+.\run_dev.cmd                 اتصال به SQL Server (پیش‌فرض)
+.\run_dev.cmd -UseSqlite      بدون نیاز به دیتابیس سرور
+.\run_dev.cmd -DemoMode       ورود آفلاین نمایشی
 ```
 
 ### اگر این خطا را دیدید
@@ -30,7 +34,7 @@ run_dev.cmd -DemoMode       ورود آفلاین نمایشی
     + FullyQualifiedErrorId : UnauthorizedAccess
 ```
 
-یعنی `.\run_dev.ps1` را مستقیم تایپ کرده‌اید. به‌جایش `run_dev.cmd` را صدا بزنید،
+یعنی `.\run_dev.ps1` را مستقیم تایپ کرده‌اید. به‌جایش `.\run_dev.cmd` را صدا بزنید،
 یا اگر ترجیح می‌دهید دستی باشد:
 
 ```powershell

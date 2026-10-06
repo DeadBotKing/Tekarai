@@ -15,6 +15,7 @@ import { useTheme } from "../core/theme/themeContext";
 import { Icon, type IconName } from "../shared/components/Icon";
 import { Avatar, IconButton } from "../shared/components/primitives";
 import { OfflineIndicator } from "../shared/components/OfflineIndicator";
+import { DemoModeBanner } from "../shared/components/DemoModeBanner";
 import { AccentSwatches } from "../shared/components/AccentSwatches";
 import { Drawer } from "../shared/components/overlays";
 
@@ -250,6 +251,7 @@ export function AppShell(): JSX.Element {
             </div>
           </div>
           <div className="topbar__actions">
+            <DemoModeBanner />
             <OfflineIndicator />
             <button type="button" className="global-search-trigger" onClick={openSearch}>
               <Icon name="search" size={17} />

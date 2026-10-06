@@ -7,6 +7,7 @@ import { DataTable, type DataTableColumn } from "../shared/components/DataTable"
 import { createSecurityService, type SessionRecord, type UserAccount, type MfaSetupResult } from "../features/security/securityService";
 import { Toast } from "../shared/components/overlays";
 import { Badge, Button, Card, CardHeader, SectionHeader, TextInput } from "../shared/components/primitives";
+import { demoAccountUser } from "../features/demo/pageDemoFixtures";
 
 export function AccountPage(): JSX.Element {
   const t = faText;
@@ -31,7 +32,7 @@ export function AccountPage(): JSX.Element {
   };
   useEffect(() => {
     if (runtimeConfig.demoMode) {
-      setMe({ id: "demo", tenantId: "demo", username: "demo.admin", email: "demo@tekarai.local", displayName: "راهبر نمایشی", status: "active", createdAt: "" });
+      setMe(demoAccountUser);
       return;
     }
     service.me().then((account) => setMe(account.user)).catch(() => fail("admin.loadFailed"));

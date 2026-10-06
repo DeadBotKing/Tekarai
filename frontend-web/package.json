@@ -13,7 +13,8 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "typecheck": "tsc -b --pretty false",
-    "quality": "npm run typecheck && npm run test && npm run build"
+    "quality": "npm run typecheck && npm run test && npm run verify:demo-boundary",
+    "verify:demo-boundary": "node scripts/verifyDemoBoundary.mjs"
   },
   "dependencies": {
     "@types/qrcode": "^1.5.6",

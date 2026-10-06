@@ -666,3 +666,85 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .pm-cal__cell--closed { background: var(--surface-2); }
 .pm-cal__holiday { display: block; overflow: hidden; color: var(--danger, #d1495b); font-size: 9px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; unicode-bidi: plaintext; }
 .pm-cal__conflict { display: inline-flex; align-items: center; gap: 3px; margin-top: 3px; padding: 1px 5px; color: #a9670b; background: var(--warning-soft); border-radius: 4px; font-size: 9px; font-weight: 700; }
+
+/* Demo mode is visually identical to the real product; this says which one
+   you are looking at, and cannot be dismissed. */
+.demo-banner { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; color: #7a3d00; background: #ffe8c2; border: 1px solid #f0b454; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.demo-banner__dot { width: 7px; height: 7px; background: #e07b00; border-radius: 50%; }
+@media (max-width: 900px) { .demo-banner { font-size: 0; gap: 0; padding: 7px; } .demo-banner__dot { width: 9px; height: 9px; } }
+
+/* Error state — what a page shows instead of empty tables or fabricated rows
+   when the API call failed. Loud enough to notice, calm enough to live inside
+   a card. */
+.error-state {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px 22px;
+  border: 1px solid color-mix(in srgb, var(--color-danger, #d64545) 35%, transparent);
+  border-radius: var(--radius-md, 12px);
+  background: color-mix(in srgb, var(--color-danger, #d64545) 7%, var(--color-surface, #fff));
+}
+
+.error-state--compact {
+  padding: 12px 14px;
+  gap: 10px;
+}
+
+.error-state__icon {
+  display: inline-flex;
+  color: var(--color-danger, #d64545);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.error-state__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.error-state__body strong {
+  font-size: 0.95rem;
+  color: var(--color-text, #1a1a1a);
+}
+
+.error-state__detail {
+  font-size: 0.82rem;
+  color: var(--color-text-muted, #666);
+  word-break: break-word;
+}
+
+.error-state__hint {
+  font-size: 0.78rem;
+  color: var(--color-text-muted, #666);
+  opacity: 0.85;
+}
+
+.error-state__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.error-state--compact .error-state__hint {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .error-state {
+    flex-wrap: wrap;
+  }
+  .error-state__actions {
+    width: 100%;
+  }
+}
+
+/* Padding for an error state dropped into a `padding="none"` card where a
+   table would otherwise sit flush to the edges. */
+.card-pad {
+  padding: 18px;
+}

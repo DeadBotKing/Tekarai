@@ -1,6 +1,10 @@
 import { readFileSync } from "node:fs";
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
+import {
+  demoFixtureFirewall,
+  fixturesAllowedFor,
+} from "./vite/demoFixtureFirewall";
 
 const { version } = JSON.parse(readFileSync("./package.json", "utf-8")) as {
   version: string;
@@ -14,34 +18,45 @@ const { version } = JSON.parse(readFileSync("./package.json", "utf-8")) as {
  */
 const buildId = `${version}-${Date.now().toString(36)}`;
 
-export default defineConfig({
-  plugins: [react()],
-  define: {
-    __APP_BUILD_ID__: JSON.stringify(buildId),
-  },
-  server: {
-    host: "0.0.0.0",
-    allowedHosts: true,
-    port: 4173,
-    proxy: {
-      "/api": {
-        target: "http://127.0.0.1:8000",
-        changeOrigin: true,
-      },
-      "/ws": {
-        target: "ws://127.0.0.1:8000",
-        ws: true,
-        changeOrigin: true,
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "VITE_");
+  const allowFixtures = fixturesAllowedFor(mode, { ...env, ...process.env });
+
+  if (!allowFixtures) {
+    // Stated out loud: a build without fixtures is the safe default, but it
+    // is also the build where a leftover demo branch renders nothing.
+    console.info("[tekarai] demo fixtures excluded from this build");
+  }
+
+  return {
+    plugins: [react(), demoFixtureFirewall({ allowFixtures })],
+    define: {
+      __APP_BUILD_ID__: JSON.stringify(buildId),
+    },
+    server: {
+      host: "0.0.0.0",
+      allowedHosts: true,
+      port: 4173,
+      proxy: {
+        "/api": {
+          target: "http://127.0.0.1:8000",
+          changeOrigin: true,
+        },
+        "/ws": {
+          target: "ws://127.0.0.1:8000",
+          ws: true,
+          changeOrigin: true,
+        },
       },
     },
-  },
-  preview: {
-    host: "0.0.0.0",
-    allowedHosts: true,
-    port: 4173,
-  },
-  build: {
-    sourcemap: true,
-    target: "es2022",
-  },
+    preview: {
+      host: "0.0.0.0",
+      allowedHosts: true,
+      port: 4173,
+    },
+    build: {
+      sourcemap: true,
+      target: "es2022",
+    },
+  };
 });

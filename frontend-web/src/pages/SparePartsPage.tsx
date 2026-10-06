@@ -17,16 +17,16 @@ import { DataTable, type DataTableColumn } from "../shared/components/DataTable"
 import { Modal, Toast } from "../shared/components/overlays";
 import { Badge, Button, Card, CardHeader, PermissionGuard, SectionHeader, SelectInput, TextInput } from "../shared/components/primitives";
 import { Icon } from "../shared/components/Icon";
+import { ErrorState } from "../shared/components/ErrorState";
 import { formatNumber } from "../core/localization/format";
+// Demo fixtures live behind the build-time firewall; re-exported so the
+// existing importers keep one import path.
+export {
+  demoParts,
+  seedDemoLedger,
+} from "../features/demo/pageDemoFixtures";
+import { demoParts, seedDemoLedger } from "../features/demo/pageDemoFixtures";
 
-export const demoParts: SparePart[] = [
-  { id: "sp-1", code: "SAL-4021", name: "بلبرینگ 6204", unit: "عدد", quantityOnHand: 42, minimumStock: 20, unitCost: 185_000, lowStock: false, createdAt: "1405/05/12", updatedAt: "" },
-  { id: "sp-2", code: "BLT-1180", name: "تسمه V118", unit: "عدد", quantityOnHand: 6, minimumStock: 10, unitCost: 320_000, lowStock: true, createdAt: "1405/05/12", updatedAt: "" },
-  { id: "sp-3", code: "FLT-2200", name: "فیلتر روغن هیدرولیک", unit: "عدد", quantityOnHand: 15, minimumStock: 8, unitCost: 610_000, lowStock: false, createdAt: "1405/05/13", updatedAt: "" },
-  { id: "sp-4", code: "OIL-5046", name: "روغن هیدرولیک ISO46", unit: "لیتر", quantityOnHand: 120, minimumStock: 60, unitCost: 340_000, lowStock: false, createdAt: "1405/05/14", updatedAt: "" },
-  { id: "sp-5", code: "SL-3309", name: "سیل مکانیکی 45mm", unit: "عدد", quantityOnHand: 3, minimumStock: 5, unitCost: 1_850_000, lowStock: true, createdAt: "1405/05/15", updatedAt: "" },
-  { id: "sp-6", code: "CNT-8800", name: "کنتاکتور 25A", unit: "عدد", quantityOnHand: 9, minimumStock: 4, unitCost: 2_400_000, lowStock: false, createdAt: "1405/05/15", updatedAt: "" },
-];
 
 interface PartFormState { code: string; name: string; unit: string; quantityOnHand: string; minimumStock: string; unitCost: string; }
 const emptyForm: PartFormState = { code: "", name: "", unit: "عدد", quantityOnHand: "0", minimumStock: "0", unitCost: "0" };
@@ -34,12 +34,6 @@ const emptyForm: PartFormState = { code: "", name: "", unit: "عدد", quantityO
 interface TxFormState { transactionType: PartTransactionType; quantity: string; reference: string; note: string; }
 const emptyTxForm: TxFormState = { transactionType: "RECEIPT", quantity: "", reference: "", note: "" };
 
-/** دفتر نمایشی هر قطعه: دو ردیف منسجم که به موجودی فعلی می‌رسد. */
-export function seedDemoLedger(part: SparePart): PartTransaction[] {
-  const received: PartTransaction = { id: `${part.id}-t1`, partId: part.id, partCode: part.code, partName: part.name, unit: part.unit, transactionType: "RECEIPT", typeLabel: "رسید", quantity: part.quantityOnHand + 2, balanceAfter: part.quantityOnHand + 2, note: "موجودی اولیه", reference: "رسید ابتدایی", actorId: "", createdAt: part.createdAt };
-  const counted: PartTransaction = { id: `${part.id}-t2`, partId: part.id, partCode: part.code, partName: part.name, unit: part.unit, transactionType: "ADJUSTMENT", typeLabel: "تعدیل", quantity: -2, balanceAfter: part.quantityOnHand, note: "انبارگردانی", reference: "", actorId: "", createdAt: part.createdAt };
-  return [counted, received];
-}
 
 export function signedQuantity(type: PartTransactionType, amount: number): number {
   if (type === "ISSUE") return -Math.abs(amount);
@@ -57,6 +51,7 @@ export function SparePartsPage(): JSX.Element {
   const [search, setSearch] = useState("");
   const [lowOnly, setLowOnly] = useState(false);
   const [loading, setLoading] = useState(!runtimeConfig.demoMode);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<SparePart | null>(null);
   const [form, setForm] = useState<PartFormState>(emptyForm);
@@ -75,8 +70,10 @@ export function SparePartsPage(): JSX.Element {
     if (runtimeConfig.demoMode) return;
     setLoading(true);
     service.listSpareParts(searchText)
-      .then(setParts)
-      .catch(() => setToast(t("warehouse.loadFailed")))
+      .then((rows) => { setParts(rows); setLoadError(null); })
+      // A failed load is kept on screen, not flashed in a toast. An empty
+      // warehouse and an unreachable server are different facts.
+      .catch((error: unknown) => setLoadError(error instanceof Error ? error.message : t("warehouse.loadFailed")))
       .finally(() => setLoading(false));
   };
   useEffect(() => { refresh(""); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
@@ -271,7 +268,13 @@ export function SparePartsPage(): JSX.Element {
         <div className="search-box"><Icon name="search" size={16} /><input value={search} aria-label={t("warehouse.search")} placeholder={t("warehouse.search")} onChange={(event) => setSearch(event.target.value)} /></div>
         <Button variant={lowOnly ? "secondary" : "ghost"} size="sm" icon="warning" onClick={() => setLowOnly((current) => !current)}>{t("warehouse.lowOnly")}</Button>
       </div>} />
-      <DataTable columns={columns} data={filtered} rowKey={(row) => row.id} search="" exportName="tekarai-spare-parts" empty={{ title: loading ? t("common.loading") : t("warehouse.empty") }} />
+      {loadError ? (
+        <div className="card-pad">
+          <ErrorState detail={loadError} onRetry={() => refresh(search)} />
+        </div>
+      ) : (
+        <DataTable columns={columns} data={filtered} rowKey={(row) => row.id} search="" exportName="tekarai-spare-parts" empty={{ title: loading ? t("common.loading") : t("warehouse.empty") }} />
+      )}
     </Card>
     <Modal open={modalOpen} title={editing ? t("warehouse.editPart") : t("warehouse.addPart")} onClose={() => setModalOpen(false)} footer={<>
       <Button variant="secondary" onClick={() => setModalOpen(false)}>{t("common.cancel")}</Button>

@@ -6,6 +6,102 @@ made it impossible to tell what any given commit changed or to roll back to a
 known-good state. Entries follow [Keep a Changelog](https://keepachangelog.com)
 and the project aims at [Semantic Versioning](https://semver.org).
 
+## [0.4.0]
+
+### Security
+
+- Demo fixtures are no longer linked into builds that are not demo builds.
+  `vite/demoFixtureFirewall.ts` replaces each fixture module at build time
+  with a same-named, empty stub. A runtime flag could not fix this: static
+  imports had already put roughly 45 KB of fabricated Persian equipment,
+  people and suppliers into every production bundle regardless of what
+  `demoMode` said. A `VITE_DEMO_MODE=false` build now contains **zero**
+  fabricated records across 66 artefacts.
+- Fabricated records that sat inline inside page components — a supplier in
+  `ProcurementPage`, an administrator in `AccountPage`, a role in
+  `AdministrationPage`, six parts in `SparePartsPage` — moved to
+  `src/features/demo/pageDemoFixtures.ts`, where the firewall covers them.
+  Inline fixtures were invisible to any module-level rule.
+
+### Added
+
+- `ErrorState` component. A failed request is now reported on screen with a
+  retry, replacing `.catch(() => setRows([]))`, which made an unreachable
+  server look identical to an empty warehouse, and replacing the demo
+  fallback, which answered a failure with fiction. Wired into
+  `SparePartsPage`, `ProcurementPage` and `AdministrationPage`.
+- `src/tests/demoFixtureIsolation.test.tsx` — renders 20 pages with
+  `demoMode: false` and every request rejecting, and asserts no fixture
+  string reaches the DOM. Verified by mutation: restoring one demo fallback
+  makes it fail.
+- `src/tests/demoFixtureFirewall.test.ts` — 14 specs over the firewall's
+  rules and the stubs it generates.
+- `npm run verify:demo-boundary` — builds with demo mode off and greps the
+  artefacts, checking what ships rather than only the rules meant to produce
+  it. Added to `npm run quality`.
+
+### Changed
+
+- Demo service factories in a non-demo build now throw instead of returning
+  an empty object. Reaching one is a routing bug, and a loud failure in
+  staging beats a blank page in front of a customer. Data exports keep their
+  shape (`[]`, `{}`) so a leaked consumer renders empty rather than crashing.
+
+### Known issues
+
+- The 151 inline `demoMode` branches still exist and are still frozen by the
+  ratchet. Production can no longer serve fixtures, but the pages are not yet
+  on the service seam. See `docs/DemoModeBoundary.md`.
+- The spare-parts CSV import template still ships one sample row
+  (`بلبرینگ 6204`). It is a template, not data presented as the tenant's own;
+  the exception is listed explicitly in `scripts/verifyDemoBoundary.mjs`.
+
+## [0.3.0]
+
+### Security
+
+- A production build no longer honours `VITE_DEMO_MODE`. Demo mode includes
+  `demoLogin`, which ignores the submitted credentials and returns
+  `role: "Platform Administrator"` with `permissions: ["*"]`; a single
+  environment variable was therefore the whole distance between a real
+  deployment and one that admits anybody as administrator. Enabling demo mode
+  in a production build now additionally requires
+  `VITE_ALLOW_DEMO_IN_PRODUCTION=true`, a flag with no other purpose. A refusal
+  is reported on the console rather than applied silently.
+
+### Added
+
+- `DemoModeBanner` in the application shell. Demo and real builds used to look
+  identical; an active demo mode is now stated on screen, collapsing to an icon
+  below 900px.
+- `src/tests/demoModeProductionGuard.test.ts` — 6 specs pinning the refusal,
+  the escape hatch and unchanged development behaviour.
+- `src/tests/demoModeBoundary.test.ts` — a ratchet over the 151 `demoMode`
+  references in 35 files. It fails when a clean file gains a branch, when a
+  branching file gains more, and when branches are removed without lowering the
+  baseline, so the count can only shrink.
+- `docs/DemoModeBoundary.md` — the evidence, what is enforced, and the
+  file-by-file plan for removing the remaining branches.
+- `VITE_ALLOW_DEMO_IN_PRODUCTION` documented in `frontend-web/.env.example`,
+  with the credential bypass spelled out next to `VITE_DEMO_MODE`.
+
+### Known issues
+
+- Demo mode is still implemented as 151 inline branches rather than a service
+  seam, so roughly 45 KB of fabricated fixtures still ship in the production
+  bundle. The boundary is enforced and frozen; the branches are not yet gone.
+  See `docs/DemoModeBoundary.md`.
+
+## [0.2.7]
+
+### Fixed
+
+- `RUNNING-WINDOWS.md` told the reader to type `run_dev.cmd`, which PowerShell
+  rejects with `CommandNotFoundException` — it does not run commands from the
+  current directory without an explicit `.\`. Every invocation in the document
+  now reads `.\run_dev.cmd`, with a note that the prefix is required and that
+  it has nothing to do with the signing restriction that applies to `.ps1`.
+
 ## [0.2.6]
 
 ### Added — `run_dev.cmd`, a launcher Windows will actually run

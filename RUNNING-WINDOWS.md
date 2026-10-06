@@ -1,5 +1,45 @@
 # اجرای Tekarai روی ویندوز (PowerShell)
 
+## سریع‌ترین راه — `run_dev.cmd`
+
+```
+run_dev.cmd -UseSqlite
+```
+
+یا فقط روی `run_dev.cmd` دوبار کلیک کنید.
+
+این فایل همهٔ ماجرای «اسکریپت امضا نشده» را دور می‌زند. ویندوز اجرای مستقیم
+`run_dev.ps1` را رد می‌کند مگر اینکه امضای دیجیتال داشته باشد یا سیاست امنیتی
+دستگاه را عوض کنید — کاری که برای راه‌اندازی یک سرور توسعه نه لازم است و نه
+درست. فایل‌های `.cmd` اصلاً مشمول این سیاست نیستند، پس `run_dev.cmd` اسکریپت را
+با سیاست آزاد **فقط برای همان یک پردازه** اجرا می‌کند. هیچ تنظیمی روی سیستم شما
+تغییر نمی‌کند.
+
+تمام سوئیچ‌های `run_dev.ps1` عیناً منتقل می‌شوند:
+
+```
+run_dev.cmd                 اتصال به SQL Server (پیش‌فرض)
+run_dev.cmd -UseSqlite      بدون نیاز به دیتابیس سرور
+run_dev.cmd -DemoMode       ورود آفلاین نمایشی
+```
+
+### اگر این خطا را دیدید
+
+```
+.\run_dev.ps1 : File ... is not digitally signed.
+    + FullyQualifiedErrorId : UnauthorizedAccess
+```
+
+یعنی `.\run_dev.ps1` را مستقیم تایپ کرده‌اید. به‌جایش `run_dev.cmd` را صدا بزنید،
+یا اگر ترجیح می‌دهید دستی باشد:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\run_dev.ps1 -UseSqlite
+```
+
+---
+
+
 پیش‌نیاز: **Python 3.12 یا بالاتر** و **Node.js 20 یا بالاتر**.
 
 ```powershell
@@ -20,7 +60,7 @@ node --version
 زیپ را از حالت فشرده خارج کنید و وارد پوشه شوید:
 
 ```powershell
-cd C:\path\to\Tekarai
+cd C:\Users\Mitra\Desktop\Tekarai
 ```
 
 ### بک‌اند
@@ -48,7 +88,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 در یک پنجرهٔ PowerShell **دوم**:
 
 ```powershell
-cd C:\path\to\Tekarai\frontend-web
+cd C:\Users\Mitra\Desktop\Tekarai\frontend-web
 npm ci
 ```
 
@@ -59,7 +99,7 @@ npm ci
 **پنجرهٔ اول — بک‌اند روی پورت 8000:**
 
 ```powershell
-cd C:\path\to\Tekarai\backend
+cd C:\Users\Mitra\Desktop\Tekarai\backend
 .\.venv\Scripts\Activate.ps1
 python manage.py runserver 0.0.0.0:8000 --settings=config.settings.development
 ```
@@ -67,7 +107,7 @@ python manage.py runserver 0.0.0.0:8000 --settings=config.settings.development
 **پنجرهٔ دوم — فرانت‌اند روی پورت 4173:**
 
 ```powershell
-cd C:\path\to\Tekarai\frontend-web
+cd C:\Users\Mitra\Desktop\Tekarai\frontend-web
 npm run dev
 ```
 
@@ -91,7 +131,7 @@ API نیست.
 اگر دیتابیس را خراب کردید یا می‌خواهید از صفر شروع کنید:
 
 ```powershell
-cd C:\path\to\Tekarai\backend
+cd C:\Users\Mitra\Desktop\Tekarai\backend
 .\.venv\Scripts\Activate.ps1
 Remove-Item devdb.sqlite3 -ErrorAction SilentlyContinue
 python manage.py migrate       --settings=config.settings.development
@@ -111,7 +151,7 @@ Demo seed done for tenant «platform» → locations=9, personnel=6, spareParts=
 
 ```powershell
 # بک‌اند (۲۹۵۴ تست)
-cd C:\path\to\Tekarai\backend
+cd C:\Users\Mitra\Desktop\Tekarai\backend
 .\.venv\Scripts\Activate.ps1
 python manage.py test --settings=config.settings.testing
 ruff check .
@@ -119,7 +159,7 @@ ruff format --check .
 mypy config apps tests
 
 # فرانت‌اند (۲۴۴ تست)
-cd C:\path\to\Tekarai\frontend-web
+cd C:\Users\Mitra\Desktop\Tekarai\frontend-web
 $env:VITE_DEMO_MODE = "true"; npm test
 npm run typecheck
 npm run build

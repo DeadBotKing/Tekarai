@@ -1,30 +1,30 @@
 @echo off
-chcp 65001 >nul
-rem ============================================================================
-rem  Tekarai - اجرای کل برنامه (بک‌اند + فرانت) بدون درگیری با Execution Policy
-rem
-rem      run_dev.cmd                 -> مثل run_dev.ps1 (SQL Server / SQL Express)
-rem      run_dev.cmd -UseSqlite      -> بدون SQL Server، روی SQLite محلی
-rem      run_dev.cmd -DemoMode       -> فقط رابط کاربری، بدون بک‌اند
-rem
-rem  این فایل ابتدا قفل «فایل دانلود شده از اینترنت» را از اسکریپت‌های .ps1
-rem  برمی‌دارد و بعد run_dev.ps1 را با دور زدن Execution Policy اجرا می‌کند.
-rem ============================================================================
-setlocal
-cd /d "%~dp0"
+REM ===========================================================================
+REM Tekarai - start the whole platform with one double-click.
+REM
+REM Windows refuses to run run_dev.ps1 directly unless the script is digitally
+REM signed or the machine policy has been changed, which is a security setting
+REM most people cannot or should not alter just to start a dev server. A .cmd
+REM file is not subject to the PowerShell execution policy at all, so this
+REM launcher hands the script to PowerShell with the policy bypassed for that
+REM one process only. Nothing on the machine is changed.
+REM
+REM   run_dev.cmd                 - SQL Server (SQL Express), the default
+REM   run_dev.cmd -UseSqlite      - offline SQLite, no database server needed
+REM   run_dev.cmd -DemoMode       - offline demo login
+REM
+REM Every switch run_dev.ps1 accepts is forwarded unchanged.
+REM ===========================================================================
 
-echo == آزادسازی اسکریپت‌های PowerShell (یک‌بار) ==
-powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-ChildItem -Path '%~dp0' -Filter *.ps1 -Recurse -ErrorAction SilentlyContinue | Unblock-File -ErrorAction SilentlyContinue"
-
-echo == اجرای run_dev.ps1 ==
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0run_dev.ps1" %*
-set "RESULT=%ERRORLEVEL%"
+set "TEKARAI_EXIT=%ERRORLEVEL%"
 
-if not "%RESULT%"=="0" (
+if not "%TEKARAI_EXIT%"=="0" (
   echo.
-  echo اجرا با کد %RESULT% پایان یافت. اگر خطای پایگاه داده بود، اول این را اجرا کنید:
-  echo     fix_login.cmd
+  echo Tekarai stopped with exit code %TEKARAI_EXIT%.
+  echo Scroll up for the error, or check the logs\ folder.
   echo.
   pause
 )
-exit /b %RESULT%
+
+exit /b %TEKARAI_EXIT%

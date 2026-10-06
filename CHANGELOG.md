@@ -6,6 +6,157 @@ made it impossible to tell what any given commit changed or to roll back to a
 known-good state. Entries follow [Keep a Changelog](https://keepachangelog.com)
 and the project aims at [Semantic Versioning](https://semver.org).
 
+## [0.2.6]
+
+### Added — `run_dev.cmd`, a launcher Windows will actually run
+
+`run_dev.ps1` was the only way to start the stack, and a default Windows
+install refuses to run an unsigned `.ps1`:
+
+```
+.\run_dev.ps1 : File ...\run_dev.ps1 is not digitally signed.
+    + FullyQualifiedErrorId : UnauthorizedAccess
+```
+
+The usual advice — `Unblock-File`, or changing the execution policy — either
+fails under `AllSigned` or asks someone to weaken a machine-wide security
+setting in order to start a development server. `.cmd` files are not subject
+to the execution policy at all, so `run_dev.cmd` hands the script to
+PowerShell with `-ExecutionPolicy Bypass` scoped to that single process.
+Nothing on the machine is changed, and it works by double-click.
+
+Every switch is forwarded unchanged: `run_dev.cmd -UseSqlite`,
+`run_dev.cmd -DemoMode`, and so on. The exit code is propagated, and a failure
+pauses so a double-clicked window does not vanish before the error is read.
+
+### Changed
+
+- `RUNNING-WINDOWS.md` leads with `run_dev.cmd`, explains the signing error and
+  what to do about it, and now uses real paths instead of `C:\path\to\…`
+  placeholders (7 occurrences).
+
+## [0.2.5]
+
+### Added — a note on each requested part
+
+A requisition had one «دلیل درخواست» covering the whole document, so there was
+nowhere to say why *this* bearing is wanted while the next line is routine.
+The line table in the database has carried a `note` column all along, the
+serializer declares it and the create view already persists it — only the form
+never sent one and no screen ever showed one.
+
+- The compose row gained **«توضیحات این قطعه»**, which travels with the line it
+  was typed for. It is cleared after the line is added, so an explanation
+  cannot silently follow the next part.
+- The basket table shows a توضیحات column while the request is being built.
+- A new **اقلام** column in the درخواست‌ها and خریدشده lists shows every line
+  with its quantity and its note, so the note is readable after filing rather
+  than write-only.
+- Adding the same part twice keeps both notes, joined with an em dash, instead
+  of dropping one when the quantities merge.
+
+Verified against the running API: a two-line request round-tripped
+`"برای پمپ خط ۳ — جنس استیل"` and `"فوری"` to the right lines.
+
+### Tests
+
+- Four more specs: the note reaches the API on its own line, the box clears
+  after adding, both notes survive a merge, and the list renders line and note.
+- Frontend 269 tests pass; ruff and mypy clean.
+
+## [0.2.4]
+
+### Changed — "add a new part" now lives in the part dropdown
+
+Creating a part that is not in the warehouse yet was an action *beside* the
+picker: first a second dialog (0.2.2), then a link underneath it (0.2.3).
+Someone looking for a missing part looks in the list, so that is where the
+entry belongs now — «➕ افزودن قطعه جدید…» is the last option of the قطعه انبار
+dropdown, mirroring the `CreatableSelect` pattern the registry pages already
+use. Choosing it expands code, name, unit and unit-cost fields inside the
+request; saving registers the part in the warehouse and selects it for the
+line being composed, without ever opening a second window.
+
+### Tests
+
+- Two more specs in `procurementRequisitionLines.test.tsx`: the entry exists
+  inside the dropdown and opens the fields in place with a single dialog on
+  screen, and the full manual path — type a part, register it, submit the
+  request with it — reaches the API with the typed code.
+- Frontend 265 tests pass.
+
+## [0.2.3]
+
+### Changed — the procurement screen asks less of the reader
+
+The page carried eight equally weighted tabs, eight dialogs and seven forms,
+which put a receipt correction at the same visual weight as the daily job of
+raising a request and checking what was bought.
+
+- **Three tabs up front** — نمای کلی، درخواست‌ها، خریدشده — with سفارش خرید،
+  رسید انبار، فاکتورها، برگشت کالا and تأمین‌کنندگان one click away under
+  «بیشتر». Nothing was removed.
+- **Stalled requests are shown on the tab**, as a count badge, instead of
+  being visible only after navigating into the list. The number comes from
+  the dashboard so it is correct whichever tab is open.
+- **The requisition form is three numbered steps** — add parts, review the
+  lines, then the request details — in a wide dialog, with the running
+  total in the footer.
+- **Defining a new part no longer opens a second dialog.** The fields expand
+  inside the requisition form, so the nested-window problem does not arise on
+  the common path at all. The standalone dialog remains for the returns form,
+  where it is not nested.
+- **The priority options state their own alert threshold** («بالا — هشدار پس
+  از ۴ روز»), so the staleness rule is visible at the moment it is chosen
+  rather than documented elsewhere.
+
+### Note
+
+Multi-part purchase requests shipped in 0.2.2; this release makes them easy to
+find. Both are only visible after extracting the current archive — the
+reported symptoms matched the 0.2.1 code.
+
+## [0.2.2]
+
+### Fixed — a purchase request can hold more than one part
+
+- **The requisition form could only ever order a single part.** The API has
+  always declared `lines = LineSerializer(many=True, min_length=1)` and totals
+  across every line, but the form held one `partId` and posted
+  `lines: [oneLine]`, so ordering three parts meant raising three separate
+  requests — each with its own number, approval and staleness clock. The form
+  now composes a line at a time into a basket, shows the lines with a running
+  total, lets a line be removed, and posts all of them. Choosing the same part
+  twice adds the quantities instead of writing a duplicate row. A single-part
+  request can still be submitted without pressing "add" first.
+  Verified against the running API: one POST created `PR-AC7C8613` with three
+  lines and `totalEstimated` 4,980,000.
+- **The "افزودن قطعه" button did not add a part to the request.** It opened the
+  warehouse part-registration dialog — a useful shortcut for a part that is not
+  in the catalogue yet, but the label read as "add a part to this request",
+  which is exactly how it was reported. Renamed to «تعریف قطعه جدید در انبار»,
+  and the real action is now «➕ افزودن این قطعه به درخواست».
+- **The مبلغ column was blank on every purchase request.** The shared document
+  table read `row.total`, which purchase orders and invoices expose but a
+  requisition does not — a requisition reports `totalEstimated`, because its
+  price is a forecast until a supplier quotes it. The column now falls back to
+  it and formats the amount in Persian digits.
+- **A modal opened from inside another modal could render behind it.** Both
+  used the same `--z-overlay`, so paint order came down to JSX position, and
+  both hard-coded `id="modal-title"`, which made `aria-labelledby` ambiguous
+  for screen readers. `Modal` now stacks each nesting level one step higher,
+  gives every instance a unique title id, and leaves the body scroll lock to
+  the outermost dialog.
+
+### Tests
+
+- `src/tests/procurementRequisitionLines.test.tsx` — nine specs covering the
+  multi-line basket, the payload actually sent, duplicate merging, removal,
+  the single-part shortcut, the empty-request guard, state not leaking into the
+  next requisition, the renamed button, and the amount column.
+- Backend 2983 tests pass; frontend 263 tests pass with and without
+  `VITE_DEMO_MODE=false`.
+
 ## [0.2.1]
 
 ### Fixed — alarms that were connected to nobody

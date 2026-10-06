@@ -149,6 +149,8 @@ class Command(BaseCommand):
         platform = TenantRepositoryDjango().getByCode("platform")
         if platform is None:  # pragma: no cover — bootstrapPlatform guarantees it
             raise RuntimeError("bootstrapPlatform did not create the platform tenant.")
+        # The platform admin gets the operational roles from
+        # bootstrapPlatform; only the demo tenant needs them here.
         self.stdout.write("seeding workspace for tenant: platform")
         self._seedProjects(platform.id)
         self._seedTasks(platform.id)
@@ -173,6 +175,7 @@ class Command(BaseCommand):
             password,
             "member",
         )
+        self._grantOperationalRoles(demo.id, f"{demoCode}-admin")
         self.stdout.write(f"seeding workspace for tenant: {demoCode}")
         self._seedProjects(demo.id)
         self._seedTasks(demo.id)
@@ -239,6 +242,31 @@ class Command(BaseCommand):
             access.grantRoleToUser(existing.id, tenantId, roleId)
             self._ensureMembership(existing.id, tenantId)
             self.stdout.write(f"  user ready: {username}")
+
+    def _grantOperationalRoles(self, tenantId: uuid.UUID, username: str) -> None:
+        """Give the tenant's admin the CMMS roles the alerts are routed to.
+
+        Every scheduled alert in the product — overdue work orders, low
+        stock, PM reminders, stalled purchase requests — targets
+        ``maintenanceManager``. A freshly seeded install had no holder for
+        that role at all, so those notifications were created for zero
+        recipients and silently discarded: the alarms were wired up and
+        connected to nobody. The seeded admin is the only operator in a demo
+        install, so they take the role.
+        """
+        repository = UserRepositoryDjango()
+        access = AccessRepositoryDjango()
+        user = repository.getByUsername(tenantId, username)
+        if user is None:  # pragma: no cover — the caller just created them
+            self.stderr.write(f"  cannot grant operational roles: {username} missing")
+            return
+        for roleCode in ("maintenanceManager",):
+            role = RoleModel.objects.filter(code=roleCode, isActive=True).first()
+            if role is None:
+                self.stderr.write(f"  role missing from catalogue: {roleCode}")
+                continue
+            access.grantRoleToUser(user.id, tenantId, role.id)
+        self.stdout.write(f"  operational roles granted: {username}")
 
     def _ensureMembership(self, userId: uuid.UUID, tenantId: uuid.UUID) -> None:
         membershipRepository = TenantMembershipRepositoryDjango()

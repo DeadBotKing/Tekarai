@@ -54,8 +54,13 @@ def scanTenants(
     if tenantId:
         tenantIds = [uuid.UUID(tenantId)]
     else:
+        # order_by() clears Meta.ordering (["-createdAt"]). Django appends
+        # ordering columns to a DISTINCT SELECT, so without this the query
+        # de-duplicates on (tenantId, createdAt) and yields one row per work
+        # order: a tenant with 500 orders was scanned 500 times per run.
         tenantIds = list(
             WorkOrderModel.objects.filter(deletedAt__isnull=True)
+            .order_by()
             .values_list("tenantId", flat=True)
             .distinct()
         )

@@ -11,6 +11,8 @@ from decimal import Decimal
 
 from django.db import models
 
+from apps.procurement.domain.valueObjects.requisitionState import REQUISITION_STATUSES
+
 
 class TenantStamped(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -66,9 +68,7 @@ class SupplierPartModel(TenantStamped):
 
 
 class PurchaseRequisitionModel(TenantStamped):
-    STATUS = [
-        (x, x) for x in ("draft", "submitted", "approved", "rejected", "cancelled", "ordered")
-    ]
+    STATUS = [(x, x) for x in REQUISITION_STATUSES]
     number = models.CharField(max_length=40)
     status = models.CharField(max_length=20, choices=STATUS, default="draft", db_index=True)
     requesterId = models.UUIDField(null=True, blank=True)
@@ -78,6 +78,14 @@ class PurchaseRequisitionModel(TenantStamped):
     priority = models.CharField(max_length=20, default="normal")
     justification = models.TextField(blank=True, default="")
     totalEstimated = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0"))
+    # When the request entered the buyer's queue. The staleness clock starts
+    # here rather than at createdAt: a draft nobody submitted is not overdue
+    # procurement work. Null while the requisition is still a draft.
+    submittedAt = models.DateTimeField(null=True, blank=True, db_index=True)
+    # Set when the fulfilling purchase order is fully received. Gives the
+    # "purchased" list a real completion date to sort and report on instead
+    # of updatedAt, which any later edit would move.
+    purchasedAt = models.DateTimeField(null=True, blank=True, db_index=True)
 
     class Meta:
         db_table = "ProcurementRequisition"

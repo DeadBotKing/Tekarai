@@ -35,6 +35,12 @@ class CreateNotificationCommand:
     correlationId: str = ""
     causationId: str = ""
     actorId: uuid.UUID | None = None
+    #: Used only when ``recipientSpec`` resolves to nobody. An operational
+    #: alert whose target role has no holders would otherwise be created for
+    #: zero recipients and reported as a success — the alarm rings in an
+    #: empty room. Leave empty for notifications that are genuinely pointless
+    #: without their specific audience (a chat message, a meeting invite).
+    fallbackRecipientSpec: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

@@ -111,6 +111,33 @@ class CreateNotificationService(NotificationUseCase):
     def perform(self, command: CreateNotificationCommand) -> CreationOutcome:
         now = self.nowUtc()
         recipients = self.resolveRecipients.resolve(command.tenantId, command.recipientSpec)
+        if not recipients and command.fallbackRecipientSpec:
+            # The configured audience does not exist in this tenant — most
+            # often a ROLE nobody holds. Operational alerts must still land
+            # on somebody rather than evaporate.
+            recipients = self.resolveRecipients.resolve(
+                command.tenantId, command.fallbackRecipientSpec
+            )
+            logger.warning(
+                "Notification recipients resolved empty; used the fallback audience",
+                extra={
+                    "tenantId": str(command.tenantId),
+                    "notificationType": command.notificationType,
+                    "recipientSpec": command.recipientSpec,
+                    "fallbackRecipients": len(recipients),
+                },
+            )
+        if not recipients:
+            # Still nobody. Say so: a silent no-op here is indistinguishable
+            # from a delivered alert in every log and metric.
+            logger.warning(
+                "Notification created for zero recipients",
+                extra={
+                    "tenantId": str(command.tenantId),
+                    "notificationType": command.notificationType,
+                    "recipientSpec": command.recipientSpec,
+                },
+            )
         policyResolution = self.resolvePolicy.resolve(
             command.tenantId, command.notificationType, command.category
         )

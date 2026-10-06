@@ -7,6 +7,7 @@ from decimal import Decimal
 
 from django.db import transaction
 from django.db.models import Q
+from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -19,6 +20,13 @@ from apps.procurement.domain.services.receiptRules import (
     asQuantity,
     guardOrderAcceptsDelivery,
     guardReceiptLine,
+)
+from apps.procurement.domain.services.requisitionAging import evaluateRequisitionAging
+from apps.procurement.domain.valueObjects.requisitionState import (
+    OPEN_REQUISITION_STATUSES,
+    REQ_ORDERED,
+    REQ_PURCHASED,
+    REQ_SUBMITTED,
 )
 from apps.procurement.infrastructure.models import (
     GoodsReceiptLineModel,
@@ -57,6 +65,15 @@ def tenant() -> uuid.UUID:
     if not value:
         raise ValueError("Tenant scope could not be resolved.")
     return uuid.UUID(str(value))
+
+
+def _actorId() -> uuid.UUID | None:
+    """Authenticated user id, or None for system/unauthenticated callers."""
+    raw = getattr(currentContext(), "actorId", "")
+    try:
+        return uuid.UUID(str(raw))
+    except (ValueError, TypeError):
+        return None
 
 
 def row(obj, extra=None):
@@ -169,10 +186,26 @@ class SupplierPartsView(Base):
         return Response(successEnvelope(row(obj)), status=201)
 
 
-def requisitionDetail(obj):
+def requisitionDetail(obj, now=None):
+    """Serialise a requisition, including how long it has been waiting.
+
+    The ageing verdict is computed per response rather than stored: it is a
+    function of the clock, so a persisted ``isStale`` flag would be wrong
+    every moment between the nightly scan and the next one.
+    """
+    aging = evaluateRequisitionAging(
+        status=obj.status,
+        priority=obj.priority,
+        submittedAt=obj.submittedAt,
+        now=now or timezone.now(),
+    )
     return row(
         obj,
         {
+            "isStale": aging.isStale,
+            "daysWaiting": aging.daysWaiting,
+            "staleThresholdDays": aging.thresholdDays,
+            "daysOverdue": aging.daysOverdue,
             "lines": [
                 row(x)
                 for x in PurchaseRequisitionLineModel.objects.filter(
@@ -191,14 +224,25 @@ def requisitionDetail(obj):
 
 class RequisitionListView(Base):
     def get(self, request):
-        return Response(
-            successEnvelope(
-                [
-                    requisitionDetail(x)
-                    for x in PurchaseRequisitionModel.objects.filter(tenantId=tenant())[:500]
-                ]
-            )
-        )
+        """List requisitions, optionally narrowed to one status or to the
+        stale ones.
+
+        ``?status=purchased`` backs the "purchased" tab; ``?stale=true``
+        backs the alert list. Staleness cannot be a database filter because
+        the threshold varies per row's priority, so it is applied after
+        serialisation — bounded by the same 500-row ceiling as every other
+        list here.
+        """
+        queryset = PurchaseRequisitionModel.objects.filter(tenantId=tenant())
+        status = str(request.query_params.get("status", "")).strip()
+        if status:
+            queryset = queryset.filter(status__in=[x for x in status.split(",") if x])
+
+        now = timezone.now()
+        items = [requisitionDetail(x, now=now) for x in queryset[:500]]
+        if str(request.query_params.get("stale", "")).lower() in {"1", "true", "yes"}:
+            items = [x for x in items if x["isStale"]]
+        return Response(successEnvelope(items))
 
     @transaction.atomic
     def post(self, request):
@@ -207,6 +251,10 @@ class RequisitionListView(Base):
         data = s.validated_data
         t = tenant()
         lines = data.pop("lines")
+        # Stamp who asked. The column existed but nothing ever filled it, so
+        # every requisition was anonymous — which meant the staleness alert
+        # had nobody to tell that *their* request had stalled.
+        data.setdefault("requesterId", _actorId())
         obj = PurchaseRequisitionModel.objects.create(
             tenantId=t, number=f"PR-{uuid.uuid4().hex[:8].upper()}", status="draft", **data
         )
@@ -257,7 +305,15 @@ class RequisitionActionView(Base):
                 status=409,
             )
         obj.status = target
-        obj.save(update_fields=["status", "updatedAt"])
+        updated = ["status", "updatedAt"]
+        # Start the staleness clock the first time the request is handed to
+        # the buyers. Re-submitting a rejected request does not restart it:
+        # the requester has been waiting since the original hand-off, and
+        # resetting would let a request be laundered out of the alert list.
+        if target == REQ_SUBMITTED and obj.submittedAt is None:
+            obj.submittedAt = timezone.now()
+            updated.append("submittedAt")
+        obj.save(update_fields=updated)
         ProcurementApprovalModel.objects.create(
             tenantId=obj.tenantId,
             documentType="requisition",
@@ -425,12 +481,17 @@ class ReceiptListView(Base):
                 note="رسید خرید",
             )
         lines = list(PurchaseOrderLineModel.objects.filter(purchaseOrderId=po.id, tenantId=t))
-        po.status = (
-            "received"
-            if all(x.receivedQuantity >= x.orderedQuantity for x in lines)
-            else "partiallyReceived"
-        )
+        fullyReceived = all(x.receivedQuantity >= x.orderedQuantity for x in lines)
+        po.status = "received" if fullyReceived else "partiallyReceived"
         po.save(update_fields=["status", "updatedAt"])
+        # Close the loop back to the requisition. Until this existed a
+        # requisition stopped at "ordered" forever: goods could have arrived
+        # months ago and the request still looked outstanding, both to the
+        # requester and to the staleness scan.
+        if fullyReceived and po.requisitionId:
+            PurchaseRequisitionModel.objects.filter(
+                id=po.requisitionId, tenantId=t, status=REQ_ORDERED
+            ).update(status=REQ_PURCHASED, purchasedAt=timezone.now())
         return Response(
             successEnvelope(
                 row(
@@ -514,10 +575,28 @@ class InvoiceListView(Base):
 class ProcurementDashboardView(Base):
     def get(self, request):
         t = tenant()
+        now = timezone.now()
+        # Priority-dependent thresholds cannot be expressed as one SQL
+        # predicate, so the open rows are aged in Python. Only the three
+        # open statuses are loaded, and only the two columns needed.
+        openRows = PurchaseRequisitionModel.objects.filter(
+            tenantId=t, status__in=OPEN_REQUISITION_STATUSES
+        ).values_list("status", "priority", "submittedAt")
+        staleCount = sum(
+            1
+            for status, priority, submittedAt in openRows
+            if evaluateRequisitionAging(
+                status=status, priority=priority, submittedAt=submittedAt, now=now
+            ).isStale
+        )
         return Response(
             successEnvelope(
                 {
                     "suppliers": SupplierModel.objects.filter(tenantId=t, status="active").count(),
+                    "staleRequisitions": staleCount,
+                    "purchasedRequisitions": PurchaseRequisitionModel.objects.filter(
+                        tenantId=t, status=REQ_PURCHASED
+                    ).count(),
                     "openRequisitions": PurchaseRequisitionModel.objects.filter(
                         tenantId=t, status__in=["draft", "submitted", "approved"]
                     ).count(),

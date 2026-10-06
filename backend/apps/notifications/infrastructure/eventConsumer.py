@@ -110,6 +110,9 @@ DEFAULT_EVENT_ROUTES: dict[str, dict[str, Any]] = {
         "title": "درخواست کار در انتظار تأیید شماست",
         "body": "یک درخواست کار توسط تکنسین تکمیل و برای تأیید مدیر ارسال شد.",
         "recipientSpec": {"type": "ROLE", "value": ["maintenanceManager"]},
+        # Operational alert: if the target role has no holders the
+        # notification would be created for nobody, so fall back to admins.
+        "fallbackRecipientSpec": {"type": "TENANT_ADMIN"},
         "sourceType": "MAINTENANCE",
     },
     "workOrderApproved": {
@@ -147,6 +150,9 @@ DEFAULT_EVENT_ROUTES: dict[str, dict[str, Any]] = {
             "type": "ROLE",
             "value": ["maintenanceTechnician", "maintenanceManager"],
         },
+        # Operational alert: if the target role has no holders the
+        # notification would be created for nobody, so fall back to admins.
+        "fallbackRecipientSpec": {"type": "TENANT_ADMIN"},
         "sourceType": "MAINTENANCE",
     },
     # -- Scheduled maintenance alerts (checkMaintenanceAlerts scan) -----------
@@ -163,6 +169,9 @@ DEFAULT_EVENT_ROUTES: dict[str, dict[str, Any]] = {
             "type": "ROLE",
             "value": ["maintenanceManager"],
         },
+        # Operational alert: if the target role has no holders the
+        # notification would be created for nobody, so fall back to admins.
+        "fallbackRecipientSpec": {"type": "TENANT_ADMIN"},
         "sourceType": "MAINTENANCE",
     },
     "sparePartLowStock": {
@@ -176,7 +185,28 @@ DEFAULT_EVENT_ROUTES: dict[str, dict[str, Any]] = {
             "type": "ROLE",
             "value": ["maintenanceManager", "maintenanceTechnician"],
         },
+        # Operational alert: if the target role has no holders the
+        # notification would be created for nobody, so fall back to admins.
+        "fallbackRecipientSpec": {"type": "TENANT_ADMIN"},
         "sourceType": "MAINTENANCE",
+    },
+    # -- Scheduled procurement alerts (checkProcurementAlerts scan) ----------
+    # A purchase request that has sat unbought past the limit for its
+    # priority. Weekly-deterministic eventId, so the daily cron raises each
+    # late request once a week rather than every morning.
+    "purchaseRequisitionStale": {
+        "notificationType": "procurement.requisitionStale",
+        "category": "PROCUREMENT",
+        "priority": "HIGH",
+        "templateKey": "procurement.requisitionStale",
+        "title": "درخواست خرید معطل مانده است",
+        "body": "یک درخواست خرید بیش از مهلت مجاز اولویت خود بدون خرید مانده است؛ لطفاً پیگیری کنید.",
+        # Recipients are resolved at the source (requester + buyers, with a
+        # tenant-admin fallback) and carried on the payload, so the alert
+        # still lands on a fresh install where nobody holds a buyer role.
+        "recipientSpec": {"type": "USER", "value": "$payload.recipientIds"},
+        "fallbackRecipientSpec": {"type": "TENANT_ADMIN"},
+        "sourceType": "PROCUREMENT",
     },
     "devicePmOverdue": {
         "notificationType": "maintenance.pmOverdue",
@@ -189,6 +219,9 @@ DEFAULT_EVENT_ROUTES: dict[str, dict[str, Any]] = {
             "type": "ROLE",
             "value": ["maintenanceTechnician", "maintenanceManager"],
         },
+        # Operational alert: if the target role has no holders the
+        # notification would be created for nobody, so fall back to admins.
+        "fallbackRecipientSpec": {"type": "TENANT_ADMIN"},
         "sourceType": "MAINTENANCE",
     },
 }
@@ -224,6 +257,7 @@ def makeNotificationHandler(route: dict[str, Any]) -> Callable[[DomainEvent], No
         command = CreateNotificationCommand(
             tenantId=event.tenantId,
             recipientSpec=_resolveSpec(route.get("recipientSpec", {}), payload),
+            fallbackRecipientSpec=_resolveSpec(route.get("fallbackRecipientSpec", {}), payload),
             eventType=event.name,
             eventId=str(
                 payload.get("eventId")

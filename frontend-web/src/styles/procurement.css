@@ -95,3 +95,19 @@
   direction: ltr;
   text-align: start;
 }
+
+/* Stale purchase requests: a counter tile and the banner above the
+   requisition list. Both lean on the existing danger tokens so the alert
+   reads the same in light and dark themes. */
+.procurement-page .stat-alert {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.procurement-page .stat-alert strong {
+  color: var(--danger);
+}
+
+.procurement-page .procurement-action-row .badge--danger {
+  margin-inline-start: 0.25rem;
+}

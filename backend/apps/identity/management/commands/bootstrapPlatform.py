@@ -64,6 +64,13 @@ class Command(BaseCommand):
         for roleCode, (roleName, scopeType) in roleSeeds.items():
             access.ensureRole(roleCode, roleName, ROLE_PRESETS[roleCode], scopeType)
         adminRoleId = RoleModel.objects.get(code=PLATFORM_ADMIN_ROLE).id
+        # Every scheduled alert in the product (overdue work orders, low
+        # stock, PM reminders, stalled purchase requests) is routed to
+        # maintenanceManager. The role was created here but granted to
+        # nobody, so on a fresh install those notifications resolved zero
+        # recipients and were silently discarded. The platform admin is the
+        # only operator a first-run install has, so they hold it too.
+        operationalRoleIds = [RoleModel.objects.get(code=MAINTENANCE_MANAGER_ROLE).id]
 
         repository = TenantRepositoryDjango()
         tenant = repository.getByCode(PLATFORM_TENANT_CODE)
@@ -105,10 +112,14 @@ class Command(BaseCommand):
                     )
                 )
             access.grantRoleToUser(uuid.UUID(userDto.id), tenantId, adminRoleId)
+            for roleId in operationalRoleIds:
+                access.grantRoleToUser(uuid.UUID(userDto.id), tenantId, roleId)
             self._ensureMembership(uuid.UUID(userDto.id), tenantId)
             self.stdout.write(f"platform admin created: {username}")
         else:
             access.grantRoleToUser(existingUser.id, tenantId, adminRoleId)
+            for roleId in operationalRoleIds:
+                access.grantRoleToUser(existingUser.id, tenantId, roleId)
             self._ensureMembership(existingUser.id, tenantId)
             self._syncAdminCredentials(existingUser.id, password)
             self.stdout.write(

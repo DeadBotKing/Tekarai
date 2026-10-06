@@ -6,6 +6,107 @@ made it impossible to tell what any given commit changed or to roll back to a
 known-good state. Entries follow [Keep a Changelog](https://keepachangelog.com)
 and the project aims at [Semantic Versioning](https://semver.org).
 
+## [0.2.1]
+
+### Fixed — alarms that were connected to nobody
+
+- **Every scheduled alert was being delivered to zero people.** The notification
+  routes for overdue work orders, low stock, PM due/overdue and stalled purchase
+  requests all target the `maintenanceManager` role. `bootstrapPlatform` created
+  that role but granted it to no one, so `resolveRecipients` returned an empty
+  list, the engine created no rows and reported success. The scans printed
+  confident summaries — `{'overdueWorkOrders': 1, 'lowStockParts': 1}` — while
+  nothing reached a single inbox. Fixed on three levels:
+  - `bootstrapPlatform` now grants `maintenanceManager` to the platform
+    administrator, and `seedWorkspace` grants it to the demo tenant's admin, so
+    a fresh install has a real holder. The command is idempotent, so existing
+    installs are repaired by re-running it.
+  - `CreateNotificationCommand` gained `fallbackRecipientSpec`. When the primary
+    audience resolves empty, the engine re-resolves against the fallback and
+    logs a warning. Six operational routes fall back to `TENANT_ADMIN`; routes
+    that are meaningless without their specific audience (chat, meeting
+    invites) deliberately declare no fallback.
+  - A notification that still ends up with no recipients now logs
+    `Notification created for zero recipients` instead of passing silently.
+  - Verified against the development database: a maintenance + procurement scan
+    that previously produced nothing now produces four notifications addressed
+    to real users.
+- **The frontend unit suite was not hermetic.** Six specs (`registry pages`,
+  `chat page`, `locations page dropdown`) read the developer's `.env`, and with
+  `VITE_DEMO_MODE=false` they issued real HTTP requests, so `npm test` passed or
+  failed depending on whether a backend happened to be running. `vitest.config.ts`
+  now pins the suite's environment, and `src/tests/setup.ts` installs a `fetch`
+  guard that rejects any unmocked request naming the URL, instead of letting it
+  surface as an opaque `SYS_NETWORK_ERROR`.
+- **The live-API rendering path had no test coverage at all** — every page spec
+  ran in demo mode, so a wrong endpoint or a changed response shape could only
+  be caught in a browser. `src/tests/liveApiPages.test.tsx` renders the registry
+  and locations pages with `demoMode` off against stubbed API-shaped responses,
+  asserting that fetched data (not demo fixtures) reaches the screen and that
+  the auth header is sent.
+
+### Tests
+
+- `tests/integration/testAlertsReachSomebody.py` — pins that somebody holds the
+  role alerts are routed to, that a low-stock scan actually creates a
+  notification record, that the fallback fires only when the primary audience is
+  empty, and that no operational route can be added without a fallback.
+- Backend 2983 tests pass; frontend 254 tests pass both with and without
+  `VITE_DEMO_MODE=false`.
+
+### Known issues
+
+- The `de` catalogue holds 134 of 1542 keys and falls back to English for the
+  rest.
+- `ReportsPage` and `SettingsPage` are not wired to live data.
+
+## [0.2.0]
+
+### Added — purchase request follow-up
+
+- **Stale purchase-request alerts.** A request that has been waiting past the
+  limit for its priority (critical 2 days, high 4, normal 7, low 14, counted
+  from submission) now raises a `purchaseRequisitionStale` notification to the
+  requester and the buyers. Run `manage.py checkProcurementAlerts` daily; the
+  event id is scoped to the ISO week, so a daily cron raises each late request
+  once a week instead of every morning.
+- **A terminal `purchased` status.** Fully receiving the purchase order that
+  fulfils a request moves the request to `purchased` and stamps `purchasedAt`.
+  The procurement screen gained a «خریدشده» tab backed by
+  `GET /procurement/requisitions?status=purchased`.
+- Requisition responses now carry `isStale`, `daysWaiting`,
+  `staleThresholdDays` and `daysOverdue`; the list accepts `?status=` and
+  `?stale=true`; the dashboard reports `staleRequisitions` and
+  `purchasedRequisitions`.
+- `PROCUREMENT` notification category and the §30 route for the new event.
+
+### Fixed
+
+- **The requisition lifecycle had no end.** Raising a purchase order moved a
+  request to `ordered` and nothing ever moved it on, so a request whose goods
+  had arrived months ago was indistinguishable from one still at the supplier.
+- **`requesterId` was never written.** The column existed on every requisition
+  and nothing ever filled it, so every purchase request was anonymous — which
+  is why the new alert initially had nobody to notify. It is now stamped from
+  the authenticated actor.
+- **The alert scanners visited each tenant once per document.** Both
+  `checkMaintenanceAlerts` and the new procurement scan used
+  `.values_list("tenantId").distinct()` on a model whose `Meta.ordering` is
+  `["-createdAt"]`; Django appends ordering columns to a `DISTINCT` SELECT, so
+  the query de-duplicated on `(tenantId, createdAt)` and returned one row per
+  work order. A tenant with 500 work orders was scanned 500 times per run.
+  Both now clear the ordering with `.order_by()`.
+- Procurement tables printed the raw English status enum
+  («partiallyReceived», «ordered») into an otherwise Persian page.
+
+### Known limitation
+
+- Buyer-role targeting resolves to nobody on a fresh install, because no user
+  holds `maintenanceManager`. The alert falls back to the tenant/platform
+  admins so it is never silently dropped, but assigning the role gives the
+  intended routing. **Resolved in 0.2.1**, which also showed the same gap had
+  been silencing the pre-existing maintenance alerts.
+
 ## [Unreleased]
 
 ### Fixed
@@ -90,14 +191,11 @@ and the project aims at [Semantic Versioning](https://semver.org).
 - `apps/sharedKernel/domain/coercion.py` — explicit `asInt` / `asDecimal` /
   `asStringList` for loosely-typed inbound payloads.
 
-### Known issues
+### Known issues at the time of 0.1.0
 
-- Six frontend specs fail when `VITE_DEMO_MODE=false` because they reach for a
-  live API instead of a mock (`registry pages`, `chat page`,
-  `locations page dropdown`). CI pins demo mode; the specs still need fixing.
-- The `de` catalogue holds 134 of 1542 keys and falls back to English for the
-  rest.
-- `ReportsPage` and `SettingsPage` are not wired to live data.
+Resolved in 0.2.1 (frontend specs) — see above. Still open: the `de` catalogue
+holds 134 of 1542 keys; `ReportsPage` and `SettingsPage` are not wired to live
+data.
 
 ### Fixed (found by running the stack, not just its tests)
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import uuid
 from decimal import Decimal
 
@@ -124,6 +125,14 @@ class Base(IdempotencyMixin, APIView):
             action = "procurement.return.post"
         elif "/invoices" in path:
             action = "procurement.invoice.manage"
+        elif "/replenishment" in path:
+            # Previewing the shortfall is a view; raising the drafts
+            # creates requisitions and is gated as such.
+            action = (
+                "procurement.supplier.view"
+                if method == "GET"
+                else "procurement.requisition.create"
+            )
         elif "/dashboard" in path:
             action = "procurement.supplier.view"
         return [IsAuthenticated(), actionPermission(action)()]
@@ -651,3 +660,57 @@ class ProcurementSupplierPerformanceView(Base):
                 }
             )
         return Response(successEnvelope(result))
+
+
+class ReplenishmentView(Base):
+    """The stock→purchase loop: what the warehouse needs, and raising it.
+
+    ``GET`` previews — it reads the same numbers the apply path would act
+    on and writes nothing, so the buyer can look before committing.
+    ``POST`` creates the draft requisitions.
+
+    No new permission was invented for this. Looking at the suggestion list
+    is ``procurement.supplier.view`` (it is a buying view like the rest) and
+    raising the drafts is ``procurement.requisition.create`` — it creates
+    exactly the object that permission already governs, so every role that
+    could raise a purchase request by hand can raise one this way, and no
+    role silently gains the ability to commit spend.
+    """
+
+    def get(self, request):
+        from apps.procurement.application.services.replenishmentScan import scanReplenishment
+
+        result = scanReplenishment(tenant())
+        return Response(
+            successEnvelope(
+                [dataclasses.asdict(x) for x in result.suggestions],
+                meta={
+                    "asOf": result.asOf,
+                    "suggestedCount": result.suggestedCount,
+                    "estimatedTotal": str(result.estimatedTotal),
+                    "skipped": result.skipped,
+                },
+            )
+        )
+
+    def post(self, request):
+        from apps.procurement.application.services.replenishmentScan import scanReplenishment
+
+        result = scanReplenishment(
+            tenant(),
+            apply=True,
+            actorId=_actorId(),
+            actorName=str(getattr(currentContext(), "actorName", "") or ""),
+        )
+        return Response(
+            successEnvelope(
+                {
+                    "createdRequisitions": result.createdRequisitions,
+                    "createdRequisitionIds": result.createdRequisitionIds,
+                    "lineCount": result.suggestedCount,
+                    "estimatedTotal": str(result.estimatedTotal),
+                },
+                meta={"asOf": result.asOf, "skipped": result.skipped},
+            ),
+            status=201 if result.createdRequisitions else 200,
+        )

@@ -43,6 +43,8 @@ class SparePartRepositoryDjango:
             unitCost=model.unitCost,
             createdAt=model.createdAt,
             updatedAt=model.updatedAt,
+            reorderQuantity=model.reorderQuantity,
+            autoReorder=model.autoReorder,
         )
 
     @staticmethod
@@ -70,6 +72,10 @@ class SparePartRepositoryDjango:
         quantityOnHand: Decimal,
         minimumStock: Decimal,
         unitCost: Decimal,
+        # Keyword-only with defaults: the reorder policy is optional, and
+        # every existing caller passes this signature positionally.
+        reorderQuantity: Decimal = Decimal("0"),
+        autoReorder: bool = True,
     ) -> SparePart:
         try:
             model = SparePartModel.objects.create(
@@ -80,6 +86,8 @@ class SparePartRepositoryDjango:
                 quantityOnHand=quantityOnHand,
                 minimumStock=minimumStock,
                 unitCost=unitCost,
+                reorderQuantity=reorderQuantity,
+                autoReorder=autoReorder,
             )
         except IntegrityError as error:
             raise DuplicateBusinessCodeError("Spare-part code already exists.") from error
@@ -94,6 +102,8 @@ class SparePartRepositoryDjango:
         quantityOnHand: Decimal,
         minimumStock: Decimal,
         unitCost: Decimal,
+        reorderQuantity: Decimal = Decimal("0"),
+        autoReorder: bool = True,
     ) -> SparePart:
         with transaction.atomic():
             model = (
@@ -108,6 +118,8 @@ class SparePartRepositoryDjango:
             model.quantityOnHand = quantityOnHand
             model.minimumStock = minimumStock
             model.unitCost = unitCost
+            model.reorderQuantity = reorderQuantity
+            model.autoReorder = autoReorder
             model.updatedAt = datetime.now().astimezone()
             model.save(
                 update_fields=[
@@ -116,6 +128,8 @@ class SparePartRepositoryDjango:
                     "quantityOnHand",
                     "minimumStock",
                     "unitCost",
+                    "reorderQuantity",
+                    "autoReorder",
                     "updatedAt",
                 ]
             )

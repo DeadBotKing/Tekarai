@@ -47,6 +47,8 @@ class SparePartDto:
     lowStock: bool
     createdAt: str
     updatedAt: str = ""
+    reorderQuantity: str = "0"
+    autoReorder: bool = True
 
 
 @dataclass(frozen=True)
@@ -120,6 +122,8 @@ def _partDto(part: SparePart) -> SparePartDto:
         minimumStock=str(part.minimumStock),
         unitCost=str(part.unitCost),
         lowStock=part.lowStock,
+        reorderQuantity=str(part.reorderQuantity),
+        autoReorder=part.autoReorder,
         createdAt=part.createdAt.isoformat(),
         updatedAt=part.updatedAt.isoformat() if part.updatedAt else "",
     )
@@ -165,6 +169,8 @@ class CreateSparePartUseCase(SparePartUseCaseBase):
             _decimal(command.quantityOnHand, "quantityOnHand"),
             _decimal(command.minimumStock, "minimumStock"),
             _moneyValue(command.unitCost, "unitCost"),
+            reorderQuantity=_decimal(command.reorderQuantity, "reorderQuantity"),
+            autoReorder=bool(command.autoReorder),
         )
         self.audit(AUDIT_CREATE, "SparePart", str(part.id), tenantId, after=_partDto(part).__dict__)
         return _partDto(part)
@@ -185,6 +191,8 @@ class UpdateSparePartUseCase(SparePartUseCaseBase):
             _decimal(command.quantityOnHand, "quantityOnHand"),
             _decimal(command.minimumStock, "minimumStock"),
             _moneyValue(command.unitCost, "unitCost"),
+            reorderQuantity=_decimal(command.reorderQuantity, "reorderQuantity"),
+            autoReorder=bool(command.autoReorder),
         )
         self.audit(AUDIT_UPDATE, "SparePart", str(part.id), tenantId, after=_partDto(part).__dict__)
         return _partDto(part)

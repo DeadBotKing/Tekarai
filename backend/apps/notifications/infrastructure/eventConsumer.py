@@ -208,6 +208,23 @@ DEFAULT_EVENT_ROUTES: dict[str, dict[str, Any]] = {
         "fallbackRecipientSpec": {"type": "TENANT_ADMIN"},
         "sourceType": "PROCUREMENT",
     },
+    # The stock→purchase loop raised draft requests from low stock. These
+    # are drafts: nothing has been committed, so this is NORMAL rather than
+    # HIGH — it is a queue to review, not an escalation.
+    "replenishmentRequisitionRaised": {
+        "notificationType": "procurement.replenishmentRaised",
+        "category": "PROCUREMENT",
+        "priority": "NORMAL",
+        "templateKey": "procurement.replenishmentRaised",
+        "title": "درخواست خرید خودکار ایجاد شد",
+        "body": "بر اساس کسری موجودی انبار، پیش‌نویس درخواست خرید ساخته شد؛ لطفاً بررسی و ثبت کنید.",
+        "recipientSpec": {
+            "type": "ROLE",
+            "value": ["maintenanceManager"],
+        },
+        "fallbackRecipientSpec": {"type": "TENANT_ADMIN"},
+        "sourceType": "PROCUREMENT",
+    },
     "devicePmOverdue": {
         "notificationType": "maintenance.pmOverdue",
         "category": "MAINTENANCE",

@@ -6,6 +6,76 @@ made it impossible to tell what any given commit changed or to roll back to a
 known-good state. Entries follow [Keep a Changelog](https://keepachangelog.com)
 and the project aims at [Semantic Versioning](https://semver.org).
 
+## [0.6.0]
+
+### Added
+
+- **The stock→purchase loop.** Low stock now becomes a purchase request
+  instead of only a notification somebody had to act on by hand. All three
+  pieces already existed and none were connected: the warehouse knew a part
+  was below minimum, `SupplierPart` knew who sells it at what price with
+  what lead time and minimum order quantity, and the requisition → order →
+  receipt chain knew how to buy things.
+  - New domain service `procurement/domain/services/reorderPolicy.py` —
+    pure rules, no ORM. Decides *whether* and *how much*.
+  - New application service `replenishmentScan` + infrastructure query
+    module `replenishmentRepository` (the application layer may not import
+    the ORM).
+  - `GET/POST /api/v1/procurement/replenishment` — preview and apply.
+  - New «تأمین انبار» tab on the procurement page showing the arithmetic:
+    on hand, already on order, net, suggested, supplier, estimated cost.
+  - `python manage.py runReplenishment [--apply] [--tenant <uuid>]` for
+    cron. **Dry run is the default** — a cron line meant to report must not
+    start spending because of a typo.
+- `SparePart.reorderQuantity` and `SparePart.autoReorder`
+  (migration `maintenance/0021_sparePartReorderPolicy`). Both additive with
+  defaults that preserve today's behaviour; the loop works with zero
+  configuration by topping up to twice the minimum.
+- Public contract `inventoryContract.listStockPositions()` /
+  `tenantIdsWithStock()`, so procurement reads warehouse stock through
+  maintenance's `.application` facade rather than its tables (RULE E/F).
+- Notification route `replenishmentRequisitionRaised` (NORMAL — these are
+  drafts to review, not an escalation).
+
+### Design decisions
+
+- **Counting goods already on order is what makes the loop idempotent.**
+  The trigger is net available stock — on hand *plus* open requisition
+  lines *plus* the undelivered purchase-order balance. Because a draft this
+  scan creates immediately counts as incoming, a second run proposes
+  nothing, with no deduplication key to keep in sync. A scan that ignored
+  goods in transit would raise a fresh request every night until delivery.
+  Verified on a real seeded database: run 1 created one requisition, runs 2
+  and 3 created zero.
+- **Drafts, not submitted requests.** A machine may notice the need; a
+  person still decides to spend the money. It also keeps generated requests
+  out of the buyer's overdue list, since the staleness clock starts at
+  `submittedAt`.
+- **One requisition per supplier, not per part.** Parts with no supplier on
+  file are grouped into a single unassigned requisition rather than dropped.
+- Urgency reuses the requisition priority vocabulary, so a stockout is also
+  chased up sooner; a multi-line requisition inherits the most urgent line's
+  priority.
+- No new permission: `POST` is gated on `procurement.requisition.create`,
+  the permission that already governs the object it creates.
+
+### Tests
+
+- Backend **3024 → 3087** (19 reorder-policy unit tests, 44 integration).
+- Frontend **325 → 335**.
+- Gates: `tsc --noEmit` ✔, `ruff` ✔, `mypy` ✔ (1025 files), architecture
+  suite ✔.
+
+### Known limitations
+
+- Safety stock from lead-time demand, ABC classification and consumption
+  forecasting are **not** implemented — all three need consumption
+  statistics the part ledger does not yet aggregate, and a fabricated
+  number would be worse than none. See `docs/StockPurchaseLoop.md`.
+- The replenishment panel is live-data only: the demo-boundary rule forbids
+  new files branching on the demo flag, so under demo fixtures it shows its
+  error state rather than a fabricated shortage list.
+
 ## [0.5.0]
 
 ### Security

@@ -13,6 +13,8 @@ class CreateSparePartCommand(Command):
     quantityOnHand: str = "0"
     minimumStock: str = "0"
     unitCost: str = "0"
+    reorderQuantity: str = "0"
+    autoReorder: bool = True
 
 
 @dataclass(frozen=True)
@@ -23,6 +25,8 @@ class UpdateSparePartCommand(Command):
     quantityOnHand: str = "0"
     minimumStock: str = "0"
     unitCost: str = "0"
+    reorderQuantity: str = "0"
+    autoReorder: bool = True
 
 
 @dataclass(frozen=True)

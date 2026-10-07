@@ -168,6 +168,8 @@ class SparePartRepository(Protocol):
         quantityOnHand: Decimal,
         minimumStock: Decimal,
         unitCost: Decimal,
+        reorderQuantity: Decimal = Decimal("0"),
+        autoReorder: bool = True,
     ) -> SparePart: ...
 
     def update(
@@ -179,6 +181,8 @@ class SparePartRepository(Protocol):
         quantityOnHand: Decimal,
         minimumStock: Decimal,
         unitCost: Decimal,
+        reorderQuantity: Decimal = Decimal("0"),
+        autoReorder: bool = True,
     ) -> SparePart: ...
 
     def list(self, tenantId: uuid.UUID, search: str = "") -> builtins.list[SparePart]: ...

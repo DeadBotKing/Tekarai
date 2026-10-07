@@ -71,6 +71,12 @@ class CreateSparePartSerializer(serializers.Serializer):
     minimumStock = serializers.DecimalField(
         max_digits=14, decimal_places=3, min_value=Decimal("0"), required=False, default=0
     )
+    # How much to buy when stock trips the minimum; 0 = let the reorder
+    # policy top up to twice the minimum.
+    reorderQuantity = serializers.DecimalField(
+        max_digits=14, decimal_places=3, min_value=Decimal("0"), required=False, default=0
+    )
+    autoReorder = serializers.BooleanField(required=False, default=True)
     # Latest price per unit; each consumption row snapshots it (time & cost).
     unitCost = serializers.DecimalField(
         max_digits=16, decimal_places=2, min_value=Decimal("0"), required=False, default=0
@@ -86,6 +92,10 @@ class UpdateSparePartSerializer(serializers.Serializer):
     minimumStock = serializers.DecimalField(
         max_digits=14, decimal_places=3, min_value=Decimal("0"), required=False, default=0
     )
+    reorderQuantity = serializers.DecimalField(
+        max_digits=14, decimal_places=3, min_value=Decimal("0"), required=False, default=0
+    )
+    autoReorder = serializers.BooleanField(required=False, default=True)
     unitCost = serializers.DecimalField(
         max_digits=16, decimal_places=2, min_value=Decimal("0"), required=False, default=0
     )

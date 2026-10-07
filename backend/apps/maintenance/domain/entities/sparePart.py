@@ -20,6 +20,12 @@ class SparePart:
     unitCost: Decimal
     createdAt: datetime
     updatedAt: datetime | None = None
+    #: How much to buy when the part trips its minimum. Zero means "not
+    #: configured" — the reorder policy then tops up to twice the minimum.
+    reorderQuantity: Decimal = Decimal("0")
+    #: False excludes the part from automatic purchase suggestions. The
+    #: low-stock alert still fires; only the buying proposal is suppressed.
+    autoReorder: bool = True
 
     @property
     def lowStock(self) -> bool:

@@ -56,6 +56,8 @@ class SparePartListView(IdempotencyMixin, APIView):
                 quantityOnHand=str(data["quantityOnHand"]),
                 minimumStock=str(data["minimumStock"]),
                 unitCost=str(data.get("unitCost", 0)),
+                reorderQuantity=str(data.get("reorderQuantity", 0)),
+                autoReorder=bool(data.get("autoReorder", True)),
             )
         )
         return Response(successEnvelope(dataclasses.asdict(result)), status=201)
@@ -77,6 +79,8 @@ class SparePartDetailView(IdempotencyMixin, APIView):
                 quantityOnHand=str(data["quantityOnHand"]),
                 minimumStock=str(data["minimumStock"]),
                 unitCost=str(data.get("unitCost", 0)),
+                reorderQuantity=str(data.get("reorderQuantity", 0)),
+                autoReorder=bool(data.get("autoReorder", True)),
             )
         )
         return Response(successEnvelope(dataclasses.asdict(result)))

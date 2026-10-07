@@ -172,6 +172,15 @@ class SparePartModel(models.Model):
     unit = models.CharField(max_length=30, default="عدد")
     quantityOnHand = models.DecimalField(max_digits=14, decimal_places=3, default=0)
     minimumStock = models.DecimalField(max_digits=14, decimal_places=3, default=0)
+    # How much to buy when the part drops to ``minimumStock``. Zero means
+    # "not configured": the reorder policy then tops the part up to twice
+    # its minimum, so the stock→purchase loop works on existing data without
+    # anyone editing every part first.
+    reorderQuantity = models.DecimalField(max_digits=14, decimal_places=3, default=0)
+    # Opt-out for parts that must never be proposed automatically: stock
+    # being run down, project-funded items, consigned goods. The low-stock
+    # alert still fires; only the purchase suggestion is suppressed.
+    autoReorder = models.BooleanField(default=True)
     # Latest purchase/replacement price per ``unit`` — the consumption rows
     # snapshot this value so historical costs never drift with price updates.
     unitCost = models.DecimalField(max_digits=16, decimal_places=2, default=0)
@@ -199,6 +208,10 @@ class SparePartModel(models.Model):
             models.CheckConstraint(
                 condition=models.Q(unitCost__gte=0),
                 name="ck_spare_part_unit_cost_nonnegative",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(reorderQuantity__gte=0),
+                name="ck_spare_part_reorder_quantity_nonnegative",
             ),
         ]
 

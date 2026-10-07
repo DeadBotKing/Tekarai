@@ -27,6 +27,7 @@ positive, stock going back out to a supplier is negative.
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
 from decimal import Decimal
 
 from apps.maintenance.domain.entities.sparePart import (
@@ -122,3 +123,70 @@ def _now():  # noqa: ANN202 - datetime, imported lazily to keep the module thin
     from datetime import UTC, datetime
 
     return datetime.now(UTC)
+
+
+# --- Stock positions, for the procurement replenishment loop ---------------
+#
+# Procurement needs to know what is on the shelf and what each part's reorder
+# policy says, so it can turn a shortage into a purchase request. It must not
+# read ``SparePartModel`` to find out: that is this context's infrastructure,
+# and the architecture rules make only ``.application`` public. The snapshot
+# below is a plain value object — no ORM rows escape, and the shape procurement
+# depends on is one this context controls.
+
+
+@dataclass(frozen=True)
+class StockPosition:
+    """One spare part's stock level and its reorder policy."""
+
+    partId: uuid.UUID
+    code: str
+    name: str
+    unit: str
+    quantityOnHand: Decimal
+    minimumStock: Decimal
+    reorderQuantity: Decimal
+    autoReorder: bool
+    #: Last price paid. The fallback estimate for a part with no supplier.
+    unitCost: Decimal
+
+
+def listStockPositions(tenantId: uuid.UUID) -> list[StockPosition]:
+    """Every live spare part of one tenant, with its reorder settings.
+
+    Soft-deleted parts are excluded by the repository, so a retired part is
+    never proposed for purchase.
+    """
+    return [
+        StockPosition(
+            partId=part.id,
+            code=part.code,
+            name=part.name,
+            unit=part.unit,
+            quantityOnHand=Decimal(part.quantityOnHand),
+            minimumStock=Decimal(part.minimumStock),
+            reorderQuantity=Decimal(part.reorderQuantity),
+            autoReorder=bool(part.autoReorder),
+            unitCost=Decimal(part.unitCost),
+        )
+        for part in _repository().list(tenantId)
+    ]
+
+
+def tenantIdsWithStock() -> list[uuid.UUID]:
+    """Every tenant holding at least one live spare part.
+
+    Exposed here rather than queried by procurement because the spare-part
+    table belongs to this context. ``order_by()`` is load-bearing: the
+    model's ``Meta.ordering`` columns join a DISTINCT select, which would
+    return one row per part instead of one per tenant — so a scheduled scan
+    would run 50 times over a 50-part warehouse.
+    """
+    from apps.maintenance.infrastructure.models import SparePartModel
+
+    return list(
+        SparePartModel.objects.filter(deletedAt__isnull=True)
+        .order_by()
+        .values_list("tenantId", flat=True)
+        .distinct()
+    )

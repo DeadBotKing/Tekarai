@@ -308,3 +308,19 @@
 }
 
 .req-lines__note { color: var(--text-muted); max-width: 230px; }
+
+/* --- تأمین انبار (stock→purchase loop) ------------------------------- */
+.replenishment-notice {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  background: var(--color-surface-muted, #f4f6f8);
+  border-bottom: 1px solid var(--color-border, #e3e8ef);
+  font-size: 0.9rem;
+}
+.replenishment-summary {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--color-border, #e3e8ef);
+  text-align: start;
+  font-size: 0.9rem;
+}

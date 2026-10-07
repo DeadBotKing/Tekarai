@@ -6,6 +6,78 @@ made it impossible to tell what any given commit changed or to roll back to a
 known-good state. Entries follow [Keep a Changelog](https://keepachangelog.com)
 and the project aims at [Semantic Versioning](https://semver.org).
 
+## [0.5.0]
+
+### Security
+
+- **Any authenticated user could write into any tenant.**
+  `maintenance/tenantResolver.resolveTenantId` returned whatever `tenantId`
+  the caller supplied, and seven views feed it `request.data.get("tenantId")`.
+  Tenant ids are returned in every API payload, so this was reachable by
+  anyone with a login. Confirmed three ways, each returning `201`: a device
+  planted in another tenant, a work order submitted against another tenant's
+  device, and a device created in a tenant id that did not exist. The
+  resolver now compares the requested tenant against the authenticated
+  context and raises `TenantAccessDeniedError` on a mismatch; a request
+  naming the caller's own tenant still works, and background jobs that
+  iterate tenants without a request context are unaffected.
+
+### Fixed
+
+- **`manage.py dumpdata` produced an empty backup.** Django skips apps whose
+  `models_module` is `None`, which is every app here because models live in
+  `infrastructure/models.py` by architectural rule. A dump of a populated
+  database returned 20 records — `contenttypes` and `auth.permission` — and
+  said nothing about the omission. New `manage.py backupData` collects models
+  through the app registry and writes a `loaddata`-compatible fixture; the
+  same database yields 380 records across 9 models. `--tenant` limits the
+  dump to one tenant.
+
+### Added
+
+Sixty-nine tests across the twelve gaps raised. Backend 2983 → 3024,
+frontend 313 → 325. See `docs/TestCoverageGaps.md` for what each suite
+covers and what remains uncovered.
+
+- `tests/integration/testMultiTenantIsolation.py` (6) — a genuine second
+  tenant, created through the real use cases, with reads and writes attempted
+  across the boundary.
+- `tests/resilience/testDependencyOutages.py` (7) — database and broker
+  failures: `readyz` 503 while `healthz` stays 200, failed queries returning
+  the project envelope with a correlation id and no leaked driver message,
+  failed writes never reporting success.
+- `tests/resilience/testFileSecurity.py` (13) — path traversal in filenames,
+  cross-tenant download and delete, unauthenticated access, the 25 MB
+  ceiling, uploaded HTML served as an attachment, byte-exact round trips and
+  Persian filenames.
+- `tests/resilience/testScaleAndLoad.py` (8) — 500 devices and 500 work
+  orders: paging, clamped limits, and N+1 detection by comparing query counts
+  across page sizes; two tenants on eight threads checking that the
+  request-scoped tenant does not leak under concurrency.
+- `tests/resilience/testBackupRestore.py` (7) — dump/delete/reload round
+  trips, foreign keys, Persian text, idempotent re-restore, and two tenants
+  that must not merge.
+- `frontend-web/src/tests/permissionMatrix.test.tsx` (12) — five shipped
+  roles against the real provider and a real session, including that a
+  permission list is an AND, that `"*"` is exact, and that a maintenance
+  manager may raise a requisition but not approve it.
+- `tests/support/multiTenantHelpers.py` — builds a second tenant with its own
+  administrator through the application's own use cases.
+
+### Known issues
+
+- **Every authenticated request writes to the database.**
+  `principals.verifyToken` updates `Session.lastActivityAt` on each call, so
+  every read is also a write. Under concurrency on SQLite this produces
+  `database is locked`; on any database it is write amplification
+  proportional to traffic. Throttling the update to once per session per
+  minute would remove it.
+- Browser-level E2E, sustained load testing, offline sync conflict
+  resolution, and disaster recovery remain uncovered. Each is blocked on
+  something other than test code — missing browser libraries, load
+  infrastructure, an undecided merge rule, and a second region respectively.
+  `docs/TestCoverageGaps.md` says so per item.
+
 ## [0.4.0]
 
 ### Security

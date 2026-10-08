@@ -51,6 +51,9 @@ class WorkOrderRepositoryDjango:
             assignedToName=order.assignedToName,
             resolutionNote=order.resolutionNote,
             createdAt=order.createdAt,
+            orgDepartmentId=order.orgDepartmentId,
+            requestedByUserId=order.requestedByUserId,
+            assignedToUserId=order.assignedToUserId,
         )
 
     def update(self, order: WorkOrder) -> None:
@@ -61,6 +64,7 @@ class WorkOrderRepositoryDjango:
             status=str(order.status),
             department=str(order.department),
             assignedToName=order.assignedToName,
+            assignedToUserId=order.assignedToUserId,
             resolutionNote=order.resolutionNote,
             updatedAt=order.updatedAt or datetime.now(tz=None),
             closedAt=order.closedAt,
@@ -121,6 +125,19 @@ class WorkOrderRepositoryDjango:
 
     def list(self, filters: WorkOrderFilters) -> WorkOrderPage:
         queryset = WorkOrderModel.objects.filter(tenantId=filters.tenantId, deletedAt__isnull=True)
+        # Organisation scope (Phase 28). Applied FIRST, before any caller
+        # filter, so no query parameter can widen it. `scopeDenied` means
+        # the user holds no grant at all — an empty page, never an
+        # unfiltered one.
+        if filters.scopeDenied:
+            return WorkOrderPage(items=[], totalCount=0)
+        if filters.scopeDepartmentIds is not None:
+            queryset = queryset.filter(orgDepartmentId__in=filters.scopeDepartmentIds)
+        if filters.scopeUserIds is not None:
+            queryset = queryset.filter(
+                Q(requestedByUserId__in=filters.scopeUserIds)
+                | Q(assignedToUserId__in=filters.scopeUserIds)
+            )
         if filters.deviceId:
             queryset = queryset.filter(deviceId=filters.deviceId)
         if filters.status:
@@ -171,6 +188,9 @@ class WorkOrderRepositoryDjango:
             status=WorkOrderStatus(model.status),
             department=MaintenanceDepartment(model.department),
             requestedByName=model.requestedByName,
+            orgDepartmentId=model.orgDepartmentId,
+            requestedByUserId=model.requestedByUserId,
+            assignedToUserId=model.assignedToUserId,
             assignedToName=model.assignedToName,
             resolutionNote=model.resolutionNote,
             createdAt=model.createdAt,

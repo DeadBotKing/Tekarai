@@ -37,6 +37,7 @@ FRAMEWORK_HOOKS = {
     "get_next_link",  # DRF cursor pagination helper
     "has_permission",  # DRF permission hook
     "get_permissions",  # DRF per-method permission hook
+    "handle_exception",  # DRF view-level exception hook
     "authenticate",  # DRF authentication hook
     "authenticate_header",  # DRF authentication hook
     "dispatch",  # DRF view dispatch

@@ -1174,6 +1174,8 @@ const en = {
   // Phase 31 — spare-parts warehouse, real documents, account & search.
   "nav.warehouse": "Warehouse",
   "nav.procurement": "Procurement",
+  "nav.safetyPermits": "Permit to Work",
+  "nav.organizationStructure": "Organisation & Access",
   "warehouse.title": "Spare-parts warehouse",
   "warehouse.subtitle": "Live stock levels, minimums and consumption-ready pricing.",
   "warehouse.addPart": "Add part",
@@ -1991,6 +1993,8 @@ const fa: Partial<TranslationMap> = {
 
   "nav.warehouse": "انبار قطعات",
   "nav.procurement": "تدارکات و خرید",
+  "nav.safetyPermits": "مجوز کار",
+  "nav.organizationStructure": "ساختار سازمانی",
   "nav.account": "حساب و امنیت",
   "warehouse.title": "انبار قطعات یدکی",
   "warehouse.subtitle": "موجودی واقعی انبار، حداقل‌ها و قیمت واحد آماده‌ی مصرف در دستور کار.",

@@ -6,6 +6,237 @@ made it impossible to tell what any given commit changed or to roll back to a
 known-good state. Entries follow [Keep a Changelog](https://keepachangelog.com)
 and the project aims at [Semantic Versioning](https://semver.org).
 
+## [0.9.0] — Scope is now enforced, not just recorded
+
+Written after walking the four factory scenarios the client proposed. The
+first three held. The fourth — «مریم، QA، رئیس باید Work Orderهای QA را
+ببیند، نه فنی و تولید» — **did not**, and the way it failed is worth
+recording: every grant resolved correctly, the profile said
+`WorkOrder.View = department`, and the list endpoint returned every unit's
+work anyway. Scope was computed and then ignored. That is the worst
+possible state for a permission system, because it reads as a control
+while behaving as a wildcard.
+
+Sixteen scenario tests were written from the brief's wording before any
+fix; eleven failed. They now pass, as do sixteen more that drive the same
+scenarios over real HTTP.
+
+### Added
+
+- **Attribution on work orders**: `orgDepartmentId`, `requestedByUserId`,
+  `assignedToUserId`, stamped at creation from the requester's primary
+  posting. The existing `requestedByName` / `assignedToName` fields cannot
+  carry an access decision — two «رضا»s are not the same person, and
+  renaming a user would silently change who can see a record.
+  `orgDepartmentId` is deliberately separate from the existing
+  `department` field, which is maintenance's own routing crew.
+- **Scope applied to the work-order query**, before any caller filter, so
+  no query parameter can widen it. The actor comes from the session, never
+  from a parameter.
+- **Record-level checks on `GET` and `PATCH`** of a single work order,
+  reading the same resolution as the list — a user can never be shown a
+  row they are then refused on open.
+- `own` scope now also covers work **assigned** to the person, not only
+  work they raised; otherwise «کار خودش» excluded the job they were told
+  to do.
+- 32 new tests: `testFactoryScenarios.py` (the four scenarios at the
+  resolution level) and `testScenarioEnforcementApi.py` (the same over
+  HTTP, including a test that a query parameter cannot escape the unit and
+  that list and detail never disagree).
+
+### Changed
+
+- **«مدیر» now defaults to `department` scope, not `all`.** A unit manager
+  runs his unit. Plant-wide sight is a different job — «مدیر کارخانه» —
+  which an administrator creates and grants `all` deliberately. Defaulting
+  every manager to `all` meant the first person given the title could read
+  every unit in the factory, which is the collapse of «واحد» this design
+  exists to prevent. The eight verbs are unchanged; only their reach is.
+
+### Compatibility
+
+A tenant with no units defined is unaffected: no filter is applied and
+every list behaves exactly as before. Once units exist, a user with no
+posting gets an empty list rather than a full one. The asymmetry is
+deliberate — **absence of configuration is permissive, absence of
+permission is not.**
+
+### Tests
+
+Backend 3332 → **3364**; frontend **380**. mypy clean across 1077 files,
+ruff clean, `tsc -b` clean, 164 architecture tests green.
+
+## [0.8.0] — Organisation chart and unit/position access control
+
+Gap #4 from the CMMS gap analysis. Until now access came from a flat Role,
+which cannot tell «مدیر فنی و مهندسی» from «مدیر تولید», cannot say "only
+his own work orders", and could not be extended without a programmer. The
+unit of access is now the posting — **کاربر + واحد + سمت** — and every
+grant carries a scope.
+
+### Added
+
+- **New bounded context `apps.organization`** (the register's long-planned
+  `organization` context, opened by this release). Five tables: units,
+  positions, postings, matrix cells and an append-only audit log. Users are
+  referenced by id only — no foreign key into identity.
+- **Units («واحدها») and positions («سمت‌ها») are data, not code.** Seeded
+  with فنی و مهندسی / QC / QA / HSE / تولید and مدیر / رئیس / سرپرست /
+  کارشناس / تکنسین / اپراتور, all of which the plant may rename, nest,
+  deactivate or extend from inside the CMMS. Adding «انبار» or «سرپرست برق»
+  tomorrow requires no deployment.
+- **A position alone grants nothing.** Authority comes from the posting, so
+  «علی، فنی و مهندسی، مدیر» and «رضا، همان واحد، تکنسین» are different
+  principals. A user may hold several postings; their grants union, and the
+  widest scope wins on collision.
+- **A per-unit permission matrix** of capability × verb → scope, editable at
+  runtime. Eight verbs (View, Create, Edit, Delete, Approve, Assign, Close,
+  Export) rather than a single show/hide flag.
+- **Scope on every grant** — `own` / `team` / `department` / `all`. The
+  brief's worked case holds end to end: a technician sees and edits only his
+  own work orders, a supervisor his team's, a رئیس the unit, a factory
+  manager everything.
+- **`scopeFilterForUser` and `userCanActOnRecord`**, derived from the same
+  resolution, so a user is never shown a row they cannot open.
+- **Screen «ساختار سازمانی»** with three tabs and a scrollable matrix grid
+  whose rows are drawn from the catalogue the server sends.
+- **`manage.py seedOrganization --tenant <uuid>`** — idempotent.
+- `docs/OrganizationAccessControl.md`.
+
+### Changed
+
+- **`AccessRepositoryDjango.grantsOfUser` now also assembles grants from the
+  organisation chart**, through the organization context's public
+  application contract. Org grants are inserted *before* direct user grants
+  so an explicit `deny` still overrides them: there remains exactly one
+  place to look when locking someone out.
+- **New public contract
+  `apps.identity.application.services.authorizationInvalidation`.** Other
+  contexts can now say "this user's access changed" without importing
+  identity's cache. Every structural or matrix change bumps the affected
+  users' version, so a revoked posting stops working on the next request
+  rather than when a TTL expires.
+- Twelve new permission codes registered in the catalogue, including the
+  `maintenance.workorder.delete/.close/.export` verbs the matrix can grant
+  and which had no code before.
+
+### Fixed
+
+- **The matrix view merged every unit's overrides when no unit was
+  selected**, showing an organisation-wide grid of scopes that applied in no
+  unit at all. Caught by its own API test.
+
+### Design notes
+
+- **Capabilities and verbs are code; everything else is data.** Each matrix
+  cell maps to real enforced action codes, and a cell that resolves to none
+  is refused rather than stored — a tick that grants nothing is worse than
+  no tick. `testEveryMatrixActionCodeExistsInThePermissionCatalogue` breaks
+  the build if anyone adds one.
+- **The matrix is additive; it has no deny.** Subtraction stays with
+  identity's `UserPermission` deny rows.
+- **A unit-specific rule replaces the organisation-wide default outright,
+  including when it is narrower** — "in QC the supervisor sees only his own"
+  has to be expressible.
+- **Seniority grants nothing.** `level` orders the grid's columns; a higher
+  number does not inherit a lower one's permissions.
+- **An unknown scope string resolves to no access**, so a seed typo cannot
+  become a wildcard, and a user with no grant yields `denied`, never an
+  unfiltered query.
+
+### Tests
+
+Backend 3216 → **3332**; frontend 353 → **380**. mypy clean across 1075
+files, ruff clean, `tsc -b` clean, all 164 architecture tests green.
+
+## [0.7.0] — Permit to Work (مجوز کار)
+
+Gap #1 from the CMMS gap analysis, built because the system is going into a
+real factory. A permit system that records who clicked what is paperwork;
+this one is built around what it **refuses**.
+
+### Added
+
+- **New bounded context `apps.safety`.** Permit to work is a safety-management
+  domain, not a corner of maintenance (which already carries 31 models). It
+  references work orders and devices **by id only**, with no cross-context
+  foreign key — the same pattern procurement uses for spare parts.
+- **Ten enforced safety invariants**, each with a stable error code and a
+  Persian message: self-approval refused; no issue against an unconfirmed
+  mandatory precaution; no issue of an isolation-class permit unless every
+  point is applied *and* independently verified; no activation outside the
+  validity window; no closure while a lock is still on; no lock removal while
+  work is running; illegal transitions refused; terminal states terminal;
+  cross-tenant access refused; and a two-person rule above high risk where the
+  verifier may not be the applier.
+- **Expiry is computed from the clock, never stored.** A persisted `isExpired`
+  flag is wrong for every moment between one scheduled scan and the next.
+- **`scanPermitExpiry` management command**, dry-run by default. It
+  auto-expires only **approved-but-never-started** permits, and merely alarms
+  on overdue **active** ones — silently expiring a live permit while people are
+  inside a vessel does not get them out, it only deletes the record that they
+  are there. Intended cadence is every 15 minutes, not daily.
+- **Four tables**: the permit, the checklist as rows (not JSON — an
+  investigator asks *who* confirmed the gas test and *when*), the
+  lock-and-tag register with three independent signature pairs, and an
+  append-only event trail. Nothing is ever hard-deleted.
+- **Eight permit types** with per-type Persian checklists, validity caps
+  (hot work 12h … excavation 72h) and an isolation requirement; four risk
+  levels; eight energy types.
+- **API** `/api/v1/safety/permits` — list/create, detail, nine lifecycle
+  actions, precaution confirmation, isolation apply/verify/remove, and a
+  read-only expiry preview.
+- **Five permissions** `safety.permit.view/.request/.approve/.isolate/.close`,
+  wired so a technician may raise and isolate but never authorise or close.
+- **Frontend `SafetyPermitsPage`** at `/app/maintenance/permits`, fixture-free
+  (zero `demoMode` branches).
+- `docs/PermitToWork.md` — the rules, the asymmetry of the expiry scan, and
+  what was deliberately left out.
+
+### Design decisions
+
+- **Safety refusals return 422, not 400.** The request was well-formed; the
+  *plant* was not ready, and the client has to tell those apart.
+- **All blockers are reported at once**, never one at a time. A permit office
+  told one missing item per attempt makes one trip per item.
+- **`workAtHeight` and `radiography` deliberately do not require isolation.**
+  Their controls are barriers and dosimetry; demanding a fake isolation
+  register there teaches people to fill in fake ones, and that habit spreads
+  to the permits where the register is real.
+- **The two-person rule starts at high risk, not everywhere.** Requiring a
+  second body for every low-risk isolation in a small plant produces
+  signatures nobody witnessed — worse than an honest single signature.
+- **Re-applying an isolation invalidates its previous verification**: what was
+  checked is not necessarily what is now in place.
+- **Concurrent permits on one asset are announced, not blocked** — two trades
+  in one shutdown is legitimate, but it must be a conscious decision.
+- **The checklist locks once the permit is authorised**: it *is* the assessment
+  the signature was given against.
+- The UI's disabled approve button is a courtesy; the guard lives in the
+  domain, because a UI check alone is bypassed by the first person who learns
+  the URL.
+
+### Tests
+
+- **129 new tests** (backend 3087 → 3216, frontend 335 → 353): 55 pure-rule
+  tests with an injected clock, 47 against the database, 27 over authenticated
+  HTTP, 18 on the page.
+- The happy path is tested as deliberately as the refusals — a suite that only
+  proves things are blocked can hide a rule that blocks everything, which in a
+  real plant means the system is bypassed on paper within a week.
+- Live smoke test on a seeded database confirmed all four headline refusals
+  fire over HTTP and that a fully prepared permit completes the whole
+  draft→closed cycle.
+
+### Known limitations
+
+- No digital or biometric signature; no permit extension (extensions become a
+  way around the validity cap); `workOrderId` is stored but not yet populated
+  from the work-order screen; no safety reporting or KPIs yet.
+- The one-user test fixture means segregation of duties correctly fires before
+  every other check; tests that need to exercise the rules underneath it seed
+  a second requester directly.
+
 ## [0.6.0]
 
 ### Added

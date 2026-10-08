@@ -1,0 +1,147 @@
+/* ساختار سازمانی و ماتریس دسترسی — organisation chart and access grid.
+ *
+ * The grid is the hard part. It is wide by nature (one column per position,
+ * one row per capability × verb), so it scrolls horizontally inside its card
+ * while the capability and verb columns stay pinned — an administrator who
+ * has scrolled four positions to the left must still be able to see which
+ * permission the row is about.
+ *
+ * Granted cells are tinted rather than only ticked. At a glance the shape of
+ * who-can-do-what should be readable across the whole table, which a column
+ * of identical checkboxes does not give you.
+ */
+
+.organization-page {
+  display: grid;
+  gap: 1rem;
+  text-align: start;
+}
+
+.organization-page .tab-bar {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+}
+
+.organization-page .tab {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted, #64748b);
+  font: inherit;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.organization-page .tab-active {
+  color: var(--color-primary, #2563eb);
+  border-bottom-color: var(--color-primary, #2563eb);
+  font-weight: 600;
+}
+
+.organization-page .inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  padding: 1rem;
+  margin: 0.75rem 0;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 0.5rem;
+  background: var(--color-surface-muted, #f8fafc);
+}
+
+.organization-page .notice {
+  margin: 0.5rem 0 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.organization-page .form-error {
+  margin: 0.5rem 0 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.organization-page .hint {
+  margin: 0.5rem 0;
+  color: var(--color-text-muted, #64748b);
+  font-size: 0.875rem;
+}
+
+.organization-page .row-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+/* The grid ------------------------------------------------------------- */
+
+.matrix-scroll {
+  overflow-x: auto;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.access-matrix {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.access-matrix caption {
+  text-align: start;
+  font-weight: 600;
+  padding: 0.5rem 0;
+  color: var(--color-text-muted, #64748b);
+}
+
+.access-matrix th,
+.access-matrix td {
+  border: 1px solid var(--color-border, #e2e8f0);
+  padding: 0.375rem 0.5rem;
+  text-align: start;
+  white-space: nowrap;
+}
+
+.access-matrix thead th {
+  background: var(--color-surface-muted, #f8fafc);
+  position: sticky;
+  top: 0;
+}
+
+/* Keep the capability and verb columns readable while scrolling sideways. */
+.access-matrix tbody th[scope="row"] {
+  position: sticky;
+  inset-inline-start: 0;
+  background: var(--color-surface, #fff);
+  font-weight: 600;
+}
+
+.access-matrix td[data-granted="yes"] {
+  background: #f0fdf4;
+}
+
+.matrix-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.matrix-cell select {
+  font: inherit;
+  font-size: 0.75rem;
+  padding: 0.125rem 0.25rem;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 0.25rem;
+  background: var(--color-surface, #fff);
+}
+
+.scope-fixed {
+  font-size: 0.75rem;
+  color: var(--color-text-muted, #64748b);
+}

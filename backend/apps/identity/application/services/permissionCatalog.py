@@ -107,6 +107,35 @@ ACTIONS: list[tuple[str, str]] = [
     ("procurement.receipt.post", "Post goods receipts into inventory"),
     ("procurement.return.post", "Post supplier returns"),
     ("procurement.invoice.manage", "Record and manage supplier invoices"),
+    # Phase 27 — permit to work. The split follows who may do what on a real
+    # plant, not CRUD shape: requesting a permit and applying an isolation are
+    # the crew's job, authorising one is the supervisor's, and the two must
+    # never collapse into a single permission.
+    ("safety.permit.view", "View permits to work and their isolation registers"),
+    ("safety.permit.request", "Raise a permit to work and submit it for approval"),
+    ("safety.permit.approve", "Authorise, reject, suspend or cancel a permit to work"),
+    ("safety.permit.isolate", "Apply, verify and remove isolation points"),
+    ("safety.permit.close", "Close a permit and hand equipment back to operations"),
+    # Phase 28 — organisation chart. Managing the structure is separated
+    # from managing the matrix on purpose: moving a person between units is
+    # routine administration, while editing who may approve work is the act
+    # that changes what the system refuses, and the two should not be the
+    # same permission.
+    ("organization.department.view", "View organisation units"),
+    ("organization.department.manage", "Create, edit and deactivate organisation units"),
+    ("organization.position.view", "View organisation positions"),
+    ("organization.position.manage", "Create, edit and deactivate positions"),
+    ("organization.assignment.view", "View who is posted where"),
+    ("organization.assignment.manage", "Assign users to units and positions"),
+    ("organization.accessRule.view", "View the department/position permission matrix"),
+    ("organization.accessRule.manage", "Grant and revoke permissions in the matrix"),
+    # Verbs the matrix can grant that had no action code before it existed.
+    ("maintenance.workorder.delete", "Delete a work order"),
+    ("maintenance.workorder.close", "Close a completed work order"),
+    ("maintenance.workorder.export", "Export work orders"),
+    ("maintenance.device.export", "Export the equipment register"),
+    ("maintenance.inventory.export", "Export the spare-parts register"),
+    ("analytics.metric.export", "Export analytics and reports"),
 ]
 
 
@@ -146,6 +175,8 @@ _MAINTENANCE_REQUESTER_ACTIONS = [
     "maintenance.attachment.manage",
     "maintenance.document.view",
     "maintenance.document.upload",
+    "safety.permit.view",
+    "organization.department.view",
 ]
 _MAINTENANCE_TECHNICIAN_ACTIONS = [
     "maintenance.device.list",
@@ -165,6 +196,13 @@ _MAINTENANCE_TECHNICIAN_ACTIONS = [
     "maintenance.attachment.manage",
     "maintenance.document.view",
     "maintenance.document.upload",
+    # A technician raises permits for their own work and performs the
+    # lock-and-tag, but cannot authorise — that is the whole point of
+    # segregation of duties.
+    "safety.permit.view",
+    "safety.permit.request",
+    "safety.permit.isolate",
+    "organization.department.view",
 ]
 _PROCUREMENT_MANAGER_ACTIONS = [
     "procurement.supplier.view",
@@ -203,6 +241,26 @@ _MAINTENANCE_MANAGER_ACTIONS = [
     "maintenance.document.view",
     "maintenance.document.upload",
     "maintenance.document.manage",
+    # The supervisor authorises and closes. They can also raise and isolate,
+    # because in a small plant they often do — but the self-approval guard
+    # in the domain still refuses when they try to sign off their own.
+    "safety.permit.view",
+    "safety.permit.request",
+    "safety.permit.approve",
+    "safety.permit.isolate",
+    "safety.permit.close",
+    # The manager runs their own unit: who is in it, and (for their unit)
+    # what each title may do. Creating units and positions stays with the
+    # tenant administrator, who holds every action.
+    "organization.department.view",
+    "organization.position.view",
+    "organization.assignment.view",
+    "organization.assignment.manage",
+    "organization.accessRule.view",
+    "maintenance.workorder.export",
+    "maintenance.device.export",
+    "maintenance.inventory.export",
+    "analytics.metric.export",
 ]
 
 ROLE_PRESETS: dict[str, list[str]] = {

@@ -67,6 +67,13 @@ class WorkOrderFilters:
     createdFrom: datetime | None = None
     createdTo: datetime | None = None
 
+    # Organisation access scope (Phase 28). `None` means "this dimension
+    # does not narrow the query"; an empty tuple means "narrow to nothing",
+    # which is a real and different answer. `scopeDenied` short-circuits.
+    scopeDenied: bool = False
+    scopeDepartmentIds: tuple[str, ...] | None = None
+    scopeUserIds: tuple[str, ...] | None = None
+
 
 @dataclass(frozen=True)
 class WorkOrderPage:

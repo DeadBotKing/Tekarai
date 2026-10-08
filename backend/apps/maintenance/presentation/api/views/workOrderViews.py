@@ -43,6 +43,7 @@ from apps.maintenance.presentation.api.serializers.maintenanceSerializers import
     SubmitWorkOrderSerializer,
     UpdateWorkOrderSerializer,
 )
+from apps.sharedKernel.domain.errors import PermissionDeniedError
 from apps.sharedKernel.presentation.api.authentication import BearerSessionAuthentication
 from apps.sharedKernel.presentation.api.idempotency import IdempotencyMixin
 from apps.sharedKernel.presentation.api.permissions import IsAuthenticated
@@ -53,6 +54,68 @@ def asDict(dto: Any) -> dict[str, Any]:
     return dataclasses.asdict(dto)
 
 
+
+def currentActorId() -> str:
+    """The signed-in user's id, or "" when there is no request actor."""
+    from apps.sharedKernel.application.requestContext import currentContext
+
+    return str(getattr(currentContext(), "actorId", "") or "")
+
+
+def assertRecordInScope(workOrderId: str, action: str) -> None:
+    """Refuse a single record the caller's scope does not cover.
+
+    The list query and this check read the same resolution, so a user can
+    never be shown a row in a list that they are then refused on open —
+    the inconsistency that teaches people the permissions are arbitrary.
+    """
+    import uuid as _uuid
+
+    from apps.maintenance.infrastructure.models import WorkOrderModel
+    from apps.sharedKernel.application.requestContext import currentContext
+
+    context = currentContext()
+    actorId = str(getattr(context, "actorId", "") or "")
+    tenantRaw = getattr(context, "tenantId", None) or getattr(context, "actorTenantId", None)
+    if not actorId or not tenantRaw:
+        return
+    try:
+        from apps.organization.application.services.accessContract import (
+            hasOrganizationStructure,
+            userCanActOnRecord,
+        )
+
+        tenantId = _uuid.UUID(str(tenantRaw))
+        if not hasOrganizationStructure(tenantId):
+            return
+        row = (
+            WorkOrderModel.objects.filter(id=workOrderId, tenantId=tenantId)
+            .values("orgDepartmentId", "requestedByUserId", "assignedToUserId")
+            .first()
+        )
+        if row is None:
+            return
+        allowed = userCanActOnRecord(
+            tenantId,
+            _uuid.UUID(actorId),
+            action,
+            ownerUserId=str(row["requestedByUserId"] or ""),
+            departmentId=str(row["orgDepartmentId"] or ""),
+        ) or userCanActOnRecord(
+            tenantId,
+            _uuid.UUID(actorId),
+            action,
+            # A technician assigned to a job owns it for access purposes
+            # even when somebody else raised it; otherwise «کار خودش»
+            # would exclude the work he was told to do.
+            ownerUserId=str(row["assignedToUserId"] or ""),
+            departmentId=str(row["orgDepartmentId"] or ""),
+        )
+    except (ImportError, ValueError):
+        return
+    if not allowed:
+        raise PermissionDeniedError(action)
+
 class WorkOrderListView(IdempotencyMixin, APIView):
     authentication_classes = [BearerSessionAuthentication]
     permission_classes = [IsAuthenticated]
@@ -62,6 +125,11 @@ class WorkOrderListView(IdempotencyMixin, APIView):
 
         def buildQuery(page: int, pageSize: int) -> ListWorkOrdersQuery:
             return ListWorkOrdersQuery(
+                # Phase 28: the list is narrowed by the caller's postings.
+                # Passed from the view because the actor is a request fact,
+                # and taken from the session rather than any parameter — a
+                # client must not be able to ask for someone else's scope.
+                actorUserId=currentActorId(),
                 deviceId=str(request.query_params.get("deviceId", "")).strip(),
                 status=str(request.query_params.get("status", "")).strip(),
                 orderType=str(request.query_params.get("orderType", "")).strip(),
@@ -128,12 +196,14 @@ class WorkOrderDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request: Request, workOrderId: str) -> Response:
+        assertRecordInScope(str(workOrderId), "maintenance.workorder.view")
         dto = container.getWorkOrderUseCase().execute(
             GetWorkOrderQuery(workOrderId=str(workOrderId))
         )
         return Response(successEnvelope(asDict(dto)))
 
     def patch(self, request: Request, workOrderId: str) -> Response:
+        assertRecordInScope(str(workOrderId), "maintenance.workorder.update")
         serializer = UpdateWorkOrderSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         dto = container.updateWorkOrderUseCase().execute(

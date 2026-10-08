@@ -7,6 +7,7 @@ demands it (BR-TEN-001). IntegrityErrors map to stable error codes.
 from __future__ import annotations
 
 import builtins
+import logging
 import uuid
 from datetime import UTC, datetime
 
@@ -322,6 +323,15 @@ class AccessRepositoryDjango:
                         scopeRef=roleRow["scopeRef"] or "",
                     )
                 )
+        # Phase 28 — permissions earned from the organisation chart
+        # («کاربر + واحد + سمت»). Pulled through the organization context's
+        # public application contract, which is the only cross-context
+        # surface the architecture allows; identity never learns what a
+        # «واحد» is. Added before the direct user grants below so an
+        # explicit deny still overrides anything a posting granted — there
+        # must remain exactly one place to look when locking someone out.
+        grants.extend(self.organizationGrants(userId, tenantId))
+
         for direct in UserPermissionModel.objects.filter(userId=userId):
             grants.append(
                 AccessGrant(
@@ -345,6 +355,37 @@ class AccessRepositoryDjango:
             ],
         )
         return grants
+
+    @staticmethod
+    def organizationGrants(userId: uuid.UUID, tenantId: uuid.UUID) -> list[AccessGrant]:
+        """Action codes this user earns from their postings in the chart.
+
+        Imported inside the function because the organization context is
+        optional at this layer: an installation that has not adopted
+        departments, or a test that does not load the app, must keep
+        authenticating normally rather than failing closed on an import
+        error. A genuine failure is logged and treated as "no extra
+        grants", never as "allow".
+        """
+        try:
+            from apps.organization.application.services.accessContract import grantsForUser
+
+            return [
+                AccessGrant(
+                    actionPattern=row["actionPattern"],
+                    scopeType=row["scopeType"],
+                    scopeRef=row.get("scopeRef", ""),
+                    effect=row.get("effect", "allow"),
+                )
+                for row in grantsForUser(tenantId, userId)
+            ]
+        except ImportError:
+            return []
+        except Exception:  # noqa: BLE001 — see docstring
+            logging.getLogger(__name__).exception(
+                "Organisation grants could not be resolved", extra={"userId": str(userId)}
+            )
+            return []
 
     @staticmethod
     def toGrant(row: dict) -> AccessGrant:

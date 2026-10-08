@@ -52,6 +52,14 @@ urlpatterns = [
                     "procurement/",
                     include("apps.procurement.presentation.api.urls"),
                 ),
+                path(
+                    "safety/",
+                    include("apps.safety.presentation.api.urls"),
+                ),
+                path(
+                    "organization/",
+                    include("apps.organization.presentation.api.urls"),
+                ),
                 path("", include("apps.documents.presentation.api.urls.documentRoutes")),
             ]
         ),

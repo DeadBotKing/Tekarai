@@ -68,6 +68,9 @@ class WorkOrder(AggregateRoot):
         repairFinishedAt: datetime | None = None,
         returnedToServiceAt: datetime | None = None,
         downtimeMinutes: int = 0,
+        orgDepartmentId: uuid.UUID | None = None,
+        requestedByUserId: uuid.UUID | None = None,
+        assignedToUserId: uuid.UUID | None = None,
         labourHours: Decimal = Decimal("0"),
         labourCost: Decimal = Decimal("0"),
         partsCost: Decimal = Decimal("0"),
@@ -82,6 +85,11 @@ class WorkOrder(AggregateRoot):
         self.status = status
         self.department = department
         self.requestedByName = requestedByName
+        # Attribution by id — what `own`, `team` and `department` scope are
+        # evaluated against. The name fields cannot carry an access decision.
+        self.orgDepartmentId = orgDepartmentId
+        self.requestedByUserId = requestedByUserId
+        self.assignedToUserId = assignedToUserId
         self.assignedToName = assignedToName
         self.resolutionNote = resolutionNote
         self.createdAt = createdAt
@@ -114,6 +122,8 @@ class WorkOrder(AggregateRoot):
         department: MaintenanceDepartment,
         requestedByName: str,
         now: datetime,
+        orgDepartmentId: uuid.UUID | None = None,
+        requestedByUserId: uuid.UUID | None = None,
     ) -> WorkOrder:
         if not title.strip():
             raise ValidationFailedError(
@@ -133,6 +143,8 @@ class WorkOrder(AggregateRoot):
             assignedToName="",
             resolutionNote="",
             createdAt=now,
+            orgDepartmentId=orgDepartmentId,
+            requestedByUserId=requestedByUserId,
         )
         order.recordEvent(
             DomainEvent(

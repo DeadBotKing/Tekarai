@@ -98,6 +98,21 @@ class WorkOrderModel(models.Model):
     department = models.CharField(max_length=24, default="general", db_index=True)
     requestedByName = models.CharField(max_length=160, blank=True, default="")
     assignedToName = models.CharField(max_length=160, blank=True, default="")
+
+    # Phase 28 — attribution by id, for unit/position access control.
+    #
+    # The name fields above are for display and cannot carry a permission
+    # decision: two «رضا»s in a plant are not the same person, and a renamed
+    # user would silently change who can see a record. These three are what
+    # `own`, `team` and `department` scope are actually evaluated against.
+    #
+    # `orgDepartmentId` is the organisation unit that owns the work, stamped
+    # from the requester's primary posting at creation. It is deliberately
+    # separate from `department` above, which is maintenance's own routing
+    # crew (electrical, mechanical, …) and answers a different question.
+    orgDepartmentId = models.UUIDField(null=True, blank=True, db_index=True)
+    requestedByUserId = models.UUIDField(null=True, blank=True, db_index=True)
+    assignedToUserId = models.UUIDField(null=True, blank=True, db_index=True)
     resolutionNote = models.TextField(blank=True, default="")
     createdAt = models.DateTimeField(auto_now_add=True, db_index=True)
     updatedAt = models.DateTimeField(null=True, blank=True)

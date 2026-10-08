@@ -84,6 +84,14 @@ const DeviceTimelinePage = named(
 const WorkOrdersPage = named(() => import("../../pages/WorkOrdersPage"), "WorkOrdersPage");
 const SparePartsPage = named(() => import("../../pages/SparePartsPage"), "SparePartsPage");
 const ProcurementPage = named(() => import("../../pages/ProcurementPage"), "ProcurementPage");
+const SafetyPermitsPage = named(
+  () => import("../../pages/SafetyPermitsPage"),
+  "SafetyPermitsPage",
+);
+const OrganizationStructurePage = named(
+  () => import("../../pages/OrganizationStructurePage"),
+  "OrganizationStructurePage",
+);
 const AccountPage = named(() => import("../../pages/AccountPage"), "AccountPage");
 const DocumentsPage = named(() => import("../../pages/DocumentsPage"), "DocumentsPage");
 const IntelligencePage = named(() => import("../../pages/IntelligencePage"), "IntelligencePage");
@@ -121,6 +129,8 @@ export function AppRouter(): JSX.Element {
         <Route path="maintenance/work-orders" element={<WorkOrdersPage />} />
         <Route path="maintenance/warehouse" element={<SparePartsPage />} />
         <Route path="maintenance/procurement" element={<ProcurementPage />} />
+        <Route path="maintenance/permits" element={<SafetyPermitsPage />} />
+        <Route path="organization/structure" element={<OrganizationStructurePage />} />
         <Route path="account" element={<AccountPage />} />
         <Route path="maintenance/inspections" element={<MaintenanceInspectionsPage />} />
         <Route path="maintenance/pm-calendar" element={<MaintenancePmCalendarPage />} />

@@ -89,6 +89,74 @@ from apps.sharedKernel.application.useCase import (
 )
 from apps.sharedKernel.domain.errors import EntityNotFoundError
 
+LIST_ACTION = "maintenance.workorder.list"
+
+
+def organizationScopeFilters(tenantId: uuid.UUID, actorUserId: str) -> dict:
+    """Translate a user's organisation scope into repository filters.
+
+    Returns an empty dict when the chart is not in use or no actor was
+    supplied, so a plant that has not adopted departments keeps seeing
+    everything it saw before — adding this feature must not silently empty
+    anybody's work-order list.
+
+    When the chart IS in use and the user holds no grant, the result is
+    `scopeDenied`, not an unfiltered query. That asymmetry is the whole
+    point: absence of configuration is permissive, absence of permission
+    is not.
+    """
+    if not actorUserId:
+        return {}
+    try:
+        from apps.organization.application.services.accessContract import (
+            hasOrganizationStructure,
+            scopeFilterForUser,
+        )
+
+        if not hasOrganizationStructure(tenantId):
+            return {}
+        scope = scopeFilterForUser(tenantId, uuid.UUID(str(actorUserId)), LIST_ACTION)
+    except (ImportError, ValueError):
+        return {}
+
+    if scope.denied:
+        return {"scopeDenied": True}
+    if scope.unrestricted:
+        return {}
+    if scope.scope == "department":
+        return {"scopeDepartmentIds": scope.departmentIds}
+    return {"scopeUserIds": scope.userIds}
+
+
+def resolveActorUserId(command) -> uuid.UUID | None:
+    """The acting user, from the command or the ambient request context."""
+    raw = str(getattr(command, "requestedByUserId", "") or "")
+    if not raw:
+        from apps.sharedKernel.application.requestContext import currentContext
+
+        raw = str(getattr(currentContext(), "actorId", "") or "")
+    try:
+        return uuid.UUID(raw)
+    except (ValueError, AttributeError):
+        return None
+
+
+def primaryUnitOf(tenantId: uuid.UUID, userId: uuid.UUID | None) -> uuid.UUID | None:
+    """The organisation unit a person's work is attributed to, if any."""
+    if userId is None:
+        return None
+    try:
+        from apps.organization.application.services.accessContract import (
+            primaryDepartmentIdFor,
+        )
+
+        value = primaryDepartmentIdFor(tenantId, userId)
+    except ImportError:
+        return None
+    try:
+        return uuid.UUID(value) if value else None
+    except ValueError:
+        return None
 
 class WorkOrderUseCaseBase(UseCase):
     def __init__(
@@ -145,6 +213,11 @@ class SubmitWorkOrderUseCase(UseCase):
             MaintenanceDepartment(command.department) if command.department else device.department
         )
         now = self.clock.nowUtc()
+        # Attribution: who raised it and which unit owns it. Stamped once,
+        # at creation, from the requester's primary posting — deriving it
+        # later from a name would be guesswork, and a work order that
+        # belongs to no unit cannot be scoped to one.
+        requesterId = resolveActorUserId(command)
         order = WorkOrder.submit(
             tenantId=tenantId,
             deviceId=deviceId,
@@ -155,6 +228,8 @@ class SubmitWorkOrderUseCase(UseCase):
             department=department,
             requestedByName=command.requestedByName,
             now=now,
+            requestedByUserId=requesterId,
+            orgDepartmentId=primaryUnitOf(tenantId, requesterId),
         )
         self.repository.create(order)
         recordHistory(
@@ -471,6 +546,7 @@ class ListWorkOrdersUseCase(WorkOrderUseCaseBase):
         page = self.repository.list(
             WorkOrderFilters(
                 tenantId=tenantId,
+                **organizationScopeFilters(tenantId, query.actorUserId),
                 deviceId=query.deviceId,
                 status=query.status,
                 orderType=query.orderType,

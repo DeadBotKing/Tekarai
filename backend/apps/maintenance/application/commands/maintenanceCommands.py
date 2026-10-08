@@ -63,6 +63,7 @@ class SubmitWorkOrderCommand(Command):
     priority: str = "normal"
     department: str = ""
     requestedByName: str = ""
+    requestedByUserId: str = ""
 
 
 @dataclass(frozen=True)

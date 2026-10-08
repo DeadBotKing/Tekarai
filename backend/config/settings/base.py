@@ -109,6 +109,8 @@ INSTALLED_APPS = [
     "apps.maintenance",
     "apps.analytics",
     "apps.procurement",
+    "apps.safety",
+    "apps.organization",
     "apps.documents",
 ]
 
@@ -698,6 +700,8 @@ MIGRATION_MODULES = {
     "analytics": "apps.analytics.infrastructure.migrations",
     "procurement": "apps.procurement.infrastructure.migrations",
     "documents": "apps.documents.infrastructure.migrations",
+    "safety": "apps.safety.infrastructure.migrations",
+    "organization": "apps.organization.infrastructure.migrations",
 }
 
 # Phase 07 §7/§8 — JWT configuration (ADR-022: in-house HS256, stdlib only).

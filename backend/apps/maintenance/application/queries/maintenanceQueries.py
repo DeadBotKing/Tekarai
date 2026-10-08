@@ -29,6 +29,10 @@ class ListDuePmQuery(Query):
 
 @dataclass(frozen=True)
 class ListWorkOrdersQuery(Query):
+    #: When set, the list is narrowed to what this user's postings allow.
+    #: Left empty by internal callers (PM generation, exports of a single
+    #: device) that are not acting on behalf of a person.
+    actorUserId: str = ""
     deviceId: str = ""
     status: str = ""
     orderType: str = ""

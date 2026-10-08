@@ -47,6 +47,8 @@ export const navigationConfig: NavigationItem[] = [
       { id: "maintenanceDashboard", label: "nav.maintenanceDashboard", icon: "chart", route: "/app/maintenance/dashboard", permission: PERMISSIONS.maintenanceWorkOrderList },
       { id: "maintenanceWarehouse", label: "nav.warehouse", icon: "layers", route: "/app/maintenance/warehouse", permission: PERMISSIONS.maintenanceInventoryView },
       { id: "maintenanceProcurement", label: "nav.procurement", icon: "briefcase", route: "/app/maintenance/procurement", permission: PERMISSIONS.procurementSupplierView },
+      { id: "safetyPermits", label: "nav.safetyPermits", icon: "shield", route: "/app/maintenance/permits", permission: PERMISSIONS.safetyPermitView },
+      { id: "organizationStructure", label: "nav.organizationStructure", icon: "users", route: "/app/organization/structure", permission: PERMISSIONS.organizationDepartmentView },
       {
         id: "maintenanceAssets",
         label: "nav.cmmsAssets",

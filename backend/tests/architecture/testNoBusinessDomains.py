@@ -32,12 +32,13 @@ OPENED_CONTEXTS = {
     "maintenance": "Phase 21 (Maintenance / CMMS)",
     "documents": "Phase 31 (Tenant Document Library)",
     "procurement": "Phase 32 (Procurement and Purchasing)",
+    "safety": "Phase 27 (Permit to Work / Safety Management)",
+    "organization": "Phase 28 (Organisation Chart & Unit/Position Access)",
     "analytics": "MetricReading delivery (Reporting / Analytics)",
 }
 
 #: Bounded contexts from the approved domain map — still not opened.
 FORBIDDEN_APP_DIRECTORIES = {
-    "organization",
     "workforce",
     "hr",
     "people",
@@ -142,7 +143,16 @@ class ContextOpeningRegisterTests(SimpleTestCase):
                 # mechanical, …) used for two-step work-order routing. This is
                 # distinct from the not-yet-opened org-chart Department and is
                 # allowed only inside the maintenance context.
-                if word == "Department" and "maintenance" in sourceFile.parts:
+                # EVOLUTION NOTE (Phase 28): the organisation context is now
+                # open and OWNS the org-chart Department («واحد») — units,
+                # positions, postings and the unit/position permission matrix.
+                # Maintenance keeps its own narrower routing Department (an
+                # electrical/mechanical crew), which predates this context and
+                # is a different concept; both are allowed, each only inside
+                # the context that owns it, and nowhere else.
+                if word == "Department" and (
+                    "maintenance" in sourceFile.parts or "organization" in sourceFile.parts
+                ):
                     continue
                 # EVOLUTION NOTE (Phase 27): the Maintenance / CMMS context owns
                 # the explicit asset hierarchy — سایت ← ساختمان ← خط تولید ←
@@ -187,7 +197,10 @@ class ContextOpeningRegisterTests(SimpleTestCase):
             # Delivered supporting contexts.
             "apps.documents",
             "apps.procurement",
+            "apps.safety",
             "apps.analytics",
+            # Phase 28: Organisation chart and unit/position access control.
+            "apps.organization",
         }
         unexpectedApps = sorted(set(settings.INSTALLED_APPS) - allowedApps)
         self.assertEqual(

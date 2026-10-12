@@ -66,7 +66,11 @@ const BASELINE: Record<string, number> = {
   "pages/SparePartsPage.tsx": 10,
   "pages/TasksPage.tsx": 3,
   "pages/WorkCalendarPage.tsx": 2,
-  "pages/WorkOrdersPage.tsx": 27,
+  // Raised 27 → 28 for step-by-step escalation (v0.10.0): the demo has no
+  // org chart to resolve a target from, so the handler answers locally like
+  // the 26 branches around it. Recorded here rather than hidden behind a
+  // helper so the count stays honest.
+  "pages/WorkOrdersPage.tsx": 28,
   "shared/components/DemoModeBanner.tsx": 1,
 };
 

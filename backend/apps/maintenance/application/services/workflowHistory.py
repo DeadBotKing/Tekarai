@@ -13,6 +13,7 @@ from apps.maintenance.domain.entities.workOrder import WorkOrder
 from apps.maintenance.domain.entities.workOrderHistory import (
     HISTORY_APPROVED,
     HISTORY_ASSIGNED,
+    HISTORY_ESCALATED,
     HISTORY_REJECTED,
     HISTORY_ROUTED,
     HISTORY_STATUS_CHANGED,
@@ -62,6 +63,7 @@ def recordHistory(
 
 __all__ = [
     "HISTORY_APPROVED",
+    "HISTORY_ESCALATED",
     "HISTORY_ASSIGNED",
     "HISTORY_REJECTED",
     "HISTORY_ROUTED",

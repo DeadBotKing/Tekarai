@@ -50,6 +50,7 @@ export const apiEndpoints = {
     workOrderAssign: (id: string) => `maintenance/work-orders/${id}/assign`,
     workOrderStatus: (id: string) => `maintenance/work-orders/${id}/status`,
     workOrderApprove: (id: string) => `maintenance/work-orders/${id}/approve`,
+    workOrderEscalate: (id: string) => `maintenance/work-orders/${id}/escalate`,
     workOrderReject: (id: string) => `maintenance/work-orders/${id}/reject`,
     workOrderHistory: (id: string) => `maintenance/work-orders/${id}/history`,
     spareParts: "maintenance/spare-parts",

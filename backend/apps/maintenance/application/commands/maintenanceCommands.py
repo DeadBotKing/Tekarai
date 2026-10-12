@@ -107,6 +107,16 @@ class ApproveWorkOrderCommand(Command):
 
 
 @dataclass(frozen=True)
+class EscalateWorkOrderCommand(Command):
+    """Refer a work order one rung up the unit's position chain."""
+
+    workOrderId: str
+    note: str = ""
+    #: The sender, from the session — never a client-supplied choice.
+    actorUserId: str = ""
+
+
+@dataclass(frozen=True)
 class RejectWorkOrderCommand(Command):
     workOrderId: str
     note: str = ""

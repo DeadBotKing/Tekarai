@@ -100,6 +100,7 @@ from apps.maintenance.application.useCases.workOrderUseCases import (
     AutoAssignWorkOrderUseCase,
     ChangeWorkOrderStatusUseCase,
     DeviceMaintenanceReportUseCase,
+    EscalateWorkOrderUseCase,
     GeneratePmWorkOrdersUseCase,
     GetWorkOrderUseCase,
     ListWorkOrderHistoryUseCase,
@@ -394,6 +395,10 @@ def changeWorkOrderStatusUseCase() -> ChangeWorkOrderStatusUseCase:
 
 def approveWorkOrderUseCase() -> ApproveWorkOrderUseCase:
     return ApproveWorkOrderUseCase(**_workOrderDeps())
+
+
+def escalateWorkOrderUseCase() -> EscalateWorkOrderUseCase:
+    return EscalateWorkOrderUseCase(**_workOrderDeps())
 
 
 def rejectWorkOrderUseCase() -> RejectWorkOrderUseCase:

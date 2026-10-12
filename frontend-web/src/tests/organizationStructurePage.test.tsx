@@ -95,6 +95,13 @@ const POSITIONS = [
   },
 ];
 
+const USERS = [
+  { id: "user-ali", username: "alireza", displayName: "علی رضایی", status: "active" },
+  { id: "user-reza", username: "reza", displayName: "رضا محمدی", status: "active" },
+  { id: "user-maryam", username: "maryam", displayName: "مریم احمدی", status: "active" },
+  { id: "user-ahmad", username: "ahmad", displayName: "", status: "active" },
+];
+
 const ASSIGNMENTS = [
   {
     id: "asg-1",
@@ -183,7 +190,10 @@ const refusal = (code: string, message: string): Response =>
 interface StubOptions {
   matrix?: unknown;
   createRefusal?: { code: string; message: string };
-  onPost?: (url: string, body: unknown) => void;
+  onPost?: (url: string, body: unknown) => unknown;
+  onGet?: (url: string) => void;
+  /** What the user-directory search returns; defaults to the fixture list. */
+  users?: unknown[];
 }
 
 const stubApi = (options: StubOptions = {}): void => {
@@ -194,7 +204,7 @@ const stubApi = (options: StubOptions = {}): void => {
       const method = (init?.method ?? "GET").toUpperCase();
       if (method === "POST" || method === "PATCH" || method === "DELETE") {
         const body = init?.body ? JSON.parse(String(init.body)) : {};
-        options.onPost?.(url, body);
+        const posted = options.onPost?.(url, body);
         if (options.createRefusal) {
           return Promise.resolve(
             refusal(options.createRefusal.code, options.createRefusal.message),
@@ -203,12 +213,19 @@ const stubApi = (options: StubOptions = {}): void => {
         if (url.includes("access-matrix")) {
           return Promise.resolve(envelope({ matrix: options.matrix ?? MATRIX }));
         }
+        if (posted !== undefined) {
+          return Promise.resolve(envelope(posted));
+        }
         return Promise.resolve(envelope({ ok: true }));
       }
       if (url.includes("access-matrix")) {
         return Promise.resolve(
           envelope(matrixPayload(options.matrix ? { matrix: options.matrix } : {})),
         );
+      }
+      if (url.includes("/users")) {
+        options.onGet?.(url);
+        return Promise.resolve(envelope(options.users ?? USERS));
       }
       if (url.includes("/departments")) return Promise.resolve(envelope({ items: DEPARTMENTS }));
       if (url.includes("/positions")) return Promise.resolve(envelope({ items: POSITIONS }));
@@ -300,6 +317,51 @@ describe("organisation structure page — units", () => {
     await waitFor(() => expect(posts).toHaveLength(1));
     expect(posts[0].url).toContain("organization/departments");
     expect(posts[0].body).toMatchObject({ name: "تدارکات" });
+  });
+
+  it("offers «افزودن واحد جدید» inside the parent-unit dropdown itself", async () => {
+    const posts: { url: string; body: unknown }[] = [];
+    stubApi({
+      onPost: (url, body) => {
+        posts.push({ url, body });
+        if (url.includes("organization/departments")) {
+          // The server answers with the created row; the page must select it.
+          return {
+            id: "dept-new",
+            code: "LOG",
+            name: "لجستیک",
+            description: "",
+            status: "active",
+            statusLabel: "فعال",
+            parentId: null,
+            managerName: "",
+            isSystem: false,
+            memberCount: 0,
+          };
+        }
+        return undefined;
+      },
+    });
+    renderPage();
+    await screen.findByText("ENG");
+
+    await userEvent.click(screen.getByRole("button", { name: "＋ افزودن واحد" }));
+    await userEvent.type(screen.getByLabelText("نام واحد"), "انبار خام");
+    // The missing parent is offered where the user is looking — inside the
+    // dropdown — not only as a separate top-level action.
+    await userEvent.selectOptions(screen.getByLabelText("واحد بالادست"), "__addParentUnit__");
+    await userEvent.type(screen.getByLabelText("نام واحد بالادست"), "لجستیک");
+    await userEvent.click(screen.getByRole("button", { name: "ثبت و انتخاب به‌عنوان بالادست" }));
+
+    await waitFor(() => expect(posts).toHaveLength(1));
+    expect(posts[0].url).toContain("organization/departments");
+    // The new parent has no parent of its own; the child keeps its own name.
+    expect(posts[0].body).toMatchObject({ name: "لجستیک", parentId: null });
+    // The new unit is selected as the parent without retyping anything, and
+    // the unit being created keeps the name typed before the detour.
+    const parentSelect = screen.getByLabelText("واحد بالادست") as HTMLSelectElement;
+    await waitFor(() => expect(parentSelect.value).toBe("dept-new"));
+    expect((screen.getByLabelText("نام واحد") as HTMLInputElement).value).toBe("انبار خام");
   });
 
   it("refuses to delete a seeded unit and explains why instead of failing on click", async () => {
@@ -441,6 +503,104 @@ describe("organisation structure page — positions and postings", () => {
     await screen.findByText("ENG");
     await openTab("سمت‌ها");
     expect(screen.getByRole("button", { name: "＋ انتساب کاربر" })).toBeInTheDocument();
+  });
+});
+
+describe("organisation structure page — assigning a person", () => {
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+    authenticate(ALL_PERMISSIONS);
+    stubApi();
+  });
+
+  it("asks for a person by name, not for a UUID", async () => {
+    const searches: string[] = [];
+    stubApi({ onGet: (url) => searches.push(url) });
+    renderPage();
+    await screen.findByText("ENG");
+    await openTab("سمت‌ها");
+    await userEvent.click(screen.getByRole("button", { name: "＋ انتساب کاربر" }));
+
+    // The UUID field and the hand-typed display-name field are both gone.
+    expect(screen.queryByLabelText("شناسه کاربر")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("نام نمایشی")).not.toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText("کاربر"), "علی");
+    expect(await screen.findByRole("option", { name: /علی رضایی/ })).toBeInTheDocument();
+    // The directory was searched with what the user typed — not left to scroll.
+    const userSearch = searches.find((url) => url.includes("/users"));
+    expect(userSearch).toBeDefined();
+    expect(decodeURIComponent(userSearch ?? "")).toContain("search=علی");
+  });
+
+  it("picks a person and posts their id behind the scenes", async () => {
+    const posts: { url: string; body: unknown }[] = [];
+    stubApi({ onPost: (url, body) => posts.push({ url, body }) });
+    renderPage();
+    await screen.findByText("ENG");
+    await openTab("سمت‌ها");
+    await userEvent.click(screen.getByRole("button", { name: "＋ انتساب کاربر" }));
+
+    await userEvent.type(screen.getByLabelText("کاربر"), "علی");
+    await userEvent.click(await screen.findByRole("option", { name: /علی رضایی/ }));
+    // The chosen person reads as a name on screen — the id never appears.
+    expect((screen.getByLabelText("کاربر") as HTMLInputElement).value).toBe("علی رضایی");
+
+    await userEvent.selectOptions(screen.getByLabelText("واحد"), "dept-eng");
+    await userEvent.selectOptions(screen.getByLabelText("سمت"), "pos-mgr");
+    await userEvent.click(screen.getByRole("button", { name: "ثبت انتساب" }));
+
+    await waitFor(() => expect(posts).toHaveLength(1));
+    expect(posts[0].url).toContain("organization/assignments");
+    expect(posts[0].body).toEqual({
+      userId: "user-ali",
+      userDisplayName: "علی رضایی",
+      departmentId: "dept-eng",
+      positionId: "pos-mgr",
+    });
+    expect(await screen.findByText(/کاربر به واحد و سمت منتسب شد/)).toBeInTheDocument();
+  });
+
+  it("falls back to the username when a person has no display name", async () => {
+    renderPage();
+    await screen.findByText("ENG");
+    await openTab("سمت‌ها");
+    await userEvent.click(screen.getByRole("button", { name: "＋ انتساب کاربر" }));
+    await userEvent.type(screen.getByLabelText("کاربر"), "ahmad");
+    // The option is offered by username, and picking it sends the username
+    // as the display name — an empty name must not be stored.
+    await userEvent.click(await screen.findByRole("option", { name: /ahmad/ }));
+    expect((screen.getByLabelText("کاربر") as HTMLInputElement).value).toBe("ahmad");
+  });
+
+  it("keeps ثبت انتساب out of reach until a real person is picked", async () => {
+    renderPage();
+    await screen.findByText("ENG");
+    await openTab("سمت‌ها");
+    await userEvent.click(screen.getByRole("button", { name: "＋ انتساب کاربر" }));
+    await userEvent.selectOptions(screen.getByLabelText("واحد"), "dept-eng");
+    await userEvent.selectOptions(screen.getByLabelText("سمت"), "pos-mgr");
+
+    const submit = screen.getByRole("button", { name: "ثبت انتساب" });
+    expect(submit).toBeDisabled();
+
+    // Typing a query is not choosing a person — results alone must not arm the button.
+    await userEvent.type(screen.getByLabelText("کاربر"), "رضا");
+    await screen.findByRole("option", { name: /رضا محمدی/ });
+    expect(submit).toBeDisabled();
+
+    await userEvent.click(screen.getByRole("option", { name: /رضا محمدی/ }));
+    expect(submit).toBeEnabled();
+  });
+
+  it("says so when nobody matches", async () => {
+    stubApi({ users: [] });
+    renderPage();
+    await screen.findByText("ENG");
+    await openTab("سمت‌ها");
+    await userEvent.click(screen.getByRole("button", { name: "＋ انتساب کاربر" }));
+    await userEvent.type(screen.getByLabelText("کاربر"), "غایب");
+    expect(await screen.findByText("کاربری با این نام پیدا نشد.")).toBeInTheDocument();
   });
 });
 

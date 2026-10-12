@@ -30,6 +30,7 @@ export const PERMISSIONS = {
   maintenanceWorkOrderRoute: "maintenance.workorder.route",
   maintenanceWorkOrderAssign: "maintenance.workorder.assign",
   maintenanceWorkOrderApprove: "maintenance.workorder.approve",
+  maintenanceWorkOrderEscalate: "maintenance.workorder.escalate",
   maintenanceWorkOrderList: "maintenance.workorder.list",
   maintenanceWorkOrderView: "maintenance.workorder.view",
   maintenanceWorkOrderLogTime: "maintenance.workorder.logTime",

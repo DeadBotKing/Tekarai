@@ -199,24 +199,47 @@ class AccessMatrixApiTests(OrganizationApiTestBase):
         capabilities = {x["key"]: x for x in data["capabilities"]}
         self.assertIn("workOrder", capabilities)
         workOrderActions = [x["value"] for x in capabilities["workOrder"]["actions"]]
-        self.assertEqual(len(workOrderActions), 8)
+        # Nine verbs: the brief's eight plus «escalate», the step-by-step
+        # referral up the unit's ladder.
+        self.assertEqual(
+            sorted(workOrderActions),
+            [
+                "approve",
+                "assign",
+                "close",
+                "create",
+                "delete",
+                "edit",
+                "escalate",
+                "export",
+                "view",
+            ],
+        )
         # A catalogue entry that is not scoped must say so, so the screen
         # does not offer a scope selector that would be ignored.
         self.assertFalse(capabilities["inventory"]["scoped"])
         self.assertTrue(capabilities["workOrder"]["scoped"])
 
     def testSeededGridMatchesTheBriefsWorkOrderExample(self) -> None:
-        """مدیر all eight; رئیس all but Delete; تکنسین view only."""
+        """مدیر all eight; رئیس all but Delete; تکنسین view only.
+
+        «escalate» rides along at every rung — the ladder itself is a
+        permission, granted per position like any other verb.
+        """
         data = self.get("/access-matrix").json()["data"]
         matrix = data["matrix"]
         manager = matrix[str(self.positions["MGR"].id)]["workOrder"]
         head = matrix[str(self.positions["HEAD"].id)]["workOrder"]
         technician = matrix[str(self.positions["TECHNICIAN"].id)]["workOrder"]
-        self.assertEqual(len(manager), 8)
+        self.assertEqual(len(manager), 9)
         self.assertNotIn("delete", head)
-        self.assertEqual(sorted(technician), ["edit", "view"])
+        self.assertEqual(head["escalate"], "own")
+        self.assertEqual(
+            sorted(technician), ["edit", "escalate", "view"]
+        )
         self.assertEqual(technician["view"], "own")
         self.assertEqual(technician["edit"], "own")
+        self.assertEqual(technician["escalate"], "own")
 
     def testTickingACellWritesItAndReturnsTheNewGrid(self) -> None:
         response = self.post(

@@ -122,6 +122,56 @@ def primaryDepartmentIdFor(tenantId: uuid.UUID, userId: uuid.UUID) -> str:
     return _repository().primaryDepartmentFor(tenantId, userId)
 
 
+def nextUserAbove(tenantId: uuid.UUID, departmentId: uuid.UUID, userId: uuid.UUID) -> dict | None:
+    """The next rung up the unit's own ladder, for step-by-step referral.
+
+    «فرد رده بالاتر» is read from the position chain of the *same* unit:
+    among the unit's active members, the one holding the lowest position
+    that is still higher than the sender's. Ties break by primary posting
+    then name so the answer is deterministic. Crossing into another unit
+    is deliberately not offered — escalation inside a unit is a routing
+    decision, while anything cross-unit is a new request.
+
+    Returns ``{"userId", "userDisplayName", "positionName", "positionLevel"}``
+    or ``None`` when nobody sits above the sender in this unit.
+    """
+    repository = _repository()
+    members = repository.listAssignments(tenantId, departmentId=departmentId)
+    if not members:
+        return None
+    positions = {str(x.id): x for x in repository.listPositions(tenantId)}
+    senderLevels = [
+        getattr(positions.get(str(m.positionId), None), "level", 0)
+        for m in members
+        if str(m.userId) == str(userId)
+    ]
+    if not senderLevels:
+        # Not a member of this unit — the chart cannot name a superior here.
+        return None
+    senderLevel = max(senderLevels)
+    best = None
+    bestKey = None
+    for member in members:
+        if str(member.userId) == str(userId):
+            continue
+        position = positions.get(str(member.positionId), None)
+        level = getattr(position, "level", 0)
+        if level <= senderLevel:
+            continue
+        # Lowest position above the sender wins; primary posting and then
+        # name break a tie between equally-ranked members.
+        key = (level, 0 if member.isPrimary else 1, member.userDisplayName or "")
+        if bestKey is None or key < bestKey:
+            bestKey = key
+            best = {
+                "userId": str(member.userId),
+                "userDisplayName": member.userDisplayName or "",
+                "positionName": getattr(position, "name", ""),
+                "positionLevel": level,
+            }
+    return best
+
+
 def departmentIdsForUser(tenantId: uuid.UUID, userId: uuid.UUID) -> list[str]:
     return _repository().departmentIdsForUser(tenantId, userId)
 

@@ -52,6 +52,149 @@
   background: var(--color-surface-muted, #f8fafc);
 }
 
+/* «افزودن واحد جدید» inside the parent dropdown: a full-width section
+   inside the unit form, so the user never leaves a half-filled form. */
+.organization-page .inline-form__section {
+  flex-basis: 100%;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--color-border, #cbd5e1);
+}
+
+.organization-page .inline-form__section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.organization-page .inline-form__section-note {
+  margin: 0.25rem 0 0.75rem;
+  color: var(--color-text-muted, #64748b);
+  font-size: 0.875rem;
+}
+
+.organization-page .inline-form__section-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.organization-page .inline-close {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-text-muted, #64748b);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.organization-page .inline-close:hover {
+  color: var(--color-text, #0f172a);
+}
+
+/* Person picker for assignments: type a name, pick a person, the UUID
+   stays behind the scenes. Follows the shared field conventions. */
+.user-picker {
+  position: relative;
+  min-width: 220px;
+  flex: 1 1 220px;
+}
+
+.user-picker .field__control input {
+  padding-inline-end: 2.25rem;
+}
+
+.user-picker__clear {
+  position: absolute;
+  inset-inline-end: 8px;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface-2, #e2e8f0);
+  color: var(--text-muted, #64748b);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+}
+
+.user-picker__clear:hover {
+  background: var(--border-strong, #cbd5e1);
+  color: var(--text-strong, #0f172a);
+}
+
+.user-picker__menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  z-index: 40;
+  margin-top: 4px;
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--surface-1, #fff);
+  border: 1px solid var(--border-strong, #cbd5e1);
+  border-radius: var(--radius-sm, 6px);
+  box-shadow: 0 12px 28px rgb(15 23 42 / 14%);
+}
+
+.user-picker__state {
+  margin: 0;
+  padding: 10px 12px;
+  color: var(--text-muted, #64748b);
+  font-size: 0.875rem;
+}
+
+.user-picker__state--error {
+  color: #b91c1c;
+}
+
+.user-picker__options {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+}
+
+.user-picker__option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+}
+
+.user-picker__option--active,
+.user-picker__option:hover {
+  background: var(--surface-2, #f1f5f9);
+}
+
+.user-picker__name {
+  color: var(--text-strong, #0f172a);
+  font-weight: 600;
+}
+
+.user-picker__username {
+  color: var(--text-muted, #64748b);
+  font-size: 0.8125rem;
+  direction: ltr;
+}
+
+.user-picker__flag {
+  margin-inline-start: auto;
+  font-size: 0.75rem;
+  color: #92400e;
+  background: #fef3c7;
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
 .organization-page .notice {
   margin: 0.5rem 0 0;
   padding: 0.5rem 0.75rem;

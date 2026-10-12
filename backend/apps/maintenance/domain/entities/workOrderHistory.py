@@ -20,6 +20,8 @@ HISTORY_STATUS_CHANGED = "statusChanged"
 HISTORY_SUBMITTED_FOR_APPROVAL = "submittedForApproval"
 HISTORY_APPROVED = "approved"
 HISTORY_REJECTED = "rejected"
+#: Step-by-step referral up the unit's position chain (ارجاع به بالا).
+HISTORY_ESCALATED = "escalated"
 
 
 @dataclass(frozen=True)

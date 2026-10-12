@@ -15,6 +15,7 @@ from apps.maintenance.application.commands.maintenanceCommands import (
     ApproveWorkOrderCommand,
     AssignWorkOrderCommand,
     ChangeWorkOrderStatusCommand,
+    EscalateWorkOrderCommand,
     GeneratePmWorkOrdersCommand,
     RejectWorkOrderCommand,
     RouteWorkOrderCommand,
@@ -52,7 +53,6 @@ from apps.sharedKernel.presentation.api.response import successEnvelope
 
 def asDict(dto: Any) -> dict[str, Any]:
     return dataclasses.asdict(dto)
-
 
 
 def currentActorId() -> str:
@@ -115,6 +115,7 @@ def assertRecordInScope(workOrderId: str, action: str) -> None:
         return
     if not allowed:
         raise PermissionDeniedError(action)
+
 
 class WorkOrderListView(IdempotencyMixin, APIView):
     authentication_classes = [BearerSessionAuthentication]
@@ -279,6 +280,31 @@ class WorkOrderApproveView(IdempotencyMixin, APIView):
             ApproveWorkOrderCommand(
                 workOrderId=str(workOrderId),
                 note=str(serializer.validated_data["note"]),
+            )
+        )
+        return Response(successEnvelope(asDict(dto)))
+
+
+class WorkOrderEscalateView(IdempotencyMixin, APIView):
+    """Refer an order one rung up the unit's ladder (ارجاع به بالا).
+
+    The destination is resolved from the org chart on the server; the
+    client sends only a note. Scope is checked against the escalate
+    action so a technician can refer their own order but not a
+    colleague's, and a supervisor their team's.
+    """
+
+    authentication_classes = [BearerSessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Request, workOrderId: str) -> Response:
+        assertRecordInScope(str(workOrderId), "maintenance.workorder.escalate")
+        note = str(request.data.get("note", "") or "")
+        dto = container.escalateWorkOrderUseCase().execute(
+            EscalateWorkOrderCommand(
+                workOrderId=str(workOrderId),
+                note=note,
+                actorUserId=currentActorId(),
             )
         )
         return Response(successEnvelope(asDict(dto)))

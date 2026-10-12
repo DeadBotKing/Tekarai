@@ -68,6 +68,10 @@ ACTION_APPROVE = "approve"
 ACTION_ASSIGN = "assign"
 ACTION_CLOSE = "close"
 ACTION_EXPORT = "export"
+#: Hand the request one rung up the unit's own ladder. Distinct from
+#: ``assign`` (choosing any technician) and ``route`` (the maintenance
+#: crew): escalation follows the org chart, upward only.
+ACTION_ESCALATE = "escalate"
 
 ACTIONS = (
     ACTION_VIEW,
@@ -78,6 +82,7 @@ ACTIONS = (
     ACTION_ASSIGN,
     ACTION_CLOSE,
     ACTION_EXPORT,
+    ACTION_ESCALATE,
 )
 
 ACTION_LABELS_FA = {
@@ -89,6 +94,7 @@ ACTION_LABELS_FA = {
     ACTION_ASSIGN: "تخصیص",
     ACTION_CLOSE: "بستن",
     ACTION_EXPORT: "خروجی",
+    ACTION_ESCALATE: "ارجاع به بالا",
 }
 
 #: Verbs that change or release something. They are called out so the UI can
@@ -121,6 +127,7 @@ CAPABILITIES: tuple[dict, ...] = (
             ACTION_ASSIGN: ("maintenance.workorder.assign",),
             ACTION_CLOSE: ("maintenance.workorder.close",),
             ACTION_EXPORT: ("maintenance.workorder.export",),
+            ACTION_ESCALATE: ("maintenance.workorder.escalate",),
         },
     },
     {
@@ -328,6 +335,7 @@ DEFAULT_ACCESS_MATRIX: dict[str, dict[str, dict[str, str]]] = {
             ACTION_ASSIGN: SCOPE_DEPARTMENT,
             ACTION_CLOSE: SCOPE_DEPARTMENT,
             ACTION_EXPORT: SCOPE_DEPARTMENT,
+            ACTION_ESCALATE: SCOPE_DEPARTMENT,
         },
         "device": {
             ACTION_VIEW: SCOPE_DEPARTMENT,
@@ -365,6 +373,7 @@ DEFAULT_ACCESS_MATRIX: dict[str, dict[str, dict[str, str]]] = {
             ACTION_ASSIGN: SCOPE_DEPARTMENT,
             ACTION_CLOSE: SCOPE_DEPARTMENT,
             ACTION_EXPORT: SCOPE_DEPARTMENT,
+            ACTION_ESCALATE: SCOPE_OWN,
         },
         "device": {ACTION_VIEW: SCOPE_DEPARTMENT, ACTION_EDIT: SCOPE_DEPARTMENT},
         "preventiveMaintenance": {
@@ -386,6 +395,7 @@ DEFAULT_ACCESS_MATRIX: dict[str, dict[str, dict[str, str]]] = {
             ACTION_EDIT: SCOPE_TEAM,
             ACTION_ASSIGN: SCOPE_TEAM,
             ACTION_CLOSE: SCOPE_TEAM,
+            ACTION_ESCALATE: SCOPE_TEAM,
         },
         "device": {ACTION_VIEW: SCOPE_DEPARTMENT},
         "preventiveMaintenance": {ACTION_VIEW: SCOPE_DEPARTMENT},
@@ -403,6 +413,7 @@ DEFAULT_ACCESS_MATRIX: dict[str, dict[str, dict[str, str]]] = {
             ACTION_VIEW: SCOPE_DEPARTMENT,
             ACTION_CREATE: SCOPE_OWN,
             ACTION_EDIT: SCOPE_OWN,
+            ACTION_ESCALATE: SCOPE_OWN,
         },
         "device": {ACTION_VIEW: SCOPE_DEPARTMENT},
         "preventiveMaintenance": {ACTION_VIEW: SCOPE_DEPARTMENT},
@@ -415,7 +426,11 @@ DEFAULT_ACCESS_MATRIX: dict[str, dict[str, dict[str, str]]] = {
     # ``own`` scope — the reason scope is part of the grant and not a
     # separate feature.
     "TECHNICIAN": {
-        "workOrder": {ACTION_VIEW: SCOPE_OWN, ACTION_EDIT: SCOPE_OWN},
+        "workOrder": {
+            ACTION_VIEW: SCOPE_OWN,
+            ACTION_EDIT: SCOPE_OWN,
+            ACTION_ESCALATE: SCOPE_OWN,
+        },
         "device": {ACTION_VIEW: SCOPE_DEPARTMENT},
         "inventory": {ACTION_VIEW: SCOPE_ALL},
         "permitToWork": {
@@ -425,7 +440,11 @@ DEFAULT_ACCESS_MATRIX: dict[str, dict[str, dict[str, str]]] = {
         },
     },
     "OPERATOR": {
-        "workOrder": {ACTION_VIEW: SCOPE_OWN, ACTION_CREATE: SCOPE_OWN},
+        "workOrder": {
+            ACTION_VIEW: SCOPE_OWN,
+            ACTION_CREATE: SCOPE_OWN,
+            ACTION_ESCALATE: SCOPE_OWN,
+        },
         "device": {ACTION_VIEW: SCOPE_DEPARTMENT},
         "permitToWork": {ACTION_VIEW: SCOPE_OWN},
     },

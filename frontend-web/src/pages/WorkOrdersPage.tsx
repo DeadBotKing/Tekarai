@@ -224,6 +224,8 @@ export function WorkOrdersPage(): JSX.Element {
   const [technicianName, setTechnicianName] = useState("");
   const [routeDepartment, setRouteDepartment] = useState<MaintenanceDepartment>("general");
   const [approveOrder, setApproveOrder] = useState<WorkOrder | null>(null);
+  const [escalateOrder, setEscalateOrder] = useState<WorkOrder | null>(null);
+  const [escalateNote, setEscalateNote] = useState("");
   const [rejectOrder, setRejectOrder] = useState<WorkOrder | null>(null);
   const [decisionNote, setDecisionNote] = useState("");
   const [failureCategory, setFailureCategory] = useState("");
@@ -676,6 +678,35 @@ export function WorkOrdersPage(): JSX.Element {
       setDecisionNote("");
       setToast(t("cmms.wo.rejectSuccess"));
       await refresh();
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : t("cmms.wo.saveFailed"));
+    }
+  };
+
+  const escalate = async (): Promise<void> => {
+    if (!escalateOrder) return;
+    if (runtimeConfig.demoMode) {
+      // دمو چارت سازمانی ندارد؛ رفتار شبیه‌سازی می‌شود و صریحاً برچسب می‌خورد.
+      setOrders((current) =>
+        current.map((item) =>
+          item.id === escalateOrder.id
+            ? { ...item, status: "assigned", assignedToName: "رده بالاتر (دمو)" }
+            : item,
+        ),
+      );
+      setEscalateOrder(null);
+      setEscalateNote("");
+      setToast(t("cmms.wo.escalateDone", { name: "رده بالاتر (دمو)" }));
+      return;
+    }
+    try {
+      const updated = await service.escalateWorkOrder(escalateOrder.id, escalateNote.trim());
+      setOrders((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item)),
+      );
+      setEscalateOrder(null);
+      setEscalateNote("");
+      setToast(t("cmms.wo.escalateDone", { name: updated.assignedToName }));
     } catch (error) {
       setToast(error instanceof Error ? error.message : t("cmms.wo.saveFailed"));
     }
@@ -1508,6 +1539,26 @@ export function WorkOrdersPage(): JSX.Element {
               )}
             </PermissionGuard>
 
+            <PermissionGuard permission={PERMISSIONS.maintenanceWorkOrderEscalate}>
+              {(activeOrder.status === "submitted" ||
+                activeOrder.status === "routed" ||
+                activeOrder.status === "assigned" ||
+                activeOrder.status === "inProgress" ||
+                activeOrder.status === "onHold") && (
+                <Button
+                  variant="secondary"
+                  icon="send"
+                  onClick={() => {
+                    setEscalateNote("");
+                    setEscalateOrder(activeOrder);
+                    setActiveOrder(null);
+                  }}
+                >
+                  {t("cmms.wo.escalate")}
+                </Button>
+              )}
+            </PermissionGuard>
+
             <PermissionGuard permission={PERMISSIONS.maintenanceWorkOrderApprove}>
               {activeOrder.status === "pendingApproval" && (
                 <div className="cmms-transition-row">
@@ -1797,6 +1848,29 @@ export function WorkOrdersPage(): JSX.Element {
             </div>
           </div>
         )}
+      </Modal>
+
+      <Modal
+        open={Boolean(escalateOrder)}
+        title={t("cmms.wo.escalateTitle")}
+        onClose={() => setEscalateOrder(null)}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setEscalateOrder(null)}>
+              {t("cmms.common.cancel")}
+            </Button>
+            <Button variant="primary" icon="send" onClick={escalate}>
+              {t("cmms.wo.escalate")}
+            </Button>
+          </>
+        }
+      >
+        <p className="detail-panel__description">{t("cmms.wo.escalateHelp")}</p>
+        <TextInput
+          label={t("cmms.wo.escalateNote")}
+          value={escalateNote}
+          onChange={(event) => setEscalateNote(event.target.value)}
+        />
       </Modal>
 
       <Modal

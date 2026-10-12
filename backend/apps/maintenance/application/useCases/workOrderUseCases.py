@@ -24,6 +24,7 @@ from apps.maintenance.application.commands.maintenanceCommands import (
     ApproveWorkOrderCommand,
     AssignWorkOrderCommand,
     ChangeWorkOrderStatusCommand,
+    EscalateWorkOrderCommand,
     GeneratePmWorkOrdersCommand,
     RejectWorkOrderCommand,
     RouteWorkOrderCommand,
@@ -50,6 +51,7 @@ from apps.maintenance.application.services.tenantResolver import resolveTenantId
 from apps.maintenance.application.services.workflowHistory import (
     HISTORY_APPROVED,
     HISTORY_ASSIGNED,
+    HISTORY_ESCALATED,
     HISTORY_REJECTED,
     HISTORY_ROUTED,
     HISTORY_STATUS_CHANGED,
@@ -87,7 +89,7 @@ from apps.sharedKernel.application.useCase import (
     AUDIT_UPDATE,
     UseCase,
 )
-from apps.sharedKernel.domain.errors import EntityNotFoundError
+from apps.sharedKernel.domain.errors import EntityNotFoundError, ValidationFailedError
 
 LIST_ACTION = "maintenance.workorder.list"
 
@@ -157,6 +159,7 @@ def primaryUnitOf(tenantId: uuid.UUID, userId: uuid.UUID | None) -> uuid.UUID | 
         return uuid.UUID(value) if value else None
     except ValueError:
         return None
+
 
 class WorkOrderUseCaseBase(UseCase):
     def __init__(
@@ -529,6 +532,85 @@ class RejectWorkOrderUseCase(WorkOrderUseCaseBase):
         self.collectEventsFrom(order)
         self.audit(
             AUDIT_REJECTION,
+            resourceType="WorkOrder",
+            resourceId=str(order.id),
+            tenantId=tenantId,
+            after=order.snapshot(),
+        )
+        return workOrderDtoFromDomain(order, now)
+
+
+class EscalateWorkOrderUseCase(WorkOrderUseCaseBase):
+    """Refer a work order one rung up the unit's own position chain.
+
+    The destination is never a client choice: it is resolved from the org
+    chart — the lowest position above the sender's that has an active
+    member in the order's unit. The sender must be the order's current
+    holder, which keeps «از هر فردی به فرد رده بالاتر» from becoming
+    «everybody can reroute everything». The final rung ends in the
+    existing approve gate: escalation moves responsibility, it never
+    grants the right to close one's own work.
+    """
+
+    requiredAction = "maintenance.workorder.escalate"
+
+    def perform(self, command: EscalateWorkOrderCommand) -> WorkOrderDto:
+        tenantId = resolveTenantId("")
+        order = self.repository.getById(tenantId, uuid.UUID(command.workOrderId))
+        if order is None:
+            raise EntityNotFoundError("Work order not found.")
+        actorRaw = str(command.actorUserId or "")
+        if not actorRaw:
+            from apps.sharedKernel.application.requestContext import currentContext
+
+            actorRaw = str(getattr(currentContext(), "actorId", "") or "")
+        actorUserId = actorRaw
+        if not actorUserId:
+            raise ValidationFailedError(
+                "Escalation needs a signed-in actor.",
+                fieldErrors={"escalate": "noActor"},
+            )
+        if not order.orgDepartmentId:
+            raise ValidationFailedError(
+                "ارجاع پله‌به‌پله فقط برای دستور کارهای منتسب به واحد سازمانی فعال است.",
+                fieldErrors={"escalate": "noUnit"},
+            )
+        try:
+            from apps.organization.application.services.accessContract import nextUserAbove
+
+            target = nextUserAbove(tenantId, order.orgDepartmentId, uuid.UUID(str(actorUserId)))
+        except ImportError:  # pragma: no cover - chart not installed
+            target = None
+        if target is None:
+            raise ValidationFailedError(
+                "فردی با رده بالاتر از شما در این واحد یافت نشد؛ درخواست نزد شما می‌ماند.",
+                fieldErrors={"escalate": "noTarget"},
+            )
+        now = self.clock.nowUtc()
+        previousStatus = str(order.status)
+        order.escalate(
+            uuid.UUID(str(actorUserId)),
+            uuid.UUID(str(target["userId"])),
+            target["userDisplayName"] or target["positionName"],
+            command.note,
+            now,
+        )
+        self.repository.update(order)
+        recordHistory(
+            self.historyRepository,
+            order,
+            HISTORY_ESCALATED,
+            now,
+            fromStatus=previousStatus,
+            toStatus=str(order.status),
+            note=(
+                f"ارجاع از دستِ فعلی به {target['userDisplayName']}"
+                + (f" — {command.note}" if command.note else "")
+            ),
+        )
+        self.collectEventsFrom(order)
+        self.audit(
+            AUDIT_UPDATE,
             resourceType="WorkOrder",
             resourceId=str(order.id),
             tenantId=tenantId,

@@ -3,6 +3,7 @@ import { ApiClientError } from "../core/api/apiClient";
 import { useApiClient } from "../core/api/apiContext";
 import { PERMISSIONS } from "../core/permissions/permissionContext";
 import { DataTable, type DataTableColumn } from "../shared/components/DataTable";
+import { UserPicker, type UserPickerUser } from "../shared/components/UserPicker";
 import {
   Badge,
   Button,
@@ -105,6 +106,9 @@ interface MatrixPayload {
 }
 
 const emptyDepartmentForm = { name: "", code: "", description: "", parentId: "" };
+/** Sentinel row offered inside the parent-unit dropdown, mirroring the spare-part picker. */
+const ADD_PARENT_OPTION = "__addParentUnit__";
+const emptyParentForm = { name: "", code: "" };
 const emptyPositionForm = { name: "", code: "", level: "40", description: "" };
 const emptyAssignmentForm = {
   userId: "",
@@ -137,6 +141,8 @@ export function OrganizationStructurePage(): JSX.Element {
   const [showPositionForm, setShowPositionForm] = useState(false);
   const [showAssignmentForm, setShowAssignmentForm] = useState(false);
   const [departmentForm, setDepartmentForm] = useState(emptyDepartmentForm);
+  const [parentInline, setParentInline] = useState(false);
+  const [parentForm, setParentForm] = useState(emptyParentForm);
   const [positionForm, setPositionForm] = useState(emptyPositionForm);
   const [assignmentForm, setAssignmentForm] = useState(emptyAssignmentForm);
 
@@ -209,6 +215,39 @@ export function OrganizationStructurePage(): JSX.Element {
       .finally(() => setBusy(false));
   };
 
+  /**
+   * Create a unit straight from the parent dropdown and select it as the
+   * parent, so the user never has to leave a half-filled form to add the
+   * unit that is missing from the list.
+   */
+  const saveParentUnit = (): void => {
+    if (parentForm.name.trim() === "") {
+      setError("نام واحد بالادست الزامی است.");
+      return;
+    }
+    setBusy(true);
+    setNotice("");
+    setError(null);
+    void api
+      .post<DepartmentRow>("organization/departments", {
+        name: parentForm.name,
+        code: parentForm.code,
+        description: "",
+        parentId: null,
+      })
+      .then((row) => {
+        // Join the list immediately so the dropdown can select it; the next
+        // full load reconciles member counts.
+        setDepartments((current) => [...current, row]);
+        setDepartmentForm((current) => ({ ...current, parentId: row.id }));
+        setParentForm(emptyParentForm);
+        setParentInline(false);
+        setNotice("واحد جدید ثبت و به‌عنوان بالادست انتخاب شد.");
+      })
+      .catch((cause: unknown) => setError(failureMessage(cause, "ثبت واحد ناموفق بود.")))
+      .finally(() => setBusy(false));
+  };
+
   const submitPosition = (): void => {
     setBusy(true);
     setNotice("");
@@ -227,6 +266,26 @@ export function OrganizationStructurePage(): JSX.Element {
       })
       .catch((cause: unknown) => setError(failureMessage(cause, "ثبت سمت ناموفق بود.")))
       .finally(() => setBusy(false));
+  };
+
+  /**
+   * The user types a name or username; the directory returns the people.
+   * Runs against the same users endpoint the account screen uses, so the
+   * picker sees exactly who can log in.
+   */
+  const searchUsers = useCallback(
+    (query: string): Promise<UserPickerUser[]> =>
+      api.get<UserPickerUser[]>("users", { query: { search: query, pageSize: 20 } }),
+    [api],
+  );
+
+  /** The picker hands us the whole person; the id travels, the name is what everyone reads. */
+  const pickAssignmentUser = (user: UserPickerUser | null): void => {
+    setAssignmentForm((current) => ({
+      ...current,
+      userId: user?.id ?? "",
+      userDisplayName: user ? (user.displayName.trim() !== "" ? user.displayName : user.username) : "",
+    }));
   };
 
   const submitAssignment = (): void => {
@@ -451,6 +510,7 @@ export function OrganizationStructurePage(): JSX.Element {
             }
           />
           {showDepartmentForm ? (
+            <>
             <div className="inline-form">
               <TextInput
                 label="نام واحد"
@@ -473,15 +533,50 @@ export function OrganizationStructurePage(): JSX.Element {
                 options={[
                   { value: "", label: "— بدون واحد بالادست —" },
                   ...activeDepartments.map((row) => ({ value: row.id, label: row.name })),
+                  { value: ADD_PARENT_OPTION, label: "➕ افزودن واحد جدید…" },
                 ]}
-                onChange={(event) =>
-                  setDepartmentForm({ ...departmentForm, parentId: event.target.value })
-                }
+                onChange={(event) => {
+                  if (event.target.value === ADD_PARENT_OPTION) {
+                    setParentInline(true);
+                    return;
+                  }
+                  setDepartmentForm({ ...departmentForm, parentId: event.target.value });
+                }}
               />
               <Button disabled={busy || departmentForm.name.trim() === ""} onClick={submitDepartment}>
                 ثبت واحد
               </Button>
             </div>
+            {parentInline ? (
+              <div className="inline-form__section">
+                <div className="inline-form__section-head">
+                  <strong>واحد بالادست جدید</strong>
+                  <button type="button" className="inline-close" onClick={() => setParentInline(false)}>
+                    بستن
+                  </button>
+                </div>
+                <p className="inline-form__section-note">
+                  واحد ثبت می‌شود و بلافاصله به‌عنوان بالادست همین واحد انتخاب می‌گردد.
+                </p>
+                <div className="inline-form__section-row">
+                  <TextInput
+                    label="نام واحد بالادست"
+                    value={parentForm.name}
+                    onChange={(event) => setParentForm({ ...parentForm, name: event.target.value })}
+                  />
+                  <TextInput
+                    label="کد واحد بالادست (اختیاری)"
+                    hint="در صورت خالی‌بودن از روی نام ساخته می‌شود."
+                    value={parentForm.code}
+                    onChange={(event) => setParentForm({ ...parentForm, code: event.target.value })}
+                  />
+                  <Button disabled={busy || parentForm.name.trim() === ""} onClick={saveParentUnit}>
+                    ثبت و انتخاب به‌عنوان بالادست
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+            </>
           ) : null}
           <DataTable
             columns={departmentColumns}
@@ -569,22 +664,20 @@ export function OrganizationStructurePage(): JSX.Element {
             />
             {showAssignmentForm ? (
               <div className="inline-form">
-                <TextInput
-                  label="شناسه کاربر"
-                  value={assignmentForm.userId}
-                  onChange={(event) =>
-                    setAssignmentForm({ ...assignmentForm, userId: event.target.value })
+                <UserPicker
+                  label="کاربر"
+                  hint="نام یا نام کاربری را تایپ کنید و از فهرست انتخاب کنید."
+                  value={
+                    assignmentForm.userId
+                      ? {
+                          id: assignmentForm.userId,
+                          username: "",
+                          displayName: assignmentForm.userDisplayName,
+                        }
+                      : null
                   }
-                />
-                <TextInput
-                  label="نام نمایشی"
-                  value={assignmentForm.userDisplayName}
-                  onChange={(event) =>
-                    setAssignmentForm({
-                      ...assignmentForm,
-                      userDisplayName: event.target.value,
-                    })
-                  }
+                  onSelect={pickAssignmentUser}
+                  search={searchUsers}
                 />
                 <SelectInput
                   label="واحد"

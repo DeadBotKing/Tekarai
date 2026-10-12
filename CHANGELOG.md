@@ -6,6 +6,120 @@ made it impossible to tell what any given commit changed or to roll back to a
 known-good state. Entries follow [Keep a Changelog](https://keepachangelog.com)
 and the project aims at [Semantic Versioning](https://semver.org).
 
+## [0.10.0] — Step-by-step referral up the unit's ladder
+
+The brief: «از هر فردی به فرد رده بالاتر درخواست کار ارجاع شود، در نهایت
+تأیید نهایی با مدیر واحد باشد.» Before this, the request went straight
+to whoever had the assign permission — the ladder existed in the org
+chart's numbers but nothing walked it.
+
+### Added
+
+- **«ارجاع به بالا» (`escalate`)** — a ninth verb on the work-order
+  capability. The current holder of an order (its assignee, or its
+  requester while nobody has been assigned) can refer it one rung up.
+  The server names the destination from the org chart: the lowest
+  position above the sender's that has an active member **in the same
+  unit**. The client sends only a note — never a person, never an id.
+  `POST /api/v1/maintenance/work-orders/{id}/escalate`.
+- The full default ladder, proven live: اپراتور ← تکنسین ← سرپرست ←
+  رئیس ← مدیر. At the top the answer is honest and in Persian: «فردی با
+  رده بالاتر از شما در این واحد یافت نشد؛ درخواست نزد شما می‌ماند.»
+- Every rung lands in the order's timeline (who referred, to whom, with
+  what note) — `escalated` joins the history action codes.
+- `nextUserAbove(tenantId, departmentId, userId)` on the organisation
+  contract: deterministic (position level, then primary posting, then
+  name), and deliberately same-unit only — crossing units is a new
+  request, not a referral.
+- Matrix defaults for the new verb: OPERATOR/TECHNICIAN/SPECIALIST `own`,
+  SUPERVISOR `team`, HEAD `own`, MGR `department` — the ladder itself is
+  a permission, granted per position like any other verb.
+- The work-order DTO now carries `orgDepartmentId`, `requestedByUserId`,
+  `assignedToUserId` — ids behind the display names, because escalation
+  and the own-scope check key on them.
+- Frontend: an «ارجاع به بالا» button on open orders (hidden without the
+  permission, absent on pending-approval and closed ones), a one-field
+  modal (note only), and a toast that says who received the order.
+
+### Kept, on purpose
+
+- **Escalation is not approval.** It moves responsibility; it never
+  completes, approves or bypasses the gate. Final approval still rests
+  with the approve permission — پیش‌فرضش مدیر و رئیس واحد. The
+  technician who did the work still cannot bless it.
+- Only the current holder can send it up — «one rung up» must not become
+  «everybody can reroute everything».
+- Orders awaiting a decision or already closed have nothing to refer.
+
+### Tests
+
+Backend 3364 → **3372** (8 new: the whole ladder over real HTTP with a
+login per rung, the top-of-ladder refusal, the holder check, the
+cross-unit refusal, the no-unit answer, the closed-order refusal, and
+both approve-gate proofs). Frontend 386 → **391** (5 new: the button and
+its permission, the note-only POST, the named recipient, the closed-order
+absence, the Persian refusal). mypy clean across 1078 files, ruff clean,
+`tsc -b` clean. The demo-mode boundary baseline rises 27 → 28 for this
+page, recorded in the test with the reason.
+
+## [0.9.2] — Assignments pick a person, not a UUID
+
+The assignment form asked for a user id in a text box. Nobody in a real
+factory knows that `8f4a9c2e-…` is علی رضایی, and the form made them
+prove it twice — a «شناسه کاربر» field for the id and a «نام نمایشی»
+field for the name, typed by hand, with nothing keeping the two honest.
+
+### Added
+
+- **A person picker** in place of both fields. Type a name or a username,
+  the matching accounts appear below («علی رضایی — alireza»), pick one,
+  and the field shows the name. The id is sent behind the scenes; it is
+  never displayed, never typed, and never mismatches the name — both now
+  come from the same directory record. Searches the same
+  `GET /api/v1/users?search=…` endpoint the account screen uses, which
+  matches displayName, username and email, and is scoped to the tenant.
+- `UserPicker` (`frontend-web/src/shared/components/UserPicker.tsx`) — a
+  reusable combobox: debounced search with stale-answer cancellation,
+  keyboard navigation (arrows, Enter, Escape), ARIA combobox/listbox
+  roles, and a clear button. The page supplies the search function, so
+  the component stays presentational.
+
+### Removed
+
+- The «شناسه کاربر» and «نام نمایشی» free-text inputs. A display name
+  that does not match the id could not survive this change: there is no
+  path left that sends a hand-typed name.
+
+### Tests
+
+Frontend 381 → **386**, including: the directory is searched with what
+was typed; the picked person's id is posted without appearing on screen;
+the submit button stays out of reach until a real person is picked from
+the list; a person with no display name falls back to their username; an
+empty result says so in Persian. The full flow was also driven over live
+HTTP against a running server: search «رضا» → pick → assign → the
+assignment list shows «رضا محمدی / فنی و مهندسی / مدیر».
+
+## [0.9.1] — A missing parent unit no longer interrupts the unit form
+
+### Added
+
+- **«➕ افزودن واحد جدید…» inside the «واحد بالادست» dropdown** on the
+  organisation page. Until now the choices were the units already in the
+  list or «— بدون واحد بالادست —»; a missing parent meant leaving the
+  form half-filled, creating the unit from the top, and starting over.
+  The dropdown now offers to create the unit on the spot: a name, an
+  optional code, one button — and the new unit is both created and
+  selected as the parent. Nothing already typed into the form is lost.
+  Same pattern the spare-part picker uses.
+
+### Tests
+
+Frontend 380 → **381**; the new test pins that the option lives inside
+the dropdown, that the created unit is posted without a parent of its
+own, that it is selected automatically, and that the half-filled form
+survives the detour.
+
 ## [0.9.0] — Scope is now enforced, not just recorded
 
 Written after walking the four factory scenarios the client proposed. The

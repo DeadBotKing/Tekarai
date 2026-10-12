@@ -113,6 +113,7 @@ from apps.maintenance.presentation.api.views.workOrderViews import (
     WorkOrderApproveView,
     WorkOrderAssignView,
     WorkOrderDetailView,
+    WorkOrderEscalateView,
     WorkOrderGeneratePmView,
     WorkOrderHistoryView,
     WorkOrderListView,
@@ -382,6 +383,11 @@ urlpatterns = [
         "work-orders/<uuid:workOrderId>/approve",
         WorkOrderApproveView.as_view(),
         name="workOrderApprove",
+    ),
+    path(
+        "work-orders/<uuid:workOrderId>/escalate",
+        WorkOrderEscalateView.as_view(),
+        name="workOrderEscalate",
     ),
     path(
         "work-orders/<uuid:workOrderId>/reject",

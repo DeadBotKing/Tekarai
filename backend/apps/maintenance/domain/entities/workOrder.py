@@ -236,6 +236,64 @@ class WorkOrder(AggregateRoot):
             )
         )
 
+    def escalate(
+        self,
+        fromUserId: uuid.UUID,
+        toUserId: uuid.UUID,
+        toName: str,
+        note: str,
+        now: datetime,
+    ) -> None:
+        """Hand the order one rung up the unit's own ladder.
+
+        This is referral, not reassignment: the sender must be the order's
+        current holder (its assignee, or its requester while nobody has
+        been assigned), the destination comes from the organisation chart
+        rather than a free-text name, and the destination must be someone
+        else. Orders awaiting a decision or already closed have nothing to
+        refer — the decision path (approve/reject) is the only way on from
+        there.
+        """
+        if str(self.status) in (WO_PENDING_APPROVAL, WO_COMPLETED, WO_CANCELLED):
+            raise InvalidStateTransitionError(
+                f"Cannot escalate a work order in state '{self.status}'."
+            )
+        holder = self.assignedToUserId or self.requestedByUserId
+        if holder is None or str(holder) != str(fromUserId):
+            raise ValidationFailedError(
+                "Only the current holder of a work order may escalate it.",
+                fieldErrors={"escalate": "notHolder"},
+            )
+        if str(toUserId) == str(fromUserId):
+            raise ValidationFailedError(
+                "A work order cannot be escalated to its own sender.",
+                fieldErrors={"escalate": "selfTarget"},
+            )
+        previous = str(self.status)
+        previousName = self.assignedToName
+        self.assignedToUserId = toUserId
+        self.assignedToName = toName
+        if str(self.status) in (WO_SUBMITTED, WO_ROUTED):
+            # The order now sits with a named person; that is an assignment.
+            self.status = WorkOrderStatus(WO_ASSIGNED)
+        self.updatedAt = now
+        self.recordEvent(
+            DomainEvent(
+                name="workOrderEscalated",
+                occurredAt=now,
+                tenantId=self.tenantId,
+                payload={
+                    "workOrderId": str(self.id),
+                    "from": previous,
+                    "fromUserId": str(fromUserId),
+                    "toUserId": str(toUserId),
+                    "toName": toName,
+                    "previousAssignee": previousName,
+                    "note": note,
+                },
+            )
+        )
+
     def changeStatus(self, target: str, resolutionNote: str, now: datetime) -> None:
         if not self.status.canTransitionTo(target):
             raise InvalidStateTransitionError(

@@ -89,7 +89,8 @@ export type WorkOrderHistoryAction =
   | "statusChanged"
   | "submittedForApproval"
   | "approved"
-  | "rejected";
+  | "rejected"
+  | "escalated";
 
 export interface DeviceReportSummary {
   totalOrders: number;
@@ -331,6 +332,11 @@ export interface WorkOrder {
   department: MaintenanceDepartment;
   requestedByName: string;
   assignedToName: string;
+  // Ids behind the display names — escalation keys on these, because two
+  // people with the same name are not one person.
+  orgDepartmentId?: string;
+  requestedByUserId?: string;
+  assignedToUserId?: string;
   resolutionNote: string;
   createdAt: string;
   closedAt: string;

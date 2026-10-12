@@ -113,6 +113,11 @@ class WorkOrderDto:
     labourHours: str = "0"
     labourCost: str = "0"
     partsCost: str = "0"
+    # Ids behind the display names: escalation and the own-scope check key
+    # on these, because two «رضا»s are not one person.
+    orgDepartmentId: str = ""
+    requestedByUserId: str = ""
+    assignedToUserId: str = ""
 
 
 @dataclass(frozen=True)
@@ -244,6 +249,9 @@ def workOrderDtoFromDomain(order: WorkOrder, now: datetime | None = None) -> Wor
         department=str(order.department),
         requestedByName=order.requestedByName,
         assignedToName=order.assignedToName,
+        orgDepartmentId=str(order.orgDepartmentId) if order.orgDepartmentId else "",
+        requestedByUserId=str(order.requestedByUserId) if order.requestedByUserId else "",
+        assignedToUserId=str(order.assignedToUserId) if order.assignedToUserId else "",
         resolutionNote=order.resolutionNote,
         createdAt=order.createdAt.isoformat(),
         updatedAt=order.updatedAt.isoformat() if order.updatedAt else "",

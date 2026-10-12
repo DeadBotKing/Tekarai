@@ -54,6 +54,9 @@ interface WorkOrderDto {
   department: string;
   requestedByName: string;
   assignedToName: string;
+  orgDepartmentId?: string;
+  requestedByUserId?: string;
+  assignedToUserId?: string;
   resolutionNote: string;
   createdAt: string;
   closedAt: string;
@@ -280,6 +283,9 @@ const toWorkOrder = (dto: WorkOrderDto): WorkOrder => ({
   department: (dto.department as MaintenanceDepartment) ?? "general",
   requestedByName: dto.requestedByName ?? "",
   assignedToName: dto.assignedToName ?? "",
+  orgDepartmentId: dto.orgDepartmentId || undefined,
+  requestedByUserId: dto.requestedByUserId || undefined,
+  assignedToUserId: dto.assignedToUserId || undefined,
   resolutionNote: dto.resolutionNote ?? "",
   createdAt: dto.createdAt ?? "",
   closedAt: dto.closedAt ?? "",
@@ -595,6 +601,11 @@ export interface MaintenanceService {
     note?: string,
     signal?: AbortSignal,
   ) => Promise<WorkOrder>;
+  escalateWorkOrder: (
+    id: string,
+    note?: string,
+    signal?: AbortSignal,
+  ) => Promise<WorkOrder>;
   rejectWorkOrder: (
     id: string,
     note?: string,
@@ -903,6 +914,14 @@ export const createMaintenanceService = (api: ApiClient): MaintenanceService => 
   rejectWorkOrder: async (id, note = "", signal) => {
     const dto = await api.post<WorkOrderDto>(
       apiEndpoints.maintenance.workOrderReject(id),
+      { note },
+      { signal, retry: 0 },
+    );
+    return toWorkOrder(dto);
+  },
+  escalateWorkOrder: async (id, note = "", signal) => {
+    const dto = await api.post<WorkOrderDto>(
+      apiEndpoints.maintenance.workOrderEscalate(id),
       { note },
       { signal, retry: 0 },
     );

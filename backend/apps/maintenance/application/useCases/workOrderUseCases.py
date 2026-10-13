@@ -571,8 +571,14 @@ class EscalateWorkOrderUseCase(WorkOrderUseCaseBase):
                 fieldErrors={"escalate": "noActor"},
             )
         if not order.orgDepartmentId:
+            # The unit is stamped at creation, from the requester's primary
+            # posting. An order with no unit was raised by someone who held
+            # no position at the time (typically the bootstrap admin) — say
+            # that, and what to do about it, rather than a generic refusal.
             raise ValidationFailedError(
-                "ارجاع پله‌به‌پله فقط برای دستور کارهای منتسب به واحد سازمانی فعال است.",
+                "این درخواست کار به هیچ واحد سازمانی منتسب نشده — ثبت‌کننده‌اش "
+                "در زمان ثبت در واحدی سمت نداشته است. پس از انتساب در «ساختار "
+                "سازمانی»، درخواست‌های جدید قابل ارجاع می‌شوند.",
                 fieldErrors={"escalate": "noUnit"},
             )
         try:

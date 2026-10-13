@@ -202,7 +202,10 @@ class TheLadderTests(EscalationTestBase):
         operator = self.login("OPERATOR")
         response = operator.post(f"{WORK_ORDERS}/{order.id}/escalate", {}, format="json")
         self.assertEqual(response.status_code, 422, response.content)
-        self.assertIn("واحد سازمانی", str(response.json()["errors"]))
+        # The refusal must say what happened and what to do — a guard whose
+        # message nobody can act on is a guard people learn to ignore.
+        self.assertIn("منتسب نشده", str(response.json()["errors"]))
+        self.assertIn("ساختار سازمانی", str(response.json()["errors"]))
 
     def testClosedOrdersHaveNothingToRefer(self) -> None:
         order = self.raiseRequest(ownerCode="OPERATOR")

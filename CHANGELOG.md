@@ -6,6 +6,17 @@ made it impossible to tell what any given commit changed or to roll back to a
 known-good state. Entries follow [Keep a Changelog](https://keepachangelog.com)
 and the project aims at [Semantic Versioning](https://semver.org).
 
+## [0.10.1] — The no-unit refusal now says what to do
+
+A work order raised by someone who held no position (typically the
+bootstrap admin) carries no unit, so escalation has no ladder to climb —
+correct, but the refusal read «…منتسب به واحد سازمانی فعال است», which
+sounds like a unit was deactivated and points nowhere. It now says what
+actually happened and what to do: the order was never attributed to a
+unit because its requester held no position at submission time, and
+orders raised after a posting lands are escalatable. The test pins both
+halves of the sentence.
+
 ## [0.10.0] — Step-by-step referral up the unit's ladder
 
 The brief: «از هر فردی به فرد رده بالاتر درخواست کار ارجاع شود، در نهایت

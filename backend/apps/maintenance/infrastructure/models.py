@@ -450,6 +450,9 @@ class MaintenancePersonnelModel(models.Model):
     shift = models.CharField(max_length=60, blank=True, default="")
     skills = models.TextField(blank=True, default="")
     certifications = models.TextField(blank=True, default="")
+    # The platform account this technician signs in with, if any. The link
+    # is what lets the user desk match by identity instead of by name.
+    linkedUserId = models.UUIDField(null=True, blank=True, db_index=True)
     active = models.BooleanField(default=True)
     createdAt = models.DateTimeField(db_index=True)
     updatedAt = models.DateTimeField(null=True, blank=True)
@@ -463,7 +466,12 @@ class MaintenancePersonnelModel(models.Model):
                 fields=["tenantId", "personnelCode"],
                 condition=models.Q(deletedAt__isnull=True),
                 name="uq_maintenance_personnel_tenant_code",
-            )
+            ),
+            models.UniqueConstraint(
+                fields=["tenantId", "linkedUserId"],
+                condition=models.Q(deletedAt__isnull=True, linkedUserId__isnull=False),
+                name="uq_maintenance_personnel_linked_user",
+            ),
         ]
 
     def __str__(self) -> str:  # pragma: no cover — debug helper

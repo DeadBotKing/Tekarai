@@ -1,9 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useApiClient } from "../core/api/apiContext";
 import { useLocalization } from "../core/localization/localizationContext";
 import { useTheme } from "../core/theme/themeContext";
-import { JALALI_MONTHS, gregorianToJalali, jalaliPartsToIso, toPersianDigits } from "../core/localization/jalali";
+import { useAuth } from "../core/auth/authContext";
+import {
+  JALALI_MONTHS,
+  gregorianToJalali,
+  isoToJalaliParts,
+  jalaliMonthLength,
+  jalaliPartsToIso,
+  toPersianDigits,
+  todayIso,
+} from "../core/localization/jalali";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import {
   createMaintenanceService,
@@ -14,6 +23,13 @@ import { demoDevices, demoWorkOrders } from "../features/maintenance/maintenance
 import { formatJalali } from "../core/localization/jalali";
 import { slaBreachedOrders, buildReorderSuggestions } from "../features/maintenance/wave1";
 import { demoParts } from "./SparePartsPage";
+import {
+  CalendarDashboard,
+  UserDashboard,
+  currentDashMonth,
+  persianDayIndex,
+  type DashCalMonth,
+} from "./maintenanceDashboardViews";
 import type {
   MaintenanceDepartment,
   MaintenanceDevice,
@@ -58,6 +74,17 @@ const PRIORITY_COLORS: Record<Priority, string> = {
   high: "#e6a23c",
   critical: "#ef4444",
 };
+
+// ── The dashboard family (v0.15.0) ────────────────────────────────────────
+// One route, four dashboards, picked from the side navigation.
+type DashView = "daily" | "calendar" | "performance" | "user";
+
+// The Jalali month an order belongs to (by its creation date), or null.
+const jalaliMonthOf = (iso: string): DashCalMonth | null => {
+  const parts = isoToJalaliParts(iso);
+  return parts ? { year: parts[0], month: parts[1] } : null;
+};
+
 
 // Selectable look-back windows, in days. `0` means "all time".
 type RangeKey = "7" | "30" | "90" | "all";
@@ -122,8 +149,42 @@ export function MaintenanceDashboardPage(): JSX.Element {
   const { accentHex } = useTheme();
   const api = useApiClient();
   const navigate = useNavigate();
+  const { session } = useAuth();
+  // Which dashboard of the family is on screen: /dashboard (daily) or
+  // /dashboard/:view. Unknown values fall back to the daily control view.
+  const routeView = useParams<{ view?: string }>().view;
+  const view: DashView =
+    routeView === "calendar" || routeView === "performance" || routeView === "user"
+      ? routeView
+      : "daily";
   const service = useMemo(() => createMaintenanceService(api), [api]);
   const [trendView, setTrendView] = useState<"pie" | "trend">("pie");
+  // Calendar view state: month cursor, department filter, selected day.
+  const [calMonth, setCalMonth] = useState<DashCalMonth>(() => {
+    // In the demo the fixtures live in past months; open the calendar on
+    // the newest month that actually has an order so the preview is not an
+    // empty grid. Live mode always opens on the current month.
+    if (runtimeConfig.demoMode) {
+      let latest: DashCalMonth | null = null;
+      for (const order of demoWorkOrders) {
+        const month = jalaliMonthOf(order.createdAt);
+        if (
+          month &&
+          (!latest ||
+            month.year > latest.year ||
+            (month.year === latest.year && month.month > latest.month))
+        ) {
+          latest = month;
+        }
+      }
+      if (latest) return latest;
+    }
+    return currentDashMonth();
+  });
+  const [deptFilter, setDeptFilter] = useState<Set<MaintenanceDepartment>>(new Set());
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  // User view: demo only — pick which colleague's desk to look at.
+  const [viewAs, setViewAs] = useState<string | null>(null);
   const [orders, setOrders] = useState<WorkOrder[]>(
     runtimeConfig.demoMode ? demoWorkOrders : [],
   );
@@ -311,6 +372,130 @@ export function MaintenanceDashboardPage(): JSX.Element {
 
   const hasData = orders.length > 0 || devices.length > 0;
 
+  // ── Calendar view: month grid over the (department-filtered) requests ──
+  const calMonthStartIso = jalaliPartsToIso(calMonth.year, calMonth.month, 1);
+  const calMonthLength = jalaliMonthLength(calMonth.year, calMonth.month);
+  const calCells = useMemo(() => {
+    const leading = persianDayIndex(new Date(`${calMonthStartIso}T00:00:00`));
+    const grid: Array<{ iso: string; day: number } | null> = [];
+    for (let index = 0; index < leading; index += 1) grid.push(null);
+    for (let day = 1; day <= calMonthLength; day += 1) {
+      grid.push({ iso: jalaliPartsToIso(calMonth.year, calMonth.month, day), day });
+    }
+    while (grid.length % 7 !== 0) grid.push(null);
+    return grid;
+  }, [calMonth.year, calMonth.month, calMonthLength, calMonthStartIso]);
+  const calDeptCounts = useMemo(() => {
+    const counts = new Map<MaintenanceDepartment, number>();
+    for (const order of orders) {
+      const month = jalaliMonthOf(order.createdAt);
+      if (!month || month.year !== calMonth.year || month.month !== calMonth.month) continue;
+      counts.set(order.department, (counts.get(order.department) ?? 0) + 1);
+    }
+    return counts;
+  }, [orders, calMonth]);
+  const calMonthOrders = useMemo(
+    () =>
+      orders.filter((order) => {
+        const month = jalaliMonthOf(order.createdAt);
+        if (!month || month.year !== calMonth.year || month.month !== calMonth.month) {
+          return false;
+        }
+        return deptFilter.size === 0 || deptFilter.has(order.department);
+      }),
+    [orders, calMonth, deptFilter],
+  );
+  const calByDay = useMemo(() => {
+    const grouped = new Map<string, WorkOrder[]>();
+    for (const order of calMonthOrders) {
+      const dayOrders = grouped.get(order.createdAt) ?? [];
+      dayOrders.push(order);
+      grouped.set(order.createdAt, dayOrders);
+    }
+    return grouped;
+  }, [calMonthOrders]);
+  const calTodayIso = todayIso();
+
+  // ── User view: the signed-in user's own desk ──
+  // Demo-only: colleagues whose desk the preview may show. In live mode
+  // this stays empty — a real user only ever sees their own desk, never a
+  // colleague's, so the fallback below lands on the session name.
+  const demoUserCandidates = useMemo(
+    () =>
+      runtimeConfig.demoMode
+        ? [
+            ...new Set(
+              orders.flatMap((order) => (order.assignedToName ? [order.assignedToName] : [])),
+            ),
+          ]
+        : [],
+    [orders],
+  );
+  const sessionName = session?.user.displayName ?? "";
+  const activeUserName = useMemo(() => {
+    if (viewAs) return viewAs;
+    if (sessionName && demoUserCandidates.includes(sessionName)) return sessionName;
+    if (demoUserCandidates.length > 0) return demoUserCandidates[0];
+    return sessionName;
+  }, [viewAs, sessionName, demoUserCandidates]);
+  const myOrders = useMemo(
+    () =>
+      activeUserName
+        ? orders.filter(
+            (order) =>
+              order.assignedToName === activeUserName ||
+              // Identity beats a display name (v0.16.0): when the order
+              // carries the assignee's account id, match it directly. The
+              // demo-only «view as» desks stay name-based.
+              (!viewAs && order.assignedToUserId === session?.user.id),
+          )
+        : [],
+    [orders, activeUserName, viewAs, session],
+  );
+  const myRequests = useMemo(
+    () =>
+      activeUserName
+        ? orders.filter((order) => order.requestedByName === activeUserName)
+        : [],
+    [orders, activeUserName],
+  );
+  const myStats = useMemo(() => {
+    const open = myOrders.filter((order) => isOpen(order.status));
+    return {
+      assignedTotal: myOrders.length,
+      assignedOpen: open.length,
+      assignedInProgress: open.filter((order) => order.status === "inProgress").length,
+      assignedCompleted: myOrders.filter((order) => order.status === "completed").length,
+      requestedTotal: myRequests.length,
+      requestedOpen: myRequests.filter((order) => isOpen(order.status)).length,
+    };
+  }, [myOrders, myRequests]);
+  const myOrdersSorted = useMemo(
+    () =>
+      [...myOrders].sort((a, b) => {
+        const openDiff = Number(isOpen(b.status)) - Number(isOpen(a.status));
+        if (openDiff !== 0) return openDiff;
+        return b.createdAt.localeCompare(a.createdAt);
+      }),
+    [myOrders],
+  );
+  const myRequestsSorted = useMemo(
+    () => [...myRequests].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [myRequests],
+  );
+
+  // Calendar rail: toggle one department, or clear the filter.
+  const toggleDept = useCallback((department: MaintenanceDepartment): void => {
+    setDeptFilter((current) => {
+      const next = new Set(current);
+      if (next.has(department)) next.delete(department);
+      else next.add(department);
+      return next;
+    });
+  }, []);
+  const clearDepts = useCallback((): void => setDeptFilter(new Set()), []);
+
+
   const goToOrders = useCallback(
     (params: { status?: WorkOrderStatus; department?: MaintenanceDepartment }): void => {
       const query = new URLSearchParams();
@@ -400,7 +585,8 @@ export function MaintenanceDashboardPage(): JSX.Element {
         }
       />
 
-      <div className="dash-range-bar dash-actions--noprint">
+      {(view === "daily" || view === "performance") && (
+        <div className="dash-range-bar dash-actions--noprint">
         <span className="dash-range-bar__label">
           <Icon name="calendar" size={15} />
           {t("cmms.dash.rangeLabel")}
@@ -424,7 +610,10 @@ export function MaintenanceDashboardPage(): JSX.Element {
           ))}
         </div>
       </div>
+      )}
 
+      {view === "daily" && (
+        <>
       <div className="widget-grid dash-alerts-grid">
       {(() => {
         const breaches = slaBreachedOrders(orders);
@@ -534,8 +723,11 @@ export function MaintenanceDashboardPage(): JSX.Element {
           )}
         </Card>
       )}
+        </>
+      )}
 
-      <div className="metric-grid">
+      {(view === "daily" || view === "performance") && (
+        <div className="metric-grid">
         <MetricCard
           label={t("cmms.dash.openWo")}
           value={stats.open}
@@ -568,8 +760,37 @@ export function MaintenanceDashboardPage(): JSX.Element {
           trendLabel={t("cmms.dash.mttrHint")}
         />
       </div>
+      )}
 
-      {loading && !hasData ? (
+      {view === "calendar" ? (
+        <CalendarDashboard
+          month={calMonth}
+          onMonthChange={setCalMonth}
+          cells={calCells}
+          ordersByDay={calByDay}
+          monthOrders={calMonthOrders}
+          deptCounts={calDeptCounts}
+          departments={DEPARTMENTS}
+          deptFilter={deptFilter}
+          onToggleDept={toggleDept}
+          onClearDepts={clearDepts}
+          selectedDay={selectedDay}
+          onSelectDay={setSelectedDay}
+          todayIsoValue={calTodayIso}
+          t={t}
+        />
+      ) : view === "user" ? (
+        <UserDashboard
+          userName={activeUserName}
+          stats={myStats}
+          orders={myOrdersSorted}
+          requests={myRequestsSorted}
+          candidates={demoUserCandidates}
+          viewAs={viewAs}
+          onViewAs={setViewAs}
+          t={t}
+        />
+      ) : loading && !hasData ? (
         <Card padding="lg">
           <div className="state state--empty">
             <span className="state__icon">
@@ -596,6 +817,8 @@ export function MaintenanceDashboardPage(): JSX.Element {
         </Card>
       ) : (
         <div className="widget-grid">
+          {view !== "daily" ? (
+            <>
           <Card className="dashboard-widget" padding="md">
             <CardHeader
               title={t("cmms.dash.trend")}
@@ -667,7 +890,10 @@ export function MaintenanceDashboardPage(): JSX.Element {
               />
             )}
           </Card>
-
+            </>
+          ) : null}
+          {view === "daily" ? (
+            <>
           <Card className="dashboard-widget" padding="md">
             <CardHeader
               title={t("cmms.dash.byStatus")}
@@ -713,7 +939,10 @@ export function MaintenanceDashboardPage(): JSX.Element {
               </div>
             </div>
           </Card>
-
+            </>
+          ) : null}
+          {view !== "daily" ? (
+            <>
           <Card className="dashboard-widget" padding="md">
             <CardHeader
               title={t("cmms.dash.byPriority")}
@@ -780,6 +1009,8 @@ export function MaintenanceDashboardPage(): JSX.Element {
               })}
             </div>
           </Card>
+            </>
+          ) : null}
         </div>
       )}
     </div>

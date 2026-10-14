@@ -72,6 +72,8 @@ interface PersonnelDto {
   skills: string[];
   certifications: string[];
   active: boolean;
+  linkedUserId?: string;
+  linkedUserDisplayName?: string;
 }
 
 interface SpecificationDto {
@@ -355,6 +357,8 @@ export const toPersonnel = (dto: PersonnelDto): MaintenancePersonnel => ({
   skills: dto.skills ?? [],
   certifications: dto.certifications ?? [],
   active: Boolean(dto.active),
+  linkedUserId: dto.linkedUserId || undefined,
+  linkedUserDisplayName: dto.linkedUserDisplayName || "",
 });
 
 export const toSpecification = (dto: SpecificationDto): DeviceSpecification => ({
@@ -762,6 +766,8 @@ export interface SavePersonnelInput {
   skills?: string[];
   certifications?: string[];
   active?: boolean;
+  /** Account to link ("" clears the link). */
+  linkedUserId?: string | null;
 }
 
 export interface SavePmPlanInput {
@@ -1086,6 +1092,7 @@ export const createRegistryService = (api: ApiClient): RegistryService => ({
         skills: input.skills ?? [],
         certifications: input.certifications ?? [],
         active: input.active ?? true,
+        linkedUserId: input.linkedUserId ?? "",
       },
       { signal, retry: 0 },
     );
@@ -1104,6 +1111,7 @@ export const createRegistryService = (api: ApiClient): RegistryService => ({
         skills: input.skills ?? [],
         certifications: input.certifications ?? [],
         active: input.active ?? true,
+        linkedUserId: input.linkedUserId ?? "",
       },
       { signal, retry: 0 },
     );

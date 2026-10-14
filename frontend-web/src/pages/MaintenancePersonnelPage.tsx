@@ -26,6 +26,8 @@ import {
   TextInput,
 } from "../shared/components/primitives";
 import { CreatableSelect } from "../shared/components/CreatableSelect";
+import { UserPicker, type UserPickerUser } from "../shared/components/UserPicker";
+import { demoUserDirectory } from "../features/maintenance/registryDemoData";
 import { mergeOptions } from "../features/maintenance/optionCatalog";
 
 /** Directory of maintenance staff that devices and PM plans are assigned to. */
@@ -56,6 +58,20 @@ export function MaintenancePersonnelPage(): JSX.Element {
   const [formSkills, setFormSkills] = useState("");
   const [formCertifications, setFormCertifications] = useState("");
   const [formActive, setFormActive] = useState(true);
+  // The account this person signs in with (v0.16.0) — picked, never typed.
+  const [formLinkedUser, setFormLinkedUser] = useState<UserPickerUser | null>(null);
+
+  const searchUsers = useCallback(
+    (query: string): Promise<UserPickerUser[]> =>
+      runtimeConfig.demoMode
+        ? Promise.resolve(
+            demoUserDirectory.filter((user) =>
+              `${user.displayName} ${user.username}`.toLowerCase().includes(query.toLowerCase()),
+            ),
+          )
+        : api.get<UserPickerUser[]>("users", { query: { search: query, pageSize: 20 } }),
+    [api],
+  );
 
   const refresh = useCallback(async (): Promise<void> => {
     try {
@@ -94,6 +110,7 @@ export function MaintenancePersonnelPage(): JSX.Element {
     setFormSkills("");
     setFormCertifications("");
     setFormActive(true);
+    setFormLinkedUser(null);
     setModalOpen(true);
   };
 
@@ -108,6 +125,15 @@ export function MaintenancePersonnelPage(): JSX.Element {
     setFormSkills(person.skills.join("\n"));
     setFormCertifications(person.certifications.join("\n"));
     setFormActive(person.active);
+    setFormLinkedUser(
+      person.linkedUserId
+        ? {
+            id: person.linkedUserId,
+            username: "",
+            displayName: person.linkedUserDisplayName || "",
+          }
+        : null,
+    );
     setModalOpen(true);
   };
 
@@ -131,6 +157,7 @@ export function MaintenancePersonnelPage(): JSX.Element {
       skills: lines(formSkills),
       certifications: lines(formCertifications),
       active: formActive,
+      linkedUserId: formLinkedUser?.id ?? "",
     };
     setSaving(true);
     try {
@@ -189,6 +216,19 @@ export function MaintenancePersonnelPage(): JSX.Element {
       label: t("registry.personnel.shift"),
       accessor: (row) => row.shift,
       render: (row) => <span className="muted-cell">{row.shift || t("registry.common.none")}</span>,
+    },
+    {
+      key: "linkedUser",
+      label: t("registry.personnel.linkedUser"),
+      accessor: (row) => row.linkedUserDisplayName ?? "",
+      render: (row) =>
+        row.linkedUserId ? (
+          <Badge tone="info" dot>
+            {row.linkedUserDisplayName || row.linkedUserId}
+          </Badge>
+        ) : (
+          <span className="muted-cell">{t("registry.common.none")}</span>
+        ),
     },
     {
       key: "phone",
@@ -359,6 +399,13 @@ export function MaintenancePersonnelPage(): JSX.Element {
             label={t("registry.personnel.unit")}
             value={formUnit}
             onChange={(event) => setFormUnit(event.target.value)}
+          />
+          <UserPicker
+            label={t("registry.personnel.linkedUser")}
+            value={formLinkedUser}
+            onSelect={setFormLinkedUser}
+            search={searchUsers}
+            hint={t("registry.personnel.linkedUserHint")}
           />
           <TextInput
             label={t("registry.personnel.phone")}

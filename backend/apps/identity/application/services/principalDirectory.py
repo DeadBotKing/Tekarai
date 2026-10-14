@@ -39,6 +39,21 @@ def usernameOf(tenantId: uuid.UUID, userId: uuid.UUID) -> str:
     return user.username if user else ""
 
 
+def userDisplayNameOf(tenantId: uuid.UUID, userId: uuid.UUID) -> str:
+    """Display name (falling back to the username), or "" when unknown.
+
+    The Maintenance context (v0.16.0) uses this to label the account a
+    workforce person is linked to, so the directory shows a person, never
+    a bare UUID.
+    """
+    from apps.identity.infrastructure.repositories.identityRepositoriesImpl import (
+        UserRepositoryDjango,
+    )
+
+    user = UserRepositoryDjango().getById(userId, tenantId)
+    return (user.displayName or user.username) if user else ""
+
+
 def userIdOfUsername(tenantId: uuid.UUID, username: str) -> uuid.UUID | None:
     from apps.identity.infrastructure.repositories.identityRepositoriesImpl import (
         UserRepositoryDjango,

@@ -73,6 +73,7 @@ class MaintenancePersonnel:
     shift: str = ""
     skills: tuple[str, ...] = ()
     certifications: tuple[str, ...] = ()
+    linkedUserId: uuid.UUID | None = None
     active: bool = True
     createdAt: datetime | None = None
     updatedAt: datetime | None = None

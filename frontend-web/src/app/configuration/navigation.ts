@@ -11,6 +11,9 @@ export interface NavigationItem {
   featureFlag?: string;
   children?: NavigationItem[];
   badge?: number;
+  /** Match the route exactly (no prefix) — for a view that owns the bare
+   *  route while its siblings live under it, e.g. the daily dashboard. */
+  exact?: boolean;
 }
 
 export const navigationConfig: NavigationItem[] = [
@@ -44,7 +47,20 @@ export const navigationConfig: NavigationItem[] = [
     label: "nav.maintenance",
     icon: "cpu",
     children: [
-      { id: "maintenanceDashboard", label: "nav.maintenanceDashboard", icon: "chart", route: "/app/maintenance/dashboard", permission: PERMISSIONS.maintenanceWorkOrderList },
+      {
+        id: "maintenanceDashboard",
+        label: "nav.maintenanceDashboard",
+        icon: "chart",
+        permission: PERMISSIONS.maintenanceWorkOrderList,
+        children: [
+          // The daily view keeps the parameter-less URL, so the legacy
+          // bookmark and the sidenav highlight stay exact-match only.
+          { id: "maintenanceDashboardDaily", label: "nav.dashDaily", icon: "chart", route: "/app/maintenance/dashboard", permission: PERMISSIONS.maintenanceWorkOrderList, exact: true },
+          { id: "maintenanceDashboardCalendar", label: "nav.dashCalendar", icon: "calendar", route: "/app/maintenance/dashboard/calendar", permission: PERMISSIONS.maintenanceWorkOrderList },
+          { id: "maintenanceDashboardPerformance", label: "nav.dashPerformance", icon: "activity", route: "/app/maintenance/dashboard/performance", permission: PERMISSIONS.maintenanceWorkOrderList },
+          { id: "maintenanceDashboardUser", label: "nav.dashUser", icon: "users", route: "/app/maintenance/dashboard/user", permission: PERMISSIONS.maintenanceWorkOrderList },
+        ],
+      },
       { id: "maintenanceWarehouse", label: "nav.warehouse", icon: "layers", route: "/app/maintenance/warehouse", permission: PERMISSIONS.maintenanceInventoryView },
       { id: "maintenanceProcurement", label: "nav.procurement", icon: "briefcase", route: "/app/maintenance/procurement", permission: PERMISSIONS.procurementSupplierView },
       { id: "safetyPermits", label: "nav.safetyPermits", icon: "shield", route: "/app/maintenance/permits", permission: PERMISSIONS.safetyPermitView },

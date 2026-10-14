@@ -6,6 +6,113 @@ made it impossible to tell what any given commit changed or to roll back to a
 known-good state. Entries follow [Keep a Changelog](https://keepachangelog.com)
 and the project aims at [Semantic Versioning](https://semver.org).
 
+## [0.16.0] — A workforce person links to the account they sign in with
+
+«هر پرسنل نت بتواند به حساب کاربری مربوطه وصل شود.» Done — picked by
+name, never a typed UUID, and enforced at the database level.
+
+### Added
+
+- **`linkedUserId` on the workforce directory** (`MaintenancePersonnel`) —
+  the platform account a technician signs in with. One link per account is
+  enforced by a conditional unique constraint
+  (`uq_maintenance_personnel_linked_user`), and the save use case refuses
+  three ways with field-level errors: not a uuid, no such living user in
+  the tenant, or the account already belongs to another person.
+- **The personnel form gains «حساب کاربری مرتبط»** — a `UserPicker` that
+  searches accounts by name (the same component the org chart uses). The
+  directory shows the link as a badge with the account's display name.
+- `userDisplayNameOf` on Identity's public facade (`principalDirectory`),
+  so Maintenance reads accounts through the application contract (RULE F)
+  and never Identity's internals.
+- The **user dashboard now matches by identity**: when a work order carries
+  the assignee's account id, the desk matches it directly instead of
+  comparing display names. The demo-only «view as» desks stay name-based.
+
+### Tests
+
+- Backend `testPersonnelUserLink` — 7 tests: the link echoes back with the
+  display name, unlinked people carry empty strings, the three refusals
+  (unknown user / non-uuid / taken account / cross-tenant), re-saving the
+  same link stays fine, and an empty patch frees the account for the next
+  person.
+- Frontend `personnelUserLink.test` — 2 tests: the badge shows on the
+  directory (linked twice, unlinked once), and picking an account by name
+  carries the link through a save. Full suites: backend 2810 tests, frontend
+  tsc + 408 tests + build green (the four Phase-13 agent-contract failures
+  are pre-existing on the v0.15.1 tree as well — environment, not this).
+
+## [0.15.1] — The switcher moves into the side navigation
+
+«نمیشه اینارو ببری تو منو سمت راست، همونجا که نوشته داشبورد دراپ‌داون بشه.»
+Done — the four dashboards now live where the rest of the app lives.
+
+### Changed
+
+- **«داشبورد نگهداری» in the sidenav is now an expanding group** with the
+  four dashboards as children: کنترل روزانه، تقویم، عملکرد، کاربری. The
+  group pre-opens on the active view, the active child takes the pill, and
+  in the mobile drawer the same four appear as links under the section.
+- **The header dropdown is gone** — the switcher button, its menu and their
+  CSS left the dashboard page; the header keeps refresh / CSV / print.
+- `NavigationItem` gains an `exact` flag, used by the daily child: its route
+  is the prefix of the other three, so it highlights only on the bare
+  `/app/maintenance/dashboard` URL, never on its siblings' pages.
+
+### Tests
+
+- sidenav: +2 — the group expands into the four dashboards with the right
+  hrefs, and only the active view is pilled (daily is exact-match).
+- dashboardViews: the two switcher-driven tests became one route-driven
+  render test (the sidenav owns navigation now). Frontend: tsc + 406 tests
+  + build green.
+
+## [0.15.0] — One dashboard page, four dashboards
+
+«داشبوردی که دراپ‌داون باز شود و به چند داشبورد تقسیم شود: کنترل روزانه، تقویم،
+عملکرد، کاربری — و در تقویم دپارتمان‌ها سمت راست باشند که فیلترشان کنم.» Done.
+
+### Added
+
+- **The dashboard switcher** — a dropdown in the page header («انتخاب داشبورد»)
+  that swaps between four dashboards on one route, `/app/maintenance/dashboard/:view`.
+  The daily view keeps the old parameter-less URL, so every bookmark and the
+  sidenav entry keep working.
+- **Calendar dashboard** (`/calendar`) — a Jalali month grid of work orders by
+  their creation date, following the PM-calendar grid pattern (Friday column
+  tinted, today outlined, Persian digits). The **department rail sits to the
+  right of the calendar**: chips with per-department counts, multi-select plus
+  «همه», filtering both the grid and the month counter. Clicking a day opens a
+  day panel listing that day's requests with status dot, priority and
+  department. In the demo the calendar opens on the newest month that has an
+  order; live installs open on the current month.
+- **User dashboard** (`/user`) — the signed-in user's own desk: open / in-progress
+  / completed counts of orders assigned to them, their filed requests, and two
+  lists with status, priority and dates. In the demo only, a «نمایش به عنوان»
+  picker lets you peek at a colleague's desk; live installs always show the
+  session user.
+- `src/pages/maintenanceDashboardViews.tsx` — the calendar and user views as
+  pure, props-only components (no demoMode branch of their own), plus
+  `dashboardViews.css` for the switcher, rail, grid and desk layouts.
+
+### Changed
+
+- **The daily/performance split** — the range bar, metric cards and the trend
+  widgets (order trend, MTTR trend, by-priority, workload) belong to
+  performance; alerts, cost, by-status and completion stay on daily control.
+  Both views share the range bar and metric cards.
+- `demoModeBoundary` BASELINE for `MaintenanceDashboardPage.tsx` raised 9 → 11:
+  the demo-only calendar month default and the demo-only «نمایش به عنوان»
+  picker, recorded with a comment rather than hidden behind a helper.
+
+### Tests
+
+- `src/tests/dashboardViews.test.tsx` — 7 tests: the switcher lists all four
+  dashboards and navigates, the department rail filters the calendar (۴ → ۱ → ۴),
+  clicking a day lists its requests, the user desk shows only one's own work,
+  and daily/performance each keep their own widgets. Frontend: tsc + 404 tests
+  + build green.
+
 ## [0.14.1] — The HR manager can run the appraisal round
 
 «همین نقش را نیمه‌مدیریتی کن، بتواند دورهٔ ارزیابی بسازد یا امتیاز ثبت

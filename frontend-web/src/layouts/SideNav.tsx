@@ -15,8 +15,8 @@ import { Icon, type IconName } from "../shared/components/Icon";
 const routeOf = (item: NavigationItem): string =>
   item.route ?? item.children?.find((child) => child.route)?.route ?? "/app/dashboard";
 
-const isActivePath = (path: string, route: string): boolean => {
-  if (route === "/app/dashboard") return path === route;
+const isActivePath = (path: string, route: string, exact = false): boolean => {
+  if (exact || route === "/app/dashboard") return path === route;
   return path === route || path.startsWith(`${route}/`);
 };
 
@@ -54,7 +54,7 @@ function SideItem({
   const { t } = useLocalization();
   const children = item.children?.filter((child) => child.route) ?? [];
   const route = routeOf(item);
-  const active = isActivePath(currentPath, route);
+  const active = isActivePath(currentPath, route, item.exact);
 
   if (children.length === 0) {
     return (
@@ -85,7 +85,7 @@ function SideParent({
   onNavigate?: () => void;
 }): JSX.Element {
   const { t } = useLocalization();
-  const childActive = children.some((child) => isActivePath(currentPath, child.route ?? ""));
+  const childActive = children.some((child) => isActivePath(currentPath, child.route ?? "", child.exact));
   const [open, setOpen] = useState(childActive);
   const childActiveRef = childActive;
   useEffect(() => {
@@ -106,7 +106,7 @@ function SideParent({
       </button>
       {open &&
         children.map((child) => {
-          const active = isActivePath(currentPath, child.route ?? "");
+          const active = isActivePath(currentPath, child.route ?? "", child.exact);
           return (
             <NavLink
               key={child.id}
@@ -133,7 +133,7 @@ export function MobileNav({ groups, currentPath, onNavigate }: SideNavProps): JS
     <nav className="mobilenav" aria-label={t("nav.workspace")}>
       {groups.map((group) => {
         const children = group.children ?? [];
-        const childActive = children.some((child) => isActivePath(currentPath, routeOf(child)));
+        const childActive = children.some((child) => isActivePath(currentPath, routeOf(child), child.exact));
         const directs = children.filter((child) => child.route);
         const submenus = children.filter((child) => !child.route && child.children?.length);
         return (
@@ -173,7 +173,7 @@ function MobileLink({
   onNavigate?: () => void;
 }): JSX.Element {
   const { t } = useLocalization();
-  const active = isActivePath(currentPath, item.route ?? "");
+  const active = isActivePath(currentPath, item.route ?? "", item.exact);
   return (
     <NavLink
       to={item.route ?? "/app/dashboard"}

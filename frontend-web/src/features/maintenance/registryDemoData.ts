@@ -89,6 +89,18 @@ export const demoLocations: MaintenanceLocation[] = [
   },
 ];
 
+/**
+ * The demo's tiny account directory (v0.16.0). Live installs search real
+ * accounts through the users endpoint; the demo has no backend, so the
+ * personnel form's picker searches this list instead.
+ */
+export const demoUserDirectory = [
+  { id: "usr-reza", username: "reza.ahmadi", displayName: "رضا احمدی", status: "active" },
+  { id: "usr-maryam", username: "maryam.karimi", displayName: "مریم کریمی", status: "active" },
+  { id: "usr-hossein", username: "hossein.mohammadi", displayName: "حسین محمدی", status: "active" },
+  { id: "usr-admin", username: "platform-admin", displayName: "مدیر پلتفرم", status: "active" },
+];
+
 export const demoPersonnel: MaintenancePersonnel[] = [
   {
     id: "per-1",
@@ -101,6 +113,8 @@ export const demoPersonnel: MaintenancePersonnel[] = [
     skills: ["تعویض یاتاقان", "هم‌محوری", "جوشکاری"],
     certifications: ["ایمنی کار در ارتفاع"],
     active: true,
+    linkedUserId: "usr-reza",
+    linkedUserDisplayName: "رضا احمدی",
   },
   {
     id: "per-2",
@@ -125,6 +139,8 @@ export const demoPersonnel: MaintenancePersonnel[] = [
     skills: ["تابلو برق", "درایو"],
     certifications: [],
     active: true,
+    linkedUserId: "usr-hossein",
+    linkedUserDisplayName: "حسین محمدی",
   },
   {
     id: "per-4",
@@ -1186,6 +1202,7 @@ export const createDemoRegistryService = (): RegistryService => ({
       ),
     ),
   createPersonnel: async (input) => {
+    const linked = demoUserDirectory.find((user) => user.id === input.linkedUserId);
     const created: MaintenancePersonnel = {
       id: nextId("per"),
       personnelCode: input.personnelCode ?? "",
@@ -1197,11 +1214,14 @@ export const createDemoRegistryService = (): RegistryService => ({
       skills: input.skills ?? [],
       certifications: input.certifications ?? [],
       active: input.active ?? true,
+      linkedUserId: linked?.id,
+      linkedUserDisplayName: linked?.displayName ?? "",
     };
     store.personnel = [...store.personnel, created];
     return clone(created);
   },
   updatePersonnel: async (id, input) => {
+    const linked = demoUserDirectory.find((user) => user.id === input.linkedUserId);
     const updated: MaintenancePersonnel = {
       id,
       personnelCode: input.personnelCode ?? "",
@@ -1213,6 +1233,8 @@ export const createDemoRegistryService = (): RegistryService => ({
       skills: input.skills ?? [],
       certifications: input.certifications ?? [],
       active: input.active ?? true,
+      linkedUserId: linked?.id,
+      linkedUserDisplayName: linked?.displayName ?? "",
     };
     store.personnel = store.personnel.map((item) => (item.id === id ? updated : item));
     return clone(updated);

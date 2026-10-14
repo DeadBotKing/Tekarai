@@ -184,6 +184,7 @@ class PersonnelListView(IdempotencyMixin, RegistryView):
                 skills=tuple(data["skills"]),
                 certifications=tuple(data["certifications"]),
                 active=bool(data["active"]),
+                linkedUserId=str(data["linkedUserId"]),
             )
         )
         return Response(successEnvelope(asDict(dto)), status=201)
@@ -206,6 +207,7 @@ class PersonnelDetailView(RegistryView):
                 skills=tuple(data["skills"]),
                 certifications=tuple(data["certifications"]),
                 active=bool(data["active"]),
+                linkedUserId=str(data["linkedUserId"]),
             )
         )
         return Response(successEnvelope(asDict(dto)))

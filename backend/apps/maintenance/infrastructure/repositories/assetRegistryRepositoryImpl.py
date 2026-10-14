@@ -279,6 +279,7 @@ class PersonnelRepositoryDjango:
         skills: builtins.list[str],
         certifications: builtins.list[str],
         active: bool,
+        linkedUserId: uuid.UUID | None,
         now: datetime,
     ) -> MaintenancePersonnel:
         model = MaintenancePersonnelModel.objects.create(
@@ -291,6 +292,7 @@ class PersonnelRepositoryDjango:
             shift=shift,
             skills=_joinLines(skills),
             certifications=_joinLines(certifications),
+            linkedUserId=linkedUserId,
             active=active,
             createdAt=now,
         )
@@ -308,6 +310,7 @@ class PersonnelRepositoryDjango:
         skills: builtins.list[str],
         certifications: builtins.list[str],
         active: bool,
+        linkedUserId: uuid.UUID | None,
         now: datetime,
     ) -> MaintenancePersonnel:
         model = self._get(tenantId, personnelId)
@@ -318,6 +321,7 @@ class PersonnelRepositoryDjango:
         model.shift = shift
         model.skills = _joinLines(skills)
         model.certifications = _joinLines(certifications)
+        model.linkedUserId = linkedUserId
         model.active = active
         model.updatedAt = now
         model.save()
@@ -337,6 +341,14 @@ class PersonnelRepositoryDjango:
     def getByCode(self, tenantId: uuid.UUID, code: str) -> MaintenancePersonnel | None:
         model = MaintenancePersonnelModel.objects.filter(
             tenantId=tenantId, personnelCode=code, deletedAt__isnull=True
+        ).first()
+        return self.toDomain(model) if model else None
+
+    def getByLinkedUserId(
+        self, tenantId: uuid.UUID, linkedUserId: uuid.UUID
+    ) -> MaintenancePersonnel | None:
+        model = MaintenancePersonnelModel.objects.filter(
+            tenantId=tenantId, linkedUserId=linkedUserId, deletedAt__isnull=True
         ).first()
         return self.toDomain(model) if model else None
 
@@ -378,6 +390,7 @@ class PersonnelRepositoryDjango:
             shift=model.shift,
             skills=_splitLines(model.skills),
             certifications=_splitLines(model.certifications),
+            linkedUserId=model.linkedUserId,
             active=model.active,
             createdAt=model.createdAt,
             updatedAt=model.updatedAt,

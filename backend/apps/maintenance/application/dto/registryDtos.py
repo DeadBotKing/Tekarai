@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass, field
 
 from apps.maintenance.domain.entities.assetRegistry import (
@@ -48,6 +49,9 @@ class PersonnelDto:
     skills: list[str] = field(default_factory=list)
     certifications: list[str] = field(default_factory=list)
     active: bool = True
+    # The account this person signs in with (empty string when unlinked).
+    linkedUserId: str = ""
+    linkedUserDisplayName: str = ""
 
 
 @dataclass(frozen=True)
@@ -359,7 +363,10 @@ def locationDto(location: MaintenanceLocation, deviceCount: int = 0) -> Location
     )
 
 
-def personnelDto(person: MaintenancePersonnel) -> PersonnelDto:
+def personnelDto(
+    person: MaintenancePersonnel,
+    userNames: dict[uuid.UUID, str] | None = None,
+) -> PersonnelDto:
     return PersonnelDto(
         id=str(person.id),
         personnelCode=person.personnelCode,
@@ -371,6 +378,10 @@ def personnelDto(person: MaintenancePersonnel) -> PersonnelDto:
         skills=list(person.skills),
         certifications=list(person.certifications),
         active=person.active,
+        linkedUserId=str(person.linkedUserId) if person.linkedUserId else "",
+        linkedUserDisplayName=(
+            (userNames or {}).get(person.linkedUserId, "") if person.linkedUserId else ""
+        ),
     )
 
 

@@ -52,6 +52,10 @@ class SavePersonnelSerializer(serializers.Serializer):
         child=serializers.CharField(max_length=160), required=False, default=list
     )
     active = serializers.BooleanField(required=False, default=True)
+    # Platform account this person signs in with ("" clears the link).
+    linkedUserId = serializers.CharField(
+        max_length=64, required=False, allow_blank=True, default=""
+    )
 
 
 class SpecificationRowSerializer(serializers.Serializer):

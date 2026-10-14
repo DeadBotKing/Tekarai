@@ -7,6 +7,7 @@ import "../styles/globals.css";
 import "../styles/maintenanceAttachments.css";
 import "../styles/pmCalendar.css";
 import "../styles/maintenanceCost.css";
+import "../styles/dashboardViews.css";
 import "../styles/chat.css";
 import "../styles/uiPolish.css";
 import "../styles/procurement.css";

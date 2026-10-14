@@ -115,6 +115,7 @@ export function AppRouter(): JSX.Element {
         <Route path="projects" element={<ProjectsPage />} />
         <Route path="tasks" element={<TasksPage />} />
         <Route path="maintenance/dashboard" element={<MaintenanceDashboardPage />} />
+        <Route path="maintenance/dashboard/:view" element={<MaintenanceDashboardPage />} />
         <Route path="maintenance/devices" element={<MaintenanceDevicesPage />} />
         <Route path="maintenance/registry" element={<EquipmentRegistryPage />} />
         <Route path="maintenance/devices/:deviceId/profile" element={<DeviceProfilePage />} />

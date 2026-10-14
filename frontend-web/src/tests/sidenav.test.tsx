@@ -60,6 +60,7 @@ const renderShell = (initialRoute = "/app/dashboard"): void => {
           <Route path="/app" element={<AppShell />}>
             <Route path="dashboard" element={<div data-testid="page-dashboard">صفحه داشبورد</div>} />
             <Route path="maintenance/work-orders" element={<div data-testid="page-orders">صفحه درخواست‌ها</div>} />
+          <Route path="maintenance/dashboard/*" element={<div data-testid="page-dash-family">صفحه خانواده داشبورد</div>} />
           </Route>
         </Routes>
       </AppProviders>
@@ -116,6 +117,45 @@ describe("the sidebar — سایدبار روشن", () => {
 
     await userEvent.click(orders);
     expect(await screen.findByTestId("page-orders")).toBeInTheDocument();
+  });
+
+  it("expands «داشبورد نگهداری» into the four dashboards (v0.15.1)", async () => {
+    renderShell();
+    const dash = within(rail()).getByRole("button", { name: /داشبورد نگهداری/ });
+    expect(dash).toHaveAttribute("aria-expanded", "false");
+
+    await userEvent.click(dash);
+    expect(dash).toHaveAttribute("aria-expanded", "true");
+    const labels = within(rail())
+      .getAllByRole("link")
+      .map((link) => link.textContent?.trim() ?? "");
+    // The four dashboards, in the order the brief listed them.
+    const family = ["کنترل روزانه", "تقویم", "عملکرد", "کاربری"];
+    expect(family.every((label) => labels.includes(label))).toBe(true);
+    // And they point at the four routes of the family.
+    const calendar = within(rail()).getByRole("link", { name: "تقویم" });
+    expect(calendar).toHaveAttribute("href", "/app/maintenance/dashboard/calendar");
+  });
+
+  it("pills only the active dashboard — the daily link is exact-match", () => {
+    renderShell("/app/maintenance/dashboard/calendar");
+    const nav = rail();
+    const dash = within(nav).getByRole("button", { name: /داشبورد نگهداری/ });
+    // The group pre-opened and the parent highlights.
+    expect(dash).toHaveAttribute("aria-expanded", "true");
+    expect(dash.className).toContain("is-active");
+    // The calendar child is the pill; the daily child is NOT, although
+    // its route is the prefix of the current URL.
+    expect(within(nav).getByRole("link", { name: "تقویم" }).className).toContain("is-active");
+    expect(within(nav).getByRole("link", { name: "کنترل روزانه" }).className).not.toContain("is-active");
+  });
+
+  it("pills the daily dashboard on the bare dashboard URL", () => {
+    renderShell("/app/maintenance/dashboard");
+    const daily = within(rail()).getByRole("link", { name: "کنترل روزانه" });
+    expect(daily.className).toContain("is-active");
+    // …and none of the other three.
+    expect(within(rail()).getByRole("link", { name: "تقویم" }).className).not.toContain("is-active");
   });
 
   it("pre-opens the sub-menu that owns the current page and pills the page", () => {

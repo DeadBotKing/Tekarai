@@ -52,11 +52,11 @@ const BASELINE: Record<string, number> = {
   "pages/EquipmentRegistryPage.tsx": 5,
   "pages/FleetAnalyticsPage.tsx": 1,
   "pages/LoginPage.tsx": 4,
-  "pages/MaintenanceDashboardPage.tsx": 9,
+  "pages/MaintenanceDashboardPage.tsx": 11,
   "pages/MaintenanceDevicesPage.tsx": 7,
   "pages/MaintenanceInspectionsPage.tsx": 2,
   "pages/MaintenanceLocationsPage.tsx": 1,
-  "pages/MaintenancePersonnelPage.tsx": 1,
+  "pages/MaintenancePersonnelPage.tsx": 2,
   "pages/MaintenancePmCalendarPage.tsx": 4,
   "pages/MaintenanceReportPage.tsx": 4,
   "pages/MaintenanceWorkReportPage.tsx": 3,
@@ -72,6 +72,11 @@ const BASELINE: Record<string, number> = {
   // helper so the count stays honest.
   "pages/WorkOrdersPage.tsx": 28,
   "shared/components/DemoModeBanner.tsx": 1,
+  // Raised 9 → 11 for the dashboard family (v0.15.0): the demo-only
+  // calendar month default (fixtures live in past months, so the preview
+  // opens on the newest month that has an order) and the demo-only "view
+  // as" desk picker. Recorded here rather than hidden behind a helper so
+  // the count stays honest.
 };
 
 const sourceFiles = (directory: string, collected: string[] = []): string[] => {

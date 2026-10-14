@@ -51,6 +51,10 @@ from apps.maintenance.application.services.tenantResolver import (
     parseDateOrNone,
     resolveTenantId,
 )
+from apps.maintenance.application.services.userDirectory import (
+    findActiveUser,
+    userDisplayNames,
+)
 from apps.maintenance.domain.services.assetHierarchyRules import (
     assertDepthWithinLimit,
     assertLocationNesting,
@@ -142,6 +146,8 @@ class SavePersonnelCommand:
     skills: tuple[str, ...] = ()
     certifications: tuple[str, ...] = ()
     active: bool = True
+    # Platform account this person signs in with ("" = no link).
+    linkedUserId: str = ""
 
 
 @dataclass(frozen=True)
@@ -400,9 +406,42 @@ class SavePersonnelUseCase(RegistryUseCaseBase):
                 "Personnel code is required.", fieldErrors={"personnelCode": "required"}
             )
 
+    def resolveLinkedUser(
+        self, tenantId: uuid.UUID, raw: str, personnelId: str
+    ) -> uuid.UUID | None:
+        """The validated account id behind ``linkedUserId``, or None.
+
+        Three ways to refuse, each with its own field error so the form can
+        point at the picker: not a uuid, no such living user in this tenant,
+        or the account already belongs to another person's record.
+        """
+        value = raw.strip()
+        if not value:
+            return None
+        try:
+            userId = uuid.UUID(value)
+        except ValueError:
+            raise ValidationFailedError(
+                "Linked user must be a user id.",
+                fieldErrors={"linkedUserId": "invalid"},
+            ) from None
+        if findActiveUser(tenantId, userId) is None:
+            raise ValidationFailedError(
+                "Linked user was not found in this tenant.",
+                fieldErrors={"linkedUserId": "not-found"},
+            )
+        holder = self.personnelRepository.getByLinkedUserId(tenantId, userId)
+        if holder is not None and str(holder.id) != personnelId:
+            raise ValidationFailedError(
+                "This account is already linked to another person.",
+                fieldErrors={"linkedUserId": "already-linked"},
+            )
+        return userId
+
     def perform(self, command: SavePersonnelCommand) -> PersonnelDto:
         tenantId = resolveTenantId("")
         now = self.clock.nowUtc()
+        linkedUserId = self.resolveLinkedUser(tenantId, command.linkedUserId, command.personnelId)
         if command.personnelId:
             person = self.personnelRepository.update(
                 tenantId,
@@ -415,6 +454,7 @@ class SavePersonnelUseCase(RegistryUseCaseBase):
                 list(command.skills),
                 list(command.certifications),
                 command.active,
+                linkedUserId,
                 now,
             )
             action = AUDIT_UPDATE
@@ -435,6 +475,7 @@ class SavePersonnelUseCase(RegistryUseCaseBase):
                 list(command.skills),
                 list(command.certifications),
                 command.active,
+                linkedUserId,
                 now,
             )
             action = AUDIT_CREATE
@@ -443,9 +484,16 @@ class SavePersonnelUseCase(RegistryUseCaseBase):
             resourceType="MaintenancePersonnel",
             resourceId=str(person.id),
             tenantId=tenantId,
-            after={"code": person.personnelCode, "specialty": person.specialty},
+            after={
+                "code": person.personnelCode,
+                "specialty": person.specialty,
+                "linkedUserId": str(person.linkedUserId) if person.linkedUserId else "",
+            },
         )
-        return personnelDto(person)
+        return personnelDto(
+            person,
+            userDisplayNames(tenantId, [person.linkedUserId] if person.linkedUserId else []),
+        )
 
 
 class DeletePersonnelUseCase(RegistryUseCaseBase):
@@ -470,12 +518,11 @@ class ListPersonnelUseCase(RegistryUseCaseBase):
 
     def perform(self, query: ListPersonnelQuery) -> PersonnelListDto:
         tenantId = resolveTenantId("")
-        return PersonnelListDto(
-            items=[
-                personnelDto(person)
-                for person in self.personnelRepository.list(tenantId, query.search, query.specialty)
-            ]
+        people = self.personnelRepository.list(tenantId, query.search, query.specialty)
+        names = userDisplayNames(
+            tenantId, [person.linkedUserId for person in people if person.linkedUserId]
         )
+        return PersonnelListDto(items=[personnelDto(person, names) for person in people])
 
 
 # =====================================================================================

@@ -434,6 +434,9 @@ export interface MaintenancePersonnel {
   skills: string[];
   certifications: string[];
   active: boolean;
+  /** The account this person signs in with, when linked (v0.16.0). */
+  linkedUserId?: string;
+  linkedUserDisplayName?: string;
 }
 
 export interface DeviceSpecification {

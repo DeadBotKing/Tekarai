@@ -259,7 +259,9 @@ describe("registry pages", () => {
       <MaintenancePersonnelPage />,
       "/app/maintenance/personnel",
     );
-    expect(await screen.findByText("رضا احمدی")).toBeInTheDocument();
-    expect(screen.getByText("سارا نوری")).toBeInTheDocument();
+    // v0.16.0: رضا احمدی carries a linked-account badge next to his name
+    // cell, so the directory shows him twice — once per role.
+    expect((await screen.findAllByText("رضا احمدی")).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("سارا نوری").length).toBe(1);
   });
 });

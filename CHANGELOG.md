@@ -6,6 +6,290 @@ made it impossible to tell what any given commit changed or to roll back to a
 known-good state. Entries follow [Keep a Changelog](https://keepachangelog.com)
 and the project aims at [Semantic Versioning](https://semver.org).
 
+## [0.14.1] — The HR manager can run the appraisal round
+
+«همین نقش را نیمه‌مدیریتی کن، بتواند دورهٔ ارزیابی بسازد یا امتیاز ثبت
+کند.» Done — with a dedicated permission instead of the blunt one.
+
+### Added
+
+- **`maintenance.review.manage`** — a new catalogue action for running the
+  performance-review process: opening and amending cycles, recording and
+  withdrawing rater marks, and computing results. The five review use
+  cases now require it instead of `maintenance.device.manage`.
+
+### Changed
+
+- **The `hrManager` preset gains the new action** — the HR manager can
+  build the round, record marks and compute, but still cannot touch the
+  machine register (the test drives a whole round as the HR user and
+  asserts device registration is refused with `PermissionDeniedError`).
+- **`maintenanceManager` (and tenantAdmin, which inherits the bundle)
+  explicitly carry the new action** so existing managers lose nothing
+  from the split.
+
+### Notes
+
+- One catalog action, five `requiredAction` swaps, demo fixture updated.
+  No frontend permission gates changed (the review page already rode
+  `maintenance.device.list`, which HR holds). Full backend suite green
+  (3,380 tests — one new functional round-trip test); ruff + mypy clean;
+  frontend 397 tests, typecheck and build green.
+
+## [0.14.0] — A built-in «مدیر منابع انسانی» (HR manager) role
+
+«مورد اول رو بساز تستش کن.» The role the HR manager plays in the
+performance-review cycle now exists as a real, seeded, read-only role.
+
+### Added
+
+- **`hrManager`** — a built-in tenant role seeded by `bootstrapPlatform`
+  (which `run_dev` runs on every start, idempotently, so it materialises
+  on existing databases too) with the Persian name «مدیر منابع انسانی».
+  Its preset is deliberately a **people view, read-only**: personnel
+  list and performance-review results (`maintenance.device.list/view`),
+  the whole organisation chart including the access matrix
+  (`organization.{department,position,assignment,accessRule}.view`) and
+  the user directory (`user.view`, `user.list`, `tenant.view`). No
+  manage verb anywhere — the tests refuse `*.manage`, `user.create`,
+  `user.assignRole`, `role.update`, work-order routing and assignment.
+- Assignment is the standard flow: مدیریت ← کاربران ← نقش‌ها.
+- Seven new backend tests pin the contract: preset codes all exist in
+  the catalogue, the people view is covered, no manage verbs, the seed
+  is idempotent, the role is listed with its actions (the query the
+  admin UI calls), and a granted user actually resolves the permissions
+  through the real permission gate.
+- The demo fixture gained the role so the demo preview shows it.
+
+### Notes
+
+- Backend: `permissionCatalog.py` (+1 role, +1 preset — no new action
+  codes needed) and `bootstrapPlatform.py`; frontend: demo fixture only.
+  Full backend suite green (exit 0), ruff + mypy clean; frontend 397
+  tests, typecheck and production build green.
+
+## [0.13.4] — Offline queue and meter readings back to full width
+
+«صف افلاین و قرائیت کنتورها خیلی زشت شدن که.» Fair: both pages carry
+7-column tables and wrapping list rows, which crumpled when squeezed
+into half-width cards. The pairing is reverted for these two pages.
+
+### Changed
+
+- **Meter readings and the offline queue are stacked full-width cards
+  again** — points, capture form, PM status and history; stats, rejected,
+  pending and history. They keep the compact v0.13.2/3 sizing, so the
+  boxes stay small; they just get the full row to breathe.
+- The `duo-grid` pairing stays on the three pages where it reads well:
+  inspections checklist, org structure and performance review.
+
+### Notes
+
+- Two page files, wrapper divs removed; no CSS, logic or test changes.
+  397 frontend tests, typecheck and production build green.
+
+## [0.13.3] — Five pages paired up, tables one notch tighter
+
+«چک لیست سازمانی-ساختار سازمانی-ارزیابی عملکرد-صفحه قرائت کنتور-صفحه
+صف افلاین همه این صفحات جداول و باکساش بزرگه کوچیکشون کن و کنار هم
+قرارشون بده.» Five named pages got the box treatment: smaller **and**
+side by side.
+
+### Changed
+
+- **A `duo-grid` utility pairs the cards** on: inspections checklist
+  (templates + record history), org structure (positions + user
+  assignments), performance review (comparison chart + unrated list),
+  meter readings (points table + capture form, PM status + history) and
+  the offline queue (stats + rejected, pending + history). Wide main
+  tables (final ranking, access matrix) stay full-width on purpose;
+  below 1080px every pair collapses to one column.
+- **All tables are one notch tighter than v0.13.2:** cells 6px vertical
+  padding, 11px body font, slimmer toolbars and pagination strips.
+- Offline-queue rows, the stats tiles and the role permission checklist
+  compacted to match.
+
+### Notes
+
+- Pure layout: five page files gained wrapper divs, one CSS section in
+  `density.css`. No logic, i18n, permission or data changes. 397
+  frontend tests, typecheck and production build green.
+
+## [0.13.2] — Every box, everywhere, smaller
+
+«گفتم هر باکسی تو هر جای سایت میبینی همه شکوچیک بشه.» v0.13.1 only
+compacted the maintenance dashboard; the rest of the app kept the roomy
+Fracttal density. This pass rewrites the density layer so **every
+content box on every page** is compact.
+
+### Changed
+
+- **`density.css` is now a global compact layer.** Cards on every page
+  (procurement, work permits, org structure, spare parts, reports,
+  administration, …) drop from 18px to 13px padding with tighter
+  headers; stat tiles from 104px to 84px; section titles, page padding
+  and footers shrink accordingly.
+- **Forms and controls:** inputs 38 → 33px, buttons 36 → 31px,
+  textareas 96 → 72px, form-grid gaps 16 → 11px — the permit form and
+  the requisition wizard are the big winners.
+- **Tables and toolbars:** cells 11px → 8px vertical padding, toolbars
+  and pagination strips trimmed on every list page.
+- **Overlays:** modals, drawers and toasts lost ~a third of their
+  padding.
+- **Charts on every page** (not just dashboards) run at 104px instead
+  of 118px; PM-calendar cells 108 → 86px; org-chart forms, matrix
+  cells, tabs, requisition steps and the login card trimmed to match.
+- The maintenance-dashboard pairing from v0.13.1 is kept, now on the
+  tighter baseline.
+
+### Notes
+
+- One file rewritten (`density.css`); the Fracttal One theme in
+  `tokens.css`/`sidenav.css` is untouched — same navy rail and blue
+  pill, denser content. No TSX, i18n, permission or data changes.
+  397 frontend tests, typecheck and production build green.
+
+## [0.13.1] — Maintenance dashboard: small boxes, side by side
+
+«باکسا خیلی بزرگن… همه این باکس هارو ابعادشون رو کوچیک کن و بجای زیر هم
+زیر هم گذاشتنشون بذارشون کنار هم.» The maintenance dashboard's chart
+boxes were full-width and stacked; they are now compact and paired.
+
+### Changed
+
+- **Every chart widget on the maintenance dashboard now takes half the
+  row** — the request-trend card, the MTTR-trend card, the by-status
+  bars and the department workload list dropped their `--wide` span, so
+  the six widgets pair into three tidy rows of two.
+- **The alert cards pair too:** the SLA-breach banner and the
+  reorder-suggestion card sit side by side in their own grid (and got a
+  little flex layout so their rows read cleanly at half width).
+- **Everything inside got smaller to match:** widget padding 18 → 13/15,
+  header margins tightened, trend charts 118 → 106 px, bar charts
+  126 → 118 px, the donut 132 → 110 and the pie ring 146 → 118, the
+  empty-chart placeholder and department rows trimmed likewise. On
+  phones the grid still collapses to one column.
+
+### Notes
+
+- Visual-only layer in `density.css` (with `.layout-compact`-scoped
+  twins so the older compact rules in `globals.css` are overridden by
+  cascade, not deleted) plus four class changes in
+  `MaintenanceDashboardPage.tsx`. No i18n, no permissions, no data.
+  397 frontend tests, typecheck and production build unchanged-green.
+
+## [0.13.0] — The Fracttal One theme: navy rail, saturated blue pill
+
+The brief moved again: «حالا شبیه اینش کن Fracttal One.» The structure
+stayed a sidebar (Fracttal One navigates the same way); what changed is
+the visual language, applied as a token-and-CSS theme over the existing
+`SideNav` — no component rewrite, so every navigation test still pins
+the same contract.
+
+### Changed
+
+- **A deep navy rail replaces the light one.** Brand and tenant sit in
+  white-on-navy chips, section labels in muted blue-grey, items light
+  with a soft white hover. Dark mode is a token swap, as before.
+- **The Fracttal signature: the current page sits in a saturated blue
+  pill** — white icon, white text, a soft blue glow on the navy — in
+  place of MaintainX's soft pastille. The parent owning the page is
+  marked too; sub-menus still expand in place and pre-open to the
+  active child.
+- **The primary hue shifted to Fracttal's azure** (`#1f7ae0`), the app
+  background to a cooler grey, and every radius up a notch (10/14/18/24)
+  for the round, soft-shadowed card feel their screenshots are known
+  for. Table rows settle at 11px — clean, mobile-first, «neat and
+  well-arranged», which is how the reviews describe it.
+
+### Kept
+
+The colour-coded statuses, calendar views and drag-and-drop board the
+reviews praise were already in the product; they simply inherit the new
+palette. Permission behaviour, the drawer on phones, Ctrl+K search,
+theme and language toggles are untouched.
+
+### Tests
+
+No behavioural change — all **397** frontend tests pass unchanged, and
+the typecheck and production build are clean. The look is carried
+entirely by `tokens.css`, `sidenav.css` and `density.css`.
+
+## [0.12.0] — The MaintainX look: a light, friendly sidebar
+
+The brief moved: «حالا مشابه MaintainX کن.» eMaint's dark dropdown strip
+made way for MaintainX's signature — a light rail on the start edge (the
+right, in Persian), a blue pill on the current page, roomy and calm
+everywhere.
+
+### Changed
+
+- **Navigation is a light sidebar again, not a top strip.** Small-caps
+  section labels, one item per row, sub-menus that expand in place and
+  pre-open to reveal the active child. The current page is a blue pill —
+  MaintainX's signature highlight — and the parent owning it is marked
+  too. The rail carries the brand and the tenant chip; the dark mode
+  palette rides the same `--sidebar-*` tokens. On phones the rail hides
+  and the hamburger opens the drawer with the same tree.
+- **The density file was retuned from cramped to roomy**: 14px body,
+  38px inputs, 36px buttons, 12px table rows, calmer cards — the same
+  single-file discipline (`density.css`, imported last), different
+  numbers. Radii went back up (8/12/16/22) for the rounded, friendly
+  feel.
+- The top menubar and its component are gone (`MenuBar.tsx`,
+  `menubar.css`); `SideNav.tsx` / `sidenav.css` replace them, driven by
+  the same `navigationConfig` and the same permission filtering — a
+  hidden menu is still a hidden permission.
+
+### Tests
+
+6 sidebar tests pin the contract: the light rail with its sections, the
+in-place sub-menu expansion and navigation, the pre-opened active
+parent, the blue pill on the current page, permission hiding (with
+settings and one's own account staying), and collapse on a second
+click. Frontend 396 → **397**; typecheck and production build clean.
+
+## [0.11.0] — The eMaint-style menubar and a compact working density
+
+The brief: «همه چیزو تو دراپ‌داون‌ها بذار… یه سایت مثل eMaint، فقط نمونهٔ
+فارسیش» — everything in dropdowns, a tight working screen, modelled on
+eMaint's Persian counterpart.
+
+### Changed
+
+- **Navigation moved from the left sidebar to a dark top strip.** Every
+  section is a dropdown: direct pages first, then each sub-menu as a
+  titled section — a page is never more than two clicks away. A section
+  with exactly one page is an honest link, not a dropdown of one. The
+  strip carries the brand and the current tenant; the section owning the
+  current page is marked; menus open on click (nothing hover-only),
+  glide between sections once open, and close on Escape, outside click
+  or navigation. Phones get the same tree as a scrollable list in the
+  drawer, sections pre-opened to the active page.
+- **The whole product is denser**, in one file that wins the cascade:
+  13px body text, 34px inputs, 32px buttons, tighter cards and page
+  rhythm, table rows at 8px padding — a working grid, not a magazine.
+  Radii came down (6/9/13px) to match. `density.css` is imported last
+  on purpose; a number is lowered there, never raised elsewhere.
+- The old sidebar's collapse state is gone along with the sidebar; the
+  content column takes the full width.
+
+### Added
+
+- `MenuBar` / `MobileNav` (`src/layouts/MenuBar.tsx`) — permission-aware,
+  driven by the same `navigationConfig` as before, badge-capable, ARIA
+  menubar semantics (`aria-haspopup`, `aria-expanded`, `role="menu"`).
+- 5 tests pin the contract: dropdowns on the strip, honest single links,
+  open-and-navigate, Escape/outside close, and that a limited account
+  sees fewer sections while settings and one's own account stay.
+
+### Kept
+
+Permission behaviour is unchanged — a hidden menu is still a hidden
+permission — and the demo boundary, theme, accent, language, Ctrl+K
+search, notifications and profile menus all work exactly as before.
+Frontend 391 → **396**, typecheck and production build clean.
+
 ## [0.10.1] — The no-unit refusal now says what to do
 
 A work order raised by someone who held no position (typically the

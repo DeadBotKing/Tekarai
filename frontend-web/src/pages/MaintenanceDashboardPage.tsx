@@ -425,11 +425,12 @@ export function MaintenanceDashboardPage(): JSX.Element {
         </div>
       </div>
 
+      <div className="widget-grid dash-alerts-grid">
       {(() => {
         const breaches = slaBreachedOrders(orders);
         if (!breaches.length) return null;
         return (
-          <Card padding="md" className="dash-cost">
+          <Card padding="md" className="dashboard-widget dash-cost">
             <div className="inspection-item">
               <span><Icon name="warning" size={16} /> <strong>{t("cmms.wave1.slaTitle")}</strong></span>
               <Badge tone="danger" dot>{t("cmms.wave1.slaBanner").replace("{count}", String(breaches.length))}</Badge>
@@ -449,7 +450,7 @@ export function MaintenanceDashboardPage(): JSX.Element {
         const suggestions = buildReorderSuggestions(parts);
         if (!suggestions.length) return null;
         return (
-          <Card padding="md">
+          <Card padding="md" className="dashboard-widget">
             <CardHeader title={t("cmms.wave1.reorderTitle")} subtitle={t("cmms.wave1.reorderSubtitle")} icon="warning" />
             <div className="reorder-list">
               {suggestions.slice(0, 4).map((item) => (
@@ -465,6 +466,7 @@ export function MaintenanceDashboardPage(): JSX.Element {
           </Card>
         );
       })()}
+      </div>
       {!runtimeConfig.demoMode && (
         <Card className="dash-cost dash-actions--noprint" padding="md">
           <CardHeader
@@ -594,7 +596,7 @@ export function MaintenanceDashboardPage(): JSX.Element {
         </Card>
       ) : (
         <div className="widget-grid">
-          <Card className="dashboard-widget dashboard-widget--wide" padding="md">
+          <Card className="dashboard-widget" padding="md">
             <CardHeader
               title={t("cmms.dash.trend")}
               subtitle={t("cmms.dash.trendCaption")}
@@ -616,6 +618,7 @@ export function MaintenanceDashboardPage(): JSX.Element {
               <PieChart
                 ariaLabel={t("cmms.dash.trend")}
                 centerLabel={t("cmms.dash.pieCenter")}
+                size={118}
                 slices={[
                   { label: t("cmms.woStatus.completed"), value: stats.completed, color: "#22c55e" },
                   { label: t("cmms.dash.legendOpen"), value: stats.open, color: accentHex },
@@ -642,7 +645,7 @@ export function MaintenanceDashboardPage(): JSX.Element {
             )}
           </Card>
 
-          <Card className="dashboard-widget dashboard-widget--wide" padding="md">
+          <Card className="dashboard-widget" padding="md">
             <CardHeader
               title={t("cmms.dash.mttrTrend")}
               subtitle={t("cmms.dash.mttrTrendCaption")}
@@ -665,7 +668,7 @@ export function MaintenanceDashboardPage(): JSX.Element {
             )}
           </Card>
 
-          <Card className="dashboard-widget dashboard-widget--wide" padding="md">
+          <Card className="dashboard-widget" padding="md">
             <CardHeader
               title={t("cmms.dash.byStatus")}
               subtitle={t("cmms.dash.byStatusHint")}
@@ -691,6 +694,7 @@ export function MaintenanceDashboardPage(): JSX.Element {
                 value={stats.completionRate}
                 label={t("cmms.dash.donutLabel")}
                 color="#22c55e"
+                size={110}
                 ariaLabel={t("cmms.dash.completionChart")}
               />
               <div className="health-widget__legend">
@@ -736,7 +740,7 @@ export function MaintenanceDashboardPage(): JSX.Element {
             </div>
           </Card>
 
-          <Card className="dashboard-widget dashboard-widget--wide" padding="md">
+          <Card className="dashboard-widget" padding="md">
             <CardHeader
               title={t("cmms.dash.byDepartment")}
               subtitle={t("cmms.dash.byDepartmentHint")}

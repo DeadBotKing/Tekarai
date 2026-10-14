@@ -1,0 +1,172 @@
+/* ────────────────────────────────────────────────────────────────────────
+   چگالی فشردهٔ سراسری (v0.13.2) — «هر باکسی، هر جای سایت، کوچک»
+   One place that sets the whole product's working size. Every content
+   box on every page — cards, stat tiles, forms, tables, modals, drawers,
+   charts — is compact now, not just the maintenance dashboard. The
+   Fracttal One *look* (navy rail, blue pill, radii) lives in tokens.css
+   and sidenav.css and is untouched. Imported last so it wins the
+   cascade; the `.layout-compact …` twins cancel the older compact rules
+   in globals.css by cascade order, not by deletion.
+   ──────────────────────────────────────────────────────────────────────── */
+
+body { font-size: 13px; line-height: 1.55; }
+
+/* ── کنترل‌ها ── */
+.button { min-height: 31px; padding-inline: 12px; font-size: 12.5px; }
+.button--sm { min-height: 27px; padding-inline: 10px; font-size: 11.5px; }
+.button--lg { min-height: 38px; }
+.icon-button { width: 31px; height: 31px; }
+.icon-button--sm { width: 27px; height: 27px; }
+.field { gap: 4px; }
+.field__label { font-size: 11px; }
+.field__control input, .field__control select { min-height: 33px; padding-inline: 10px; }
+.field textarea { min-height: 72px; }
+.jdp__trigger { min-height: 33px; }
+.search-box { height: 32px; width: 210px; }
+.global-search-trigger { height: 32px; }
+.badge { padding: 2px 7px; font-size: 9.5px; }
+.form-grid { gap: 11px; }
+.form-grid--compact { margin-top: 10px; gap: 9px; }
+
+/* ── کارت‌ها — خودِ باکس‌ها، همه‌جا ── */
+.card--padding-sm { padding: 11px; }
+.card--padding-md { padding: 13px; }
+.card--padding-lg { padding: 17px; }
+.card--padding-none > .card__header { padding: 12px 14px 0; }
+.card__header { gap: 10px; margin-bottom: 9px; }
+.card__heading h2, .card__header h2 { font-size: 13.5px; }
+.card__heading p, .card__header p { margin-top: 2px; font-size: 11.5px; }
+.card__heading-icon { width: 26px; height: 26px; border-radius: 7px; }
+
+/* ── ریتم صفحه ── */
+.section-header { gap: 12px; margin-bottom: 13px; }
+.section-header h1 { margin-top: 3px; font-size: clamp(18px, 2.2vw, 21px); }
+.section-header p { margin-top: 4px; font-size: 11.5px; }
+.main-content { padding: 16px 20px 34px; }
+.app-footer { padding: 10px 20px 14px; }
+.quick-actions { margin: 10px 0 13px; }
+.state { min-height: 150px; padding: 18px; }
+.file-drop { min-height: 140px; padding: 16px; }
+.detail-panel { gap: 11px; }
+
+/* ── جداول ── */
+.data-table th { padding: 8px 11px; font-size: 10px; }
+.data-table td { padding: 8px 11px; font-size: 11.5px; }
+.data-table th:first-child, .data-table td:first-child { padding-inline-start: 14px; }
+.data-table th:last-child, .data-table td:last-child { padding-inline-end: 14px; }
+.table-toolbar, .layout-compact .table-toolbar { padding: 8px 14px; }
+.table-pagination, .layout-compact .table-pagination { padding: 7px 14px; }
+.view-toolbar { padding: 9px 14px; }
+.project-cell__icon, .document-cell__icon, .report-cell__icon { width: 27px; height: 27px; }
+
+/* ── پنجره‌ها و کشوها ── */
+.modal__header { padding: 12px 15px; }
+.modal__body { padding: 14px 15px; }
+.modal__footer { padding: 10px 15px; }
+.drawer__header { padding: 12px 15px; }
+.drawer__body { padding: 14px 15px; }
+.toast { padding: 10px 12px; font-size: 11.5px; }
+
+/* ── کارت‌های آمار ── */
+.metric-card { min-height: 84px; padding: 11px; }
+.metric-card__icon { width: 29px; height: 29px; border-radius: 8px; }
+.metric-card__value { margin-top: 5px; font-size: 19px; }
+.metric-card__label { font-size: 11px; }
+.metric-card__hint { font-size: 9px; }
+.metric-grid { gap: 10px; }
+.avatar--md { width: 32px; height: 32px; }
+
+/* ── نمودارها — همهٔ صفحه‌ها، نه فقط داشبوردها ──
+   (نسخه‌های `.layout-compact` الزامی‌اند چون قوانین هم‌نام قدیمی در
+   globals.css با همان specificity می‌مانند و این فایل آخر لود می‌شود) */
+.chart > svg, .layout-compact .chart > svg { height: 104px; }
+.chart--bar, .layout-compact .chart--bar { height: 114px; }
+.bars, .layout-compact .bars { height: 86px; padding: 4px 2px 0; }
+.chart__labels, .layout-compact .chart__labels { padding-top: 4px; font-size: 8px; }
+.bar, .layout-compact .bar { width: min(16px, 52%); }
+.health-widget, .layout-compact .health-widget { min-height: 84px; gap: 16px; }
+.dash-chart-empty, .layout-compact .dash-chart-empty { min-height: 96px; }
+.trend-legend, .dash-priority-legend,
+.layout-compact .trend-legend, .layout-compact .dash-priority-legend { margin-top: 6px; }
+
+/* ── جعبه‌های نمودار داشبورد — کوچک و دوتایی (از v0.13.1) ──
+   کارت‌های داشبوردِ نگهداری دوتایی کنار هم می‌نشینند؛ حالا بقیهٔ
+   سایت هم به همین چگالی رسیده است. */
+.widget-grid { gap: 11px; }
+.dashboard-widget.card--padding-md { padding: 11px 13px 12px; }
+.dashboard-widget .card__header { gap: 9px; margin-bottom: 8px; }
+.dashboard-widget .card__heading-icon { width: 24px; height: 24px; border-radius: 6px; }
+.dashboard-widget .card__header h2 { font-size: 13px; }
+.dashboard-widget .card__header p { margin-top: 2px; font-size: 11px; }
+.pie-chart { gap: 16px; }
+.pie-chart__legend { gap: 6px; min-width: 100px; font-size: 10.5px; }
+.dash-department-list { gap: 7px; padding-top: 2px; }
+.dash-department-row { grid-template-columns: minmax(78px, 120px) 1fr auto; gap: 10px; }
+.dash-alerts-grid .dash-cost { margin-bottom: 0; }
+.dash-alerts-grid .inspection-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.dash-alerts-grid .reorder-list { display: flex; flex-direction: column; gap: 7px; }
+
+/* ── صفحه‌به‌صفحه: باکس‌های مخصوص هر صفحه ── */
+/* تدارکات */
+.req-step { padding-block: 2px 12px; }
+.req-inline-part { margin-block-start: 10px; padding: 10px; }
+/* ساختار سازمانی */
+.organization-page .tab { padding: 5px 10px; }
+.organization-page .inline-form { padding: 10px 12px; }
+.organization-page .inline-form__section { padding-top: 8px; }
+.matrix-cell { padding: 5px 7px; }
+/* تقویم PM */
+.pm-cal__cell { min-height: 86px; }
+/* چک‌لیست‌های قدیمی (مثلاً مجوز کار) */
+.checklist { line-height: 1.65; }
+/* صفحهٔ ورود */
+.auth-card__heading { margin-bottom: 18px; }
+.auth-card__icon { width: 32px; height: 32px; margin-bottom: 12px; }
+.auth-card__heading h2 { font-size: 23px; }
+.auth-card form { gap: 12px; }
+.auth-card__security { margin-top: 16px; }
+
+/* ── v0.13.3: جفت‌چینی کارت‌ها + جداولِ فشرده‌تر ──
+   صفحات چک‌لیست بازرسی، ساختار سازمانی، ارزیابی عملکرد، قرائت کنتور و
+   صف آفلاین: کارت‌ها و جداولشان دوتایی کنار هم می‌نشینند و ردیف‌های
+   جدول هم یک پله از قبل فشرده‌ترند. زیر ۱۰۸۰ پیکسل همه‌چیز تک‌ستونی
+   می‌شود تا جا نشود. */
+.duo-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; align-items: start; }
+.duo-grid > * { min-width: 0; }
+.duo-grid .data-table { min-width: 420px; }
+.duo-grid .card__header { flex-wrap: wrap; }
+.duo-grid .table-toolbar, .duo-grid .table-pagination { padding-inline: 10px; }
+@media (max-width: 1080px) {
+  .duo-grid { grid-template-columns: 1fr; }
+  .duo-grid .data-table { min-width: 560px; }
+}
+
+/* جداول — یک پله فشرده‌تر از v0.13.2 */
+.data-table th, .data-table td { padding-block: 6px; padding-inline: 9px; }
+.data-table td { font-size: 11px; }
+.data-table th { font-size: 9.5px; }
+.table-toolbar, .layout-compact .table-toolbar { padding: 7px 12px; }
+.table-pagination, .layout-compact .table-pagination { padding: 6px 12px; }
+
+/* کاشی‌های آمار (صف آفلاین و پنل‌های جزئیات) */
+.detail-stats > div { min-height: 52px; padding: 8px 10px; }
+
+/* ردیف‌های صف آفلاین */
+.offline-queue__head { margin-bottom: 7px; }
+.offline-queue__head h3 { font-size: 13px; }
+.offline-queue__list { gap: 7px; }
+.offline-queue__row { gap: 5px; padding: 9px; border-radius: 9px; }
+.offline-queue__row-meta { gap: 8px; font-size: 11.5px; }
+.offline-queue__list--compact li { padding: 5px 8px; border-radius: 7px; }
+.offline-queue__error { font-size: 11.5px; }
+
+/* چک‌لیست مجوزها (ماتریس دسترسی نقش‌ها) */
+.permission-checklist { gap: 5px; max-height: 300px; margin-top: 10px; padding: 8px; }
+.permission-checklist .checkbox-label { padding: 4px 5px; }
+
+/* ── Phone: the rail gives way to the drawer ── */
+@media (max-width: 820px) {
+  .app-shell__main { min-height: 100vh; }
+  .topbar { height: 54px; }
+  .main-content { padding: 14px 12px 26px; }
+}

@@ -232,6 +232,7 @@ export default function MaintenanceInspectionsPage(): JSX.Element {
           </Button>
         }
       />
+      <div className="duo-grid">
       <Card padding="none">
         <DataTable
           columns={columns}
@@ -254,6 +255,7 @@ export default function MaintenanceInspectionsPage(): JSX.Element {
           empty={{ title: t("cmms.wave1.recordEmpty") }}
         />
       </Card>
+      </div>
 
       <Modal
         open={builderOpen}

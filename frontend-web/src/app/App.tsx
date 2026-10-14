@@ -12,7 +12,9 @@ import "../styles/uiPolish.css";
 import "../styles/procurement.css";
 import "../styles/organization.css";
 import "../styles/fieldOps.css";
+import "../styles/sidenav.css";
 import "../styles/rtl.css";
+import "../styles/density.css";
 
 export function App(): JSX.Element {
   return <BrowserRouter><AppProviders><AppRouter /></AppProviders></BrowserRouter>;

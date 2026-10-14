@@ -79,6 +79,24 @@ export const demoRoles: DemoRole[] = [
       "procurement.invoice.manage",
     ],
   },
+  {
+    id: "demo-hr",
+    name: "مدیر منابع انسانی",
+    code: "hrManager",
+    scopeType: "TENANT",
+    actions: [
+      "maintenance.device.list",
+      "maintenance.device.view",
+      "organization.department.view",
+      "organization.position.view",
+      "organization.assignment.view",
+      "organization.accessRule.view",
+      "user.view",
+      "user.list",
+      "tenant.view",
+      "maintenance.review.manage",
+    ],
+  },
 ];
 
 export const demoAccountUser: DemoAccountUser = {

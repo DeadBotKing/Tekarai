@@ -437,6 +437,7 @@ export function PerformanceReviewPage(): JSX.Element {
               />
             </div>
 
+            <div className="duo-grid">
             <Card>
               <SectionHeader
                 title={t("review.chartTitle")}
@@ -456,6 +457,42 @@ export function PerformanceReviewPage(): JSX.Element {
                 />
               )}
             </Card>
+
+            {unrated.length > 0 ? (
+              <Card>
+                <SectionHeader
+                  title={t("review.unratedTitle")}
+                  subtitle={t("review.unratedHint")}
+                />
+                <div className="table-scroll">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>{t("review.person")}</th>
+                        <th>{t("review.systemScore")}</th>
+                        <th>{t("review.raters")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {unrated.map((row) => (
+                        <tr key={row.id}>
+                          <td className="plaintext">{row.personnelName || "—"}</td>
+                          <td>
+                            {row.systemScore == null
+                              ? t("review.noMeasurement")
+                              : number(row.systemScore)}
+                          </td>
+                          <td>
+                            <Badge tone="neutral">{t("review.notRated")}</Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            ) : null}
+            </div>
 
             {results.length > 0 ? (
               <Card>
@@ -580,41 +617,6 @@ export function PerformanceReviewPage(): JSX.Element {
                             </tr>
                           ) : null}
                         </Fragment>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-            ) : null}
-
-            {unrated.length > 0 ? (
-              <Card>
-                <SectionHeader
-                  title={t("review.unratedTitle")}
-                  subtitle={t("review.unratedHint")}
-                />
-                <div className="table-scroll">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>{t("review.person")}</th>
-                        <th>{t("review.systemScore")}</th>
-                        <th>{t("review.raters")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {unrated.map((row) => (
-                        <tr key={row.id}>
-                          <td className="plaintext">{row.personnelName || "—"}</td>
-                          <td>
-                            {row.systemScore == null
-                              ? t("review.noMeasurement")
-                              : number(row.systemScore)}
-                          </td>
-                          <td>
-                            <Badge tone="neutral">{t("review.notRated")}</Badge>
-                          </td>
-                        </tr>
                       ))}
                     </tbody>
                   </table>

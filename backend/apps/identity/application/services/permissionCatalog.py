@@ -140,6 +140,14 @@ ACTIONS: list[tuple[str, str]] = [
     ("maintenance.device.export", "Export the equipment register"),
     ("maintenance.inventory.export", "Export the spare-parts register"),
     ("analytics.metric.export", "Export analytics and reports"),
+    # Semi-managerial review running: cycles, marks and computation. Split
+    # from maintenance.device.manage on purpose — the HR manager must be
+    # able to run the appraisal process without gaining the ability to
+    # rewrite the machine register the scores are measured against.
+    (
+        "maintenance.review.manage",
+        "Create and manage performance-review cycles, record rater scores and compute results",
+    ),
 ]
 
 
@@ -151,6 +159,13 @@ MEMBER_ROLE = "member"
 MAINTENANCE_REQUESTER_ROLE = "maintenanceRequester"
 MAINTENANCE_TECHNICIAN_ROLE = "maintenanceTechnician"
 MAINTENANCE_MANAGER_ROLE = "maintenanceManager"
+
+# HR manager — a read-only people view: performance-review results, the
+# organisation chart (units, positions, assignments, access matrix) and the
+# user directory. No manage verbs anywhere: an HR manager can see who works
+# where and how they scored, but cannot rewrite the org, the users or a
+# single work order.
+HR_MANAGER_ROLE = "hrManager"
 
 # Reusable Analytics permission bundles. Definitions are governed by admins;
 # operations clients can ingest and all authenticated business roles may read.
@@ -222,6 +237,29 @@ _PROCUREMENT_MANAGER_ACTIONS = [
     "procurement.invoice.manage",
 ]
 
+# The HR manager's people view: they see the personnel list and
+# performance-review results (both ride the device registry's permissions),
+# the whole organisation chart including the access matrix, and the user
+# directory — and, since v0.14.1, they can RUN the appraisal process itself
+# (open cycles, record marks, compute) via the dedicated review action.
+# Machine-registry and org/user management verbs are deliberately absent.
+_HR_MANAGER_ACTIONS = [
+    # منوی «پرسنل» و «ارزیابی عملکرد» و دیدن نتایج ارزیابی در بک‌اند
+    "maintenance.device.list",
+    "maintenance.device.view",
+    # ساختار سازمانی — فقط مشاهده
+    "organization.department.view",
+    "organization.position.view",
+    "organization.assignment.view",
+    "organization.accessRule.view",
+    # دفترچهٔ کاربران — فقط مشاهده
+    "user.view",
+    "user.list",
+    "tenant.view",
+    # نیمه‌مدیریتی: ادارهٔ فرایند ارزیابی (دوره، امتیاز، محاسبه)
+    "maintenance.review.manage",
+]
+
 _MAINTENANCE_MANAGER_ACTIONS = [
     "maintenance.device.manage",
     "maintenance.device.list",
@@ -264,6 +302,9 @@ _MAINTENANCE_MANAGER_ACTIONS = [
     "organization.assignment.view",
     "organization.assignment.manage",
     "organization.accessRule.view",
+    # Running the appraisal round is its own permission now (the HR manager
+    # holds it without holding machine management).
+    "maintenance.review.manage",
     "maintenance.workorder.export",
     "maintenance.device.export",
     "maintenance.inventory.export",
@@ -346,4 +387,5 @@ ROLE_PRESETS: dict[str, list[str]] = {
     MAINTENANCE_MANAGER_ROLE: list(_MAINTENANCE_MANAGER_ACTIONS)
     + list(_PROCUREMENT_MANAGER_ACTIONS)
     + list(_ANALYTICS_MANAGER_ACTIONS),
+    HR_MANAGER_ROLE: list(_HR_MANAGER_ACTIONS),
 }

@@ -17,6 +17,7 @@ from django.core.management.base import BaseCommand
 from apps.identity.application.commands.identityCommands import CreateUserCommand
 from apps.identity.application.services.permissionCatalog import (
     ACTIONS,
+    HR_MANAGER_ROLE,
     MAINTENANCE_MANAGER_ROLE,
     MAINTENANCE_REQUESTER_ROLE,
     MAINTENANCE_TECHNICIAN_ROLE,
@@ -60,6 +61,7 @@ class Command(BaseCommand):
             MAINTENANCE_REQUESTER_ROLE: ("درخواست‌دهنده نگهداری", "TENANT"),
             MAINTENANCE_TECHNICIAN_ROLE: ("تکنسین نگهداری", "TENANT"),
             MAINTENANCE_MANAGER_ROLE: ("مدیر نگهداری", "TENANT"),
+            HR_MANAGER_ROLE: ("مدیر منابع انسانی", "TENANT"),
         }
         for roleCode, (roleName, scopeType) in roleSeeds.items():
             access.ensureRole(roleCode, roleName, ROLE_PRESETS[roleCode], scopeType)

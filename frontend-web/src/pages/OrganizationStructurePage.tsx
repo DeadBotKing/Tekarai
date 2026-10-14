@@ -593,6 +593,7 @@ export function OrganizationStructurePage(): JSX.Element {
 
       {tab === "positions" ? (
         <>
+          <div className="duo-grid">
           <Card>
             <CardHeader
               title="سمت‌ها"
@@ -724,6 +725,7 @@ export function OrganizationStructurePage(): JSX.Element {
               empty={{ title: "هنوز کاربری منتسب نشده است" }}
             />
           </Card>
+          </div>
         </>
       ) : null}
 

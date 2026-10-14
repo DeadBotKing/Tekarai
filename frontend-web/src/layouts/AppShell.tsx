@@ -18,6 +18,7 @@ import { OfflineIndicator } from "../shared/components/OfflineIndicator";
 import { DemoModeBanner } from "../shared/components/DemoModeBanner";
 import { AccentSwatches } from "../shared/components/AccentSwatches";
 import { Drawer } from "../shared/components/overlays";
+import { MobileNav, SideNav } from "./SideNav";
 
 interface PageResult { id: string; title: string; group: string; route: string; icon: IconName }
 interface Crumb { group: string; page: string }
@@ -43,8 +44,7 @@ export function AppShell(): JSX.Element {
   const { unreadCount } = useNotifications();
   const location = useLocation();
   const navigate = useNavigate();
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [accentOpen, setAccentOpen] = useState(false);
@@ -155,7 +155,7 @@ export function AppShell(): JSX.Element {
   }, [visibleNavigation, location.pathname, t]);
 
   const closeOverlays = (): void => {
-    setMobileOpen(false);
+    setMenuOpen(false);
     setProfileOpen(false);
     setSearchOpen(false);
   };
@@ -190,60 +190,28 @@ export function AppShell(): JSX.Element {
   }, []);
 
   return (
-    <div className={`app-shell ${collapsed ? "app-shell--collapsed" : ""}`}>
-      <aside className={`sidebar ${mobileOpen ? "is-mobile-open" : ""}`} aria-label={t("nav.workspace")}>
-        <div className="sidebar__brand">
+    <div className="app-shell">
+      <aside className="sidenav" aria-label={t("nav.workspace")}>
+        <div className="sidenav__brand">
           <span className="brand-mark">T</span>
-          {!collapsed && (
-            <div>
-              <strong>{runtimeConfig.appName}</strong>
-              <span>{t("app.tagline")}</span>
-            </div>
-          )}
-          <IconButton
-            className="sidebar__collapse"
-            icon={collapsed ? "chevronRight" : "chevronLeft"}
-            label={collapsed ? t("nav.expand") : t("nav.collapse")}
-            onClick={() => setCollapsed((value) => !value)}
-          />
+          <div>
+            <strong>{runtimeConfig.appName}</strong>
+            <span>{t("app.tagline")}</span>
+          </div>
         </div>
-        <div className="sidebar__tenant">
+        <div className="sidenav__tenant">
           <span className="tenant-avatar">{selectedTenant.name.slice(0, 1)}</span>
-          {!collapsed && (
-            <div>
-              <span>{t("header.tenant")}</span>
-              <strong>{selectedTenant.name}</strong>
-            </div>
-          )}
+          <div>
+            <span>{t("header.tenant")}</span>
+            <strong>{selectedTenant.name}</strong>
+          </div>
         </div>
-        <nav className="sidebar__nav">
-          {visibleNavigation.map((group) => (
-            <div className="nav-group" key={group.id}>
-              <div className="nav-group__label">{!collapsed && <span>{t(group.label)}</span>}</div>
-              {group.children?.map((item) => (
-                <NavItem key={item.id} item={item} collapsed={collapsed} activePath={currentPath} onNavigate={closeOverlays} />
-              ))}
-            </div>
-          ))}
-        </nav>
-        <div className="sidebar__bottom">
-          <button className="sidebar__user" type="button" onClick={() => setProfileOpen((value) => !value)} aria-label={t("header.profile")}>
-            <Avatar name={session?.user.displayName ?? "User"} size="sm" tone="purple" />
-            {!collapsed && (
-              <div>
-                <strong>{session?.user.displayName}</strong>
-                <span>{session?.user.role}</span>
-              </div>
-            )}
-            <Icon name="chevronUp" size={14} />
-          </button>
-        </div>
+        <SideNav groups={visibleNavigation} currentPath={currentPath} onNavigate={closeOverlays} />
       </aside>
-      {mobileOpen && <button className="sidebar-backdrop" type="button" aria-label={t("nav.closeMenu")} onClick={() => setMobileOpen(false)} />}
       <div className="app-shell__main">
         <header className="topbar">
           <div className="topbar__left">
-            <IconButton className="mobile-menu-button" icon="menu" label={t("nav.openMenu")} onClick={() => setMobileOpen(true)} />
+            <IconButton className="mobile-menu-button" icon="menu" label={t("nav.openMenu")} onClick={() => setMenuOpen(true)} />
             <div className="breadcrumb">
               <span>{crumb.group}</span>
               <Icon name="chevronRight" size={14} />
@@ -331,6 +299,17 @@ export function AppShell(): JSX.Element {
           <span>{t("footer.version")}</span>
         </footer>
       </div>
+      <Drawer open={menuOpen} title={t("nav.workspace")} onClose={() => setMenuOpen(false)}>
+        <div className="mobilenav__identity">
+          <Avatar name={session?.user.displayName ?? "User"} size="md" tone="purple" />
+          <div>
+            <strong>{session?.user.displayName}</strong>
+            <span>{selectedTenant.name}</span>
+          </div>
+        </div>
+        <MobileNav groups={visibleNavigation} currentPath={currentPath} onNavigate={() => setMenuOpen(false)} />
+      </Drawer>
+
       <Drawer open={searchOpen} title={t("header.search")} onClose={() => setSearchOpen(false)}>
         <div className="global-search">
           <div className="search-box search-box--large">
@@ -429,82 +408,6 @@ const filterNavigationItems = (
       return Boolean(item.route) || Boolean(item.children?.length);
     })
     .map((item) => ({ ...item, children: item.children?.length ? item.children : undefined }));
-
-function NavItem({
-  item,
-  collapsed,
-  activePath,
-  onNavigate,
-}: {
-  item: NavigationItem;
-  collapsed: boolean;
-  activePath: string;
-  onNavigate: () => void;
-}): JSX.Element {
-  const { t } = useLocalization();
-  const children = item.children?.filter((child) => child.route) ?? [];
-  const hasSub = children.length > 0;
-  const route = item.route ?? children[0]?.route ?? "/app/dashboard";
-  const normalizedPath = currentRoute(activePath);
-  const selfActive = normalizedPath === route || (route !== "/app/dashboard" && normalizedPath.startsWith(`${route}/`));
-  const childActive =
-    hasSub &&
-    children.some((child) => {
-      const childRoute = child.route ?? "";
-      return normalizedPath === childRoute || normalizedPath.startsWith(`${childRoute}/`);
-    });
-  const [open, setOpen] = useState(childActive);
-  const childActiveRef = childActive;
-  useEffect(() => {
-    if (childActiveRef) setOpen(true);
-  }, [childActiveRef]);
-
-  if (!hasSub) {
-    return (
-      <NavLink to={route} className={`nav-item ${selfActive ? "is-active" : ""}`} onClick={onNavigate} title={collapsed ? t(item.label) : undefined}>
-        <Icon name={item.icon as IconName} size={17} />
-        <span>{!collapsed && t(item.label)}</span>
-        {!collapsed && item.badge && <span className="nav-item__badge">{item.badge}</span>}
-      </NavLink>
-    );
-  }
-
-  if (collapsed) {
-    const firstChild = children[0];
-    return (
-      <NavLink to={firstChild.route ?? route} className={`nav-item ${childActive ? "is-active" : ""}`} onClick={onNavigate} title={t(item.label)}>
-        <Icon name={item.icon as IconName} size={17} />
-      </NavLink>
-    );
-  }
-
-  return (
-    <div className="nav-item-group">
-      <button
-        type="button"
-        className={`nav-item nav-item--parent ${childActive ? "is-active" : ""} ${open ? "is-open" : ""}`}
-        onClick={() => setOpen((value) => !value)}
-        aria-expanded={open}
-        aria-label={t(item.label)}
-      >
-        <Icon name={item.icon as IconName} size={17} />
-        <span>{t(item.label)}</span>
-        <Icon name="chevronUp" size={12} className="nav-item__chevron" />
-      </button>
-      {open &&
-        children.map((child) => {
-          const childRoute = child.route ?? route;
-          const active = normalizedPath === childRoute || normalizedPath.startsWith(`${childRoute}/`);
-          return (
-            <NavLink key={child.id} to={childRoute} className={`nav-item nav-item--sub ${active ? "is-active" : ""}`} onClick={onNavigate}>
-              <Icon name={child.icon as IconName} size={15} />
-              <span>{t(child.label)}</span>
-            </NavLink>
-          );
-        })}
-    </div>
-  );
-}
 
 export function ProtectedRoute({ children }: { children: ReactNode }): JSX.Element {
   const { isAuthenticated, isLoading } = useAuth();

@@ -24,7 +24,6 @@ from apps.maintenance.application.services.tenantResolver import (
     resolveTenantId,
 )
 from apps.maintenance.application.useCases.registryUseCases import (
-    PERMISSION_REGISTRY_MANAGE,
     PERMISSION_REGISTRY_VIEW,
 )
 from apps.maintenance.domain.services.performanceReviewRules import (
@@ -47,6 +46,12 @@ from apps.sharedKernel.domain.errors import DomainError, EntityNotFoundError
 
 class PerformanceReviewError(DomainError):
     """A review was set up or scored in a way that cannot be defended."""
+
+
+# Running the appraisal process (cycles, marks, computation) is its own
+# permission, split from machine management: the HR manager holds this one
+# without holding the registry's manage permission.
+PERMISSION_REVIEW_MANAGE = "maintenance.review.manage"
 
 
 # =====================================================================================
@@ -142,7 +147,7 @@ class ListReviewCyclesUseCase(PerformanceReviewUseCaseBase):
 class SaveReviewCycleUseCase(PerformanceReviewUseCaseBase):
     """Open or amend an appraisal round."""
 
-    requiredAction = PERMISSION_REGISTRY_MANAGE
+    requiredAction = PERMISSION_REVIEW_MANAGE
 
     def perform(self, command: SaveCycleCommand) -> dict:
         tenantId = resolveTenantId("")
@@ -225,7 +230,7 @@ class DeleteReviewCycleUseCase(PerformanceReviewUseCaseBase):
     closed in error.
     """
 
-    requiredAction = PERMISSION_REGISTRY_MANAGE
+    requiredAction = PERMISSION_REVIEW_MANAGE
 
     def perform(self, query: CycleQuery) -> dict:
         tenantId = resolveTenantId("")
@@ -270,7 +275,7 @@ class ListRaterScoresUseCase(PerformanceReviewUseCaseBase):
 class SaveRaterScoreUseCase(PerformanceReviewUseCaseBase):
     """Submit or revise one manager's mark for one person."""
 
-    requiredAction = PERMISSION_REGISTRY_MANAGE
+    requiredAction = PERMISSION_REVIEW_MANAGE
 
     def perform(self, command: SaveRaterScoreCommand) -> dict:
         tenantId = resolveTenantId("")
@@ -318,7 +323,7 @@ class SaveRaterScoreUseCase(PerformanceReviewUseCaseBase):
 class DeleteRaterScoreUseCase(PerformanceReviewUseCaseBase):
     """Withdraw a mark."""
 
-    requiredAction = PERMISSION_REGISTRY_MANAGE
+    requiredAction = PERMISSION_REVIEW_MANAGE
 
     def perform(self, command: DeleteScoreCommand) -> dict:
         tenantId = resolveTenantId("")
@@ -349,7 +354,7 @@ class ComputeReviewCycleUseCase(PerformanceReviewUseCaseBase):
     move on.
     """
 
-    requiredAction = PERMISSION_REGISTRY_MANAGE
+    requiredAction = PERMISSION_REVIEW_MANAGE
 
     def perform(self, command: ComputeCycleCommand) -> dict:
         tenantId = resolveTenantId("")

@@ -144,7 +144,7 @@ export function DashboardPage(): JSX.Element {
     return next;
   });
 
-  return <div className="page page--dashboard">
+  return <div className="page page--dashboard page--workspace-dashboard">
     <SectionHeader
       eyebrow={t("nav.workspace")}
       title={t("dashboard.title")}
@@ -172,7 +172,7 @@ export function DashboardPage(): JSX.Element {
     ) : (
       <div className="widget-grid">
         {widgets.map((widget, index) => (
-          <Card key={widget.id} className={`dashboard-widget dashboard-widget--${widget.size}`} padding="md">
+          <Card key={widget.id} className={`dashboard-widget dashboard-widget--${widget.size} dashboard-widget--${widget.kind}`} padding="md">
             <CardHeader
               title={widgetTitle(widget)}
               subtitle={widget.kind === "pulse" ? t("dashboard.projectPulseCaption") : widget.kind === "throughput" ? t("dashboard.taskThroughputCaption") : undefined}

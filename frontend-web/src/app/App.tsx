@@ -16,6 +16,7 @@ import "../styles/fieldOps.css";
 import "../styles/sidenav.css";
 import "../styles/rtl.css";
 import "../styles/density.css";
+import "../styles/visualRefresh.css";
 
 export function App(): JSX.Element {
   return <BrowserRouter><AppProviders><AppRouter /></AppProviders></BrowserRouter>;

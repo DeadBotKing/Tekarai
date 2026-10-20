@@ -1,0 +1,108 @@
+/* ────────────────────────────────────────────────────────────────────────
+   صفحهٔ خانهٔ ساده (v0.17.0) — اولین چیزی که یک تازه‌وارد می‌بیند.
+   سه پرسش را جواب می‌دهد: از کجا شروع کنم، چه کارهایی روزمره است،
+   و امروز چه خبر است. هدف‌های کلی، متن صمیمی، بدون شلوغی.
+   ──────────────────────────────────────────────────────────────────────── */
+
+.page--home { max-width: 980px; }
+
+.home-section-head { display: flex; flex-direction: column; gap: 3px; margin: 18px 0 10px; }
+.home-section-head h2 { margin: 0; color: var(--text-strong); font-size: 14.5px; }
+.home-section-head p { margin: 0; color: var(--text-muted); font-size: 11.5px; }
+
+/* ── کارت‌های شروع ── */
+.home-cards__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.home-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  padding: 16px 15px 14px;
+  text-align: start;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 14px);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: border-color .15s ease, transform .15s ease;
+}
+.home-card:hover { border-color: var(--primary); transform: translateY(-1px); }
+.home-card__icon {
+  display: grid;
+  place-items: center;
+  width: 40px; height: 40px;
+  margin-bottom: 4px;
+  color: var(--primary);
+  background: var(--primary-soft);
+  border-radius: 12px;
+}
+.home-card strong { color: var(--text-strong); font-size: 13px; }
+.home-card span { color: var(--text-muted); font-size: 11px; line-height: 1.8; }
+
+/* ── سه قدم ── */
+.home-steps__list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.home-steps__list button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 14px);
+  text-align: start;
+  cursor: pointer;
+}
+.home-steps__list button:hover { border-color: var(--primary); }
+.home-steps__number {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 30px; height: 30px;
+  color: #fff;
+  background: var(--primary);
+  border-radius: 50%;
+  font-size: 12.5px;
+  font-weight: 800;
+}
+.home-steps__body { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 2px; }
+.home-steps__body strong { color: var(--text-strong); font-size: 12.5px; }
+.home-steps__body span { color: var(--text-muted); font-size: 11px; line-height: 1.8; }
+.home-steps__arrow { color: var(--text-faint); flex-shrink: 0; }
+
+/* ── وضعیت امروز ── */
+.home-today__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.home-today__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 14px 16px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 14px);
+  cursor: pointer;
+}
+.home-today__cell:hover { border-color: var(--primary); }
+.home-today__cell strong { color: var(--text-strong); font-size: 22px; font-variant-numeric: tabular-nums; }
+.home-today__cell span { color: var(--text-muted); font-size: 11px; }
+
+/* ── لینک آرام به داشبورد کامل ── */
+.home-overview-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 18px;
+  padding: 8px 13px;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.home-overview-link:hover { color: var(--primary); border-color: var(--primary); }
+
+@media (max-width: 900px) {
+  .home-cards__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .home-today__grid { grid-template-columns: 1fr; }
+}

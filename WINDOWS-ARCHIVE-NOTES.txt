@@ -1,0 +1,6 @@
+Windows ZIP notes
+=================
+Source archive; extract the top-level Tekarai folder.
+Git metadata, dependencies, build outputs, and runtime mediaRoot uploads are excluded.
+The Persian guide is included once as docs/persian-guide.md; the repository also
+contains a byte-identical duplicate with a mojibake filename.

@@ -61,6 +61,7 @@ from apps.maintenance.domain.valueObjects.meterTypes import (
     TRIGGER_METER,
     MeterValue,
     ensureMeterKind,
+    ensurePerformanceRole,
     ensureQuality,
     normalizeMeterCode,
     normalizeSensorKey,
@@ -108,6 +109,7 @@ class SaveMeterPointCommand:
     maximumValue: str = ""
     rolloverMaximum: str = ""
     maximumStepPerHour: str = ""
+    performanceRole: str = "none"
     drivesRunningHours: bool = False
     active: bool = True
 
@@ -313,6 +315,8 @@ class SaveMeterPointUseCase(MeterUseCaseBase):
             normalizeMeterCode(command.code)
         if command.kind:
             ensureMeterKind(command.kind)
+        if command.performanceRole:
+            ensurePerformanceRole(command.performanceRole)
         normalizeSensorKey(command.sensorKey)
 
         minimum = optionalDecimal(command.minimumValue, "minimumValue")
@@ -335,6 +339,12 @@ class SaveMeterPointUseCase(MeterUseCaseBase):
                 fieldErrors={"maximumStepPerHour": "notPositive"},
             )
         kind = ensureMeterKind(command.kind) if command.kind else METER_CUMULATIVE
+        performanceRole = ensurePerformanceRole(command.performanceRole or "none")
+        if not command.meterPointId and performanceRole != "none" and kind != "gauge":
+            raise ValidationFailedError(
+                "Performance trends require a gauge meter point.",
+                fieldErrors={"performanceRole": "requiresGauge"},
+            )
         if rollover is not None and kind != METER_CUMULATIVE:
             raise ValidationFailedError(
                 "Only cumulative counters can roll over.",
@@ -360,9 +370,20 @@ class SaveMeterPointUseCase(MeterUseCaseBase):
             "drivesRunningHours": command.drivesRunningHours,
             "active": command.active,
         }
+        if command.performanceRole:
+            payload["performanceRole"] = ensurePerformanceRole(command.performanceRole)
 
         if command.meterPointId:
             existing = self.requirePoint(tenantId, command.meterPointId)
+            if (
+                command.performanceRole
+                and command.performanceRole != "none"
+                and existing.kind != "gauge"
+            ):
+                raise ValidationFailedError(
+                    "Performance trends require a gauge meter point.",
+                    fieldErrors={"performanceRole": "requiresGauge"},
+                )
             point = self.pointRepository.update(tenantId, existing.id, payload, now)
             self.audit(
                 AUDIT_UPDATE,

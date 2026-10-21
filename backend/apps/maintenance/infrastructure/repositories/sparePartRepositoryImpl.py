@@ -45,6 +45,7 @@ class SparePartRepositoryDjango:
             updatedAt=model.updatedAt,
             reorderQuantity=model.reorderQuantity,
             autoReorder=model.autoReorder,
+            lifecycleImpact=model.lifecycleImpact,
         )
 
     @staticmethod
@@ -61,6 +62,7 @@ class SparePartRepositoryDjango:
             unitCost=model.unitCost,
             note=model.note,
             consumedAt=model.consumedAt,
+            lifecycleImpact=model.lifecycleImpact,
         )
 
     def create(
@@ -76,6 +78,7 @@ class SparePartRepositoryDjango:
         # every existing caller passes this signature positionally.
         reorderQuantity: Decimal = Decimal("0"),
         autoReorder: bool = True,
+        lifecycleImpact: str = "unknown",
     ) -> SparePart:
         try:
             model = SparePartModel.objects.create(
@@ -88,6 +91,7 @@ class SparePartRepositoryDjango:
                 unitCost=unitCost,
                 reorderQuantity=reorderQuantity,
                 autoReorder=autoReorder,
+                lifecycleImpact=lifecycleImpact,
             )
         except IntegrityError as error:
             raise DuplicateBusinessCodeError("Spare-part code already exists.") from error
@@ -104,6 +108,7 @@ class SparePartRepositoryDjango:
         unitCost: Decimal,
         reorderQuantity: Decimal = Decimal("0"),
         autoReorder: bool = True,
+        lifecycleImpact: str | None = None,
     ) -> SparePart:
         with transaction.atomic():
             model = (
@@ -120,6 +125,8 @@ class SparePartRepositoryDjango:
             model.unitCost = unitCost
             model.reorderQuantity = reorderQuantity
             model.autoReorder = autoReorder
+            if lifecycleImpact is not None:
+                model.lifecycleImpact = lifecycleImpact
             model.updatedAt = datetime.now().astimezone()
             model.save(
                 update_fields=[
@@ -130,6 +137,7 @@ class SparePartRepositoryDjango:
                     "unitCost",
                     "reorderQuantity",
                     "autoReorder",
+                    "lifecycleImpact",
                     "updatedAt",
                 ]
             )
@@ -188,6 +196,7 @@ class SparePartRepositoryDjango:
                 # rewrite the maintenance cost history of closed orders.
                 unitCost=part.unitCost,
                 note=note.strip(),
+                lifecycleImpact=part.lifecycleImpact,
                 consumedAt=consumedAt,
             )
             self._rollupWorkOrderPartsCost(tenantId, workOrderId)

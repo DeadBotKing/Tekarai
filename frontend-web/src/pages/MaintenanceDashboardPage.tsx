@@ -40,12 +40,14 @@ import type {
 } from "../shared/types/domain";
 import { BarChart, DonutChart, PieChart, TrendChart } from "../shared/components/charts";
 import { Icon } from "../shared/components/Icon";
+import { ContextSticker } from "../shared/components/ContextSticker";
 import { taxonomyLabel } from "../core/localization/taxonomyLabel";
 import {
   Badge,
   Button,
   Card,
   CardHeader,
+  EmptyState,
   MetricCard,
   ProgressBar,
   SectionHeader,
@@ -546,7 +548,7 @@ export function MaintenanceDashboardPage(): JSX.Element {
   }, [rangedOrders, range, t]);
 
   return (
-    <div className="page page--dashboard">
+    <div className="page page--dashboard cmms-maintenance-dashboard">
       <SectionHeader
         eyebrow={t("nav.maintenance")}
         title={t("cmms.dash.title")}
@@ -801,19 +803,19 @@ export function MaintenanceDashboardPage(): JSX.Element {
         </Card>
       ) : !hasData ? (
         <Card padding="lg">
-          <div className="state state--empty">
-            <span className="state__icon">
-              <Icon name="chart" size={24} />
-            </span>
-            <h3>{t("cmms.dash.empty")}</h3>
-            <Button
-              variant="secondary"
-              icon="plus"
-              onClick={() => navigate("/app/maintenance/work-orders")}
-            >
-              {t("cmms.wo.new")}
-            </Button>
-          </div>
+          <EmptyState
+            title={t("cmms.dash.empty")}
+            sticker={<ContextSticker kind="maintenance" size="md" />}
+            action={(
+              <Button
+                variant="secondary"
+                icon="plus"
+                onClick={() => navigate("/app/maintenance/work-orders")}
+              >
+                {t("cmms.wo.new")}
+              </Button>
+            )}
+          />
         </Card>
       ) : (
         <div className="widget-grid">

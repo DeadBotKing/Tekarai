@@ -9,6 +9,7 @@ import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { rowsToCsvBlob, triggerDownload } from "../core/files/downloadUtils";
 import { MaintenanceAttachments } from "../features/maintenance/MaintenanceAttachments";
 import { createMaintenanceService } from "../features/maintenance/maintenanceService";
+import { suggestRepairScopeLocally } from "../features/maintenance/repairScopeSuggestion";
 import { reservationsForOrder } from "../features/maintenance/wave2";
 import { closeReservation, listReservations, newId, saveReservation, syncReservationsFromServer } from "../features/maintenance/wave2Store";
 import { FAILURE_TREE, formatFailureNote } from "../features/maintenance/wave1";
@@ -18,6 +19,8 @@ import type {
   MaintenanceDepartment,
   MaintenanceDevice,
   Priority,
+  RepairScope,
+  RepairScopeSuggestion,
   SparePart,
   WorkOrder,
   WorkOrderCostSummary,
@@ -59,6 +62,7 @@ import { WorkTimerPanel } from "../features/maintenance/WorkTimerPanel";
 import { ScannerModal } from "../features/scanning/ScannerModal";
 import { QrLabelModal } from "../features/scanning/QrLabelModal";
 import { formatNumber } from "../core/localization/format";
+import { ContextSticker } from "../shared/components/ContextSticker";
 
 const WO_STATUSES: WorkOrderStatus[] = [
   "submitted",
@@ -72,6 +76,7 @@ const WO_STATUSES: WorkOrderStatus[] = [
 ];
 const WO_TYPES: WorkOrderType[] = ["corrective", "preventive", "inspection"];
 const PRIORITIES: Priority[] = ["low", "normal", "high", "critical"];
+type WorkOrderDetailSection = "overview" | "resources" | "attachments" | "activity";
 const DEPARTMENTS: MaintenanceDepartment[] = [
   "general",
   "electrical",
@@ -147,7 +152,10 @@ const formatHours = (value: number): string => hoursFormatter.format(value);
 export function WorkOrdersPage(): JSX.Element {
   const { t } = useLocalization();
   const api = useApiClient();
-  const service = useMemo(() => createMaintenanceService(api), [api]);
+  const service = useMemo(
+    () => createMaintenanceService(api, runtimeConfig.demoMode ? suggestRepairScopeLocally : undefined),
+    [api],
+  );
   const [orders, setOrders] = useState<WorkOrder[]>(runtimeConfig.demoMode ? demoWorkOrders : []);
   const [devices, setDevices] = useState<MaintenanceDevice[]>(
     runtimeConfig.demoMode ? demoDevices : [],
@@ -211,6 +219,7 @@ export function WorkOrdersPage(): JSX.Element {
   const [quickDeviceOpen, setQuickDeviceOpen] = useState(false);
   const [quickPartOpen, setQuickPartOpen] = useState(false);
   const [activeOrder, setActiveOrder] = useState<WorkOrder | null>(null);
+  const [detailSection, setDetailSection] = useState<WorkOrderDetailSection>("overview");
   const [assignOrder, setAssignOrder] = useState<WorkOrder | null>(null);
   const [routeOrder, setRouteOrder] = useState<WorkOrder | null>(null);
 
@@ -241,6 +250,7 @@ export function WorkOrdersPage(): JSX.Element {
     failureSymptom: string;
     rootCause: string;
     actionTaken: string;
+    repairScope: RepairScope | "";
     repeatFailure: boolean;
     repairDate: string;
     downtimeMinutes: string;
@@ -250,13 +260,16 @@ export function WorkOrdersPage(): JSX.Element {
     resolutionNote: string;
   }
   const emptyCompleteForm: CompleteForm = {
-    reasonCode: "", failureSymptom: "", rootCause: "", actionTaken: "",
+    reasonCode: "", failureSymptom: "", rootCause: "", actionTaken: "", repairScope: "",
     repeatFailure: false, repairDate: "", downtimeMinutes: "",
     labourHours: "", labourCost: "", partsCost: "", resolutionNote: "",
   };
   const [completeOrder, setCompleteOrder] = useState<WorkOrder | null>(null);
   const [reportOrder, setReportOrder] = useState<WorkOrder | null>(null);
   const [completeForm, setCompleteForm] = useState<CompleteForm>(emptyCompleteForm);
+  const [repairScopeSuggestion, setRepairScopeSuggestion] = useState<RepairScopeSuggestion | null>(null);
+  const [suggestingRepairScope, setSuggestingRepairScope] = useState(false);
+  const [repairScopeSuggestionError, setRepairScopeSuggestionError] = useState("");
   const setCompleteField = <K extends keyof CompleteForm>(key: K, value: CompleteForm[K]): void =>
     setCompleteForm((current) => ({ ...current, [key]: value }));
 
@@ -266,11 +279,40 @@ export function WorkOrdersPage(): JSX.Element {
       resolutionNote: order.resolutionNote ?? "",
       repairDate: new Date().toISOString().slice(0, 10),
     });
+    setRepairScopeSuggestion(null);
+    setRepairScopeSuggestionError("");
     setCompleteOrder(order);
+  };
+
+  const requestRepairScopeSuggestion = async (): Promise<void> => {
+    if (!completeOrder) return;
+    setSuggestingRepairScope(true);
+    setRepairScopeSuggestionError("");
+    try {
+      const evidence = {
+        title: completeOrder.title,
+        description: completeOrder.description,
+        failureSymptom: completeForm.failureSymptom,
+        rootCause: completeForm.rootCause,
+        actionTaken: completeForm.actionTaken,
+      };
+      const suggestion = await service.suggestRepairScope(completeOrder.id, evidence);
+      setRepairScopeSuggestion(suggestion);
+    } catch (error) {
+      setRepairScopeSuggestionError(
+        error instanceof Error ? error.message : t("cmms.wo.repairScope.suggestionError"),
+      );
+    } finally {
+      setSuggestingRepairScope(false);
+    }
   };
 
   const submitCompletion = async (): Promise<void> => {
     if (!completeOrder) return;
+    if (completeOrder.orderType === "corrective" && !completeForm.repairScope) {
+      setRepairScopeSuggestionError(t("cmms.wo.repairScope.required"));
+      return;
+    }
     const [categoryCode = ""] = completeForm.reasonCode.split("-");
     const taggedNote = completeForm.reasonCode
       ? formatFailureNote(categoryCode, completeForm.reasonCode, completeForm.resolutionNote)
@@ -280,7 +322,16 @@ export function WorkOrdersPage(): JSX.Element {
     if (runtimeConfig.demoMode) {
       setOrders((current) =>
         current.map((item) =>
-          item.id === order.id ? { ...item, status: "completed", resolutionNote: taggedNote } : item,
+          item.id === order.id
+            ? {
+                ...item,
+                status: "completed",
+                resolutionNote: taggedNote,
+                ...(order.orderType === "corrective" && completeForm.repairScope
+                  ? { repairScope: completeForm.repairScope }
+                  : {}),
+              }
+            : item,
         ),
       );
       setToast(t("cmms.wo.statusSuccess"));
@@ -291,6 +342,9 @@ export function WorkOrdersPage(): JSX.Element {
         failureSymptom: completeForm.failureSymptom.trim(),
         rootCause: completeForm.rootCause.trim(),
         actionTaken: completeForm.actionTaken.trim(),
+        ...(order.orderType === "corrective" && completeForm.repairScope
+          ? { repairScope: completeForm.repairScope }
+          : {}),
         repeatFailure: completeForm.repeatFailure,
         repairFinishedAt: completeForm.repairDate || "",
         downtimeMinutes: Number(completeForm.downtimeMinutes) || 0,
@@ -381,6 +435,17 @@ export function WorkOrdersPage(): JSX.Element {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (activeOrder) setDetailSection("overview");
+  }, [activeOrder?.id]);
+
+  const jumpToDetailSection = useCallback((section: WorkOrderDetailSection): void => {
+    setDetailSection(section);
+    if (!activeOrder) return;
+    const target = document.getElementById(`work-order-${activeOrder.id}-${section}`);
+    target?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  }, [activeOrder?.id]);
 
   useEffect(() => {
     if (!activeOrder) {
@@ -799,6 +864,7 @@ export function WorkOrdersPage(): JSX.Element {
         quantityOnHand: input.quantityOnHand,
         minimumStock: input.minimumStock,
         unitCost: input.unitCost,
+        lifecycleImpact: input.lifecycleImpact,
         lowStock: input.quantityOnHand <= input.minimumStock,
         createdAt: new Date().toISOString(),
         updatedAt: "",
@@ -994,7 +1060,7 @@ export function WorkOrdersPage(): JSX.Element {
       label: t("cmms.wo.type"),
       accessor: (row) => row.orderType,
       sortable: true,
-      render: (row) => <Badge tone="info">{t(`cmms.type.${row.orderType}`)}</Badge>,
+      render: (row) => <Badge tone="info" className="work-order-type-badge"><ContextSticker kind={row.orderType} size="xs" />{t(`cmms.type.${row.orderType}`)}</Badge>,
     },
     {
       key: "department",
@@ -1038,7 +1104,7 @@ export function WorkOrdersPage(): JSX.Element {
   ];
 
   return (
-    <div className="page">
+    <div className="page cmms-work-orders-page">
       <SectionHeader
         eyebrow={t("nav.maintenance")}
         title={t("cmms.wo.title")}
@@ -1155,7 +1221,7 @@ export function WorkOrdersPage(): JSX.Element {
             data={filtered}
             rowKey={(row) => row.id}
             search=""
-            empty={{ title: t("cmms.wo.empty") }}
+            empty={{ title: t("cmms.wo.empty"), sticker: <ContextSticker kind="workOrder" size="md" /> }}
             exportName="tekarai-work-orders"
           />
         ) : (
@@ -1354,6 +1420,8 @@ export function WorkOrdersPage(): JSX.Element {
       <Modal
         open={Boolean(activeOrder)}
         title={activeOrder?.title ?? t("cmms.wo.detailTitle")}
+        wide
+        className="work-order-detail-modal"
         onClose={() => setActiveOrder(null)}
         footer={
           <Button variant="secondary" onClick={() => setActiveOrder(null)}>
@@ -1362,12 +1430,22 @@ export function WorkOrdersPage(): JSX.Element {
         }
       >
         {activeOrder && (
-          <div className="detail-panel">
-            <div className="detail-stats">
-              <div>
+          <div className="detail-panel work-order-detail">
+            <div
+              className="work-order-detail__identity"
+              id={`work-order-${activeOrder.id}-overview`}
+            >
+              <span className="work-order-detail__identity-icon"><Icon name="cpu" size={18} /></span>
+              <div className="work-order-detail__identity-copy">
                 <span>{t("cmms.wo.device")}</span>
                 <strong>{deviceNames.get(activeOrder.deviceId) ?? activeOrder.deviceId}</strong>
               </div>
+              <span className="work-order-detail__created">
+                <Icon name="calendar" size={14} />
+                {t("cmms.wo.createdAt")}: {formatJalali(activeOrder.createdAt, { withTime: true })}
+              </span>
+            </div>
+            <div className="detail-stats">
               <div>
                 <span>{t("cmms.wo.type")}</span>
                 <strong>{t(`cmms.type.${activeOrder.orderType}`)}</strong>
@@ -1421,7 +1499,29 @@ export function WorkOrdersPage(): JSX.Element {
                 </Button>
               </div>
             )}
-            <div className="detail-panel__description" style={{ marginTop: 12 }}>
+            <nav className="work-order-detail__nav" aria-label={t("cmms.wo.detailTitle")}>
+              {([
+                ["overview", "cmms.wo.section.overview", "file"],
+                ["resources", "cmms.wo.section.resources", "layers"],
+                ["attachments", "cmms.wo.section.attachments", "paperclip"],
+                ["activity", "cmms.wo.section.activity", "activity"],
+              ] as const).map(([section, label, icon]) => (
+                <button
+                  key={section}
+                  type="button"
+                  className={detailSection === section ? "is-active" : ""}
+                  aria-pressed={detailSection === section}
+                  onClick={() => jumpToDetailSection(section)}
+                >
+                  <Icon name={icon} size={15} />
+                  <span>{t(label)}</span>
+                </button>
+              ))}
+            </nav>
+            <div
+              className="detail-panel__description work-order-detail__section-title"
+              id={`work-order-${activeOrder.id}-resources`}
+            >
               <strong>{t("cmms.wave2.reserve.title")}</strong>
             </div>
             <div className="list-toolbar" style={{ marginBottom: 8 }}>
@@ -1486,14 +1586,19 @@ export function WorkOrdersPage(): JSX.Element {
               );
             })()}
 
-            <PermissionGuard permission={PERMISSIONS.maintenanceAttachmentView}>
-              <MaintenanceAttachments
-                targetType="workOrder"
-                targetId={activeOrder.id}
-                service={service}
-                onMessage={setToast}
-              />
-            </PermissionGuard>
+            <div
+              className="work-order-detail__attachments"
+              id={`work-order-${activeOrder.id}-attachments`}
+            >
+              <PermissionGuard permission={PERMISSIONS.maintenanceAttachmentView}>
+                <MaintenanceAttachments
+                  targetType="workOrder"
+                  targetId={activeOrder.id}
+                  service={service}
+                  onMessage={setToast}
+                />
+              </PermissionGuard>
+            </div>
 
             <PermissionGuard permission={PERMISSIONS.maintenanceWorkOrderRoute}>
               {(activeOrder.status === "submitted" || activeOrder.status === "routed") && (
@@ -1811,7 +1916,10 @@ export function WorkOrdersPage(): JSX.Element {
               )}
             </div>
 
-            <div className="cmms-timeline">
+            <div
+              className="cmms-timeline work-order-detail__activity"
+              id={`work-order-${activeOrder.id}-activity`}
+            >
               <h4 className="cmms-timeline__title">{t("cmms.wo.timeline")}</h4>
               {historyLoading ? (
                 <p className="detail-panel__description">{t("cmms.common.loading")}</p>
@@ -1992,7 +2100,14 @@ export function WorkOrdersPage(): JSX.Element {
         footer={
           <>
             <Button variant="secondary" onClick={() => setCompleteOrder(null)}>{t("cmms.common.cancel")}</Button>
-            <Button variant="primary" icon="check" onClick={() => void submitCompletion()}>ثبت گزارشنامه و بستن</Button>
+            <Button
+              variant="primary"
+              icon="check"
+              disabled={Boolean(completeOrder?.orderType === "corrective" && !completeForm.repairScope)}
+              onClick={() => void submitCompletion()}
+            >
+              ثبت گزارشنامه و بستن
+            </Button>
           </>
         }
       >
@@ -2042,6 +2157,74 @@ export function WorkOrdersPage(): JSX.Element {
             onChange={(event) => setCompleteField("actionTaken", event.target.value)}
             rows={2}
           />
+          {completeOrder?.orderType === "corrective" && (
+            <div className="detail-panel" style={{ gridColumn: "1 / -1", margin: 0 }}>
+              <SelectInput
+                label={t("cmms.wo.repairScope")}
+                required
+                value={completeForm.repairScope}
+                onChange={(event) => {
+                  setCompleteField("repairScope", event.currentTarget.value as RepairScope | "");
+                  setRepairScopeSuggestionError("");
+                }}
+                options={[
+                  { value: "", label: t("cmms.wo.repairScope.placeholder") },
+                  { value: "unclassified", label: t("cmms.wo.repairScope.unclassified") },
+                  { value: "minor", label: t("cmms.wo.repairScope.minor") },
+                  { value: "major", label: t("cmms.wo.repairScope.major") },
+                  { value: "overhaul", label: t("cmms.wo.repairScope.overhaul") },
+                ]}
+              />
+              <p className="muted-cell">{t("cmms.wo.repairScope.humanConfirmation")}</p>
+              <Button
+                variant="secondary"
+                icon="sparkles"
+                disabled={suggestingRepairScope}
+                onClick={() => void requestRepairScopeSuggestion()}
+              >
+                {suggestingRepairScope
+                  ? t("cmms.wo.repairScope.suggesting")
+                  : t("cmms.wo.repairScope.suggest")}
+              </Button>
+              {repairScopeSuggestionError && (
+                <p className="field__message field__message--error" role="alert">
+                  {repairScopeSuggestionError}
+                </p>
+              )}
+              {repairScopeSuggestion && (
+                <div className="detail-panel" aria-live="polite">
+                  <div className="section-actions">
+                    <strong>{t("cmms.wo.repairScope.suggestionTitle")}</strong>
+                    <Badge tone={repairScopeSuggestion.confidence === "high" ? "success" : repairScopeSuggestion.confidence === "medium" ? "warning" : "neutral"}>
+                      {t(`registry.lifecycle.confidence.${repairScopeSuggestion.confidence}`)}
+                    </Badge>
+                    <Badge tone="info">
+                      {t(`cmms.wo.repairScope.${repairScopeSuggestion.suggestedScope}`)}
+                    </Badge>
+                    <Badge tone="neutral">
+                      {t(`cmms.wo.repairScope.method.${repairScopeSuggestion.analysisMethod}` as Parameters<typeof t>[0])}
+                    </Badge>
+                  </div>
+                  <ul className="registry-checklist">
+                    {repairScopeSuggestion.reasons.map((reason, index) => (
+                      <li key={`${index}-${reason}`}>{reason}</li>
+                    ))}
+                  </ul>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    icon="check"
+                    onClick={() => {
+                      setCompleteField("repairScope", repairScopeSuggestion.suggestedScope);
+                      setRepairScopeSuggestionError("");
+                    }}
+                  >
+                    {t("cmms.wo.repairScope.acceptSuggestion")}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
           <JalaliDatePicker
             label="تاریخ اتمام تعمیر"
             value={completeForm.repairDate}
@@ -2100,8 +2283,7 @@ export function WorkOrdersPage(): JSX.Element {
         </Modal>
       )}
 
-      {toast && <Toast message={toast} onClose={() => setToast("")} />}
-      {toast && <Toast message={toast} onClose={() => setToast("")} />}
+      {toast && <Toast message={toast} sticker={toast === t("cmms.wo.createSuccess") ? <ContextSticker kind="complete" size="xs" /> : undefined} onClose={() => setToast("")} />}
     </div>
   );
 }
@@ -2122,47 +2304,71 @@ function WorkOrderBoard({
     "assigned",
     "inProgress",
     "onHold",
+    "pendingApproval",
     "completed",
+    "cancelled",
   ];
   return (
-    <div className="kanban">
-      {boardColumns.map((column) => (
-        <section className="kanban-column" key={column}>
-          <header>
-            <h3>{t(`cmms.woStatus.${column}`)}</h3>
-            <span>{orders.filter((order) => order.status === column).length}</span>
-          </header>
-          <div className="kanban-column__body">
-            {orders
-              .filter((order) => order.status === column)
-              .map((order) => (
-                <button
-                  type="button"
-                  className="task-card"
-                  key={order.id}
-                  onClick={() => onOpen(order)}
-                >
-                  <div className="task-card__top">
-                    <Badge tone={priorityTone(order.priority)}>
-                      {t(`cmms.priority.${order.priority}`)}
-                    </Badge>
-                    <Icon name="more" size={15} />
-                  </div>
-                  <strong>{order.title}</strong>
-                  <span>{deviceNames.get(order.deviceId) ?? order.deviceId}</span>
-                  <div className="task-card__bottom">
-                    <Avatar
-                      name={order.assignedToName || order.requestedByName || "?"}
-                      size="sm"
-                      tone="purple"
-                    />
-                    <span>{t(`cmms.type.${order.orderType}`)}</span>
-                  </div>
-                </button>
-              ))}
-          </div>
-        </section>
-      ))}
+    <div className="kanban cmms-work-order-board" aria-label={t("cmms.wo.board")}>
+      {boardColumns.map((column) => {
+        const columnOrders = orders.filter((order) => order.status === column);
+        return (
+          <section className="kanban-column" data-status={column} key={column}>
+            <header>
+              <h3>{t(`cmms.woStatus.${column}`)}</h3>
+              <span className="kanban-column__count">{columnOrders.length}</span>
+            </header>
+            <div className="kanban-column__body">
+              {columnOrders.length === 0 ? (
+                <span className="kanban-column__empty">{t("cmms.wo.board.empty")}</span>
+              ) : (
+                columnOrders.map((order) => (
+                  <button
+                    type="button"
+                    className="task-card"
+                    key={order.id}
+                    onClick={() => onOpen(order)}
+                  >
+                    <div className="task-card__top">
+                      <Badge tone={priorityTone(order.priority)}>
+                        {t(`cmms.priority.${order.priority}`)}
+                      </Badge>
+                      {order.overdue && (
+                        <Badge tone="danger" dot className="task-card__overdue">
+                          {t("cmms.wo.overdue")}
+                        </Badge>
+                      )}
+                    </div>
+                    <strong className="task-card__title">{order.title}</strong>
+                    <span className="task-card__device">
+                      <Icon name="cpu" size={13} />
+                      <span>{deviceNames.get(order.deviceId) ?? order.deviceId}</span>
+                    </span>
+                    <div className="task-card__bottom">
+                      <span className="task-card__assignee">
+                        <Avatar
+                          name={order.assignedToName || order.requestedByName || "?"}
+                          size="sm"
+                          tone="purple"
+                        />
+                        <span>{order.assignedToName || t("cmms.common.none")}</span>
+                      </span>
+                      <Badge tone="neutral" className="work-order-type-badge"><ContextSticker kind={order.orderType} size="xs" />{t(`cmms.type.${order.orderType}`)}</Badge>
+                    </div>
+                    <span className="task-card__date">
+                      <Icon name={order.slaDueAt ? "clock" : "calendar"} size={13} />
+                      <span>{t(order.slaDueAt ? "cmms.wo.slaDue" : "cmms.wo.createdAt")}</span>
+                      <time dateTime={order.slaDueAt ?? order.createdAt}>
+                        {formatJalali(order.slaDueAt ?? order.createdAt)}
+                      </time>
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }

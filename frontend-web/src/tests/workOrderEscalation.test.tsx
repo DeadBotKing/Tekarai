@@ -227,6 +227,28 @@ describe("work order escalation — ارجاع پله‌به‌پله", () => {
     expect(screen.queryByRole("button", { name: "ارجاع به بالا" })).not.toBeInTheDocument();
   });
 
+  it("keeps the work-order board and exposes all workflow statuses in one scrollable view", async () => {
+    stubApi({ order: { overdue: true, slaDueAt: "2026-10-12T08:00:00Z" } });
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("tab", { name: /برد|Board/ }));
+    expect(screen.getByRole("heading", { name: "در انتظار تأیید" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "لغوشده" })).toBeInTheDocument();
+    expect(screen.getByText("تأخیر")).toBeInTheDocument();
+    expect(screen.getByText("مهلت SLA")).toBeInTheDocument();
+  });
+
+  it("provides section shortcuts for the real activity log without inventing comments", async () => {
+    stubApi();
+    renderPage();
+    await openDetail();
+
+    const activityShortcut = screen.getByRole("button", { name: "رویدادهای ثبت‌شده" });
+    await userEvent.click(activityShortcut);
+    expect(activityShortcut).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("تاریخچه و گردش کار")).toBeInTheDocument();
+  });
+
   it("shows the server's Persian refusal when there is nobody above", async () => {
     stubApi({
       escalateStatus: 422,

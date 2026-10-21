@@ -51,6 +51,16 @@ METER_GAUGE = "gauge"
 #: ``cumulative`` counters carry deltas and may roll over; ``gauge`` values do not.
 METER_KINDS: tuple[str, ...] = (METER_CUMULATIVE, METER_GAUGE)
 
+# -- Explicit performance semantics ------------------------------------------------
+PERFORMANCE_ROLE_NONE = "none"
+PERFORMANCE_ROLE_HIGHER_IS_BETTER = "higherIsBetter"
+PERFORMANCE_ROLE_LOWER_IS_BETTER = "lowerIsBetter"
+PERFORMANCE_ROLES: tuple[str, ...] = (
+    PERFORMANCE_ROLE_NONE,
+    PERFORMANCE_ROLE_HIGHER_IS_BETTER,
+    PERFORMANCE_ROLE_LOWER_IS_BETTER,
+)
+
 # -- Data quality ------------------------------------------------------------------
 QUALITY_GOOD = "good"
 QUALITY_SUSPECT = "suspect"
@@ -158,6 +168,16 @@ def ensureMeterKind(value: str) -> str:
             fieldErrors={"kind": str(value)},
         )
     return kind
+
+
+def ensurePerformanceRole(value: str) -> str:
+    role = str(value or PERFORMANCE_ROLE_NONE).strip()
+    if role not in PERFORMANCE_ROLES:
+        raise ValidationFailedError(
+            "Performance role must be none, higherIsBetter or lowerIsBetter.",
+            fieldErrors={"performanceRole": str(value)},
+        )
+    return role
 
 
 def ensureQuality(value: str) -> str:

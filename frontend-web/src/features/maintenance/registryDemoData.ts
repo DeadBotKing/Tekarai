@@ -4,6 +4,7 @@ import type {
   AssetTree,
   AssetTreeNode,
   DeviceAnalytics,
+  DeviceLifecycleAnalysis,
   DeviceAssignment,
   DeviceBomItem,
   DeviceNameplate,
@@ -745,6 +746,88 @@ const profileOf = (deviceId: string): DeviceProfile => {
   return created;
 };
 
+const lifecycleAnalysisOf = (deviceId: string): DeviceLifecycleAnalysis => {
+  const profile = profileOf(deviceId);
+  const analytics = profile.analytics ?? emptyAnalytics(deviceId);
+  const correctiveCount = analytics.repairCount ?? 0;
+  const partUseCount = analytics.partsUsedCount ?? 0;
+  const hasSomeEvidence = correctiveCount > 0 || partUseCount > 0;
+  return {
+    deviceId,
+    generatedAt: new Date().toISOString(),
+    advisoryOnly: true,
+    analysisMethod: "demo-evidence-only",
+    condition: "insufficientData",
+    confidence: hasSomeEvidence ? "low" : "insufficient",
+    confidenceReason: hasSomeEvidence
+      ? "داده‌های دمو فقط شاخص کلی دارند؛ طبقه‌بندی تأییدشده و قرائت عملکرد در دسترس نیست."
+      : "برای تجهیز دمو سابقهٔ اصلاحی/عملکردی کافی ثبت نشده است.",
+    summary: `${correctiveCount} رویداد اصلاحی در دادهٔ نمایشی دیده می‌شود؛ شدت ${correctiveCount} مورد و اثر عمر ${partUseCount} ردیف مصرف قطعه هنوز تأیید/طبقه‌بندی نشده است. دادهٔ دمو برای برآورد عددی عمر مفید کافی نیست.`,
+    events: {
+      correctiveCount,
+      completedCorrectiveCount: 0,
+      majorRepairCount: 0,
+      overhaulCount: 0,
+      minorRepairCount: 0,
+      unclassifiedRepairCount: correctiveCount,
+      minorPartUseCount: 0,
+      majorPartUseCount: 0,
+      unclassifiedPartUseCount: partUseCount,
+      minorPartQuantity: 0,
+      majorPartQuantity: 0,
+    },
+    reliability: {
+      recentWindowDays: 180,
+      recentCorrectiveCount: 0,
+      previousCorrectiveCount: 0,
+      recentCorrectiveRatePerDay: 0,
+      previousCorrectiveRatePerDay: 0,
+      failureFrequencyTrend: "insufficientData",
+      recentMajorRepairCount: 0,
+      previousMajorRepairCount: 0,
+      majorRepairFrequencyTrend: "insufficientData",
+      recentAvailabilityPercent: null,
+      previousAvailabilityPercent: null,
+      availabilityChangePercentagePoints: null,
+      availabilityTrend: "stable",
+      recentDowntimeHours: 0,
+      previousDowntimeHours: 0,
+      averageRepairLabourHours: null,
+      repeatFailureCount: analytics.repeatFailures ?? 0,
+    },
+    performance: {
+      signals: [],
+      overallRetentionPercent: null,
+      trend: "insufficientData",
+      validReadingCount: 0,
+      configuredSignalCount: 0,
+    },
+    lifeEstimate: {
+      status: "insufficientData",
+      cohortType: "none",
+      cohortLabel: "",
+      peerCount: 0,
+      typicalMajorRepairsAtRetirement: null,
+      estimatedRemainingMajorRepairs: null,
+      currentMajorRepairCount: 0,
+      reason: "demo-fixtures-do-not-include-retirement-cohorts",
+    },
+    partLifeEstimates: [],
+    indicators: [
+      ...(partUseCount > 0
+        ? [{ code: "unclassifiedPartImpact", severity: "info" as const, detail: `اثر عمر ${partUseCount} ردیف مصرف قطعه در دادهٔ دمو طبقه‌بندی نشده است.` }]
+        : []),
+      { code: "performanceDataInsufficient", severity: "info", detail: "در دادهٔ دمو قرائت عملکردیِ معتبر ثبت نشده است." },
+      { code: "retirementCohortInsufficient", severity: "info", detail: "گروه مرجع بازنشستگی دمو در دسترس نیست." },
+    ],
+    limitations: [
+      "دادهٔ دمو برای تخمین عمر مفید مناسب نیست.",
+      "هیچ رویدادی بدون تأیید انسانی تعمیر اساسی شمرده نشده است.",
+      "خروجی صرفاً advisory است و وضعیت دستگاه را تغییر نمی‌دهد.",
+    ],
+  };
+};
+
 /** Registers a device created through the demo UI so its profile page works. */
 export const registerDemoDevice = (device: MaintenanceDevice): void => {
   store.profiles[device.id] = {
@@ -1442,6 +1525,7 @@ export const createDemoRegistryService = (): RegistryService => ({
   },
   getDeviceAnalytics: async (deviceId) =>
     clone(profileOf(deviceId).analytics ?? emptyAnalytics(deviceId)),
+  getDeviceLifecycleAnalysis: async (deviceId) => clone(lifecycleAnalysisOf(deviceId)),
   getFleetAnalytics: async (filters = {}) => {
     const fleet = asFleet();
     const rows = fleet.rows.filter(

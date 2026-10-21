@@ -1,20 +1,30 @@
 import { runtimeConfig } from "../../app/configuration/runtimeConfig";
+import { useLocalization } from "../../core/localization/localizationContext";
 
 /**
  * A permanent marker that the data on screen is fabricated.
  *
- * Demo mode looks exactly like the real application: the same pages, the same
- * Persian labels, plausible device names and work orders. Someone shown a
- * screen has no way to tell whether a number came from the database or from a
- * fixture file, which is how a demo gets mistaken for a working deployment.
- * The marker is deliberately hard to miss and cannot be dismissed.
+ * The short label remains visible in compact headers; the explanatory detail
+ * is shown when there is room and kept in the accessible name/title always.
  */
 export function DemoModeBanner(): JSX.Element | null {
+  const { t } = useLocalization();
   if (!runtimeConfig.demoMode) return null;
+
+  const label = t("header.demo");
+  const detail = t("demo.banner.detail");
+  const accessibleText = `${label} — ${detail}`;
+
   return (
-    <div className="demo-banner" role="status">
+    <div
+      className="demo-banner"
+      role="status"
+      aria-label={accessibleText}
+      title={accessibleText}
+    >
       <span className="demo-banner__dot" aria-hidden="true" />
-      حالت نمایشی — داده‌ها ساختگی است و در هیچ پایگاه‌داده‌ای ذخیره نمی‌شود.
+      <span className="demo-banner__label">{label}</span>
+      <span className="demo-banner__detail">{detail}</span>
     </div>
   );
 }

@@ -1,0 +1,108 @@
+/* Soft sage-and-sand organic curves keep the shared canvas warm and calm. */
+:root {
+  --page-canvas-surface: color-mix(in srgb, var(--surface-0) 98%, #d6c394 2%);
+  --page-wash-sage: color-mix(in srgb, #729073 8%, transparent);
+  --page-wash-sand: color-mix(in srgb, #c1a878 5%, transparent);
+  --page-orb-sage: color-mix(in srgb, #709275 4.5%, transparent);
+  --page-orb-sand: color-mix(in srgb, #c3a267 3.2%, transparent);
+  --page-ring-sage: color-mix(in srgb, #6e9071 12%, transparent);
+  --page-ring-sand: color-mix(in srgb, #b8955f 7%, transparent);
+}
+
+:root[data-theme="dark"] {
+  --page-canvas-surface: color-mix(in srgb, var(--surface-0) 97%, #2b3b2d 3%);
+  --page-wash-sage: color-mix(in srgb, #789f7b 11%, transparent);
+  --page-wash-sand: color-mix(in srgb, #b99967 6%, transparent);
+  --page-orb-sage: color-mix(in srgb, #789f7b 7%, transparent);
+  --page-orb-sand: color-mix(in srgb, #c1a36f 4%, transparent);
+  --page-ring-sage: color-mix(in srgb, #789f7b 13%, transparent);
+  --page-ring-sand: color-mix(in srgb, #b99967 8%, transparent);
+}
+
+/* Shared page-title box: deep forest green into near-black, with a few quiet,
+   hand-drawn curves. The strokes are intentionally organic—not a grid or tile. */
+:root .section-header,
+:root[data-theme="dark"] .section-header {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  color: #f3f8f4;
+  background-color: #101613;
+  background-image:
+    radial-gradient(ellipse 32rem 15rem at 3% 112%, rgb(39 125 74 / 28%) 0%, transparent 72%),
+    linear-gradient(112deg, #173b2a 0%, #16271f 44%, #101413 100%);
+  border-color: rgb(123 177 137 / 34%);
+  border-inline-start-color: #59b879;
+  box-shadow: 0 13px 30px rgb(5 18 13 / 20%), inset 0 1px 0 rgb(255 255 255 / 6%);
+}
+
+.section-header::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 180' preserveAspectRatio='none'%3E%3Cg fill='none' stroke='%2394d7a4' stroke-width='1.25' stroke-linecap='round' stroke-opacity='.48'%3E%3Cpath d='M-25 128 C70 46 140 163 228 112 S378 32 462 87 611 149 697 96 854 24 1025 112'/%3E%3Cpath d='M258 -18 C302 39 354 73 419 48 S512 22 549 63 575 120 635 106 719 68 763 101'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  opacity: 0.74;
+  pointer-events: none;
+}
+
+.section-header > * {
+  position: relative;
+  z-index: 1;
+}
+
+.section-header h1 { color: #f3f8f4; }
+.section-header p { color: rgb(226 238 229 / 76%); }
+.section-header__eyebrow { color: #b3e1bf; }
+.section-header__eyebrow::before { background: #6aca88; }
+
+.app-shell { background: transparent; }
+
+.app-shell__main {
+  background-color: var(--page-canvas-surface);
+  background-image:
+    radial-gradient(ellipse 44rem 32rem at 104% 1%, var(--page-wash-sage) 0%, transparent 72%),
+    radial-gradient(ellipse 36rem 32rem at -3% 65%, var(--page-wash-sand) 0%, transparent 74%),
+    radial-gradient(ellipse 20rem 16rem at 101% 25%, var(--page-orb-sage) 0%, transparent 72%),
+    radial-gradient(ellipse 17rem 22rem at 3% 90%, var(--page-orb-sand) 0%, transparent 73%),
+    radial-gradient(ellipse 27rem 21rem at 102% 25%, transparent 71%, var(--page-ring-sage) 71.7%, transparent 72.5%),
+    radial-gradient(ellipse 22rem 29rem at 2% 94%, transparent 72%, var(--page-ring-sand) 72.8%, transparent 73.7%);
+  background-repeat: no-repeat;
+}
+
+/* The login form shares the same warmer neutral surface and organic washes. */
+.auth-page__form {
+  background-color: color-mix(in srgb, var(--surface-1) 96%, #ead9b8 4%);
+  background-image:
+    radial-gradient(ellipse 30rem 25rem at 102% 12%, var(--page-wash-sand) 0%, transparent 78%),
+    radial-gradient(ellipse 19rem 15rem at 102% 12%, var(--page-orb-sage) 0%, transparent 73%),
+    radial-gradient(ellipse 18rem 14rem at 104% 10%, transparent 68%, var(--page-ring-sage) 68.8%, transparent 69.8%);
+  background-repeat: no-repeat;
+}
+
+/* Warm the login hero too, and replace its old square overlay with two soft curves. */
+:root .auth-page__visual {
+  background:
+    radial-gradient(ellipse 41rem 30rem at 78% 14%, rgb(85 126 79 / 34%), transparent 55%),
+    radial-gradient(ellipse 34rem 26rem at 12% 88%, rgb(190 159 104 / 16%), transparent 52%),
+    linear-gradient(160deg, #183b2a 0%, #0e1712 100%);
+}
+
+:root .auth-page__visual::after {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 900' preserveAspectRatio='none'%3E%3Cg fill='none' stroke='%23d1bd8b' stroke-width='1.2' stroke-linecap='round' stroke-opacity='.32'%3E%3Cpath d='M-20 280 C120 200 180 350 310 270 S520 175 590 255 700 350 825 235'/%3E%3Cpath d='M60 760 C160 650 220 810 335 710 S530 620 610 690 710 780 840 640'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 100% 100%;
+  opacity: 0.24;
+}
+
+:root .auth-visual__content .eyebrow { color: #c2d5b5; }
+:root .auth-visual__content h1 em { color: #d7bd83; }
+:root .auth-visual__footer .icon { color: #d7bd83; }
+
+@media print {
+  .app-shell__main,
+  .auth-page__form {
+    background: #fff !important;
+  }
+}

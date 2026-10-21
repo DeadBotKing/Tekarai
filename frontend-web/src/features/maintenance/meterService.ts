@@ -3,6 +3,7 @@ import { apiEndpoints } from "../../core/api/endpoints";
 import type {
   MeterCaptureMode,
   MeterKind,
+  MeterPerformanceRole,
   MeterPmStatusRow,
   MeterPoint,
   MeterPointSummary,
@@ -42,6 +43,7 @@ interface MeterPointDto {
   name: string;
   unit: string;
   kind: string;
+  performanceRole: string;
   sensorKey: string;
   minimumValue: string;
   maximumValue: string;
@@ -126,6 +128,7 @@ const toMeterPoint = (dto: MeterPointDto): MeterPoint => ({
   name: dto.name,
   unit: text(dto.unit),
   kind: (dto.kind === "cumulative" ? "cumulative" : "gauge") as MeterKind,
+  performanceRole: (dto.performanceRole || "none") as MeterPerformanceRole,
   sensorKey: text(dto.sensorKey),
   drivesRunningHours: Boolean(dto.drivesRunningHours),
   active: Boolean(dto.active),

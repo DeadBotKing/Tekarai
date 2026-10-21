@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
+from apps.maintenance.domain.services.equipmentLifecycle import REPAIR_SCOPES
 from apps.maintenance.domain.valueObjects.maintenanceState import (
     ASSET_CRITICALITIES,
     ASSET_LEVELS,
@@ -179,6 +180,12 @@ class UpdateDeviceNameplateSerializer(serializers.Serializer):
     notes = serializers.CharField(required=False, allow_blank=True, default="")
 
 
+class SuggestRepairScopeSerializer(serializers.Serializer):
+    failureSymptom = serializers.CharField(max_length=300, required=False, allow_blank=True, default="")
+    rootCause = serializers.CharField(required=False, allow_blank=True, default="")
+    actionTaken = serializers.CharField(required=False, allow_blank=True, default="")
+
+
 class CloseWorkOrderDetailsSerializer(serializers.Serializer):
     """Failure, downtime and cost facts captured when a repair is closed."""
 
@@ -191,6 +198,7 @@ class CloseWorkOrderDetailsSerializer(serializers.Serializer):
     )
     rootCause = serializers.CharField(required=False, allow_blank=True, default="")
     actionTaken = serializers.CharField(required=False, allow_blank=True, default="")
+    repairScope = serializers.ChoiceField(choices=REPAIR_SCOPES, required=False)
     repeatFailure = serializers.BooleanField(required=False, default=False)
     failureReportedAt = serializers.CharField(required=False, allow_blank=True, default="")
     repairStartedAt = serializers.CharField(required=False, allow_blank=True, default="")

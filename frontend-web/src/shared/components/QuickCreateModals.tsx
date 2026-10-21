@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Modal } from "./overlays";
-import { Button, TextInput } from "./primitives";
+import { Button, SelectInput, TextInput } from "./primitives";
 import { CreatableSelect } from "./CreatableSelect";
 import { mergeOptions } from "../../features/maintenance/optionCatalog";
 import { taxonomyLabel } from "../../core/localization/taxonomyLabel";
@@ -11,6 +11,7 @@ import {
   PART_UNITS,
   type LocationKind,
   type MaintenanceDepartment,
+  type PartLifecycleImpact,
 } from "../types/domain";
 
 /**
@@ -196,6 +197,7 @@ export interface QuickPartInput {
   quantityOnHand: number;
   minimumStock: number;
   unitCost: number;
+  lifecycleImpact: PartLifecycleImpact;
 }
 
 export function QuickPartModal({
@@ -212,6 +214,7 @@ export function QuickPartModal({
   const [stock, setStock] = useState("0");
   const [minimum, setMinimum] = useState("0");
   const [unitCost, setUnitCost] = useState("0");
+  const [lifecycleImpact, setLifecycleImpact] = useState<PartLifecycleImpact>("unknown");
 
   useEffect(() => {
     if (!open) return;
@@ -221,6 +224,7 @@ export function QuickPartModal({
     setStock("0");
     setMinimum("0");
     setUnitCost("0");
+    setLifecycleImpact("unknown");
     setError("");
   }, [open, setError]);
 
@@ -239,6 +243,7 @@ export function QuickPartModal({
         quantityOnHand: Number(stock),
         minimumStock: Number(minimum),
         unitCost: Number(unitCost),
+        lifecycleImpact,
       });
       onCreated(id);
       onClose();
@@ -282,6 +287,16 @@ export function QuickPartModal({
             catalogKey: "part.unit",
             current: unit,
           })}
+        />
+        <SelectInput
+          label={t("warehouse.lifecycleImpact")}
+          value={lifecycleImpact}
+          onChange={(event) => setLifecycleImpact(event.currentTarget.value as PartLifecycleImpact)}
+          options={[
+            { value: "unknown", label: t("warehouse.lifecycleImpact.unknown") },
+            { value: "minor", label: t("warehouse.lifecycleImpact.minor") },
+            { value: "major", label: t("warehouse.lifecycleImpact.major") },
+          ]}
         />
         <TextInput
           label="موجودی اولیه"

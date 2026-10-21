@@ -1,0 +1,166 @@
+/* Contextual sticker marks: small, quiet SVG-backed badges for empty states and work types. */
+.context-sticker {
+  --sticker-ink: var(--primary-strong);
+  --sticker-wash: var(--primary-soft);
+  position: relative;
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  color: var(--sticker-ink);
+  background: color-mix(in srgb, var(--sticker-wash) 72%, var(--surface-1));
+  border: 1px solid color-mix(in srgb, var(--sticker-ink) 18%, var(--border));
+  border-radius: 24px 27px 22px 29px;
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--sticker-ink) 10%, transparent);
+  isolation: isolate;
+  transform: rotate(-2deg);
+}
+
+.context-sticker--blue {
+  --sticker-ink: var(--primary-strong);
+  --sticker-wash: var(--primary-soft);
+}
+
+.context-sticker--sage {
+  --sticker-ink: var(--success);
+  --sticker-wash: var(--success-soft);
+}
+
+.context-sticker--sand {
+  --sticker-ink: var(--warning);
+  --sticker-wash: var(--warning-soft);
+}
+
+.context-sticker::before {
+  position: absolute;
+  z-index: -1;
+  inset-block-start: 7px;
+  inset-inline-end: 8px;
+  width: 11px;
+  height: 11px;
+  background: color-mix(in srgb, var(--sticker-ink) 20%, var(--surface-1));
+  border: 1px solid color-mix(in srgb, var(--sticker-ink) 16%, var(--border));
+  border-radius: 50%;
+  content: "";
+}
+
+.context-sticker::after {
+  position: absolute;
+  z-index: -1;
+  inset-block-end: 8px;
+  inset-inline-start: 8px;
+  width: 6px;
+  height: 6px;
+  background: var(--sticker-ink);
+  border-radius: 50%;
+  content: "";
+  opacity: .3;
+}
+
+.context-sticker__paper {
+  display: grid;
+  place-items: center;
+  width: 47px;
+  height: 47px;
+  color: var(--sticker-ink);
+  background: color-mix(in srgb, var(--surface-1) 86%, var(--sticker-wash));
+  border: 1px solid color-mix(in srgb, var(--sticker-ink) 12%, var(--border));
+  border-radius: 15px;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--sticker-ink) 9%, transparent);
+  transform: rotate(2deg);
+}
+
+.context-sticker__spark {
+  position: absolute;
+  z-index: 1;
+  inset-block-start: 9px;
+  inset-inline-start: 7px;
+  color: var(--sticker-ink);
+  transform: rotate(7deg);
+}
+
+.context-sticker--sm {
+  width: 36px;
+  height: 36px;
+  border-radius: 13px 14px 12px 15px;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--sticker-ink) 9%, transparent);
+}
+
+.context-sticker--sm::before {
+  inset-block-start: 3px;
+  inset-inline-end: 3px;
+  width: 6px;
+  height: 6px;
+}
+
+.context-sticker--sm::after,
+.context-sticker--sm .context-sticker__spark { display: none; }
+
+.context-sticker--sm .context-sticker__paper {
+  width: 26px;
+  height: 26px;
+  border-radius: 9px;
+  box-shadow: none;
+}
+
+.context-sticker--xs {
+  width: 22px;
+  height: 22px;
+  background: color-mix(in srgb, var(--sticker-wash) 82%, var(--surface-1));
+  border: 1px solid color-mix(in srgb, var(--sticker-ink) 12%, var(--border));
+  border-radius: 8px;
+  box-shadow: none;
+  transform: none;
+}
+
+.context-sticker--xs::before,
+.context-sticker--xs::after,
+.context-sticker--xs .context-sticker__spark { display: none; }
+
+.context-sticker--xs .context-sticker__paper {
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  box-shadow: none;
+  transform: none;
+}
+
+.state__sticker {
+  display: grid;
+  place-items: center;
+  min-height: 76px;
+  margin-block-end: 2px;
+}
+
+.work-order-type-badge { gap: 6px; }
+
+.work-order-card__type {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.work-order-card__type > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toast__sticker {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .context-sticker { transform: none; }
+}

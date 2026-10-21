@@ -11,6 +11,10 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.maintenance.application.useCases.equipmentLifecycleUseCases import (
+    GetDeviceLifecycleAnalysisQuery,
+    SuggestRepairScopeCommand,
+)
 from apps.maintenance.application.useCases.pmScheduleUseCases import GetPmScheduleQuery
 from apps.maintenance.application.useCases.registryUseCases import (
     DeleteLocationCommand,
@@ -43,6 +47,7 @@ from apps.maintenance.presentation.api.serializers.registrySerializers import (
     SavePersonnelSerializer,
     SavePmPlanSerializer,
     SaveSpecificationsSerializer,
+    SuggestRepairScopeSerializer,
     UpdateDeviceNameplateSerializer,
 )
 from apps.sharedKernel.presentation.api.authentication import BearerSessionAuthentication
@@ -391,6 +396,35 @@ class DeviceAnalyticsView(RegistryView):
             )
         )
         return Response(successEnvelope(asDict(dto), meta=dto.asMeta()))
+
+
+class DeviceLifecycleAnalysisView(RegistryView):
+    """Read-only advisory lifecycle analysis for one device."""
+
+    def get(self, request: Request, deviceId: str) -> Response:
+        language = str(request.query_params.get("language", "fa")).strip().lower()
+        dto = container.getDeviceLifecycleAnalysisUseCase().execute(
+            GetDeviceLifecycleAnalysisQuery(deviceId=str(deviceId), language=language)
+        )
+        return Response(successEnvelope(asDict(dto)))
+
+
+class WorkOrderRepairScopeSuggestionView(RegistryView):
+    """Return explainable evidence; the suggestion is never persisted here."""
+
+    def post(self, request: Request, workOrderId: str) -> Response:
+        serializer = SuggestRepairScopeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        dto = container.suggestRepairScopeUseCase().execute(
+            SuggestRepairScopeCommand(
+                workOrderId=str(workOrderId),
+                failureSymptom=str(data.get("failureSymptom", "")),
+                rootCause=str(data.get("rootCause", "")),
+                actionTaken=str(data.get("actionTaken", "")),
+            )
+        )
+        return Response(successEnvelope(asDict(dto)))
 
 
 class FleetAnalyticsView(RegistryView):

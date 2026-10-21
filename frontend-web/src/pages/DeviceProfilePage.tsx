@@ -6,6 +6,7 @@ import { useLocalization } from "../core/localization/localizationContext";
 import { PERMISSIONS } from "../core/permissions/permissionContext";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { createMaintenanceService } from "../features/maintenance/maintenanceService";
+import { MaintenanceAttachments } from "../features/maintenance/MaintenanceAttachments";
 import {
   createRegistryService,
   type AssignmentRowInput,
@@ -26,6 +27,7 @@ import {
   type AssetAncestry,
   type AssetMovement,
   type DeviceAnalytics,
+  type DeviceLifecycleAnalysis,
   type DeviceAssignmentRole,
   type DeviceNameplate,
   type DeviceProfile,
@@ -73,6 +75,7 @@ type TabId =
   | "specifications"
   | "pm"
   | "parts"
+  | "documents"
   | "location"
   | "personnel"
   | "analytics";
@@ -82,6 +85,7 @@ const TABS: { id: TabId; labelKey: string; icon: "file" | "table" | "calendar" |
   { id: "specifications", labelKey: "registry.tab.specifications", icon: "table" },
   { id: "pm", labelKey: "registry.tab.pm", icon: "calendar" },
   { id: "parts", labelKey: "registry.tab.parts", icon: "layers" },
+  { id: "documents", labelKey: "registry.tab.documents", icon: "file" },
   { id: "location", labelKey: "registry.tab.location", icon: "building" },
   { id: "personnel", labelKey: "registry.tab.personnel", icon: "users" },
   { id: "analytics", labelKey: "registry.tab.analytics", icon: "chart" },
@@ -108,7 +112,7 @@ const formatMoney = (value: number): string =>
 
 /** The complete equipment file: nameplate, specs, PM, parts, location, people, KPIs. */
 export function DeviceProfilePage(): JSX.Element {
-  const { t } = useLocalization();
+  const { t, locale } = useLocalization();
   const navigate = useNavigate();
   const { deviceId = "" } = useParams<{ deviceId: string }>();
   const api = useApiClient();
@@ -124,6 +128,9 @@ export function DeviceProfilePage(): JSX.Element {
   const [spareParts, setSpareParts] = useState<SparePart[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  const [lifecycleAnalysis, setLifecycleAnalysis] = useState<DeviceLifecycleAnalysis | null>(null);
+  const [lifecycleLoading, setLifecycleLoading] = useState(false);
+  const [lifecycleFailed, setLifecycleFailed] = useState(false);
   const [tab, setTab] = useState<TabId>("nameplate");
   const [toast, setToast] = useState("");
   const [qrOpen, setQrOpen] = useState(false);
@@ -222,6 +229,26 @@ export function DeviceProfilePage(): JSX.Element {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const loadLifecycleAnalysis = useCallback(async (signal?: AbortSignal): Promise<void> => {
+    if (!deviceId) return;
+    setLifecycleLoading(true);
+    setLifecycleFailed(false);
+    try {
+      setLifecycleAnalysis(await registry.getDeviceLifecycleAnalysis(deviceId, signal, locale));
+    } catch {
+      if (!signal?.aborted) setLifecycleFailed(true);
+    } finally {
+      if (!signal?.aborted) setLifecycleLoading(false);
+    }
+  }, [deviceId, locale, registry]);
+
+  useEffect(() => {
+    if (tab !== "analytics") return;
+    const controller = new AbortController();
+    void loadLifecycleAnalysis(controller.signal);
+    return () => controller.abort();
+  }, [tab, loadLifecycleAnalysis]);
 
   useEffect(() => {
     let active = true;
@@ -471,6 +498,7 @@ export function DeviceProfilePage(): JSX.Element {
         quantityOnHand: input.quantityOnHand,
         minimumStock: input.minimumStock,
         unitCost: input.unitCost,
+        lifecycleImpact: input.lifecycleImpact,
         lowStock: input.quantityOnHand <= input.minimumStock,
         createdAt: new Date().toISOString(),
         updatedAt: "",
@@ -1486,6 +1514,316 @@ export function DeviceProfilePage(): JSX.Element {
     </div>
   );
 
+  const renderLifecycleAnalysis = (): JSX.Element => {
+    const analysis = lifecycleAnalysis?.deviceId === deviceId ? lifecycleAnalysis : null;
+    const conditionTone = analysis?.condition === "retirementReview" || analysis?.condition === "watch"
+      ? "warning"
+      : analysis?.condition === "declining"
+        ? "danger"
+        : analysis?.condition === "stable"
+          ? "success"
+          : "neutral";
+    const confidenceTone = analysis?.confidence === "high"
+      ? "success"
+      : analysis?.confidence === "medium"
+        ? "info"
+        : analysis?.confidence === "low"
+          ? "warning"
+          : "neutral";
+    return (
+      <Card className="content-card" padding="md">
+        <SectionHeader
+          title={t("registry.lifecycle.title")}
+          subtitle={t("registry.lifecycle.subtitle")}
+          actions={
+            <Button
+              variant="secondary"
+              icon="refresh"
+              disabled={lifecycleLoading}
+              onClick={() => void loadLifecycleAnalysis()}
+            >
+              {lifecycleLoading ? t("registry.lifecycle.refreshing") : t("registry.lifecycle.refresh")}
+            </Button>
+          }
+        />
+        <div className="section-actions">
+          <Badge tone="info" dot>{t("registry.lifecycle.advisory")}</Badge>
+        </div>
+        {lifecycleLoading && !analysis ? (
+          <p className="muted-cell">{t("registry.lifecycle.refreshing")}</p>
+        ) : lifecycleFailed && !analysis ? (
+          <div role="alert">
+            <p className="muted-cell">{t("registry.lifecycle.loadFailed")}</p>
+            <Button variant="secondary" icon="refresh" onClick={() => void loadLifecycleAnalysis()}>
+              {t("registry.lifecycle.refresh")}
+            </Button>
+          </div>
+        ) : analysis ? (
+          <>
+            {lifecycleFailed && (
+              <p className="muted-cell" role="alert">{t("registry.lifecycle.refreshFailed")}</p>
+            )}
+            <p className="detail-panel__description">{analysis.summary}</p>
+            <p className="muted-cell">
+              {t("registry.lifecycle.method")}: {t(`registry.lifecycle.method.${analysis.analysisMethod}` as Parameters<typeof t>[0])}
+            </p>
+            {analysis.aiAdvisory && (
+              <div className="detail-panel" aria-label={t("registry.lifecycle.aiAdvisory.title")}>
+                <div className="section-actions">
+                  <strong>{t("registry.lifecycle.aiAdvisory.title")}</strong>
+                  <Badge tone="warning">{t("registry.lifecycle.aiAdvisory.advisoryOnly")}</Badge>
+                </div>
+                <p>{analysis.aiAdvisory.summary}</p>
+                {analysis.aiAdvisory.recommendations.length > 0 && (
+                  <>
+                    <strong>{t("registry.lifecycle.aiAdvisory.recommendations")}</strong>
+                    <ul className="registry-checklist">
+                      {analysis.aiAdvisory.recommendations.map((recommendation, index) => (
+                        <li key={`${index}-${recommendation}`}>{recommendation}</li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </div>
+            )}
+            <div className="section-actions">
+              <Badge tone={conditionTone} dot>
+                {t(`registry.lifecycle.condition.${analysis.condition}`)}
+              </Badge>
+              <Badge tone={confidenceTone}>
+                {t("registry.lifecycle.confidence")}: {t(`registry.lifecycle.confidence.${analysis.confidence}`)}
+              </Badge>
+              <span className="muted-cell">{analysis.confidenceReason}</span>
+            </div>
+
+            <h3>{t("registry.lifecycle.events")}</h3>
+            <div className="registry-summary-grid">
+              {[
+                ["registry.lifecycle.events.corrective", analysis.events.correctiveCount],
+                ["registry.lifecycle.events.major", analysis.events.majorRepairCount],
+                ["registry.lifecycle.events.overhaul", analysis.events.overhaulCount],
+                ["registry.lifecycle.events.minor", analysis.events.minorRepairCount],
+                ["registry.lifecycle.events.unclassified", analysis.events.unclassifiedRepairCount],
+                ["registry.lifecycle.events.partsMinor", analysis.events.minorPartUseCount],
+                ["registry.lifecycle.events.partsMajor", analysis.events.majorPartUseCount],
+                ["registry.lifecycle.events.partsUnknown", analysis.events.unclassifiedPartUseCount],
+              ].map(([label, value]) => (
+                <div key={String(label)}>
+                  <span className="muted-cell">{t(label as Parameters<typeof t>[0])}</span>
+                  <strong>{Number(value ?? 0)}</strong>
+                </div>
+              ))}
+            </div>
+
+            <div className="registry-discipline-grid">
+              <Card padding="sm">
+                <h3>{t("registry.lifecycle.lifeEstimate")}</h3>
+                <Badge tone={analysis.lifeEstimate.status === "estimated" ? "info" : "neutral"}>
+                  {t(`registry.lifecycle.lifeEstimate.${analysis.lifeEstimate.status === "estimated" ? "estimated" : "insufficient"}`)}
+                </Badge>
+                <div className="registry-summary-grid">
+                  <div>
+                    <span className="muted-cell">{t("registry.lifecycle.lifeEstimate.remaining")}</span>
+                    <strong>{formatNumber(analysis.lifeEstimate.estimatedRemainingMajorRepairs, 1)}</strong>
+                  </div>
+                  <div>
+                    <span className="muted-cell">{t("registry.lifecycle.lifeEstimate.typical")}</span>
+                    <strong>{formatNumber(analysis.lifeEstimate.typicalMajorRepairsAtRetirement, 1)}</strong>
+                  </div>
+                  <div>
+                    <span className="muted-cell">{t("registry.lifecycle.lifeEstimate.peers")}</span>
+                    <strong>{analysis.lifeEstimate.peerCount}</strong>
+                  </div>
+                  <div>
+                    <span className="muted-cell">{t("registry.lifecycle.lifeEstimate.currentMajor")}</span>
+                    <strong>{analysis.lifeEstimate.currentMajorRepairCount}</strong>
+                  </div>
+                </div>
+                {analysis.lifeEstimate.cohortLabel && (
+                  <p className="muted-cell">
+                    {t("registry.lifecycle.lifeEstimate.cohort")}: {analysis.lifeEstimate.cohortLabel}
+                  </p>
+                )}
+                <p className="muted-cell">
+                  {t(`registry.lifecycle.lifeEstimate.reason.${analysis.lifeEstimate.status === "estimated" ? "estimated" : "insufficient"}`)}
+                </p>
+              </Card>
+              <Card padding="sm">
+                <h3>{t("registry.lifecycle.reliability")}</h3>
+                <div className="registry-summary-grid">
+                  <div>
+                    <span className="muted-cell">{t("registry.lifecycle.reliability.recent")}</span>
+                    <strong>{analysis.reliability.recentCorrectiveCount}</strong>
+                  </div>
+                  <div>
+                    <span className="muted-cell">{t("registry.lifecycle.reliability.previous")}</span>
+                    <strong>{analysis.reliability.previousCorrectiveCount}</strong>
+                  </div>
+                  <div>
+                    <span className="muted-cell">{t("registry.lifecycle.reliability.failureTrend")}</span>
+                    <strong>{t(`registry.lifecycle.reliability.failureTrend.${analysis.reliability.failureFrequencyTrend}`)}</strong>
+                  </div>
+                  <div>
+                    <span className="muted-cell">{t("registry.lifecycle.reliability.recentMajor")}</span>
+                    <strong>{analysis.reliability.recentMajorRepairCount}</strong>
+                  </div>
+                  <div>
+                    <span className="muted-cell">{t("registry.lifecycle.reliability.previousMajor")}</span>
+                    <strong>{analysis.reliability.previousMajorRepairCount}</strong>
+                  </div>
+                  <div>
+                    <span className="muted-cell">{t("registry.lifecycle.reliability.majorRepairTrend")}</span>
+                    <strong>{t(`registry.lifecycle.reliability.majorRepairTrend.${analysis.reliability.majorRepairFrequencyTrend}`)}</strong>
+                  </div>
+                  <div>
+                    <span className="muted-cell">{t("registry.lifecycle.reliability.availability")}</span>
+                    <strong>{formatNumber(analysis.reliability.recentAvailabilityPercent, 2)}%</strong>
+                  </div>
+                  <div>
+                    <span className="muted-cell">{t("registry.lifecycle.reliability.availabilityChange")}</span>
+                    <strong>{formatNumber(analysis.reliability.availabilityChangePercentagePoints, 2)}</strong>
+                  </div>
+                  <div>
+                    <span className="muted-cell">{t("registry.lifecycle.reliability.repeat")}</span>
+                    <strong>{analysis.reliability.repeatFailureCount}</strong>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            <Card padding="sm">
+              <h3>{t("registry.lifecycle.partLife.title")}</h3>
+              <p className="muted-cell">{t("registry.lifecycle.partLife.note")}</p>
+              {analysis.partLifeEstimates.length === 0 ? (
+                <p className="muted-cell">{t("registry.lifecycle.partLife.noData")}</p>
+              ) : (
+                <div className="table-scroll">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>{t("registry.lifecycle.partLife.part")}</th>
+                        <th>{t("registry.lifecycle.partLife.impact")}</th>
+                        <th>{t("registry.lifecycle.partLife.events")}</th>
+                        <th>{t("registry.lifecycle.partLife.medianInterval")}</th>
+                        <th>{t("registry.lifecycle.partLife.daysSinceLast")}</th>
+                        <th>{t("registry.lifecycle.partLife.remainingInterval")}</th>
+                        <th>{t("registry.lifecycle.partLife.confidence")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analysis.partLifeEstimates.map((estimate) => (
+                        <tr key={estimate.partCode || estimate.partName}>
+                          <td>
+                            <strong>{estimate.partName || estimate.partCode}</strong>
+                            {estimate.partName && estimate.partCode && (
+                              <span className="muted-cell"> · {estimate.partCode}</span>
+                            )}
+                          </td>
+                          <td>
+                            <Badge tone={estimate.lifecycleImpact === "major" ? "warning" : estimate.lifecycleImpact === "minor" ? "info" : "neutral"}>
+                              {t(`warehouse.lifecycleImpact.${estimate.lifecycleImpact}` as Parameters<typeof t>[0])}
+                            </Badge>
+                          </td>
+                          <td>{estimate.replacementEventCount}</td>
+                          <td>
+                            {estimate.status === "estimated"
+                              ? `${formatNumber(estimate.medianReplacementIntervalDays, 1)} ${t("registry.lifecycle.partLife.days")}`
+                              : "—"}
+                          </td>
+                          <td>{formatNumber(estimate.daysSinceLastReplacement, 1)} {t("registry.lifecycle.partLife.days")}</td>
+                          <td>
+                            {estimate.status === "estimated"
+                              ? <>
+                                  {estimate.estimatedRemainingIntervalDays === 0 && (
+                                    <Badge tone="warning">{t("registry.lifecycle.partLife.pastInterval")}</Badge>
+                                  )}
+                                  {formatNumber(estimate.estimatedRemainingIntervalDays, 1)} {t("registry.lifecycle.partLife.days")}
+                                </>
+                              : t("registry.lifecycle.partLife.insufficient")}
+                          </td>
+                          <td>{t(`registry.lifecycle.partLife.confidence.${estimate.confidence}` as Parameters<typeof t>[0])}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
+
+            <Card padding="sm">
+              <h3>{t("registry.lifecycle.performance")}</h3>
+              {analysis.performance.signals.length === 0 ? (
+                <p className="muted-cell">{t("registry.lifecycle.performance.noData")}</p>
+              ) : (
+                <div className="table-scroll">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>{t("meter.name")}</th>
+                        <th>{t("meter.performanceRole")}</th>
+                        <th>{t("registry.lifecycle.performance.baseline")}</th>
+                        <th>{t("registry.lifecycle.performance.recent")}</th>
+                        <th>{t("registry.lifecycle.performance.retention")}</th>
+                        <th>{t("meter.readingCount")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analysis.performance.signals.map((signal) => (
+                        <tr key={signal.meterPointId}>
+                          <td>{signal.name}</td>
+                          <td>{t(`registry.lifecycle.performance.role.${signal.role}`)}</td>
+                          <td>{formatNumber(signal.baselineValue, 2)} {signal.unit}</td>
+                          <td>{formatNumber(signal.recentAverage, 2)} {signal.unit}</td>
+                          <td>
+                            {formatNumber(signal.retentionPercent, 1)}%
+                            <span className="muted-cell"> · {t(`registry.lifecycle.performance.trend.${signal.trend}`)}</span>
+                          </td>
+                          <td>{signal.readingCount}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {analysis.performance.overallRetentionPercent !== null && (
+                <p className="muted-cell">
+                  {t("registry.lifecycle.performance.retention")}: {formatNumber(analysis.performance.overallRetentionPercent, 1)}%
+                </p>
+              )}
+            </Card>
+
+            <div className="registry-discipline-grid">
+              <Card padding="sm">
+                <h3>{t("registry.lifecycle.indicators")}</h3>
+                {analysis.indicators.length === 0 ? (
+                  <p className="muted-cell">{t("registry.analytics.noData")}</p>
+                ) : (
+                  <ul className="registry-checklist">
+                    {analysis.indicators.map((indicator, index) => (
+                      <li key={`${indicator.code}-${index}`}>
+                        <Badge tone={indicator.severity === "warning" ? "warning" : "neutral"}>
+                          {indicator.severity === "warning" ? "!" : "i"}
+                        </Badge>{" "}{indicator.detail}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
+              <Card padding="sm">
+                <h3>{t("registry.lifecycle.limitations")}</h3>
+                <ul className="registry-checklist">
+                  {analysis.limitations.map((limitation, index) => (
+                    <li key={`${index}-${limitation}`}>{limitation}</li>
+                  ))}
+                </ul>
+              </Card>
+            </div>
+          </>
+        ) : null}
+      </Card>
+    );
+  };
+
   const renderAnalytics = (): JSX.Element => (
     <Card className="content-card" padding="md">
       <SectionHeader
@@ -1677,6 +2015,19 @@ export function DeviceProfilePage(): JSX.Element {
       {tab === "specifications" && renderSpecifications()}
       {tab === "pm" && renderPm()}
       {tab === "parts" && renderParts()}
+      {tab === "documents" && (
+        <Card className="content-card asset-documents" padding="md">
+          <SectionHeader title={t("registry.tab.documents")} subtitle={device.name} />
+          <PermissionGuard permission={PERMISSIONS.maintenanceAttachmentView} fallback="denied">
+            <MaintenanceAttachments
+              targetType="device"
+              targetId={device.id}
+              service={maintenance}
+              onMessage={setToast}
+            />
+          </PermissionGuard>
+        </Card>
+      )}
       {tab === "location" && (
         <>
           {renderLocation()}
@@ -1684,7 +2035,12 @@ export function DeviceProfilePage(): JSX.Element {
         </>
       )}
       {tab === "personnel" && renderPersonnel()}
-      {tab === "analytics" && renderAnalytics()}
+      {tab === "analytics" && (
+        <>
+          {renderAnalytics()}
+          {renderLifecycleAnalysis()}
+        </>
+      )}
 
       <Modal
         open={planModalOpen}

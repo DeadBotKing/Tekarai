@@ -26,6 +26,7 @@ from apps.maintenance.domain.entities.teamSync import (
 from apps.maintenance.domain.entities.workOrder import WorkOrder
 from apps.maintenance.domain.entities.workOrderHistory import WorkOrderHistoryEntry
 from apps.maintenance.domain.entities.workTimer import WorkTimer
+from apps.maintenance.domain.services.equipmentLifecycle import EquipmentLifecycleSnapshot
 from apps.maintenance.domain.services.maintenanceCosting import (
     LabourCostReading,
     WorkOrderCostReading,
@@ -136,6 +137,15 @@ class WorkOrderRepository(Protocol):
 
 
 @runtime_checkable
+class EquipmentLifecycleRepository(Protocol):
+    """Read-only tenant-scoped snapshot for lifecycle trend analysis."""
+
+    def getSnapshot(
+        self, tenantId: uuid.UUID, deviceId: uuid.UUID, asOf: datetime
+    ) -> EquipmentLifecycleSnapshot: ...
+
+
+@runtime_checkable
 class MaintenanceAttachmentRepository(Protocol):
     def targetExists(self, tenantId: uuid.UUID, targetType: str, targetId: uuid.UUID) -> bool: ...
 
@@ -177,6 +187,7 @@ class SparePartRepository(Protocol):
         unitCost: Decimal,
         reorderQuantity: Decimal = Decimal("0"),
         autoReorder: bool = True,
+        lifecycleImpact: str = "unknown",
     ) -> SparePart: ...
 
     def update(
@@ -190,6 +201,7 @@ class SparePartRepository(Protocol):
         unitCost: Decimal,
         reorderQuantity: Decimal = Decimal("0"),
         autoReorder: bool = True,
+        lifecycleImpact: str | None = None,
     ) -> SparePart: ...
 
     def list(self, tenantId: uuid.UUID, search: str = "") -> builtins.list[SparePart]: ...

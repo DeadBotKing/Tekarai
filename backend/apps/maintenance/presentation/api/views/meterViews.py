@@ -91,6 +91,7 @@ class DeviceMeterPointListView(IdempotencyMixin, MeterView):
                 maximumValue=str(data["maximumValue"]),
                 rolloverMaximum=str(data["rolloverMaximum"]),
                 maximumStepPerHour=str(data["maximumStepPerHour"]),
+                performanceRole=str(data["performanceRole"]),
                 drivesRunningHours=bool(data["drivesRunningHours"]),
                 active=bool(data["active"]),
             )
@@ -131,6 +132,7 @@ class MeterPointDetailView(MeterView):
                 maximumValue=str(data.get("maximumValue", "")),
                 rolloverMaximum=str(data.get("rolloverMaximum", "")),
                 maximumStepPerHour=str(data.get("maximumStepPerHour", "")),
+                performanceRole=str(data.get("performanceRole", "")),
                 drivesRunningHours=bool(data.get("drivesRunningHours", False)),
                 active=bool(data.get("active", True)),
             )

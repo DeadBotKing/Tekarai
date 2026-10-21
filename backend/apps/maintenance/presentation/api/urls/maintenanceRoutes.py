@@ -58,6 +58,7 @@ from apps.maintenance.presentation.api.views.performanceReviewViews import (
 )
 from apps.maintenance.presentation.api.views.registryViews import (
     DeviceAnalyticsView,
+    DeviceLifecycleAnalysisView,
     DeviceAssignmentsView,
     DeviceBomItemView,
     DeviceBomView,
@@ -75,6 +76,7 @@ from apps.maintenance.presentation.api.views.registryViews import (
     PmPlanExecutionView,
     PmScheduleView,
     WorkOrderClosureView,
+    WorkOrderRepairScopeSuggestionView,
 )
 from apps.maintenance.presentation.api.views.sparePartViews import (
     PartTransactionsView,
@@ -248,6 +250,11 @@ urlpatterns = [
         DeviceAnalyticsView.as_view(),
         name="deviceAnalytics",
     ),
+    path(
+        "devices/<uuid:deviceId>/lifecycle-analysis",
+        DeviceLifecycleAnalysisView.as_view(),
+        name="deviceLifecycleAnalysis",
+    ),
     # -- Personnel performance review (Phase 29) ---------------------------------
     path(
         "performance-reviews/cycles",
@@ -343,6 +350,11 @@ urlpatterns = [
         "work-orders/<uuid:workOrderId>/closure",
         WorkOrderClosureView.as_view(),
         name="workOrderClosure",
+    ),
+    path(
+        "work-orders/<uuid:workOrderId>/repair-scope-suggestion",
+        WorkOrderRepairScopeSuggestionView.as_view(),
+        name="workOrderRepairScopeSuggestion",
     ),
     # Spare-parts warehouse.
     path("spare-parts", SparePartListView.as_view(), name="sparePartList"),

@@ -104,6 +104,7 @@ class WorkOrderDto:
     failureSymptom: str = ""
     rootCause: str = ""
     actionTaken: str = ""
+    repairScope: str = "unclassified"
     repeatFailure: bool = False
     failureReportedAt: str = ""
     repairStartedAt: str = ""
@@ -263,6 +264,7 @@ def workOrderDtoFromDomain(order: WorkOrder, now: datetime | None = None) -> Wor
         failureSymptom=order.failureSymptom,
         rootCause=order.rootCause,
         actionTaken=order.actionTaken,
+        repairScope=order.repairScope,
         repeatFailure=order.repeatFailure,
         failureReportedAt=order.failureReportedAt.isoformat() if order.failureReportedAt else "",
         repairStartedAt=order.repairStartedAt.isoformat() if order.repairStartedAt else "",

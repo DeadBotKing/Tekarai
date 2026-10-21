@@ -9,7 +9,12 @@ import { createMaintenanceService } from "../features/maintenance/maintenanceSer
 import { buildReorderSuggestions } from "../features/maintenance/wave1";
 import { activeReservedForPart, availableStock } from "../features/maintenance/wave2";
 import { listReservations, syncReservationsFromServer } from "../features/maintenance/wave2Store";
-import type { PartTransaction, PartTransactionType, SparePart } from "../shared/types/domain";
+import type {
+  PartLifecycleImpact,
+  PartTransaction,
+  PartTransactionType,
+  SparePart,
+} from "../shared/types/domain";
 import { PART_UNITS } from "../shared/types/domain";
 import { CreatableSelect } from "../shared/components/CreatableSelect";
 import { mergeOptions } from "../features/maintenance/optionCatalog";
@@ -28,8 +33,19 @@ export {
 import { demoParts, seedDemoLedger } from "../features/demo/pageDemoFixtures";
 
 
-interface PartFormState { code: string; name: string; unit: string; quantityOnHand: string; minimumStock: string; unitCost: string; }
-const emptyForm: PartFormState = { code: "", name: "", unit: "عدد", quantityOnHand: "0", minimumStock: "0", unitCost: "0" };
+interface PartFormState {
+  code: string;
+  name: string;
+  unit: string;
+  quantityOnHand: string;
+  minimumStock: string;
+  unitCost: string;
+  lifecycleImpact: PartLifecycleImpact;
+}
+const emptyForm: PartFormState = {
+  code: "", name: "", unit: "عدد", quantityOnHand: "0", minimumStock: "0", unitCost: "0",
+  lifecycleImpact: "unknown",
+};
 
 interface TxFormState { transactionType: PartTransactionType; quantity: string; reference: string; note: string; }
 const emptyTxForm: TxFormState = { transactionType: "RECEIPT", quantity: "", reference: "", note: "" };
@@ -96,7 +112,15 @@ export function SparePartsPage(): JSX.Element {
   const openCreate = (): void => { setEditing(null); setForm(emptyForm); setModalOpen(true); };
   const openEdit = (part: SparePart): void => {
     setEditing(part);
-    setForm({ code: part.code, name: part.name, unit: part.unit, quantityOnHand: String(part.quantityOnHand), minimumStock: String(part.minimumStock), unitCost: String(part.unitCost) });
+    setForm({
+      code: part.code,
+      name: part.name,
+      unit: part.unit,
+      quantityOnHand: String(part.quantityOnHand),
+      minimumStock: String(part.minimumStock),
+      unitCost: String(part.unitCost),
+      lifecycleImpact: part.lifecycleImpact ?? "unknown",
+    });
     setModalOpen(true);
   };
 
@@ -108,6 +132,7 @@ export function SparePartsPage(): JSX.Element {
       quantityOnHand: toNumber(form.quantityOnHand),
       minimumStock: toNumber(form.minimumStock),
       unitCost: toNumber(form.unitCost),
+      lifecycleImpact: form.lifecycleImpact,
     };
     if (runtimeConfig.demoMode) {
       if (editing) setParts((current) => current.map((part) => part.id === editing.id ? { ...part, ...payload } : part));
@@ -211,6 +236,17 @@ export function SparePartsPage(): JSX.Element {
   const columns = useMemo<DataTableColumn<SparePart>[]>(() => [
     { key: "code", label: t("registry.code"), accessor: (row) => row.code, sortable: true, width: "14%", render: (row) => <strong>{row.code}</strong> },
     { key: "name", label: t("registry.name"), accessor: (row) => row.name, sortable: true },
+    {
+      key: "lifecycleImpact",
+      label: t("warehouse.lifecycleImpact"),
+      accessor: (row) => row.lifecycleImpact ?? "unknown",
+      render: (row) => {
+        const impact = row.lifecycleImpact ?? "unknown";
+        return <Badge tone={impact === "major" ? "warning" : impact === "minor" ? "info" : "neutral"}>
+          {t(`warehouse.lifecycleImpact.${impact}`)}
+        </Badge>;
+      },
+    },
     { key: "unit", label: t("warehouse.unit"), accessor: (row) => row.unit, sortable: true, width: "10%" },
     { key: "quantityOnHand", label: t("warehouse.stock"), accessor: (row) => row.quantityOnHand, sortable: true, width: "12%", render: (row) => <strong>{formatNumber(row.quantityOnHand, "fa")}</strong> },
     { key: "minimumStock", label: t("warehouse.minimum"), accessor: (row) => row.minimumStock, sortable: true, width: "12%" },
@@ -293,6 +329,19 @@ export function SparePartsPage(): JSX.Element {
           addLabel="➕ افزودن واحد جدید…"
           options={mergeOptions({ canonical: PART_UNITS, translate: (value) => value, catalogKey: "part.unit", current: form.unit })}
         />
+        <SelectInput
+          label={t("warehouse.lifecycleImpact")}
+          value={form.lifecycleImpact}
+          onChange={(event) =>
+            setForm({ ...form, lifecycleImpact: event.currentTarget.value as PartLifecycleImpact })
+          }
+          options={[
+            { value: "unknown", label: t("warehouse.lifecycleImpact.unknown") },
+            { value: "minor", label: t("warehouse.lifecycleImpact.minor") },
+            { value: "major", label: t("warehouse.lifecycleImpact.major") },
+          ]}
+        />
+        <p className="muted-cell">{t("warehouse.lifecycleImpactHint")}</p>
         <TextInput label={t("warehouse.stock")} type="number" value={form.quantityOnHand} onChange={(event) => setForm({ ...form, quantityOnHand: event.target.value })} />
         <TextInput label={t("warehouse.minimum")} type="number" value={form.minimumStock} onChange={(event) => setForm({ ...form, minimumStock: event.target.value })} />
         <TextInput label={t("warehouse.unitCost")} type="number" value={form.unitCost} onChange={(event) => setForm({ ...form, unitCost: event.target.value })} />

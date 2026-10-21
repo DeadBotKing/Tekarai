@@ -37,6 +37,7 @@ class MeterPointDto:
     name: str
     unit: str = ""
     kind: str = "gauge"
+    performanceRole: str = "none"
     sensorKey: str = ""
     minimumValue: str = ""
     maximumValue: str = ""
@@ -189,6 +190,7 @@ def meterPointDto(point: MeterPoint) -> MeterPointDto:
         name=point.name,
         unit=point.unit,
         kind=point.kind,
+        performanceRole=point.performanceRole,
         sensorKey=point.sensorKey,
         minimumValue=decimalText(point.minimumValue),
         maximumValue=decimalText(point.maximumValue),

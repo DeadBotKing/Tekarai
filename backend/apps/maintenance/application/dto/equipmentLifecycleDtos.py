@@ -19,6 +19,7 @@ class DeviceLifecycleAnalysisDto:
     reliability: dict[str, object] = field(default_factory=dict)
     performance: dict[str, object] = field(default_factory=dict)
     lifeEstimate: dict[str, object] = field(default_factory=dict)
+    partLifeEstimates: list[dict[str, object]] = field(default_factory=list)
     indicators: list[dict[str, str]] = field(default_factory=list)
     limitations: list[str] = field(default_factory=list)
     aiAdvisory: dict[str, object] | None = None

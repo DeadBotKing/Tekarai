@@ -54,6 +54,10 @@ from apps.maintenance.application.useCases.deviceUseCases import (
     SendPmRemindersUseCase,
     UpdateDeviceUseCase,
 )
+from apps.maintenance.application.useCases.equipmentLifecycleUseCases import (
+    GetDeviceLifecycleAnalysisUseCase,
+    SuggestRepairScopeUseCase,
+)
 from apps.maintenance.application.useCases.maintenanceAttachmentUseCases import (
     DeleteMaintenanceAttachmentUseCase,
     DownloadMaintenanceAttachmentUseCase,
@@ -487,6 +491,9 @@ from apps.maintenance.infrastructure.repositories.assetRegistryRepositoryImpl im
     MaintenanceAnalyticsRepositoryDjango,
     PersonnelRepositoryDjango,
 )
+from apps.maintenance.infrastructure.repositories.equipmentLifecycleRepositoryImpl import (  # noqa: E402
+    EquipmentLifecycleRepositoryDjango,
+)
 from apps.maintenance.infrastructure.repositories.performanceReviewRepositoryImpl import (  # noqa: E402
     PerformanceReviewRepositoryDjango,
 )
@@ -520,6 +527,32 @@ def _registryDeps() -> dict:
         "analyticsRepository": maintenanceAnalyticsRepository(),
         **_kernelPorts(),
     }
+
+
+def getDeviceLifecycleAnalysisUseCase() -> GetDeviceLifecycleAnalysisUseCase:
+    from apps.maintenance.infrastructure.services.equipmentLifecycleAiAdvisor import (
+        ConfiguredEquipmentLifecycleAIAdvisor,
+    )
+
+    return GetDeviceLifecycleAnalysisUseCase(
+        deviceRepository=deviceRepository(),
+        lifecycleRepository=EquipmentLifecycleRepositoryDjango(),
+        aiAdvisor=ConfiguredEquipmentLifecycleAIAdvisor(),
+        **_kernelPorts(),
+    )
+
+
+def suggestRepairScopeUseCase() -> SuggestRepairScopeUseCase:
+    from apps.maintenance.infrastructure.services.repairScopeAiAdvisor import (
+        ConfiguredRepairScopeAIAdvisor,
+    )
+
+    return SuggestRepairScopeUseCase(
+        workOrderRepository=workOrderRepository(),
+        sparePartRepository=sparePartRepository(),
+        aiAdvisor=ConfiguredRepairScopeAIAdvisor(),
+        **_kernelPorts(),
+    )
 
 
 def assetMovementRepository() -> AssetMovementRepositoryDjango:

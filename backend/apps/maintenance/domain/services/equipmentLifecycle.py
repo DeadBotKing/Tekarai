@@ -68,6 +68,7 @@ class LifecyclePartUse:
     partName: str
     quantity: Decimal
     lifecycleImpact: str = PART_IMPACT_UNKNOWN
+    consumedAt: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -315,6 +316,97 @@ def _performanceSignals(
     return result
 
 
+def _partLifeEstimates(
+    snapshot: EquipmentLifecycleSnapshot,
+    *,
+    asOf: datetime,
+) -> list[dict[str, object]]:
+    """Estimate recorded replacement intervals, not physical condition or failure.
+
+    A separate corrective work order is treated as one replacement event for
+    a part code. Quantities are never used. At least three dated events are
+    required so the median is based on two or more observed intervals.
+    """
+    eligibleOrders = {
+        order.id: order
+        for order in snapshot.workOrders
+        if order.orderType == CORRECTIVE_ORDER_TYPE
+        and order.status in TRUSTED_REPAIR_STATUSES
+        and order.createdAt <= asOf
+    }
+    grouped: dict[str, dict[str, dict[str, object]]] = {}
+    for use in snapshot.partUses:
+        order = eligibleOrders.get(use.workOrderId)
+        if order is None:
+            continue
+        at = use.consumedAt or order.createdAt
+        if at > asOf:
+            continue
+        partCode = str(use.partCode or "").strip()
+        partName = str(use.partName or "").strip()
+        key = partCode.casefold() or partName.casefold()
+        if not key:
+            continue
+        event = grouped.setdefault(key, {}).get(use.workOrderId)
+        if event is None or at >= event["at"]:
+            grouped[key][use.workOrderId] = {
+                "at": at,
+                "partCode": partCode,
+                "partName": partName,
+                "lifecycleImpact": use.lifecycleImpact,
+            }
+
+    estimates: list[dict[str, object]] = []
+    for events in grouped.values():
+        ordered = sorted(events.values(), key=lambda item: item["at"])
+        if len(ordered) < 2:
+            continue
+        timestamps = [item["at"] for item in ordered]
+        intervals = [
+            (right - left).total_seconds() / 86400.0
+            for left, right in zip(timestamps, timestamps[1:])
+            if right > left
+        ]
+        latest = ordered[-1]
+        estimated = len(ordered) >= 3 and len(intervals) >= 2
+        medianInterval = float(statistics.median(intervals)) if estimated else None
+        daysSinceLast = max(0.0, (asOf - latest["at"]).total_seconds() / 86400.0)
+        remainingInterval = (
+            max(0.0, medianInterval - daysSinceLast) if medianInterval is not None else None
+        )
+        estimates.append(
+            {
+                "partCode": latest["partCode"],
+                "partName": latest["partName"],
+                "lifecycleImpact": latest["lifecycleImpact"],
+                "replacementEventCount": len(ordered),
+                "intervalCount": len(intervals),
+                "status": "estimated" if estimated else "insufficientData",
+                "confidence": (
+                    "medium" if estimated and len(ordered) >= 5 else "low" if estimated else "insufficient"
+                ),
+                "medianReplacementIntervalDays": _round(medianInterval, 1),
+                "daysSinceLastReplacement": _round(daysSinceLast, 1),
+                "estimatedRemainingIntervalDays": _round(remainingInterval, 1),
+                "pastObservedInterval": bool(
+                    medianInterval is not None and daysSinceLast >= medianInterval
+                ),
+                "lastReplacementAt": latest["at"].isoformat(),
+                "reason": "median-of-recorded-corrective-use-intervals"
+                if estimated
+                else "at-least-three-dated-events-required",
+            }
+        )
+    estimates.sort(
+        key=lambda item: (
+            int(item["replacementEventCount"]),
+            str(item["lastReplacementAt"]),
+        ),
+        reverse=True,
+    )
+    return estimates
+
+
 def analyzeEquipmentLifecycle(
     snapshot: EquipmentLifecycleSnapshot,
     *,
@@ -352,6 +444,7 @@ def analyzeEquipmentLifecycle(
     unknownPartUses = tuple(
         use for use in partUses if use.lifecycleImpact not in {PART_IMPACT_MINOR, PART_IMPACT_MAJOR}
     )
+    partLifeEstimates = _partLifeEstimates(snapshot, asOf=asOf)
 
     recentDowntime = sum(max(0, int(order.downtimeMinutes or 0)) for order in recent)
     previousDowntime = sum(max(0, int(order.downtimeMinutes or 0)) for order in previous)
@@ -467,6 +560,17 @@ def analyzeEquipmentLifecycle(
                 "code": "unclassifiedPartImpact",
                 "severity": "info",
                 "detail": f"اثر عمر {len(unknownPartUses)} ردیف مصرف قطعه هنوز طبقه‌بندی نشده است.",
+            }
+        )
+    pastIntervalParts = [
+        estimate for estimate in partLifeEstimates if estimate["pastObservedInterval"]
+    ]
+    if pastIntervalParts:
+        indicators.append(
+            {
+                "code": "partReplacementIntervalReview",
+                "severity": "info",
+                "detail": f"بازهٔ میانهٔ ثبت‌شدهٔ تعویض برای {len(pastIntervalParts)} نوع قطعه گذشته است؛ این فقط قرینهٔ بازبینی است، نه تشخیص خرابی یا دستور توقف.",
             }
         )
     if performanceTrend == "declining":
@@ -612,12 +716,14 @@ def analyzeEquipmentLifecycle(
             if estimateStatus == "estimated"
             else "fewer-than-three-retired-peers-with-repair-history",
         },
+        "partLifeEstimates": partLifeEstimates,
         "indicators": indicators,
         "limitations": [
             "همهٔ دستورکارهای اصلاحیِ غیرلغوشده به‌عنوان رویداد تعمیر شمرده می‌شوند.",
             "تعمیر اساسی فقط از طبقه‌بندی ثبت/تأییدشدهٔ انسانی شمرده می‌شود؛ مصرف قطعه جایگزین آن نیست.",
             "روند عملکرد فقط از نقاط gauge که نقش عملکردی برایشان تعریف شده و قرائت معتبر دارند محاسبه می‌شود.",
-            "مقایسهٔ عمر فقط با حداقل ۳ تجهیز بازنشستهٔ مشابه با سابقهٔ اصلاحیِ طبقه‌بندی‌شده و دست‌کم یک تعمیر اساسی/اورهال تأییدشده ساخته می‌شود؛ تعمیر کوچک/مصرفی در شمار عمرِ اساسی نیست و آستانهٔ ثابت تعداد تعمیر وجود ندارد.",
+            "بازهٔ قطعه فقط از میانهٔ فاصلهٔ مصرف‌های ثبت‌شدهٔ همان قطعه در دستورکارهای اصلاحیِ تأییدشده به‌دست می‌آید و حداقل ۳ رویداد تاریخ‌دار می‌خواهد؛ این جانشین زمان نصب، ساعت کارکرد یا حسگر استهلاک نیست و عمر فیزیکی قطعه را تضمین نمی‌کند.",
+            "مقایسهٔ عمر تجهیز فقط با حداقل ۳ تجهیز بازنشستهٔ مشابه با سابقهٔ اصلاحیِ طبقه‌بندی‌شده و دست‌کم یک تعمیر اساسی/اورهال تأییدشده ساخته می‌شود؛ تعمیر کوچک/مصرفی در شمار عمرِ اساسی نیست و آستانهٔ ثابت تعداد تعمیر وجود ندارد.",
             "خروجی advisory است و هر تصمیم توقف، تغییر وضعیت یا بازنشستگی نیازمند تأیید مسئول است.",
         ],
     }

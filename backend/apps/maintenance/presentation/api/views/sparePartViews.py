@@ -58,6 +58,7 @@ class SparePartListView(IdempotencyMixin, APIView):
                 unitCost=str(data.get("unitCost", 0)),
                 reorderQuantity=str(data.get("reorderQuantity", 0)),
                 autoReorder=bool(data.get("autoReorder", True)),
+                lifecycleImpact=str(data.get("lifecycleImpact", "unknown")),
             )
         )
         return Response(successEnvelope(dataclasses.asdict(result)), status=201)
@@ -81,6 +82,7 @@ class SparePartDetailView(IdempotencyMixin, APIView):
                 unitCost=str(data.get("unitCost", 0)),
                 reorderQuantity=str(data.get("reorderQuantity", 0)),
                 autoReorder=bool(data.get("autoReorder", True)),
+                lifecycleImpact=str(data.get("lifecycleImpact", "")),
             )
         )
         return Response(successEnvelope(dataclasses.asdict(result)))

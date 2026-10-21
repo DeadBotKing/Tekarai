@@ -112,6 +112,7 @@ class GetDeviceLifecycleAnalysisUseCase(UseCase):
             reliability=dict(result["reliability"]),
             performance=dict(result["performance"]),
             lifeEstimate=dict(result["lifeEstimate"]),
+            partLifeEstimates=list(result["partLifeEstimates"]),
             indicators=list(result["indicators"]),
             limitations=list(result["limitations"]),
             aiAdvisory=aiAdvisory,

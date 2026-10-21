@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useApiClient } from "../core/api/apiContext";
 import { apiEndpoints } from "../core/api/endpoints";
+import { useAuth } from "../core/auth/authContext";
 import { useFeatureFlags } from "../core/flags/featureFlags";
 import { useLocalization } from "../core/localization/localizationContext";
+import type { TranslationKey } from "../core/localization/i18n";
 import { toPersianDigits } from "../core/localization/jalali";
-import { PERMISSIONS } from "../core/permissions/permissionContext";
+import { PERMISSIONS, usePermissions } from "../core/permissions/permissionContext";
+import { useTenant } from "../core/tenant/tenantContext";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { demoActivity, demoProjects, demoTasks } from "../features/demo/demoData";
 import { demoWorkOrders } from "../features/maintenance/maintenanceDemoData";
@@ -14,7 +17,9 @@ import { createTaskService } from "../features/tasks/taskService";
 import { createMaintenanceService } from "../features/maintenance/maintenanceService";
 import { ActivityFeed } from "../shared/components/featureComponents";
 import { BarChart, DonutChart } from "../shared/components/charts";
-import { Icon } from "../shared/components/Icon";
+import { GUIDE_OPEN_EVENT } from "../shared/components/GuideDrawer";
+import { Icon, type IconName } from "../shared/components/Icon";
+import { ContextSticker } from "../shared/components/ContextSticker";
 import { Button, Card, CardHeader, MetricCard, PermissionGuard, ProgressBar, SectionHeader, StatusBadge } from "../shared/components/primitives";
 import type { ActivityItem, Project, Task, WorkOrder } from "../shared/types/domain";
 
@@ -27,9 +32,110 @@ const defaultWidgets: WidgetConfig[] = [
   { id: "health", title: "Health by domain", kind: "health", size: "half" },
 ];
 
+interface DashboardAreaLink {
+  id: string;
+  label: TranslationKey;
+  route: string;
+  icon: IconName;
+  permission?: string;
+  featureFlag?: string;
+}
+
+interface DashboardArea {
+  id: string;
+  title: TranslationKey;
+  description: TranslationKey;
+  icon: IconName;
+  links: DashboardAreaLink[];
+}
+
+/** A concise map of real routes; links are filtered with the same access rules as the app shell. */
+const dashboardAreas: DashboardArea[] = [
+  {
+    id: "delivery",
+    title: "dashboard.area.delivery.title",
+    description: "dashboard.area.delivery.description",
+    icon: "briefcase",
+    links: [
+      { id: "projects", label: "dashboard.link.projects", route: "/app/projects", icon: "folder", permission: PERMISSIONS.projectView },
+      { id: "tasks", label: "dashboard.link.tasks", route: "/app/tasks", icon: "checkSquare", permission: PERMISSIONS.taskView },
+    ],
+  },
+  {
+    id: "maintenance",
+    title: "dashboard.area.maintenance.title",
+    description: "dashboard.area.maintenance.description",
+    icon: "cpu",
+    links: [
+      { id: "work-orders", label: "dashboard.link.workOrders", route: "/app/maintenance/work-orders", icon: "checkSquare", permission: PERMISSIONS.maintenanceWorkOrderList },
+      { id: "assets", label: "dashboard.link.assets", route: "/app/maintenance/devices", icon: "cpu", permission: PERMISSIONS.maintenanceDeviceList },
+      { id: "preventive", label: "dashboard.link.pmCalendar", route: "/app/maintenance/pm-calendar", icon: "calendar", permission: PERMISSIONS.maintenanceDeviceList },
+      { id: "inspections", label: "dashboard.link.inspections", route: "/app/maintenance/inspections", icon: "shield", permission: PERMISSIONS.maintenanceWorkOrderList },
+    ],
+  },
+  {
+    id: "supply",
+    title: "dashboard.area.supply.title",
+    description: "dashboard.area.supply.description",
+    icon: "layers",
+    links: [
+      { id: "warehouse", label: "dashboard.link.warehouse", route: "/app/maintenance/warehouse", icon: "layers", permission: PERMISSIONS.maintenanceInventoryView },
+      { id: "procurement", label: "dashboard.link.procurement", route: "/app/maintenance/procurement", icon: "briefcase", permission: PERMISSIONS.procurementSupplierView },
+    ],
+  },
+  {
+    id: "records",
+    title: "dashboard.area.records.title",
+    description: "dashboard.area.records.description",
+    icon: "file",
+    links: [
+      { id: "documents", label: "dashboard.link.documents", route: "/app/documents", icon: "file", permission: PERMISSIONS.maintenanceDocumentView },
+      { id: "safety", label: "dashboard.link.safety", route: "/app/maintenance/permits", icon: "shield", permission: PERMISSIONS.safetyPermitView },
+    ],
+  },
+  {
+    id: "people",
+    title: "dashboard.area.people.title",
+    description: "dashboard.area.people.description",
+    icon: "users",
+    links: [
+      { id: "chat", label: "dashboard.link.chat", route: "/app/chat", icon: "message" },
+      { id: "organization", label: "dashboard.link.organization", route: "/app/organization/structure", icon: "users", permission: PERMISSIONS.organizationDepartmentView },
+      { id: "users", label: "dashboard.link.users", route: "/app/administration/users", icon: "users", permission: PERMISSIONS.userList },
+      { id: "roles", label: "dashboard.link.roles", route: "/app/administration/roles", icon: "key", permission: PERMISSIONS.roleList },
+      { id: "settings", label: "dashboard.link.settings", route: "/app/settings", icon: "settings" },
+      { id: "account", label: "dashboard.link.account", route: "/app/account", icon: "user" },
+    ],
+  },
+  {
+    id: "insights",
+    title: "dashboard.area.insights.title",
+    description: "dashboard.area.insights.description",
+    icon: "chart",
+    links: [
+      { id: "reports", label: "dashboard.link.reports", route: "/app/maintenance/reports", icon: "chart", permission: PERMISSIONS.maintenanceWorkOrderList },
+      { id: "intelligence", label: "dashboard.link.intelligence", route: "/app/intelligence", icon: "sparkles", permission: PERMISSIONS.intelligenceView, featureFlag: "projectIntelligence" },
+      { id: "audit", label: "dashboard.link.audit", route: "/app/administration/audit", icon: "activity", permission: PERMISSIONS.auditView },
+    ],
+  },
+];
+
 const isOpenOrder = (order: WorkOrder): boolean => order.status !== "completed" && order.status !== "cancelled";
 
 const WIDGETS_STORAGE_KEY = "tekarai.dashboard.widgets.v1";
+const ONBOARDING_STORAGE_KEY_PREFIX = "tekarai.dashboard.onboarding.v1";
+
+function onboardingStorageKey(userId: string, tenantId: string): string {
+  return `${ONBOARDING_STORAGE_KEY_PREFIX}:${encodeURIComponent(tenantId)}:${encodeURIComponent(userId)}`;
+}
+
+function hasDismissedOnboarding(key: string): boolean {
+  try {
+    return window.localStorage.getItem(key) === "dismissed";
+  } catch {
+    return false;
+  }
+}
 
 /** Persist the dashboard layout (order + visibility) per browser profile. */
 function loadWidgets(): WidgetConfig[] {
@@ -67,6 +173,9 @@ const toActivityItem = (row: Record<string, unknown>, index: number): ActivityIt
 export function DashboardPage(): JSX.Element {
   const { t, locale } = useLocalization();
   const { isEnabled } = useFeatureFlags();
+  const { session } = useAuth();
+  const { selectedTenant } = useTenant();
+  const { has } = usePermissions();
   const api = useApiClient();
   const navigate = useNavigate();
   const projectService = useMemo(() => createProjectService(api), [api]);
@@ -75,6 +184,42 @@ export function DashboardPage(): JSX.Element {
 
   const [customizing, setCustomizing] = useState(false);
   const [widgets, setWidgets] = useState<WidgetConfig[]>(loadWidgets);
+  const [onboardingOverride, setOnboardingOverride] = useState<{ key: string; dismissed: boolean } | null>(null);
+  const [dashboardAreasExpanded, setDashboardAreasExpanded] = useState(false);
+  const onboardingKey = onboardingStorageKey(session?.user.id ?? "unknown", selectedTenant.id);
+  const onboardingDismissed = onboardingOverride?.key === onboardingKey
+    ? onboardingOverride.dismissed
+    : hasDismissedOnboarding(onboardingKey);
+  const visibleDashboardAreas = useMemo(() => dashboardAreas
+    .map((area) => ({
+      ...area,
+      links: area.links.filter((link) =>
+        (!link.permission || has(link.permission)) && (!link.featureFlag || isEnabled(link.featureFlag)),
+      ),
+    }))
+    .filter((area) => area.links.length > 0), [has, isEnabled]);
+  const suggestedStartLink = visibleDashboardAreas.find((area) => area.id === "delivery")?.links[0]
+    ?? visibleDashboardAreas.find((area) => area.id === "maintenance")?.links[0];
+  const primaryQuickAction = has(PERMISSIONS.taskCreate)
+    ? "task"
+    : has(PERMISSIONS.projectCreate) ? "project" : null;
+
+  const dismissOnboarding = (): void => {
+    try {
+      window.localStorage.setItem(onboardingKey, "dismissed");
+    } catch {
+      // The welcome panel remains dismissible for the current render if storage is blocked.
+    }
+    setOnboardingOverride({ key: onboardingKey, dismissed: true });
+  };
+  const restoreOnboarding = (): void => {
+    try {
+      window.localStorage.removeItem(onboardingKey);
+    } catch {
+      // A storage restriction must not block access to the app.
+    }
+    setOnboardingOverride({ key: onboardingKey, dismissed: false });
+  };
 
   useEffect(() => {
     saveWidgets(widgets);
@@ -144,23 +289,23 @@ export function DashboardPage(): JSX.Element {
     return next;
   });
 
-  return <div className="page page--dashboard page--workspace-dashboard">
+  return <div className="page page--dashboard">
     <SectionHeader
       eyebrow={t("nav.workspace")}
       title={t("dashboard.title")}
       subtitle={t("dashboard.subtitle")}
       actions={<div className="section-actions"><span className="updated-label"><span className="live-dot" />{loading ? "…" : t("dashboard.lastUpdated")}</span>{isEnabled("dashboardCustomization") && <Button variant={customizing ? "primary" : "secondary"} icon={customizing ? "check" : "settings"} onClick={() => setCustomizing((value) => !value)}>{customizing ? t("dashboard.done") : t("dashboard.customize")}</Button>}</div>}
     />
-    <div className="metric-grid">
+    <div className="metric-grid dashboard-metric-grid">
       <MetricCard label={t("dashboard.activeProjects")} value={locale === "fa" ? toPersianDigits(activeProjects) : activeProjects} icon="briefcase" tone="blue" />
       <MetricCard label={t("dashboard.openTasks")} value={locale === "fa" ? toPersianDigits(openTasks) : openTasks} icon="checkSquare" tone="purple" />
       <MetricCard label={t("dashboard.openWorkOrders")} value={locale === "fa" ? toPersianDigits(openWorkOrders) : openWorkOrders} icon="activity" tone="green" />
       <MetricCard label={t("dashboard.healthScore")} value={healthLabel} icon="chart" tone="amber" />
     </div>
-    <div className="quick-actions">
+    <div className="quick-actions dashboard-quick-actions">
       <span className="quick-actions__label">{t("dashboard.quickActions")}</span>
-      <PermissionGuard permission={PERMISSIONS.projectCreate}><Button variant="subtle" size="sm" icon="plus" onClick={() => navigate("/app/projects?create=1")}>{t("dashboard.newProject")}</Button></PermissionGuard>
-      <PermissionGuard permission={PERMISSIONS.taskCreate}><Button variant="subtle" size="sm" icon="checkSquare" onClick={() => navigate("/app/tasks?create=1")}>{t("dashboard.newTask")}</Button></PermissionGuard>
+      <PermissionGuard permission={PERMISSIONS.taskCreate}><Button className={primaryQuickAction === "task" ? "dashboard-primary-action" : ""} variant={primaryQuickAction === "task" ? "primary" : "subtle"} size={primaryQuickAction === "task" ? "md" : "sm"} icon="checkSquare" onClick={() => navigate("/app/tasks?create=1")}>{t("dashboard.newTask")}</Button></PermissionGuard>
+      <PermissionGuard permission={PERMISSIONS.projectCreate}><Button className={primaryQuickAction === "project" ? "dashboard-primary-action" : ""} variant={primaryQuickAction === "project" ? "primary" : "subtle"} size={primaryQuickAction === "project" ? "md" : "sm"} icon="plus" onClick={() => navigate("/app/projects?create=1")}>{t("dashboard.newProject")}</Button></PermissionGuard>
       <PermissionGuard permission={PERMISSIONS.documentUpload}><Button variant="subtle" size="sm" icon="upload" onClick={() => navigate("/app/documents?upload=1")}>{t("dashboard.uploadDocument")}</Button></PermissionGuard>
       {isEnabled("projectIntelligence") && <PermissionGuard permission={PERMISSIONS.intelligenceAnalyze}><Button variant="subtle" size="sm" icon="sparkles" onClick={() => navigate("/app/intelligence")}>{t("dashboard.runAnalysis")}</Button></PermissionGuard>}
     </div>
@@ -168,11 +313,11 @@ export function DashboardPage(): JSX.Element {
     {loading ? (
       <Card padding="lg"><div className="state state--loading"><span className="spinner" /><span>{t("dashboard.loading")}</span></div></Card>
     ) : widgets.length === 0 ? (
-      <Card padding="none"><div className="state state--empty"><span className="state__icon"><Icon name="grid" size={24} /></span><h3>{t("dashboard.noWidgets")}</h3><Button variant="secondary" icon="refresh" onClick={() => setWidgets(defaultWidgets)}>{t("dashboard.restoreWidgets")}</Button></div></Card>
+      <Card padding="none"><div className="state state--empty"><div className="state__sticker"><ContextSticker kind="dashboard" size="md" /></div><h3>{t("dashboard.noWidgets")}</h3><Button variant="secondary" icon="refresh" onClick={() => setWidgets(defaultWidgets)}>{t("dashboard.restoreWidgets")}</Button></div></Card>
     ) : (
       <div className="widget-grid">
         {widgets.map((widget, index) => (
-          <Card key={widget.id} className={`dashboard-widget dashboard-widget--${widget.size} dashboard-widget--${widget.kind}`} padding="md">
+          <Card key={widget.id} className={`dashboard-widget dashboard-widget--${widget.size}`} padding="md">
             <CardHeader
               title={widgetTitle(widget)}
               subtitle={widget.kind === "pulse" ? t("dashboard.projectPulseCaption") : widget.kind === "throughput" ? t("dashboard.taskThroughputCaption") : undefined}
@@ -202,5 +347,113 @@ export function DashboardPage(): JSX.Element {
         ))}
       </div>
     )}
+    {onboardingDismissed ? (
+      <div className="dashboard-onboarding-restore" role="status">
+        <span><Icon name="checkCircle" size={16} />{t("dashboard.onboarding.dismissed")}</span>
+        <Button variant="subtle" size="sm" icon="book" onClick={restoreOnboarding}>{t("dashboard.onboarding.restore")}</Button>
+      </div>
+    ) : (
+      <section className="dashboard-onboarding" aria-labelledby="dashboard-onboarding-title">
+        <div className="dashboard-onboarding__header">
+          <ContextSticker kind="guide" size="sm" className="dashboard-onboarding__symbol" />
+          <div className="dashboard-onboarding__intro">
+            <span className="dashboard-onboarding__eyebrow">{t("dashboard.onboarding.eyebrow")}</span>
+            <h2 id="dashboard-onboarding-title">{t("dashboard.onboarding.title")}</h2>
+            <p>{t("dashboard.onboarding.description")}</p>
+          </div>
+          <button type="button" className="dashboard-onboarding__dismiss" aria-label={t("dashboard.onboarding.dismiss")} title={t("dashboard.onboarding.dismiss")} onClick={dismissOnboarding}>
+            <Icon name="close" size={16} />
+          </button>
+        </div>
+        <ol className="dashboard-onboarding__steps">
+          <li className="dashboard-onboarding__step">
+            <span className="dashboard-onboarding__number" aria-hidden="true">{locale === "fa" ? toPersianDigits(1) : 1}</span>
+            <div className="dashboard-onboarding__step-copy">
+              <h3>{t("dashboard.onboarding.step.map.title")}</h3>
+              <p>{t("dashboard.onboarding.step.map.description")}</p>
+              <button className="dashboard-onboarding__action" type="button" onClick={() => setDashboardAreasExpanded(true)}>
+                {t("dashboard.onboarding.action.explore")}<Icon name="arrowRight" size={14} />
+              </button>
+            </div>
+          </li>
+          <li className="dashboard-onboarding__step">
+            <span className="dashboard-onboarding__number" aria-hidden="true">{locale === "fa" ? toPersianDigits(2) : 2}</span>
+            <div className="dashboard-onboarding__step-copy">
+              <h3>{t(suggestedStartLink || visibleDashboardAreas.length > 0 ? "dashboard.onboarding.step.start.title" : "dashboard.onboarding.step.start.noAreas.title")}</h3>
+              <p>{t(suggestedStartLink
+                ? "dashboard.onboarding.step.start.description"
+                : visibleDashboardAreas.length > 0
+                  ? "dashboard.onboarding.step.start.noWorkAccess"
+                  : "dashboard.onboarding.step.start.noAreas.description")}</p>
+              {suggestedStartLink ? <Link className="dashboard-onboarding__action" to={suggestedStartLink.route}>
+                {t("dashboard.onboarding.action.start")}<Icon name="arrowRight" size={14} />
+              </Link> : visibleDashboardAreas.length > 0 && <button className="dashboard-onboarding__action" type="button" onClick={() => setDashboardAreasExpanded(true)}>
+                {t("dashboard.onboarding.action.explore")}<Icon name="arrowRight" size={14} />
+              </button>}
+            </div>
+          </li>
+          <li className="dashboard-onboarding__step">
+            <span className="dashboard-onboarding__number" aria-hidden="true">{locale === "fa" ? toPersianDigits(3) : 3}</span>
+            <div className="dashboard-onboarding__step-copy">
+              <h3>{t("dashboard.onboarding.step.help.title")}</h3>
+              <p>{t("dashboard.onboarding.step.help.description")}</p>
+              <button className="dashboard-onboarding__action" type="button" onClick={() => window.dispatchEvent(new Event(GUIDE_OPEN_EVENT))}>
+                {t("dashboard.onboarding.action.help")}<Icon name="arrowRight" size={14} />
+              </button>
+            </div>
+          </li>
+        </ol>
+      </section>
+    )}
+    <section className={`dashboard-area-section${dashboardAreasExpanded ? " is-expanded" : ""}`} id="dashboard-areas" aria-labelledby="dashboard-areas-title">
+      <div className="dashboard-area-section__heading">
+        <div>
+          <span className="dashboard-section-eyebrow">{t("dashboard.area.eyebrow")}</span>
+          <h2 id="dashboard-areas-title">{t("dashboard.area.title")}</h2>
+          <p>{t("dashboard.area.description")}</p>
+        </div>
+        <button
+          type="button"
+          className="dashboard-area-toggle"
+          aria-expanded={dashboardAreasExpanded}
+          aria-controls="dashboard-area-content"
+          aria-label={t(dashboardAreasExpanded ? "dashboard.area.collapse" : "dashboard.area.expand")}
+          onClick={() => setDashboardAreasExpanded((expanded) => !expanded)}
+        >
+          <span>{t(dashboardAreasExpanded ? "dashboard.area.collapse" : "dashboard.area.expand")}</span>
+          <Icon name={dashboardAreasExpanded ? "chevronUp" : "chevronDown"} size={16} />
+        </button>
+      </div>
+      <div className="dashboard-area-section__content" id="dashboard-area-content" hidden={!dashboardAreasExpanded}>
+        {visibleDashboardAreas.length > 0 ? (
+          <div className="dashboard-area-grid" role="list">
+            {visibleDashboardAreas.map((area) => (
+              <article className={`dashboard-area-card dashboard-area-card--${area.id}`} key={area.id} role="listitem">
+                <div className="dashboard-area-card__heading">
+                  <span className="dashboard-area-card__icon"><Icon name={area.icon} size={19} /></span>
+                  <div className="dashboard-area-card__copy">
+                    <h3>{t(area.title)}</h3>
+                    <p>{t(area.description)}</p>
+                  </div>
+                </div>
+                <ul className="dashboard-area-card__links">
+                  {area.links.map((link) => (
+                    <li key={link.id}>
+                      <Link to={link.route} className="dashboard-area-card__link">
+                        <Icon name={link.icon} size={15} />
+                        <span>{t(link.label)}</span>
+                        <Icon className="dashboard-area-card__chevron" name="arrowRight" size={14} />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="dashboard-area-empty" role="status"><Icon name="lock" size={17} />{t("dashboard.area.empty")}</div>
+        )}
+      </div>
+    </section>
   </div>;
 }

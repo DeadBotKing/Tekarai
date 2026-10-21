@@ -10,6 +10,7 @@ import type {
   MeterPmStatusRow,
   MeterPoint,
   MeterPointSummary,
+  MeterPerformanceRole,
   MeterReading,
   MeterStatus,
 } from "../shared/types/domain";
@@ -81,6 +82,7 @@ interface PointFormState {
   name: string;
   unit: string;
   kind: "cumulative" | "gauge";
+  performanceRole: MeterPerformanceRole;
   sensorKey: string;
   drivesRunningHours: boolean;
   rolloverMaximum: string;
@@ -96,6 +98,7 @@ const emptyPointForm = (): PointFormState => ({
   name: "",
   unit: "",
   kind: "cumulative",
+  performanceRole: "none",
   sensorKey: "",
   drivesRunningHours: false,
   rolloverMaximum: "",
@@ -271,6 +274,7 @@ export function MeterReadingsPage(): JSX.Element {
       name: pointForm.name.trim(),
       unit: pointForm.unit.trim(),
       kind: pointForm.kind,
+      performanceRole: pointForm.kind === "gauge" ? pointForm.performanceRole : "none",
       sensorKey: pointForm.sensorKey.trim(),
       drivesRunningHours: pointForm.drivesRunningHours,
       active: pointForm.active,
@@ -418,6 +422,7 @@ export function MeterReadingsPage(): JSX.Element {
                             name: point.name,
                             unit: point.unit,
                             kind: point.kind,
+                            performanceRole: point.performanceRole ?? "none",
                             sensorKey: point.sensorKey,
                             drivesRunningHours: point.drivesRunningHours,
                             rolloverMaximum:
@@ -671,11 +676,30 @@ export function MeterReadingsPage(): JSX.Element {
                 setPointForm({
                   ...pointForm,
                   kind: event.currentTarget.value === "gauge" ? "gauge" : "cumulative",
+                  performanceRole:
+                    event.currentTarget.value === "gauge" ? pointForm.performanceRole : "none",
                 })
               }
               options={[
                 { value: "cumulative", label: t("meter.kind.cumulative") },
                 { value: "gauge", label: t("meter.kind.gauge") },
+              ]}
+            />
+            <SelectInput
+              label={t("meter.performanceRole")}
+              hint={t("meter.performanceRoleHint")}
+              value={pointForm.performanceRole}
+              disabled={pointForm.kind !== "gauge"}
+              onChange={(event) =>
+                setPointForm({
+                  ...pointForm,
+                  performanceRole: event.currentTarget.value as MeterPerformanceRole,
+                })
+              }
+              options={[
+                { value: "none", label: t("meter.performanceRole.none") },
+                { value: "higherIsBetter", label: t("meter.performanceRole.higher") },
+                { value: "lowerIsBetter", label: t("meter.performanceRole.lower") },
               ]}
             />
             <TextInput

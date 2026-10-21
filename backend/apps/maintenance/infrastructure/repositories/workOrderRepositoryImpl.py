@@ -202,6 +202,7 @@ class WorkOrderRepositoryDjango:
             failureSymptom=model.failureSymptom,
             rootCause=model.rootCause,
             actionTaken=model.actionTaken,
+            repairScope=model.repairScope,
             repeatFailure=model.repeatFailure,
             failureReportedAt=model.failureReportedAt,
             repairStartedAt=model.repairStartedAt,

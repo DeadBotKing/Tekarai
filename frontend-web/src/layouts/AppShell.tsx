@@ -19,6 +19,7 @@ import { DemoModeBanner } from "../shared/components/DemoModeBanner";
 import { AccentSwatches } from "../shared/components/AccentSwatches";
 import { Drawer } from "../shared/components/overlays";
 import { MobileNav, SideNav } from "./SideNav";
+import { GUIDE_OPEN_EVENT, GuideDrawer } from "../shared/components/GuideDrawer";
 
 interface PageResult { id: string; title: string; group: string; route: string; icon: IconName }
 interface Crumb { group: string; page: string }
@@ -47,6 +48,7 @@ export function AppShell(): JSX.Element {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [accentOpen, setAccentOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -158,10 +160,16 @@ export function AppShell(): JSX.Element {
     setMenuOpen(false);
     setProfileOpen(false);
     setSearchOpen(false);
+    setHelpOpen(false);
   };
   const openSearch = (): void => {
+    closeOverlays();
     setSearchOpen(true);
     setSearch("");
+  };
+  const openHelp = (): void => {
+    closeOverlays();
+    setHelpOpen(true);
   };
   const handleLogout = async (): Promise<void> => {
     closeOverlays();
@@ -181,12 +189,25 @@ export function AppShell(): JSX.Element {
     const onKeyDown = (event: KeyboardEvent): void => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
+        setHelpOpen(false);
         setSearchOpen((open) => !open);
         setSearch("");
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  // Let onboarding and empty states open the app's existing contextual guide.
+  useEffect(() => {
+    const openGuide = (): void => {
+      setMenuOpen(false);
+      setProfileOpen(false);
+      setSearchOpen(false);
+      setHelpOpen(true);
+    };
+    window.addEventListener(GUIDE_OPEN_EVENT, openGuide);
+    return () => window.removeEventListener(GUIDE_OPEN_EVENT, openGuide);
   }, []);
 
   return (
@@ -221,10 +242,27 @@ export function AppShell(): JSX.Element {
           <div className="topbar__actions">
             <DemoModeBanner />
             <OfflineIndicator />
+            <IconButton
+              className="mobile-search-button"
+              icon="search"
+              label={t("header.search")}
+              onClick={openSearch}
+            />
             <button type="button" className="global-search-trigger" onClick={openSearch}>
               <Icon name="search" size={17} />
               <span>{t("header.search")}</span>
               <kbd>Ctrl K</kbd>
+            </button>
+            <button
+              type="button"
+              className="topbar-help-trigger"
+              aria-label={t("header.help")}
+              title={t("header.help")}
+              aria-haspopup="dialog"
+              onClick={openHelp}
+            >
+              <Icon name="book" size={16} />
+              <span>{t("header.help")}</span>
             </button>
             <div className="topbar__divider" />
             {tenants.length > 1 && (
@@ -377,6 +415,18 @@ export function AppShell(): JSX.Element {
           )}
         </div>
       </Drawer>
+
+      <GuideDrawer
+        open={helpOpen}
+        currentPath={currentPath}
+        currentPage={crumb.page}
+        pages={allPages}
+        onClose={() => setHelpOpen(false)}
+        onNavigate={(route) => {
+          setHelpOpen(false);
+          navigate(route);
+        }}
+      />
     </div>
   );
 }

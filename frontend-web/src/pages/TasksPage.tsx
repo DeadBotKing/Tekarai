@@ -11,6 +11,7 @@ import { Modal, Toast } from "../shared/components/overlays";
 import { Avatar, Badge, Button, Card, PermissionGuard, SectionHeader, SelectInput, TextInput } from "../shared/components/primitives";
 import { Icon } from "../shared/components/Icon";
 import { JalaliDatePicker } from "../shared/components/JalaliDatePicker";
+import { ContextSticker } from "../shared/components/ContextSticker";
 import { formatJalali } from "../core/localization/jalali";
 
 const taskColumns = (t: ReturnType<typeof useLocalization>["t"], onOpen: (task: Task) => void): DataTableColumn<Task>[] => [
@@ -40,6 +41,8 @@ export function TasksPage(): JSX.Element {
   const [newPriority, setNewPriority] = useState("normal");
   const [newDue, setNewDue] = useState("2026-09-30");
   const [toast, setToast] = useState("");
+  const [toastTone, setToastTone] = useState<"success" | "error">("success");
+  const showToast = (message: string, tone: "success" | "error" = "success"): void => { setToast(message); setToastTone(tone); };
 
   const refresh = useCallback(async (): Promise<void> => {
     if (runtimeConfig.demoMode) return;
@@ -53,15 +56,15 @@ export function TasksPage(): JSX.Element {
     if (runtimeConfig.demoMode) {
       const task: Task = { id: `task-${Date.now()}`, title: newTitle.trim(), project: "Nova Plant Modernization", status: "backlog", priority: "normal", assignee: "Maya Chen", dueDate: newDue, estimate: "1d" };
       setTasks((current) => [task, ...current]);
-      setNewTitle(""); setCreateOpen(false); setToast(t("task.createSuccess"));
+      setNewTitle(""); setCreateOpen(false); showToast(t("task.createSuccess"));
       return;
     }
     try {
       await service.create({ title: newTitle.trim(), priority: newPriority, dueDate: newDue });
-      setNewTitle(""); setNewPriority("normal"); setCreateOpen(false); setToast(t("task.createSuccess"));
+      setNewTitle(""); setNewPriority("normal"); setCreateOpen(false); showToast(t("task.createSuccess"));
       await refresh();
     } catch (error) {
-      setToast(error instanceof Error ? error.message : t("task.saveFailed"));
+      showToast(error instanceof Error ? error.message : t("task.saveFailed"), "error");
     }
   };
   const moveTask = (task: Task, nextStatus: Task["status"]): void => {
@@ -71,10 +74,10 @@ export function TasksPage(): JSX.Element {
   };
 
   return <div className="page"><SectionHeader eyebrow={t("nav.projects")} title={t("task.title")} subtitle={t("task.subtitle")} actions={<PermissionGuard permission={PERMISSIONS.taskCreate}><Button variant="primary" icon="plus" onClick={() => setCreateOpen(true)}>{t("task.new")}</Button></PermissionGuard>} />
-    <Card className="content-card" padding="none"><div className="view-toolbar"><div className="segmented-control" role="tablist" aria-label="نماهای وظایف">{(["list", "board", "timeline", "calendar"] as const).map((item) => <button key={item} role="tab" aria-selected={view === item} className={view === item ? "is-active" : ""} onClick={() => setView(item)}>{item === "list" ? t("task.list") : item === "board" ? t("task.board") : item === "timeline" ? t("task.timeline") : t("task.calendar")}</button>)}</div><div className="list-toolbar"><div className="search-box"><Icon name="search" size={16} /><input value={search} aria-label={t("task.search")} placeholder={t("task.search")} onChange={(event) => setSearch(event.target.value)} /></div><SelectInput aria-label={t("task.status")} value={status} onChange={(event) => setStatus(event.target.value)} options={[{ value: "all", label: t("task.status") }, ...columns.map((item) => ({ value: item.key, label: item.label }))]} /></div></div>{view === "list" && <DataTable columns={taskColumns(t, setActiveTask)} data={filtered} rowKey={(row) => row.id} search="" empty={{ title: t("task.empty") }} exportName="tekarai-tasks" />}{view === "board" && <TaskBoard tasks={filtered} onMove={moveTask} onOpen={setActiveTask} />}{view === "timeline" && <TaskTimeline tasks={filtered} />}{view === "calendar" && <TaskCalendar tasks={filtered} />}</Card>
+    <Card className="content-card" padding="none"><div className="view-toolbar"><div className="segmented-control" role="tablist" aria-label="نماهای وظایف">{(["list", "board", "timeline", "calendar"] as const).map((item) => <button key={item} role="tab" aria-selected={view === item} className={view === item ? "is-active" : ""} onClick={() => setView(item)}>{item === "list" ? t("task.list") : item === "board" ? t("task.board") : item === "timeline" ? t("task.timeline") : t("task.calendar")}</button>)}</div><div className="list-toolbar"><div className="search-box"><Icon name="search" size={16} /><input value={search} aria-label={t("task.search")} placeholder={t("task.search")} onChange={(event) => setSearch(event.target.value)} /></div><SelectInput aria-label={t("task.status")} value={status} onChange={(event) => setStatus(event.target.value)} options={[{ value: "all", label: t("task.status") }, ...columns.map((item) => ({ value: item.key, label: item.label }))]} /></div></div>{view === "list" && <DataTable columns={taskColumns(t, setActiveTask)} data={filtered} rowKey={(row) => row.id} search="" empty={{ title: t("task.empty"), sticker: <ContextSticker kind="task" size="md" /> }} exportName="tekarai-tasks" />}{view === "board" && <TaskBoard tasks={filtered} onMove={moveTask} onOpen={setActiveTask} />}{view === "timeline" && <TaskTimeline tasks={filtered} />}{view === "calendar" && <TaskCalendar tasks={filtered} />}</Card>
     <Modal open={createOpen} title={t("task.createTitle")} onClose={() => setCreateOpen(false)} footer={<><Button variant="secondary" onClick={() => setCreateOpen(false)}>{t("common.cancel")}</Button><Button variant="primary" icon="check" onClick={createTask}>{t("task.save")}</Button></>}><TextInput label={t("task.taskName")} required value={newTitle} onChange={(event) => setNewTitle(event.target.value)} autoFocus /><div className="form-grid form-grid--compact"><SelectInput label={t("task.priority")} value={newPriority} onChange={(event) => setNewPriority(event.target.value)} options={[{ value: "low", label: t("common.priority.low") }, { value: "normal", label: t("common.priority.normal") }, { value: "high", label: t("common.priority.high") }, { value: "critical", label: t("common.priority.critical") }]} /><JalaliDatePicker label={t("task.due")} value={newDue} onChange={setNewDue} /></div></Modal>
     <Modal open={Boolean(activeTask)} title={activeTask?.title ?? t("task.title")} onClose={() => setActiveTask(null)} footer={<Button variant="secondary" onClick={() => setActiveTask(null)}>{t("common.close")}</Button>}>{activeTask && <div className="detail-panel"><div className="detail-stats"><div><span>{t("task.project")}</span><strong>{activeTask.project}</strong></div><div><span>{t("task.assignee")}</span><strong>{activeTask.assignee}</strong></div><div><span>{t("task.status")}</span><strong>{activeTask.status}</strong></div><div><span>{t("task.due")}</span><strong>{formatJalali(activeTask.dueDate, { style: "short" })}</strong></div></div><p className="detail-panel__description">Estimate: {activeTask.estimate}</p></div>}</Modal>
-    {toast && <Toast message={toast} onClose={() => setToast("")} />}
+    {toast && <Toast message={toast} tone={toastTone} sticker={toastTone === "success" ? <ContextSticker kind="complete" size="xs" /> : undefined} onClose={() => setToast("")} />}
   </div>;
 }
 

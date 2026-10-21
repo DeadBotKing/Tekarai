@@ -228,12 +228,17 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .donut__center strong { font-size: 21px; color: var(--text-strong); font-variant-numeric: tabular-nums; }
 .donut__center span { font-size: 9px; color: var(--text-muted); }
 
-/* Metric cards: gradient icon chips & crisper numbers */
-.metric-card__icon { border-radius: 12px; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25); }
-.metric-card__icon--blue { color: #ffffff !important; background: linear-gradient(140deg, #5b9dff, #2467e3) !important; }
-.metric-card__icon--green { color: #ffffff !important; background: linear-gradient(140deg, #3ecf94, #14a06c) !important; }
-.metric-card__icon--purple { color: #ffffff !important; background: linear-gradient(140deg, #a78bfa, #7c4de0) !important; }
-.metric-card__icon--amber { color: #ffffff !important; background: linear-gradient(140deg, #f4b95f, #d98a1f) !important; }
+/* KPI icons keep their tone as a restrained tint on a neutral card surface. */
+.metric-card__icon { border-radius: 10px; box-shadow: none; }
+.metric-card__icon--blue,
+.metric-card__icon--green,
+.metric-card__icon--purple,
+.metric-card__icon--amber,
+.metric-card__icon--orange {
+  color: var(--metric-accent, var(--primary)) !important;
+  background: color-mix(in srgb, var(--metric-accent, var(--primary)) 13%, var(--metric-surface, var(--surface-1))) !important;
+  box-shadow: none !important;
+}
 .metric-card__value { font-weight: 800; letter-spacing: -0.02em; }
 .metric-card__label { font-weight: 650; }
 

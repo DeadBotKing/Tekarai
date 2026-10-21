@@ -15,12 +15,14 @@ from apps.maintenance.domain.valueObjects.meterTypes import (
     CAPTURE_MODES,
     MAX_INGEST_BATCH,
     METER_KINDS,
+    PERFORMANCE_ROLES,
     READING_QUALITIES,
 )
 
 KIND_CHOICES = list(METER_KINDS)
 QUALITY_CHOICES = list(READING_QUALITIES)
 CAPTURE_MODE_CHOICES = list(CAPTURE_MODES)
+PERFORMANCE_ROLE_CHOICES = list(PERFORMANCE_ROLES)
 
 
 class SaveMeterPointSerializer(serializers.Serializer):
@@ -30,6 +32,9 @@ class SaveMeterPointSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=200, required=False, allow_blank=True, default="")
     unit = serializers.CharField(max_length=30, required=False, allow_blank=True, default="")
     kind = serializers.ChoiceField(choices=KIND_CHOICES, required=False, default="cumulative")
+    performanceRole = serializers.ChoiceField(
+        choices=PERFORMANCE_ROLE_CHOICES, required=False, default="none"
+    )
     sensorKey = serializers.CharField(max_length=120, required=False, allow_blank=True, default="")
     minimumValue = serializers.CharField(required=False, allow_blank=True, default="")
     maximumValue = serializers.CharField(required=False, allow_blank=True, default="")

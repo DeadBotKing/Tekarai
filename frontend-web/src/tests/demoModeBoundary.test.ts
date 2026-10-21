@@ -68,9 +68,10 @@ const BASELINE: Record<string, number> = {
   "pages/WorkCalendarPage.tsx": 2,
   // Raised 27 → 28 for step-by-step escalation (v0.10.0): the demo has no
   // org chart to resolve a target from, so the handler answers locally like
-  // the 26 branches around it. Recorded here rather than hidden behind a
-  // helper so the count stays honest.
-  "pages/WorkOrdersPage.tsx": 28,
+  // the 26 branches around it. Raised 28 → 29 for the human-confirmed repair
+  // scope advisor: the service selects the local explanatory demo advisor once,
+  // while production calls the configured server AI suggestion endpoint.
+  "pages/WorkOrdersPage.tsx": 29,
   "shared/components/DemoModeBanner.tsx": 1,
   // Raised 9 → 11 for the dashboard family (v0.15.0): the demo-only
   // calendar month default (fixtures live in past months, so the preview

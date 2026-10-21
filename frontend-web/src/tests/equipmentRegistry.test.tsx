@@ -237,7 +237,7 @@ describe("registry pages", () => {
       "/app/maintenance/devices/:deviceId/profile",
     );
     expect(await screen.findByRole("tab", { name: /شناسنامه/ })).toBeInTheDocument();
-    ["مشخصات فنی", "برنامه‌های PM", "قطعات", "محل استقرار و بهره‌بردار", "پرسنل نت", "شاخص‌ها و تحلیل"].forEach(
+    ["مشخصات فنی", "برنامه‌های PM", "قطعات", "اسناد و دفترچه‌ها", "محل استقرار و بهره‌بردار", "پرسنل نت", "شاخص‌ها و تحلیل"].forEach(
       (label) => {
         expect(screen.getByRole("tab", { name: new RegExp(label) })).toBeInTheDocument();
       },

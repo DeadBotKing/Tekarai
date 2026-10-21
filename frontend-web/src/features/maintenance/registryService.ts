@@ -6,6 +6,7 @@ import type {
   AssetTree,
   AssetTreeNode,
   DeviceAnalytics,
+  DeviceLifecycleAnalysis,
   DeviceAssignment,
   DeviceAssignmentRole,
   DeviceBomItem,
@@ -29,6 +30,7 @@ import type {
   PmFrequencyUnit,
   PmPlan,
   PmScheduleItem,
+  RepairScope,
   TechnicianStat,
 } from "../../shared/types/domain";
 
@@ -829,6 +831,7 @@ export interface WorkOrderClosureInput {
   failureSymptom?: string;
   rootCause?: string;
   actionTaken?: string;
+  repairScope?: RepairScope;
   repeatFailure?: boolean;
   failureReportedAt?: string;
   repairStartedAt?: string;
@@ -956,6 +959,11 @@ export interface RegistryService {
     range?: AnalyticsRange,
     signal?: AbortSignal,
   ) => Promise<DeviceAnalytics>;
+  getDeviceLifecycleAnalysis: (
+    deviceId: string,
+    signal?: AbortSignal,
+    language?: "fa" | "en" | "de",
+  ) => Promise<DeviceLifecycleAnalysis>;
   getFleetAnalytics: (filters?: FleetFilters, signal?: AbortSignal) => Promise<FleetAnalytics>;
   getPartUsageReport: (
     partId: string,
@@ -1275,6 +1283,11 @@ export const createRegistryService = (api: ApiClient): RegistryService => ({
     );
     return toDeviceAnalytics(dto);
   },
+  getDeviceLifecycleAnalysis: async (deviceId, signal, language = "fa") =>
+    api.get<DeviceLifecycleAnalysis>(
+      apiEndpoints.maintenance.deviceLifecycleAnalysis(deviceId),
+      { query: { language }, signal },
+    ),
   getFleetAnalytics: async (filters = {}, signal) => {
     const dto = await api.get<FleetAnalyticsDto>(apiEndpoints.maintenance.fleetAnalytics, {
       query: {

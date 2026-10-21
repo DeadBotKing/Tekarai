@@ -15,6 +15,7 @@ class CreateSparePartCommand(Command):
     unitCost: str = "0"
     reorderQuantity: str = "0"
     autoReorder: bool = True
+    lifecycleImpact: str = "unknown"
 
 
 @dataclass(frozen=True)
@@ -27,6 +28,7 @@ class UpdateSparePartCommand(Command):
     unitCost: str = "0"
     reorderQuantity: str = "0"
     autoReorder: bool = True
+    lifecycleImpact: str = ""
 
 
 @dataclass(frozen=True)

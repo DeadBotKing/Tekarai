@@ -68,6 +68,7 @@ class MeterPointRepositoryDjango:
             name=model.name,
             unit=model.unit,
             kind=model.kind,
+            performanceRole=model.performanceRole,
             sensorKey=model.sensorKey,
             minimumValue=model.minimumValue,
             maximumValue=model.maximumValue,
@@ -162,6 +163,7 @@ class MeterPointRepositoryDjango:
             name=str(payload.get("name", "") or code),
             unit=str(payload.get("unit", "") or ""),
             kind=str(payload.get("kind", "gauge")),
+            performanceRole=str(payload.get("performanceRole", "none")),
             sensorKey=sensorKey,
             minimumValue=_decimalOrNone(payload.get("minimumValue")),
             maximumValue=_decimalOrNone(payload.get("maximumValue")),
@@ -185,6 +187,8 @@ class MeterPointRepositoryDjango:
         for field in ("name", "unit"):
             if field in payload:
                 setattr(model, field, str(payload[field] or ""))
+        if "performanceRole" in payload:
+            model.performanceRole = str(payload["performanceRole"] or "none")
         if "sensorKey" in payload:
             sensorKey = str(payload["sensorKey"] or "")
             clash = (

@@ -67,23 +67,34 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
 
 interface SelectInputProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
+  hint?: string;
   error?: string;
   options: { value: string; label: string }[];
 }
 
-export const SelectInput = forwardRef<HTMLSelectElement, SelectInputProps>(function SelectInput({ label, error, options, id, className = "", ...props }, ref) {
+export const SelectInput = forwardRef<HTMLSelectElement, SelectInputProps>(function SelectInput({ label, hint, error, options, id, className = "", ...props }, ref) {
   const generatedId = useId().replace(/:/g, "");
   const inputId = id ?? `select-${props.name ?? generatedId}`;
   return (
     <label className={`field ${error ? "has-error" : ""} ${className}`} htmlFor={inputId}>
       {label && <span className="field__label">{label}{props.required && <span className="field__required">*</span>}</span>}
       <span className="field__control field__control--select">
-        <select ref={ref} id={inputId} aria-invalid={Boolean(error)} {...props}>
+        <select
+          ref={ref}
+          id={inputId}
+          aria-invalid={Boolean(error)}
+          aria-describedby={hint || error ? `${inputId}-hint` : undefined}
+          {...props}
+        >
           {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
         <Icon name="chevronDown" className="field__select-icon" size={16} />
       </span>
-      {error && <span className="field__message field__message--error">{error}</span>}
+      {(hint || error) && (
+        <span id={`${inputId}-hint`} className={`field__message ${error ? "field__message--error" : ""}`}>
+          {error ?? hint}
+        </span>
+      )}
     </label>
   );
 });
@@ -166,8 +177,8 @@ export function LoadingState({ label }: { label: string }): JSX.Element {
   return <div className="state state--loading" role="status"><span className="spinner" aria-hidden="true" /><span>{label}</span></div>;
 }
 
-export function EmptyState({ icon = "folder", title, description, action }: { icon?: IconName; title: string; description?: string; action?: ReactNode }): JSX.Element {
-  return <div className="state state--empty"><span className="state__icon"><Icon name={icon} size={24} /></span><h3>{title}</h3>{description && <p>{description}</p>}{action}</div>;
+export function EmptyState({ icon = "folder", title, description, action, sticker }: { icon?: IconName; title: string; description?: string; action?: ReactNode; sticker?: ReactNode }): JSX.Element {
+  return <div className="state state--empty">{sticker ? <div className="state__sticker">{sticker}</div> : <span className="state__icon"><Icon name={icon} size={24} /></span>}<h3>{title}</h3>{description && <p>{description}</p>}{action}</div>;
 }
 
 export function ErrorState({ title, description, retry }: { title: string; description: string; retry?: () => void }): JSX.Element {

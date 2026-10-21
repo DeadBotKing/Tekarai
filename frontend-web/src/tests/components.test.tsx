@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { Button, ProgressBar, TextInput } from "../shared/components/primitives";
 import { DataTable } from "../shared/components/DataTable";
+import { ContextSticker } from "../shared/components/ContextSticker";
 import { AppProviders } from "../app/providers/AppProviders";
 
 const rows = [{ id: "1", name: "Alpha", status: "active" }, { id: "2", name: "Beta", status: "pending" }];
@@ -29,5 +30,21 @@ describe("DataTable", () => {
     expect(screen.getByText("Beta")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("checkbox", { name: /select row 2/i }));
     expect(screen.getByText(/1 انتخاب‌شده/)).toBeInTheDocument();
+  });
+
+  it("renders a decorative contextual sticker in a module empty state", () => {
+    const { container } = render(
+      <AppProviders>
+        <DataTable
+          columns={[{ key: "id", label: "شناسه", accessor: (row: { id: string }) => row.id }]}
+          data={[]}
+          rowKey={(row) => row.id}
+          empty={{ title: "هنوز وظیفه‌ای ثبت نشده است", sticker: <ContextSticker kind="task" size="md" /> }}
+        />
+      </AppProviders>,
+    );
+    expect(screen.getByRole("heading", { name: "هنوز وظیفه‌ای ثبت نشده است" })).toBeInTheDocument();
+    expect(container.querySelector(".state__sticker .context-sticker")).toHaveAttribute("aria-hidden", "true");
+    expect(container.querySelector(".state__icon")).not.toBeInTheDocument();
   });
 });

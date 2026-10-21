@@ -127,6 +127,9 @@ class WorkOrderModel(models.Model):
     failureSymptom = models.CharField(max_length=300, blank=True, default="")
     rootCause = models.TextField(blank=True, default="")
     actionTaken = models.TextField(blank=True, default="")
+    # Explicit, human-confirmed repair severity. Legacy and unreviewed work
+    # orders remain unclassified; spare-part volume never determines this.
+    repairScope = models.CharField(max_length=20, default="unclassified", db_index=True)
     repeatFailure = models.BooleanField(default=False)
     failureReportedAt = models.DateTimeField(null=True, blank=True)
     repairStartedAt = models.DateTimeField(null=True, blank=True)
@@ -141,6 +144,12 @@ class WorkOrderModel(models.Model):
     class Meta:
         db_table = "WorkOrder"
         ordering = ["-createdAt"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(repairScope__in=("unclassified", "minor", "major", "overhaul")),
+                name="ck_work_order_repair_scope",
+            ),
+        ]
 
     def __str__(self) -> str:  # pragma: no cover — debug helper
         return f"{self.status}:{self.title}"
@@ -196,6 +205,9 @@ class SparePartModel(models.Model):
     # being run down, project-funded items, consigned goods. The low-stock
     # alert still fires; only the purchase suggestion is suppressed.
     autoReorder = models.BooleanField(default=True)
+    # Lifecycle relevance of a part, explicitly classified by inventory staff.
+    # Unknown is the safe default for legacy/new parts until reviewed.
+    lifecycleImpact = models.CharField(max_length=12, default="unknown")
     # Latest purchase/replacement price per ``unit`` — the consumption rows
     # snapshot this value so historical costs never drift with price updates.
     unitCost = models.DecimalField(max_digits=16, decimal_places=2, default=0)
@@ -228,6 +240,10 @@ class SparePartModel(models.Model):
                 condition=models.Q(reorderQuantity__gte=0),
                 name="ck_spare_part_reorder_quantity_nonnegative",
             ),
+            models.CheckConstraint(
+                condition=models.Q(lifecycleImpact__in=("unknown", "minor", "major")),
+                name="ck_spare_part_lifecycle_impact",
+            ),
         ]
 
 
@@ -245,6 +261,9 @@ class WorkOrderPartUsageModel(models.Model):
     # Price snapshot taken from ``SparePart.unitCost`` at consumption time.
     unitCost = models.DecimalField(max_digits=16, decimal_places=2, default=0)
     note = models.CharField(max_length=500, blank=True, default="")
+    # Snapshot from the spare-part master at issue time so later edits do not
+    # silently reinterpret a closed work order's lifecycle evidence.
+    lifecycleImpact = models.CharField(max_length=12, default="unknown")
     consumedAt = models.DateTimeField(db_index=True)
 
     class Meta:
@@ -254,7 +273,11 @@ class WorkOrderPartUsageModel(models.Model):
             models.CheckConstraint(
                 condition=models.Q(quantity__gt=0),
                 name="ck_work_order_part_usage_positive",
-            )
+            ),
+            models.CheckConstraint(
+                condition=models.Q(lifecycleImpact__in=("unknown", "minor", "major")),
+                name="ck_work_order_part_usage_impact",
+            ),
         ]
 
 
@@ -791,6 +814,9 @@ class MeterPointModel(models.Model):
     name = models.CharField(max_length=200)
     unit = models.CharField(max_length=30, blank=True, default="")
     kind = models.CharField(max_length=12, default="gauge", db_index=True)
+    # Only explicitly tagged gauge channels feed performance-trend analysis.
+    # Cumulative counters and ordinary meters remain excluded by default.
+    performanceRole = models.CharField(max_length=20, default="none")
     # Gateway binding (PLC tag / OPC-UA node / MQTT topic). Unique per tenant
     # when present, so one pushed sample can never match two meter points.
     sensorKey = models.CharField(max_length=120, blank=True, default="", db_index=True)
@@ -830,6 +856,14 @@ class MeterPointModel(models.Model):
             models.CheckConstraint(
                 condition=models.Q(kind__in=("cumulative", "gauge")),
                 name="ck_meter_point_kind",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(performanceRole__in=("none", "higherIsBetter", "lowerIsBetter")),
+                name="ck_meter_point_performance_role",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(performanceRole="none") | models.Q(kind="gauge"),
+                name="ck_meter_point_performance_gauge",
             ),
             models.CheckConstraint(
                 condition=models.Q(minimumValue__isnull=True)

@@ -1,0 +1,168 @@
+/* KPI cards: quiet surfaces and one restrained semantic accent. */
+:root {
+  --metric-surface: #fcfbf7;
+  --metric-border: #e7e1d6;
+  --metric-shadow: 0 3px 12px rgb(60 53 39 / 7%);
+  --metric-shadow-hover: 0 8px 22px rgb(60 53 39 / 11%);
+  --metric-trend-up: #477452;
+  --metric-trend-down: #ad555c;
+  --metric-accent-blue: #587b90;
+  --metric-accent-green: #5b8668;
+  --metric-accent-purple: #786f83;
+  --metric-accent-amber: #9f7b43;
+  --metric-accent-orange: #a7744d;
+}
+
+:root[data-theme="dark"] {
+  --metric-surface: #1b241e;
+  --metric-border: #354238;
+  --metric-shadow: 0 4px 14px rgb(0 0 0 / 18%);
+  --metric-shadow-hover: 0 9px 23px rgb(0 0 0 / 28%);
+  --metric-trend-up: #83b992;
+  --metric-trend-down: #e18a91;
+  --metric-accent-blue: #89aebe;
+  --metric-accent-green: #8dbb99;
+  --metric-accent-purple: #a59bb0;
+  --metric-accent-amber: #c4a76e;
+  --metric-accent-orange: #c48f68;
+}
+
+.metric-card--blue { --metric-accent: var(--metric-accent-blue); }
+.metric-card--green { --metric-accent: var(--metric-accent-green); }
+.metric-card--purple { --metric-accent: var(--metric-accent-purple); }
+.metric-card--amber { --metric-accent: var(--metric-accent-amber); }
+.metric-card--orange { --metric-accent: var(--metric-accent-orange); }
+
+/* The dashboard KPIs are category counts, not severity indicators: one shared
+   sage accent keeps this row cohesive instead of reading as a rainbow. */
+.page--dashboard .metric-card--blue,
+.page--dashboard .metric-card--green,
+.page--dashboard .metric-card--purple,
+.page--dashboard .metric-card--amber {
+  --metric-accent: #537b5f;
+}
+
+:root[data-theme="dark"] .page--dashboard .metric-card--blue,
+:root[data-theme="dark"] .page--dashboard .metric-card--green,
+:root[data-theme="dark"] .page--dashboard .metric-card--purple,
+:root[data-theme="dark"] .page--dashboard .metric-card--amber {
+  --metric-accent: #89b493;
+}
+
+.metric-card--blue,
+.metric-card--green,
+.metric-card--purple,
+.metric-card--amber,
+.metric-card--orange {
+  position: relative;
+  overflow: hidden;
+  background: var(--metric-surface) !important;
+  border: 1px solid var(--metric-border) !important;
+  box-shadow: var(--metric-shadow) !important;
+}
+
+.metric-card--blue::before,
+.metric-card--green::before,
+.metric-card--purple::before,
+.metric-card--amber::before,
+.metric-card--orange::before {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  height: 3px;
+  background: var(--metric-accent);
+  content: "";
+  pointer-events: none;
+}
+
+.metric-card--blue .metric-card__value,
+.metric-card--green .metric-card__value,
+.metric-card--purple .metric-card__value,
+.metric-card--amber .metric-card__value,
+.metric-card--orange .metric-card__value {
+  color: var(--text-strong) !important;
+}
+
+.metric-card--blue .metric-card__label,
+.metric-card--green .metric-card__label,
+.metric-card--purple .metric-card__label,
+.metric-card--amber .metric-card__label,
+.metric-card--orange .metric-card__label {
+  color: var(--text) !important;
+}
+
+.metric-card--blue .metric-card__hint,
+.metric-card--green .metric-card__hint,
+.metric-card--purple .metric-card__hint,
+.metric-card--amber .metric-card__hint,
+.metric-card--orange .metric-card__hint {
+  color: var(--text-muted) !important;
+}
+
+.metric-card--blue .metric-card__icon,
+.metric-card--green .metric-card__icon,
+.metric-card--purple .metric-card__icon,
+.metric-card--amber .metric-card__icon,
+.metric-card--orange .metric-card__icon {
+  color: var(--metric-accent) !important;
+  background: color-mix(in srgb, var(--metric-accent) 13%, var(--metric-surface)) !important;
+  border: 1px solid color-mix(in srgb, var(--metric-accent) 19%, var(--metric-border)) !important;
+  border-radius: 10px;
+  box-shadow: none !important;
+}
+
+.metric-card--blue .metric-card__trend,
+.metric-card--green .metric-card__trend,
+.metric-card--purple .metric-card__trend,
+.metric-card--amber .metric-card__trend,
+.metric-card--orange .metric-card__trend {
+  padding: 0 !important;
+  color: var(--metric-trend-up) !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+}
+
+.metric-card--blue .metric-card__trend.is-negative,
+.metric-card--green .metric-card__trend.is-negative,
+.metric-card--purple .metric-card__trend.is-negative,
+.metric-card--amber .metric-card__trend.is-negative,
+.metric-card--orange .metric-card__trend.is-negative {
+  color: var(--metric-trend-down) !important;
+}
+
+.metric-card--blue:hover,
+.metric-card--green:hover,
+.metric-card--purple:hover,
+.metric-card--amber:hover,
+.metric-card--orange:hover {
+  box-shadow: var(--metric-shadow-hover) !important;
+  transform: translateY(-1px);
+}
+
+@media print {
+  .metric-card--blue,
+  .metric-card--green,
+  .metric-card--purple,
+  .metric-card--amber,
+  .metric-card--orange {
+    background: #fff !important;
+    border: 1px solid #bbb !important;
+    box-shadow: none !important;
+  }
+
+  .metric-card__value,
+  .metric-card__label,
+  .metric-card__hint,
+  .metric-card__trend {
+    color: #000 !important;
+  }
+
+  .metric-card__icon {
+    color: #333 !important;
+    background: #fff !important;
+    border-color: #bbb !important;
+    box-shadow: none !important;
+  }
+
+  .metric-card::before { background: #777 !important; }
+}

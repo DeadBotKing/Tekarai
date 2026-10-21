@@ -403,6 +403,7 @@ class DeviceRepositoryDjango:
             "failureSymptom",
             "rootCause",
             "actionTaken",
+            "repairScope",
         ):
             if field in values:
                 setattr(model, field, values[field] or "")

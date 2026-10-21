@@ -24,7 +24,9 @@ import type {
   WorkOrderType,
   PartTransaction,
   PartTransactionType,
-  RecordPartTransactionInput
+  RecordPartTransactionInput,
+  PartLifecycleImpact,
+  RepairScopeSuggestion,
 } from "../../shared/types/domain";
 
 /** Wire shape of a device DTO returned by /api/v1/maintenance/devices (Phase 21). */
@@ -66,6 +68,7 @@ interface WorkOrderDto {
   failureSymptom: string;
   rootCause: string;
   actionTaken: string;
+  repairScope: string;
   repeatFailure: boolean;
   failureReportedAt: string;
   repairStartedAt: string;
@@ -100,6 +103,7 @@ interface SparePartDto {
   lowStock: boolean;
   createdAt: string;
   updatedAt: string;
+  lifecycleImpact: string;
 }
 
 interface PartTransactionDto {
@@ -130,6 +134,7 @@ interface WorkOrderPartUsageDto {
   totalCost: string;
   note: string;
   consumedAt: string;
+  lifecycleImpact: string;
 }
 
 interface LabourEntryDto {
@@ -159,6 +164,18 @@ interface WorkOrderCostSummaryDto {
 }
 
 /** Money comes off the wire as decimal strings (see toCostSummary); numbers here. */
+export interface RepairScopeSuggestionInput {
+  title?: string;
+  description?: string;
+  failureSymptom?: string;
+  rootCause?: string;
+  actionTaken?: string;
+}
+
+export type RepairScopeAdvisor = (
+  evidence: RepairScopeSuggestionInput,
+) => RepairScopeSuggestion | Promise<RepairScopeSuggestion>;
+
 export interface MaintenanceCostReport {
   fromDate: string;
   toDate: string;
@@ -296,6 +313,7 @@ const toWorkOrder = (dto: WorkOrderDto): WorkOrder => ({
   failureSymptom: dto.failureSymptom ?? undefined,
   rootCause: dto.rootCause ?? undefined,
   actionTaken: dto.actionTaken ?? undefined,
+  repairScope: (dto.repairScope || "unclassified") as WorkOrder["repairScope"],
   repeatFailure: dto.repeatFailure ?? undefined,
   failureReportedAt: dto.failureReportedAt ?? undefined,
   repairStartedAt: dto.repairStartedAt ?? undefined,
@@ -318,6 +336,7 @@ const toSparePart = (dto: SparePartDto): SparePart => ({
   lowStock: Boolean(dto.lowStock),
   createdAt: dto.createdAt ?? "",
   updatedAt: dto.updatedAt ?? "",
+  lifecycleImpact: (dto.lifecycleImpact || "unknown") as PartLifecycleImpact,
 });
 
 const toPartTransaction = (dto: PartTransactionDto): PartTransaction => ({
@@ -348,6 +367,7 @@ const toPartUsage = (dto: WorkOrderPartUsageDto): WorkOrderPartUsage => ({
   totalCost: Number(dto.totalCost ?? 0),
   note: dto.note ?? "",
   consumedAt: dto.consumedAt ?? "",
+  lifecycleImpact: (dto.lifecycleImpact || "unknown") as PartLifecycleImpact,
 });
 
 const toLabourEntry = (dto: LabourEntryDto): LabourEntry => ({
@@ -468,6 +488,7 @@ export interface CreateSparePartInput {
   quantityOnHand: number;
   minimumStock?: number;
   unitCost?: number;
+  lifecycleImpact?: PartLifecycleImpact;
 }
 
 export interface LogLabourEntryInput {
@@ -513,6 +534,11 @@ export interface MaintenanceService {
     values: Record<string, string | number | boolean>,
     signal?: AbortSignal,
   ) => Promise<void>;
+  suggestRepairScope: (
+    id: string,
+    input: RepairScopeSuggestionInput,
+    signal?: AbortSignal,
+  ) => Promise<RepairScopeSuggestion>;
   consumeSparePart: (
     workOrderId: string,
     partId: string,
@@ -632,7 +658,10 @@ export interface MaintenanceService {
   ) => Promise<DeviceTimeline>;
 }
 
-export const createMaintenanceService = (api: ApiClient): MaintenanceService => ({
+export const createMaintenanceService = (
+  api: ApiClient,
+  repairScopeAdvisor?: RepairScopeAdvisor,
+): MaintenanceService => ({
   listAttachments: (targetType, targetId, signal) =>
     api.get<MaintenanceAttachmentDto[]>(
       targetType === "device"
@@ -702,6 +731,18 @@ export const createMaintenanceService = (api: ApiClient): MaintenanceService => 
   recordWorkOrderClosure: async (id, values, signal) => {
     await api.patch(apiEndpoints.maintenance.workOrderClosure(id), values, { signal, retry: 0 });
   },
+  suggestRepairScope: (id, input, signal) =>
+    repairScopeAdvisor
+      ? Promise.resolve(repairScopeAdvisor(input))
+      : api.post<RepairScopeSuggestion>(
+          apiEndpoints.maintenance.workOrderRepairScopeSuggestion(id),
+          {
+            failureSymptom: input.failureSymptom ?? "",
+            rootCause: input.rootCause ?? "",
+            actionTaken: input.actionTaken ?? "",
+          },
+          { signal, retry: 0 },
+        ),
   listWorkOrderParts: async (id, signal) => {
     const dtos = await api.get<WorkOrderPartUsageDto[]>(
       apiEndpoints.maintenance.workOrderParts(id),

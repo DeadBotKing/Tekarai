@@ -74,6 +74,7 @@ class WorkOrder(AggregateRoot):
         labourHours: Decimal = Decimal("0"),
         labourCost: Decimal = Decimal("0"),
         partsCost: Decimal = Decimal("0"),
+        repairScope: str = "unclassified",
     ) -> None:
         super().__init__(id)
         self.tenantId = tenantId
@@ -110,6 +111,7 @@ class WorkOrder(AggregateRoot):
         self.labourHours = labourHours
         self.labourCost = labourCost
         self.partsCost = partsCost
+        self.repairScope = repairScope or "unclassified"
 
     @staticmethod
     def submit(

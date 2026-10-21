@@ -26,6 +26,7 @@ from apps.maintenance.domain.entities.sparePart import (
     WorkOrderPartUsage,
 )
 from apps.maintenance.domain.repositories.maintenanceRepositories import SparePartRepository
+from apps.maintenance.domain.services.equipmentLifecycle import PART_LIFECYCLE_IMPACTS
 from apps.sharedKernel.application.requestContext import currentContext
 from apps.sharedKernel.application.useCase import (
     AUDIT_CREATE,
@@ -49,6 +50,7 @@ class SparePartDto:
     updatedAt: str = ""
     reorderQuantity: str = "0"
     autoReorder: bool = True
+    lifecycleImpact: str = "unknown"
 
 
 @dataclass(frozen=True)
@@ -73,6 +75,7 @@ class WorkOrderPartUsageDto:
     totalCost: str
     note: str
     consumedAt: str
+    lifecycleImpact: str = "unknown"
 
 
 @dataclass(frozen=True)
@@ -124,6 +127,7 @@ def _partDto(part: SparePart) -> SparePartDto:
         lowStock=part.lowStock,
         reorderQuantity=str(part.reorderQuantity),
         autoReorder=part.autoReorder,
+        lifecycleImpact=part.lifecycleImpact,
         createdAt=part.createdAt.isoformat(),
         updatedAt=part.updatedAt.isoformat() if part.updatedAt else "",
     )
@@ -142,6 +146,7 @@ def _usageDto(usage: WorkOrderPartUsage) -> WorkOrderPartUsageDto:
         totalCost=str(usage.totalCost),
         note=usage.note,
         consumedAt=usage.consumedAt.isoformat(),
+        lifecycleImpact=usage.lifecycleImpact,
     )
 
 
@@ -160,6 +165,11 @@ class CreateSparePartUseCase(SparePartUseCaseBase):
                 "Part code and name are required.",
                 fieldErrors={"code": "required", "name": "required"},
             )
+        if command.lifecycleImpact not in PART_LIFECYCLE_IMPACTS:
+            raise ValidationFailedError(
+                "Part lifecycle impact must be unknown, minor or major.",
+                fieldErrors={"lifecycleImpact": "invalid"},
+            )
         tenantId = resolveTenantId("")
         part = self.repository.create(
             tenantId,
@@ -171,6 +181,7 @@ class CreateSparePartUseCase(SparePartUseCaseBase):
             _moneyValue(command.unitCost, "unitCost"),
             reorderQuantity=_decimal(command.reorderQuantity, "reorderQuantity"),
             autoReorder=bool(command.autoReorder),
+            lifecycleImpact=command.lifecycleImpact,
         )
         self.audit(AUDIT_CREATE, "SparePart", str(part.id), tenantId, after=_partDto(part).__dict__)
         return _partDto(part)
@@ -182,6 +193,11 @@ class UpdateSparePartUseCase(SparePartUseCaseBase):
     def perform(self, command: UpdateSparePartCommand) -> SparePartDto:
         if not command.name.strip():
             raise ValidationFailedError("Part name is required.", fieldErrors={"name": "required"})
+        if command.lifecycleImpact and command.lifecycleImpact not in PART_LIFECYCLE_IMPACTS:
+            raise ValidationFailedError(
+                "Part lifecycle impact must be unknown, minor or major.",
+                fieldErrors={"lifecycleImpact": "invalid"},
+            )
         tenantId = resolveTenantId("")
         part = self.repository.update(
             tenantId,
@@ -193,6 +209,7 @@ class UpdateSparePartUseCase(SparePartUseCaseBase):
             _moneyValue(command.unitCost, "unitCost"),
             reorderQuantity=_decimal(command.reorderQuantity, "reorderQuantity"),
             autoReorder=bool(command.autoReorder),
+            lifecycleImpact=command.lifecycleImpact or None,
         )
         self.audit(AUDIT_UPDATE, "SparePart", str(part.id), tenantId, after=_partDto(part).__dict__)
         return _partDto(part)

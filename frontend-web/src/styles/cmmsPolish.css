@@ -1,0 +1,328 @@
+/* Targeted CMMS polish from the product teardown. Keep the existing palette,
+   typography and component system; only improve hierarchy and working density. */
+
+/* Work-order board: one real, horizontally navigable board for every state. */
+.cmms-work-orders-page .metric-grid { margin-bottom: 18px; }
+.cmms-work-orders-page .view-toolbar { flex-wrap: wrap; gap: 12px; }
+.cmms-work-orders-page .view-toolbar > .list-toolbar { flex: 1 1 620px; justify-content: flex-end; flex-wrap: wrap; }
+.cmms-work-orders-page .kanban.cmms-work-order-board {
+  display: flex;
+  align-items: stretch;
+  flex-wrap: nowrap;
+  gap: 14px;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 18px;
+  overscroll-behavior-inline: contain;
+  scroll-padding-inline: 18px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+}
+.cmms-work-order-board .kanban-column {
+  --kanban-accent: var(--primary);
+  display: flex;
+  flex: 0 0 clamp(248px, 24vw, 292px);
+  min-width: 0;
+  flex-direction: column;
+  padding: 12px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+  scroll-snap-align: start;
+}
+.cmms-work-order-board .kanban-column[data-status="submitted"] { --kanban-accent: var(--primary); }
+.cmms-work-order-board .kanban-column[data-status="routed"] { --kanban-accent: var(--info); }
+.cmms-work-order-board .kanban-column[data-status="assigned"] { --kanban-accent: var(--purple); }
+.cmms-work-order-board .kanban-column[data-status="inProgress"] { --kanban-accent: #1687c9; }
+.cmms-work-order-board .kanban-column[data-status="onHold"] { --kanban-accent: var(--warning); }
+.cmms-work-order-board .kanban-column[data-status="pendingApproval"] { --kanban-accent: #a36be8; }
+.cmms-work-order-board .kanban-column[data-status="completed"] { --kanban-accent: var(--success); }
+.cmms-work-order-board .kanban-column[data-status="cancelled"] { --kanban-accent: var(--danger); }
+.cmms-work-order-board .kanban-column > header {
+  justify-content: flex-start;
+  gap: 9px;
+  margin: 0 0 12px;
+  padding: 0 0 11px;
+  border-bottom: 1px solid var(--border);
+}
+.cmms-work-order-board .kanban-column > header::before {
+  content: "";
+  flex: 0 0 4px;
+  height: 18px;
+  background: var(--kanban-accent);
+  border-radius: 99px;
+}
+.cmms-work-order-board .kanban-column > header h3 { flex: 1; font-size: 12px; font-weight: 800; }
+.cmms-work-order-board .kanban-column > header .kanban-column__count {
+  min-width: 24px;
+  height: 24px;
+  color: var(--kanban-accent);
+  background: color-mix(in srgb, var(--kanban-accent) 12%, var(--surface-2));
+  border-radius: 8px;
+  font-size: 10px;
+}
+.cmms-work-order-board .kanban-column__body {
+  min-height: 92px;
+  max-height: min(62vh, 680px);
+  overflow-y: auto;
+  padding-inline-end: 2px;
+  scrollbar-width: thin;
+}
+.cmms-work-order-board .task-card {
+  width: 100%;
+  gap: 10px;
+  padding: 13px;
+  text-align: start;
+  border-radius: 12px;
+  transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+.cmms-work-order-board .task-card:hover { transform: translateY(-2px); }
+.cmms-work-order-board .task-card__top { min-height: 22px; }
+.cmms-work-order-board .task-card__title {
+  display: -webkit-box;
+  overflow: hidden;
+  min-height: 2.7em;
+  color: var(--text-strong);
+  font-size: 12px;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.cmms-work-order-board .task-card__device,
+.cmms-work-order-board .task-card__date {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.cmms-work-order-board .task-card__device .icon { flex: 0 0 auto; color: var(--primary); }
+.cmms-work-order-board .task-card__device > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmms-work-order-board .task-card__bottom { align-items: center; margin-top: 1px; }
+.cmms-work-order-board .task-card__assignee { display: inline-flex; min-width: 0; align-items: center; gap: 7px; }
+.cmms-work-order-board .task-card__assignee > span:last-child {
+  overflow: hidden;
+  max-width: 120px;
+  color: var(--text-muted);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cmms-work-order-board .task-card__bottom > .badge { flex: 0 0 auto; }
+.cmms-work-order-board .task-card__date {
+  flex-wrap: wrap;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.cmms-work-order-board .task-card__date .icon { flex: 0 0 auto; color: var(--text-faint); }
+.cmms-work-order-board .task-card__date time { margin-inline-start: auto; color: var(--text); font-weight: 750; font-variant-numeric: tabular-nums; }
+.cmms-work-order-board .task-card__overdue { margin-inline-start: auto; }
+.cmms-work-order-board .kanban-column__empty {
+  display: grid;
+  min-height: 70px;
+  place-items: center;
+  padding: 12px;
+  color: var(--text-faint);
+  background: var(--surface-2);
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  font-size: 10px;
+  text-align: center;
+}
+
+/* Work-order detail: fixed modal chrome, navigable sections and a readable log. */
+.modal.work-order-detail-modal {
+  display: flex;
+  width: min(1040px, calc(100vw - 48px));
+  height: min(86vh, 900px);
+  max-height: calc(100vh - 32px);
+  flex-direction: column;
+  overflow: hidden;
+}
+.work-order-detail-modal .modal__header,
+.work-order-detail-modal .modal__footer { flex: 0 0 auto; }
+.work-order-detail-modal .modal__header { align-items: center; padding-block: 16px; }
+.work-order-detail-modal .modal__header h2 { line-height: 1.35; }
+.work-order-detail-modal .modal__body {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 18px 22px 24px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.work-order-detail-modal .modal__footer { padding-block: 12px; }
+.work-order-detail { gap: 15px; }
+.work-order-detail__identity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 14px;
+  background: linear-gradient(110deg, var(--primary-soft), var(--surface-1) 72%);
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+  border-radius: 14px;
+  scroll-margin-top: 72px;
+}
+.work-order-detail__identity-icon {
+  display: grid;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  color: var(--primary);
+  background: var(--surface-1);
+  border: 1px solid color-mix(in srgb, var(--primary) 15%, var(--border));
+  border-radius: 11px;
+}
+.work-order-detail__identity-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 2px; }
+.work-order-detail__identity-copy > span { color: var(--text-muted); font-size: 10px; font-weight: 700; }
+.work-order-detail__identity-copy > strong { overflow: hidden; color: var(--text-strong); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.work-order-detail__created { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; color: var(--text-muted); font-size: 10px; }
+.work-order-detail__created .icon { color: var(--primary); }
+.work-order-detail .detail-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); border-radius: 13px; }
+.work-order-detail .detail-stats > div { min-height: 64px; padding: 11px 13px; }
+.work-order-detail .detail-stats strong { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.work-order-detail .detail-panel__description { line-height: 1.8; }
+.work-order-detail__nav {
+  position: sticky;
+  z-index: 4;
+  top: 0;
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  padding: 6px;
+  background: color-mix(in srgb, var(--surface-1) 94%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  box-shadow: var(--shadow-sm);
+  scrollbar-width: thin;
+  backdrop-filter: blur(10px);
+}
+.work-order-detail__nav button {
+  display: inline-flex;
+  min-height: 34px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 750;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color .15s ease, background .15s ease, border-color .15s ease;
+}
+.work-order-detail__nav button:hover { color: var(--text-strong); background: var(--surface-2); }
+.work-order-detail__nav button.is-active {
+  color: var(--primary-strong);
+  background: var(--primary-soft);
+  border-color: color-mix(in srgb, var(--primary) 20%, transparent);
+}
+.work-order-detail__section-title,
+.work-order-detail__attachments,
+.work-order-detail__activity { scroll-margin-top: 76px; }
+.work-order-detail__section-title { padding: 11px 13px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 11px; }
+.work-order-detail__attachments { padding-top: 3px; }
+.work-order-detail .cmms-timeline { margin-top: 16px; }
+.work-order-detail__activity {
+  padding: 15px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.work-order-detail__activity .cmms-timeline__title { display: flex; align-items: center; gap: 8px; color: var(--text-strong); font-size: 13px; }
+.work-order-detail__activity .cmms-timeline__title::before { content: ""; width: 4px; height: 17px; background: var(--primary); border-radius: 99px; }
+.work-order-detail__activity .cmms-timeline__list { gap: 0; }
+.work-order-detail__activity .cmms-timeline__item { padding-block: 9px 13px; }
+.work-order-detail__activity .cmms-timeline__item:not(:last-child)::after {
+  position: absolute;
+  top: 19px;
+  bottom: -2px;
+  inset-inline-start: 8px;
+  width: 1px;
+  background: var(--border-strong);
+  content: "";
+}
+.work-order-detail__activity .cmms-timeline__dot { position: relative; z-index: 1; width: 9px; height: 9px; background: var(--primary); box-shadow: 0 0 0 3px var(--surface-1); }
+.work-order-detail__activity .cmms-timeline__head strong { color: var(--text-strong); font-size: 12px; }
+.work-order-detail__activity .cmms-timeline__meta { align-items: center; gap: 6px 10px; line-height: 1.7; }
+.work-order-detail__activity .cmms-timeline__note { padding: 8px 10px; background: var(--surface-1); border: 1px solid var(--border); border-radius: 9px; line-height: 1.8; }
+
+/* Maintenance dashboard: align the KPI row and give its context more room. */
+.cmms-maintenance-dashboard .metric-grid { gap: 12px; margin-bottom: 17px; }
+.cmms-maintenance-dashboard .metric-card {
+  position: relative;
+  min-height: 132px;
+  overflow: hidden;
+  border-radius: 15px;
+  box-shadow: var(--shadow-sm);
+}
+.cmms-maintenance-dashboard .metric-card::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--metric-accent, var(--primary));
+  content: "";
+}
+.cmms-maintenance-dashboard .metric-card__value { font-variant-numeric: tabular-nums; }
+.cmms-maintenance-dashboard .metric-card__hint { min-height: 1.6em; line-height: 1.55; }
+.cmms-maintenance-dashboard .dash-range-bar {
+  margin-bottom: 16px;
+  padding: 8px 11px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.cmms-maintenance-dashboard .dashboard-widget { border-radius: 15px; }
+
+/* Asset profile tabs now fit a documents/manuals destination without wrapping. */
+.registry-tabs {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 5px;
+  padding: 5px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  scrollbar-width: thin;
+}
+.registry-tab { flex: 0 0 auto; white-space: nowrap; }
+.registry-tab--active { box-shadow: var(--shadow-sm); }
+.asset-documents .maintenance-attachments { margin-top: 2px; }
+
+@media (max-width: 760px) {
+  .overlay:has(.work-order-detail-modal) { padding: 8px; }
+  .cmms-work-orders-page .view-toolbar { align-items: stretch; }
+  .cmms-work-orders-page .view-toolbar > .list-toolbar { flex-basis: 100%; justify-content: stretch; }
+  .cmms-work-order-board .kanban-column { flex-basis: min(82vw, 280px); }
+  .cmms-work-order-board .kanban-column__body { max-height: 58vh; }
+  .work-order-detail-modal.modal { width: calc(100vw - 16px); height: calc(100dvh - 16px); max-height: calc(100dvh - 16px); border-radius: 16px; }
+  .work-order-detail-modal .modal__header { padding: 13px 15px; }
+  .work-order-detail-modal .modal__body { padding: 13px 14px 19px; }
+  .work-order-detail-modal .modal__footer { padding: 10px 14px; }
+  .work-order-detail__identity { align-items: flex-start; flex-wrap: wrap; }
+  .work-order-detail__created { flex-basis: 100%; padding-inline-start: 49px; }
+  .work-order-detail .detail-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cmms-maintenance-dashboard .metric-card { min-height: 120px; }
+}
+
+@media (max-width: 420px) {
+  .cmms-work-order-board.kanban { padding: 12px; }
+  .cmms-work-order-board .kanban-column { flex-basis: 78vw; }
+  .work-order-detail .detail-stats { grid-template-columns: 1fr 1fr; }
+  .work-order-detail__nav { margin-inline: -2px; }
+  .work-order-detail__nav button { min-height: 32px; padding-inline: 9px; font-size: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cmms-work-order-board .task-card { transition: none; }
+}

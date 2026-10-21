@@ -99,6 +99,55 @@ class EquipmentLifecycleDomainTests(unittest.TestCase):
         self.assertEqual(analysis["performance"]["trend"], "declining")
         self.assertEqual(analysis["condition"], "watch")
 
+    def test_component_replacement_interval_uses_distinct_repair_events_not_quantity(self) -> None:
+        orders = (
+            self.workOrder(1, daysAgo=100),
+            self.workOrder(2, daysAgo=60),
+            self.workOrder(3, daysAgo=20),
+            self.workOrder(4, daysAgo=5, status="started"),
+        )
+        uses = tuple(
+            LifecyclePartUse(
+                workOrderId=f"wo-{index}",
+                partCode="BRG-6204",
+                partName="Bearing 6204",
+                quantity=Decimal("50"),
+                lifecycleImpact="minor",
+            )
+            for index in range(1, 5)
+        )
+        analysis = analyzeEquipmentLifecycle(
+            EquipmentLifecycleSnapshot(workOrders=orders, partUses=uses),
+            asOf=self.asOf,
+            deviceId="device-part-life",
+        )
+
+        estimate = analysis["partLifeEstimates"][0]
+        self.assertEqual(estimate["replacementEventCount"], 3)
+        self.assertEqual(estimate["status"], "estimated")
+        self.assertEqual(estimate["confidence"], "low")
+        self.assertEqual(estimate["medianReplacementIntervalDays"], 40.0)
+        self.assertEqual(estimate["estimatedRemainingIntervalDays"], 20.0)
+        self.assertEqual(analysis["lifeEstimate"]["currentMajorRepairCount"], 0)
+
+    def test_component_interval_is_not_estimated_from_only_two_events(self) -> None:
+        analysis = analyzeEquipmentLifecycle(
+            EquipmentLifecycleSnapshot(
+                workOrders=(self.workOrder(1, daysAgo=70), self.workOrder(2, daysAgo=20)),
+                partUses=(
+                    LifecyclePartUse("wo-1", "FILTER-1", "Filter", Decimal("100"), "minor"),
+                    LifecyclePartUse("wo-2", "FILTER-1", "Filter", Decimal("100"), "minor"),
+                ),
+            ),
+            asOf=self.asOf,
+            deviceId="device-part-sparse",
+        )
+
+        estimate = analysis["partLifeEstimates"][0]
+        self.assertEqual(estimate["replacementEventCount"], 2)
+        self.assertEqual(estimate["status"], "insufficientData")
+        self.assertIsNone(estimate["estimatedRemainingIntervalDays"])
+
     def test_life_estimate_requires_three_usable_retired_peers(self) -> None:
         analysis = analyzeEquipmentLifecycle(
             EquipmentLifecycleSnapshot(

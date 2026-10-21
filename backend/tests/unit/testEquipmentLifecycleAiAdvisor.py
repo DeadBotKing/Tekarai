@@ -64,6 +64,17 @@ class EquipmentLifecycleAiAdvisorTests(unittest.TestCase):
                     "peerCount": 1,
                     "estimatedRemainingMajorRepairs": None,
                 },
+                "partLifeEstimates": [
+                    {
+                        "partCode": "BRG-6204",
+                        "partName": "Bearing 6204",
+                        "lifecycleImpact": "minor",
+                        "replacementEventCount": 3,
+                        "medianReplacementIntervalDays": 45.0,
+                        "estimatedRemainingIntervalDays": 12.0,
+                        "lastReplacementAt": "2026-10-01T00:00:00+00:00",
+                    }
+                ],
                 "rawWorkOrderNarrative": "private text must not be sent",
                 "limitations": ["Insufficient retirement peers."],
             },
@@ -76,6 +87,8 @@ class EquipmentLifecycleAiAdvisorTests(unittest.TestCase):
         self.assertNotIn("deviceId", submitted)
         self.assertNotIn("rawWorkOrderNarrative", submitted)
         self.assertEqual(submitted["events"]["correctiveCount"], 12)
+        self.assertEqual(submitted["partLifeEstimates"][0]["medianReplacementIntervalDays"], 45.0)
+        self.assertNotIn("partCode", submitted["partLifeEstimates"][0])
         self.assertIn("not invent measurements", caller.request.instructions)
         self.assertEqual(caller.request.outputSchema["properties"]["recommendations"]["maxItems"], 3)
 

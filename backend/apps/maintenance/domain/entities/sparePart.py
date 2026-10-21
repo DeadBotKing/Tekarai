@@ -26,6 +26,8 @@ class SparePart:
     #: False excludes the part from automatic purchase suggestions. The
     #: low-stock alert still fires; only the buying proposal is suppressed.
     autoReorder: bool = True
+    #: Explicit part-level lifecycle relevance; unknown is deliberately neutral.
+    lifecycleImpact: str = "unknown"
 
     @property
     def lowStock(self) -> bool:
@@ -45,6 +47,8 @@ class WorkOrderPartUsage:
     unitCost: Decimal
     note: str
     consumedAt: datetime
+    #: Snapshot of the part's classification at issue time.
+    lifecycleImpact: str = "unknown"
 
     @property
     def totalCost(self) -> Decimal:

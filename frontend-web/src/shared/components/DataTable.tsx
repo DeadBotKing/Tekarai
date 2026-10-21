@@ -21,7 +21,7 @@ interface DataTableProps<T> {
   pageSize?: number;
   loading?: boolean;
   error?: { title: string; description: string };
-  empty?: { title: string; description?: string; action?: ReactNode };
+  empty?: { title: string; description?: string; action?: ReactNode; sticker?: ReactNode };
   toolbar?: ReactNode;
   bulkActions?: ReactNode | ((selectedRows: T[]) => ReactNode);
   onRowClick?: (row: T) => void;
@@ -83,7 +83,7 @@ export function DataTable<T>({ columns, data, rowKey, search = "", pageSize = 6,
 
   if (loading) return <LoadingState label={t("common.loading")} />;
   if (error) return <ErrorState title={error.title} description={error.description} />;
-  if (data.length === 0) return <EmptyState icon="table" title={empty?.title ?? t("common.noResults")} description={empty?.description} action={empty?.action} />;
+  if (data.length === 0) return <EmptyState icon="table" title={empty?.title ?? t("common.noResults")} description={empty?.description} action={empty?.action} sticker={empty?.sticker} />;
 
   return <div className="table-shell">
     <div className="table-toolbar">

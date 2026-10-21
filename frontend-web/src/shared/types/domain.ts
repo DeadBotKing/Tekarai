@@ -254,6 +254,7 @@ export interface SparePart {
   lowStock: boolean;
   createdAt: string;
   updatedAt: string;
+  lifecycleImpact?: PartLifecycleImpact;
 }
 
 export type PartTransactionType = "RECEIPT" | "ISSUE" | "RETURN" | "ADJUSTMENT";
@@ -293,6 +294,7 @@ export interface WorkOrderPartUsage {
   totalCost: number;
   note: string;
   consumedAt: string;
+  lifecycleImpact?: PartLifecycleImpact;
 }
 
 export interface LabourEntry {
@@ -321,6 +323,10 @@ export interface WorkOrderCostSummary {
   partUsages: WorkOrderPartUsage[];
 }
 
+export type RepairScope = "unclassified" | "minor" | "major" | "overhaul";
+export type PartLifecycleImpact = "unknown" | "minor" | "major";
+export type MeterPerformanceRole = "none" | "higherIsBetter" | "lowerIsBetter";
+
 export interface WorkOrder {
   id: string;
   deviceId: string;
@@ -347,6 +353,8 @@ export interface WorkOrder {
   failureSymptom?: string;
   rootCause?: string;
   actionTaken?: string;
+  /** Technician-confirmed severity; AI suggestions remain separate. */
+  repairScope?: RepairScope;
   repeatFailure?: boolean;
   failureReportedAt?: string;
   repairStartedAt?: string;
@@ -718,6 +726,110 @@ export interface DeviceAnalytics {
   trend: MaintenanceTrendBucket[];
 }
 
+export interface LifecyclePerformanceSignal {
+  meterPointId: string;
+  name: string;
+  unit: string;
+  role: Exclude<MeterPerformanceRole, "none">;
+  readingCount: number;
+  baselineValue: number | null;
+  recentAverage: number | null;
+  retentionPercent: number | null;
+  changePercent: number | null;
+  trend: "declining" | "stable" | "improving" | "insufficientData";
+  lastReadingAt: string;
+  configuredMinimum: number | null;
+  configuredMaximum: number | null;
+}
+
+export interface LifecyclePartLifeEstimate {
+  partCode: string;
+  partName: string;
+  lifecycleImpact: PartLifecycleImpact;
+  replacementEventCount: number;
+  intervalCount: number;
+  status: "estimated" | "insufficientData";
+  confidence: "insufficient" | "low" | "medium";
+  medianReplacementIntervalDays: number | null;
+  daysSinceLastReplacement: number;
+  estimatedRemainingIntervalDays: number | null;
+  pastObservedInterval: boolean;
+  lastReplacementAt: string;
+  reason: string;
+}
+
+export interface DeviceLifecycleAnalysis {
+  deviceId: string;
+  generatedAt: string;
+  advisoryOnly: boolean;
+  analysisMethod: string;
+  condition: "insufficientData" | "stable" | "watch" | "declining" | "retirementReview";
+  confidence: "insufficient" | "low" | "medium" | "high";
+  confidenceReason: string;
+  summary: string;
+  events: {
+    correctiveCount: number;
+    completedCorrectiveCount: number;
+    majorRepairCount: number;
+    overhaulCount: number;
+    minorRepairCount: number;
+    unclassifiedRepairCount: number;
+    minorPartUseCount: number;
+    majorPartUseCount: number;
+    unclassifiedPartUseCount: number;
+    minorPartQuantity: number;
+    majorPartQuantity: number;
+  };
+  reliability: {
+    recentWindowDays: number;
+    recentCorrectiveCount: number;
+    previousCorrectiveCount: number;
+    recentCorrectiveRatePerDay: number;
+    previousCorrectiveRatePerDay: number;
+    failureFrequencyTrend: "increasing" | "decreasing" | "stable" | "insufficientData";
+    recentMajorRepairCount: number;
+    previousMajorRepairCount: number;
+    majorRepairFrequencyTrend: "increasing" | "decreasing" | "stable" | "insufficientData";
+    recentAvailabilityPercent: number | null;
+    previousAvailabilityPercent: number | null;
+    availabilityChangePercentagePoints: number | null;
+    availabilityTrend: "declining" | "stable" | "improving";
+    recentDowntimeHours: number;
+    previousDowntimeHours: number;
+    averageRepairLabourHours: number | null;
+    repeatFailureCount: number;
+  };
+  performance: {
+    signals: LifecyclePerformanceSignal[];
+    overallRetentionPercent: number | null;
+    trend: "declining" | "stable" | "improving" | "insufficientData";
+    validReadingCount: number;
+    configuredSignalCount: number;
+  };
+  lifeEstimate: {
+    status: "estimated" | "insufficientData";
+    cohortType: "modelNumber" | "assetType" | "none" | string;
+    cohortLabel: string;
+    peerCount: number;
+    typicalMajorRepairsAtRetirement: number | null;
+    estimatedRemainingMajorRepairs: number | null;
+    currentMajorRepairCount: number;
+    reason: string;
+  };
+  partLifeEstimates: LifecyclePartLifeEstimate[];
+  indicators: Array<{ code: string; severity: "info" | "warning"; detail: string }>;
+  limitations: string[];
+  aiAdvisory?: { summary: string; recommendations: string[] } | null;
+}
+
+export interface RepairScopeSuggestion {
+  suggestedScope: RepairScope;
+  confidence: "high" | "medium" | "low";
+  reasons: string[];
+  requiresHumanConfirmation: true;
+  analysisMethod: string;
+}
+
 export interface DeviceProfile {
   device: MaintenanceDevice;
   nameplate: DeviceNameplate;
@@ -927,6 +1039,8 @@ export interface MeterPoint {
   name: string;
   unit: string;
   kind: MeterKind;
+  /** Role is explicit; `none` keeps generic gauges out of efficiency analysis. */
+  performanceRole?: MeterPerformanceRole;
   sensorKey: string;
   drivesRunningHours: boolean;
   active: boolean;
@@ -1016,6 +1130,7 @@ export interface SaveMeterPointInput {
   name: string;
   unit?: string;
   kind?: MeterKind;
+  performanceRole?: MeterPerformanceRole;
   sensorKey?: string;
   drivesRunningHours?: boolean;
   active?: boolean;

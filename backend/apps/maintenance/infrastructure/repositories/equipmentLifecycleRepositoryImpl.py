@@ -89,7 +89,7 @@ class EquipmentLifecycleRepositoryDjango:
             tenantId=tenantId,
             workOrderId__in=orderIds,
         ).order_by("consumedAt").only(
-            "workOrderId", "partCode", "partName", "quantity", "lifecycleImpact"
+            "workOrderId", "partCode", "partName", "quantity", "lifecycleImpact", "consumedAt"
         )
         partUses = tuple(
             LifecyclePartUse(
@@ -98,6 +98,7 @@ class EquipmentLifecycleRepositoryDjango:
                 partName=row.partName,
                 quantity=row.quantity,
                 lifecycleImpact=row.lifecycleImpact or PART_IMPACT_UNKNOWN,
+                consumedAt=row.consumedAt,
             )
             for row in usageModels
         )

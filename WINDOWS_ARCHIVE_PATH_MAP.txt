@@ -1,0 +1,13 @@
+Windows Explorer compatibility note
+This ZIP uses ASCII-only entry paths, DOS-compatible metadata, and STORE (uncompressed) entries.
+File contents are unchanged. Source paths with non-ASCII or legacy-mojibake names were assigned short ASCII aliases only inside this archive; the workspace was not modified.
+
+Original path -> path inside this archive:
+docs/راهنمای-تکرای.md -> docs/guide-fa-archive-copy-01.md
+docs/╪▒╪º┘ç┘å┘à╪º█î-╪¬┌⌐╪▒╪º█î.md -> docs/guide-fa-archive-copy-02.md
+mediaRoot/documents/2de6b2b2-718c-497c-869a-a48db2977115/61886b5a-6b03-4450-942d-71022491b157-Γò¬┬╗Γò¬ΓöéΓò¬┬¼Γöÿ├¬Γò¬ΓûÆΓò¬┬║Γöÿ├ñΓò¬ΓòúΓöÿ├áΓöÿ├ñ-Γò¬┬║Γûê├«Γöÿ├áΓöÿ├ÑΓûê├«.pdf -> mediaRoot/documents/2de6b2b2-718c-497c-869a-a48db2977115/attachment-archive-copy-01.pdf
+mediaRoot/documents/2de6b2b2-718c-497c-869a-a48db2977115/61886b5a-6b03-4450-942d-71022491b157-دستورالعمل-ایمنی.pdf -> mediaRoot/documents/2de6b2b2-718c-497c-869a-a48db2977115/attachment-archive-copy-02.pdf
+mediaRoot/documents/2de6b2b2-718c-497c-869a-a48db2977115/61886b5a-6b03-4450-942d-71022491b157-╪»╪│╪¬┘ê╪▒╪º┘ä╪╣┘à┘ä-╪º█î┘à┘å█î.pdf -> mediaRoot/documents/2de6b2b2-718c-497c-869a-a48db2977115/attachment-archive-copy-03.pdf
+mediaRoot/documents/b7616cdb-ef87-4199-acfe-47030548f536/31fefe3e-57b6-4301-bc89-4313f94df525-Γò¬┬╗Γò¬ΓöéΓò¬┬¼Γöÿ├¬Γò¬ΓûÆΓò¬┬║Γöÿ├ñΓò¬ΓòúΓöÿ├áΓöÿ├ñ-Γò¬┬║Γûê├«Γöÿ├áΓöÿ├ÑΓûê├«.pdf -> mediaRoot/documents/b7616cdb-ef87-4199-acfe-47030548f536/attachment-archive-copy-01.pdf
+mediaRoot/documents/b7616cdb-ef87-4199-acfe-47030548f536/31fefe3e-57b6-4301-bc89-4313f94df525-دستورالعمل-ایمنی.pdf -> mediaRoot/documents/b7616cdb-ef87-4199-acfe-47030548f536/attachment-archive-copy-02.pdf
+mediaRoot/documents/b7616cdb-ef87-4199-acfe-47030548f536/31fefe3e-57b6-4301-bc89-4313f94df525-╪»╪│╪¬┘ê╪▒╪º┘ä╪╣┘à┘ä-╪º█î┘à┘å█î.pdf -> mediaRoot/documents/b7616cdb-ef87-4199-acfe-47030548f536/attachment-archive-copy-03.pdf

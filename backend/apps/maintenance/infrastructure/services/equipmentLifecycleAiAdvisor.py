@@ -29,7 +29,7 @@ _OUTPUT_SCHEMA = {
     "additionalProperties": False,
 }
 
-_INSTRUCTIONS = """You are an advisory maintenance analyst. Interpret only the supplied aggregate maintenance metrics and evidence limitations. Do not invent measurements, thresholds, causes, dates, peer counts, remaining years, or a numeric life estimate. Preserve the supplied statistical peer estimate exactly; it is remaining major-repair events, not calendar life. If evidence is insufficient, state that clearly. Offer at most three practical verification or maintenance-review steps. Never direct an automatic shutdown, status change, or retirement; any such decision requires an authorized human. Reply in the requested language (fa=Persian, en=English, de=German). Return the requested JSON only."""
+_INSTRUCTIONS = """You are an advisory maintenance analyst. Interpret only the supplied aggregate maintenance metrics and evidence limitations. Do not invent measurements, thresholds, causes, dates, peer counts, remaining years, or numeric life estimates. Preserve each supplied statistical peer estimate and part replacement-interval estimate exactly. A part interval is based on recorded corrective-order use dates only; it is not a verified physical service life or failure prediction. If evidence is insufficient, state that clearly. Offer at most three practical verification or maintenance-review steps. Never direct an automatic shutdown, status change, or retirement; any such decision requires an authorized human. Reply in the requested language (fa=Persian, en=English, de=German). Return the requested JSON only."""
 
 
 class ConfiguredEquipmentLifecycleAIAdvisor:
@@ -191,6 +191,24 @@ class ConfiguredEquipmentLifecycleAIAdvisor:
                     "reason",
                 )
             },
+            "partLifeEstimates": [
+                {
+                    key: estimate.get(key)
+                    for key in (
+                        "partName",
+                        "lifecycleImpact",
+                        "replacementEventCount",
+                        "status",
+                        "confidence",
+                        "medianReplacementIntervalDays",
+                        "daysSinceLastReplacement",
+                        "estimatedRemainingIntervalDays",
+                        "pastObservedInterval",
+                    )
+                }
+                for estimate in tuple(analysis.get("partLifeEstimates") or ())[:20]
+                if isinstance(estimate, dict)
+            ],
             "limitations": [str(item)[:500] for item in tuple(analysis.get("limitations") or ())[:8]],
         }
 

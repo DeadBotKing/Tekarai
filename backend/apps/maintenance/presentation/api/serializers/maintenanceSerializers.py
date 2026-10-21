@@ -6,6 +6,7 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
+from apps.maintenance.domain.services.equipmentLifecycle import PART_LIFECYCLE_IMPACTS
 from apps.maintenance.domain.valueObjects.maintenanceState import MAINTENANCE_DEPARTMENTS
 from apps.maintenance.presentation.api.serializers.taxonomyFields import openVocabulary
 
@@ -77,6 +78,9 @@ class CreateSparePartSerializer(serializers.Serializer):
         max_digits=14, decimal_places=3, min_value=Decimal("0"), required=False, default=0
     )
     autoReorder = serializers.BooleanField(required=False, default=True)
+    lifecycleImpact = serializers.ChoiceField(
+        choices=PART_LIFECYCLE_IMPACTS, required=False, default="unknown"
+    )
     # Latest price per unit; each consumption row snapshots it (time & cost).
     unitCost = serializers.DecimalField(
         max_digits=16, decimal_places=2, min_value=Decimal("0"), required=False, default=0
@@ -96,6 +100,9 @@ class UpdateSparePartSerializer(serializers.Serializer):
         max_digits=14, decimal_places=3, min_value=Decimal("0"), required=False, default=0
     )
     autoReorder = serializers.BooleanField(required=False, default=True)
+    lifecycleImpact = serializers.ChoiceField(
+        choices=PART_LIFECYCLE_IMPACTS, required=False
+    )
     unitCost = serializers.DecimalField(
         max_digits=16, decimal_places=2, min_value=Decimal("0"), required=False, default=0
     )

@@ -54,6 +54,9 @@ class MeterPoint:
     name: str
     unit: str = ""
     kind: str = METER_GAUGE
+    #: Operational meaning assigned by the plant; only explicit performance roles
+    #: contribute to lifecycle trends, never generic or cumulative meters.
+    performanceRole: str = "none"
     sensorKey: str = ""
     #: Physically impossible values are rejected before they poison a trend.
     minimumValue: Decimal | None = None
@@ -105,6 +108,7 @@ class MeterPoint:
             "name": self.name,
             "unit": self.unit,
             "kind": self.kind,
+            "performanceRole": self.performanceRole,
             "sensorKey": self.sensorKey,
             "active": self.active,
             "drivesRunningHours": self.drivesRunningHours,

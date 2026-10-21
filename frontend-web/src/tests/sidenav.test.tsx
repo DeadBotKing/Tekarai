@@ -175,6 +175,20 @@ describe("the sidebar — سایدبار روشن", () => {
     expect(dashboard.className).toContain("is-active");
   });
 
+  it("opens the contextual quick guide and navigates from its permission-aware shortcuts", async () => {
+    renderShell();
+    await userEvent.click(screen.getByRole("button", { name: "راهنمای کار با سایت" }));
+
+    const dialog = screen.getByRole("dialog", { name: "راهنمای سادهٔ Tekarai" });
+    expect(within(dialog).getByText("برای شروع")).toBeInTheDocument();
+    expect(within(dialog).getByText("چطور کارم را انجام بدهم؟")).toBeInTheDocument();
+    expect(within(dialog).getByText(/از منو یا جست‌وجو/)).toBeInTheDocument();
+
+    await userEvent.click(within(dialog).getByRole("button", { name: /درخواست‌های کار/ }));
+    expect(await screen.findByTestId("page-orders")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "راهنمای سادهٔ Tekarai" })).not.toBeInTheDocument();
+  });
+
   it("hides sections the signed-in user has no permission for", () => {
     sessionStore.set({
       accessToken: "test-access",

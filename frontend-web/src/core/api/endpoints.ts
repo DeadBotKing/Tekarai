@@ -83,9 +83,12 @@ export const apiEndpoints = {
       `maintenance/devices/${deviceId}/bom/${partId}`,
     deviceAssignments: (id: string) => `maintenance/devices/${id}/assignments`,
     deviceAnalytics: (id: string) => `maintenance/devices/${id}/analytics`,
+    deviceLifecycleAnalysis: (id: string) => `maintenance/devices/${id}/lifecycle-analysis`,
     fleetAnalytics: "maintenance/analytics/fleet",
     partUsageReport: (partId: string) => `maintenance/analytics/parts/${partId}`,
     workOrderClosure: (id: string) => `maintenance/work-orders/${id}/closure`,
+    workOrderRepairScopeSuggestion: (id: string) =>
+      `maintenance/work-orders/${id}/repair-scope-suggestion`,
     // -- Time & cost tracking (ثبت زمان و هزینه) ------------------------------
     workOrderLabour: (id: string) => `maintenance/work-orders/${id}/labour`,
     labourEntry: (id: string) => `maintenance/labour-entries/${id}`,

@@ -1,43 +1,53 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Button, IconButton } from "./primitives";
 import { Icon } from "./Icon";
 import { useLocalization } from "../../core/localization/localizationContext";
 
 /**
- * How many modals are open right now. A modal opened from inside another
- * one (the warehouse part form launched from the purchase requisition
- * form) used to render at the same `--z-overlay` as its parent, so
- * whichever happened to sit later in the JSX painted on top — the nested
- * dialog could open *behind* the one that launched it. Each level now
- * stacks one step higher.
+ * Activation-ordered layers for open dialogs. Keep the order stable across
+ * parent re-renders: inline `onClose` callbacks change identity on each
+ * render and must not cause an already-open dialog to re-enter the stack.
  */
-let openModalCount = 0;
+const activeModalLayers = new Map<string, number>();
+let nextModalLayer = 0;
+let bodyOverflowBeforeFirstModal: string | null = null;
 
-export function Modal({ open, title, description, onClose, children, footer, wide = false }: { open: boolean; title: string; description?: string; onClose: () => void; children: ReactNode; footer?: ReactNode; wide?: boolean }): JSX.Element | null {
+export function Modal({ open, title, description, onClose, children, footer, wide = false, className = "" }: { open: boolean; title: string; description?: string; onClose: () => void; children: ReactNode; footer?: ReactNode; wide?: boolean; className?: string }): JSX.Element | null {
   const { t } = useLocalization();
   // Unique per instance: two open modals both using id="modal-title" made
   // `aria-labelledby` ambiguous, so screen readers announced the wrong one.
   const titleId = useId();
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   const [depth, setDepth] = useState(0);
-  const bodyOverflow = useRef("");
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return;
-    openModalCount += 1;
-    setDepth(openModalCount);
-    const onKey = (event: KeyboardEvent): void => { if (event.key === "Escape") onClose(); };
+    if (activeModalLayers.size === 0) {
+      bodyOverflowBeforeFirstModal = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+    }
+    const layer = ++nextModalLayer;
+    activeModalLayers.set(titleId, layer);
+    setDepth(layer);
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key !== "Escape") return;
+      const topLayer = Math.max(...activeModalLayers.values());
+      if (activeModalLayers.get(titleId) === topLayer) onCloseRef.current();
+    };
     document.addEventListener("keydown", onKey);
-    // Only the first modal owns the scroll lock, so closing a nested dialog
-    // cannot hand scrolling back while its parent is still open.
-    if (openModalCount === 1) { bodyOverflow.current = document.body.style.overflow; document.body.style.overflow = "hidden"; }
     return () => {
       document.removeEventListener("keydown", onKey);
-      openModalCount = Math.max(0, openModalCount - 1);
-      if (openModalCount === 0) document.body.style.overflow = bodyOverflow.current;
+      activeModalLayers.delete(titleId);
+      if (activeModalLayers.size === 0) {
+        document.body.style.overflow = bodyOverflowBeforeFirstModal ?? "";
+        bodyOverflowBeforeFirstModal = null;
+        nextModalLayer = 0;
+      }
     };
-  }, [onClose, open]);
+  }, [open, titleId]);
   if (!open) return null;
   return <div className="overlay" role="presentation" style={depth > 1 ? { zIndex: `calc(var(--z-overlay) + ${depth})` } : undefined} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <section className={wide ? "modal modal--wide" : "modal"} role="dialog" aria-modal="true" aria-labelledby={titleId}>
+    <section className={["modal", wide ? "modal--wide" : "", className].filter(Boolean).join(" ")} role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <header className="modal__header"><div><h2 id={titleId}>{title}</h2>{description && <p>{description}</p>}</div><IconButton icon="close" label={t("common.close")} onClick={onClose} /></header>
       <div className="modal__body">{children}</div>
       {footer && <footer className="modal__footer">{footer}</footer>}
@@ -67,6 +77,6 @@ export function ConfirmDialog({ open, title, description, onConfirm, onClose, da
   return <Modal open={open} title={title} description={description} onClose={onClose} footer={<><Button variant="secondary" onClick={onClose}>{t("common.cancel")}</Button><Button variant={danger ? "danger" : "primary"} onClick={onConfirm}>{t("common.save")}</Button></>}><div className="confirm-dialog"><span className="confirm-dialog__icon"><Icon name={danger ? "warning" : "shield"} size={22} /></span><p>{description}</p></div></Modal>;
 }
 
-export function Toast({ message, tone = "success", onClose }: { message: string; tone?: "success" | "error" | "info"; onClose?: () => void }): JSX.Element {
-  return <div className={`toast toast--${tone}`} role="status"><Icon name={tone === "success" ? "checkCircle" : tone === "error" ? "xCircle" : "bell"} size={17} /><span>{message}</span>{onClose && <button type="button" aria-label="Dismiss" className="toast__close" onClick={onClose}>×</button>}</div>;
+export function Toast({ message, tone = "success", onClose, sticker }: { message: string; tone?: "success" | "error" | "info"; onClose?: () => void; sticker?: ReactNode }): JSX.Element {
+  return <div className={`toast toast--${tone}`} role="status">{sticker ? <span className="toast__sticker">{sticker}</span> : <Icon name={tone === "success" ? "checkCircle" : tone === "error" ? "xCircle" : "bell"} size={17} />}<span>{message}</span>{onClose && <button type="button" aria-label="Dismiss" className="toast__close" onClick={onClose}>×</button>}</div>;
 }

@@ -17,6 +17,8 @@ import { Icon } from "../shared/components/Icon";
 import { ErrorState } from "../shared/components/ErrorState";
 import { formatDate } from "../core/localization/format";
 
+interface UserAssignment { id: string; userId: string; positionName: string; departmentName: string; isPrimary: boolean; isActive: boolean; }
+
 interface UserRecord { id: string; name: string; email: string; role: string; status: "active" | "pending" | "archived"; lastActive: string; access: string; }
 const users: UserRecord[] = [
   { id: "u1", name: "Maya Chen", email: "maya.chen@example.test", role: "Platform Administrator", status: "active", lastActive: "Now", access: "All domains" },
@@ -55,6 +57,44 @@ function Users({ reloadToken = 0 }: { reloadToken?: number }): JSX.Element {
   const api = useApiClient();
   const service = useMemo(() => createSecurityService(api), [api]);
   const [items, setItems] = useState<UserRecord[]>(users);
+  const [assignments, setAssignments] = useState<UserAssignment[]>([]);
+  const [assignmentError, setAssignmentError] = useState<string | null>(null);
+  const [assignmentLoading, setAssignmentLoading] = useState(!runtimeConfig.demoMode);
+  useEffect(() => {
+    if (runtimeConfig.demoMode) return;
+    let active = true;
+    let requestVersion = 0;
+    const refresh = (): void => {
+      const version = ++requestVersion;
+      setAssignmentLoading(true);
+      void api.get<{ items: UserAssignment[] }>("organization/assignments")
+        .then((payload) => {
+          if (!active || version !== requestVersion) return;
+          setAssignments(payload.items.filter((item) => item.isActive));
+          setAssignmentError(null);
+        })
+        .catch(() => {
+          if (!active || version !== requestVersion) return;
+          setAssignments([]);
+          setAssignmentError("دریافت سمت‌های سازمانی ناموفق بود؛ مجوز مشاهده ساختار سازمانی و اتصال را بررسی کنید.");
+        })
+        .finally(() => { if (active && version === requestVersion) setAssignmentLoading(false); });
+    };
+    refresh();
+    window.addEventListener("focus", refresh);
+    return () => { active = false; window.removeEventListener("focus", refresh); };
+  }, [api, reloadToken]);
+  const assignmentsByUser = useMemo(() => {
+    const result = new Map<string, UserAssignment[]>();
+    for (const item of assignments) {
+      const rows = result.get(item.userId) ?? [];
+      rows.push(item);
+      result.set(item.userId, rows);
+    }
+    for (const rows of result.values()) rows.sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary));
+    return result;
+  }, [assignments]);
+
   const [loading, setLoading] = useState(!runtimeConfig.demoMode);
   const [loadError, setLoadError] = useState<string | null>(null);
   useEffect(() => {
@@ -65,8 +105,11 @@ function Users({ reloadToken = 0 }: { reloadToken?: number }): JSX.Element {
       .catch((error: unknown) => setLoadError(error instanceof Error ? error.message : "خطای نامشخص"))
       .finally(() => setLoading(false));
   }, [service, reloadToken]);
-  const columns = useMemo<DataTableColumn<UserRecord>[]>(() => [{ key: "name", label: t("admin.user"), accessor: (row) => `${row.name} ${row.email}`, sortable: true, width: "34%", render: (row) => <div className="person-cell"><Avatar name={row.name} size="sm" tone="purple" /><div><strong>{row.name}</strong><span>{row.email}</span></div></div> }, { key: "role", label: t("admin.username"), accessor: (row) => row.role, sortable: true }, { key: "status", label: t("project.status"), accessor: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> }, { key: "lastActive", label: t("admin.lastActive"), accessor: (row) => row.lastActive }], [t]);
-  return <div className="admin-section"><Card padding="none"><CardHeader title={t("admin.users")} subtitle={t("admin.usersSubtitle")} />{loadError ? <div className="card-pad"><ErrorState detail={loadError} onRetry={() => setLoadError(null)} /></div> : <DataTable columns={columns} data={items} rowKey={(row) => row.id} exportName="tekarai-users" empty={{ title: loading ? t("common.loading") : t("admin.loadFailed") }} />}</Card></div>;
+  const columns = useMemo<DataTableColumn<UserRecord>[]>(() => [{ key: "name", label: t("admin.user"), accessor: (row) => `${row.name} ${row.email}`, sortable: true, width: "34%", render: (row) => <div className="person-cell"><Avatar name={row.name} size="sm" tone="purple" /><div><strong>{row.name}</strong><span>{row.email}</span></div></div> }, { key: "role", label: t("admin.username"), accessor: (row) => row.role, sortable: true }, { key: "organizationPosition", label: "سمت سازمانی", sortable: true,
+    accessor: (row) => (assignmentsByUser.get(row.id) ?? []).map((item) => `${item.positionName} — ${item.departmentName}`).join("، "),
+    render: (row) => assignmentLoading ? <span>در حال دریافت…</span> : assignmentError ? <span title={assignmentError}>نامشخص</span> : (assignmentsByUser.get(row.id) ?? []).length === 0 ? <span>بدون انتساب</span> : <div>{(assignmentsByUser.get(row.id) ?? []).map((item) => <div key={item.id}><strong>{item.positionName || "سمت نامشخص"}</strong><span> — {item.departmentName}{item.isPrimary ? " (اصلی)" : ""}</span></div>)}</div>
+  }, { key: "status", label: t("project.status"), accessor: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> }, { key: "lastActive", label: t("admin.lastActive"), accessor: (row) => row.lastActive }], [t, assignmentsByUser, assignmentLoading, assignmentError]);
+  return <div className="admin-section"><Card padding="none"><CardHeader title={t("admin.users")} subtitle={t("admin.usersSubtitle")} />{assignmentError && <div role="alert" className="card-pad">{assignmentError}</div>}{loadError ? <div className="card-pad"><ErrorState detail={loadError} onRetry={() => setLoadError(null)} /></div> : <DataTable columns={columns} data={items} rowKey={(row) => row.id} exportName="tekarai-users" empty={{ title: loading ? t("common.loading") : t("admin.loadFailed") }} />}</Card></div>;
 }
 
 function Roles({ reloadToken = 0 }: { reloadToken?: number }): JSX.Element {

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createSecurityService } from "../features/security/securityService";
 import { ApiClientError } from "../core/api/apiClient";
 import { useApiClient } from "../core/api/apiContext";
 import { PERMISSIONS } from "../core/permissions/permissionContext";
@@ -144,6 +145,7 @@ export function OrganizationStructurePage(): JSX.Element {
   const [parentInline, setParentInline] = useState(false);
   const [parentForm, setParentForm] = useState(emptyParentForm);
   const [positionForm, setPositionForm] = useState(emptyPositionForm);
+  const [editingPositionId, setEditingPositionId] = useState<string | null>(null);
   const [assignmentForm, setAssignmentForm] = useState(emptyAssignmentForm);
 
   const failureMessage = (cause: unknown, fallback: string): string =>
@@ -251,17 +253,21 @@ export function OrganizationStructurePage(): JSX.Element {
   const submitPosition = (): void => {
     setBusy(true);
     setNotice("");
-    void api
-      .post("organization/positions", {
+    const payload = {
         name: positionForm.name,
         code: positionForm.code,
         level: Number(positionForm.level) || 0,
         description: positionForm.description,
-      })
+      };
+    const request = editingPositionId
+      ? api.patch(`organization/positions/${editingPositionId}`, payload)
+      : api.post("organization/positions", payload);
+    void request
       .then(() => {
         setPositionForm(emptyPositionForm);
         setShowPositionForm(false);
-        setNotice("سمت جدید ثبت شد. تا زمانی که در ماتریس دسترسی تعیین نشود، هیچ اختیاری ندارد.");
+        setNotice(editingPositionId ? "سمت ویرایش شد." : "سمت جدید ثبت شد. تا زمانی که در ماتریس دسترسی تعیین نشود، هیچ اختیاری ندارد.");
+        setEditingPositionId(null);
         load();
       })
       .catch((cause: unknown) => setError(failureMessage(cause, "ثبت سمت ناموفق بود.")))
@@ -275,7 +281,7 @@ export function OrganizationStructurePage(): JSX.Element {
    */
   const searchUsers = useCallback(
     (query: string): Promise<UserPickerUser[]> =>
-      api.get<UserPickerUser[]>("users", { query: { search: query, pageSize: 20 } }),
+      createSecurityService(api).listUsers(query),
     [api],
   );
 
@@ -335,6 +341,37 @@ export function OrganizationStructurePage(): JSX.Element {
         load();
       })
       .catch((cause: unknown) => setError(failureMessage(cause, "حذف واحد ناموفق بود.")))
+      .finally(() => setBusy(false));
+  };
+
+  const editPosition = (row: PositionRow): void => {
+    setEditingPositionId(row.id);
+    setPositionForm({ name: row.name, code: row.code, level: String(row.level), description: row.description });
+    setShowPositionForm(true);
+    setError("");
+  };
+
+  const togglePosition = (row: PositionRow): void => {
+    if (row.isActive && !window.confirm(`سمت «${row.name}» غیرفعال شود؟ دسترسی‌های ناشی از این سمت قطع می‌شوند.`)) return;
+    setBusy(true);
+    setError("");
+    void api.patch(`organization/positions/${row.id}`, { isActive: !row.isActive })
+      .then(() => { setNotice(`وضعیت سمت «${row.name}» تغییر کرد.`); load(); })
+      .catch((cause: unknown) => setError(failureMessage(cause, "تغییر وضعیت سمت ناموفق بود.")))
+      .finally(() => setBusy(false));
+  };
+
+  const removePosition = (row: PositionRow): void => {
+    if (!window.confirm(`سمت «${row.name}» حذف شود؟ این عملیات قابل بازگشت نیست.`)) return;
+    setBusy(true);
+    setError("");
+    void api.delete(`organization/positions/${row.id}`)
+      .then(() => {
+        setNotice(`سمت «${row.name}» حذف شد.`);
+        if (editingPositionId === row.id) { setEditingPositionId(null); setShowPositionForm(false); setPositionForm(emptyPositionForm); }
+        load();
+      })
+      .catch((cause: unknown) => setError(failureMessage(cause, "حذف سمت ناموفق بود.")))
       .finally(() => setBusy(false));
   };
 
@@ -414,8 +451,7 @@ export function OrganizationStructurePage(): JSX.Element {
     [departments, busy, memberCountOf],
   );
 
-  const positionColumns: DataTableColumn<PositionRow>[] = useMemo(
-    () => [
+  const positionColumns: DataTableColumn<PositionRow>[] = [
       { key: "code", label: "کد", accessor: (row) => row.code },
       { key: "name", label: "سمت", accessor: (row) => row.name },
       { key: "level", label: "سطح", accessor: (row) => row.level },
@@ -433,9 +469,21 @@ export function OrganizationStructurePage(): JSX.Element {
           </Badge>
         ),
       },
-    ],
-    [],
-  );
+      {
+        key: "actions", label: "عملیات",
+        render: (row) => (
+          <PermissionGuard permission={PERMISSIONS.organizationPositionManage} fallback="hide">
+            <div className="inline-form">
+              <Button disabled={busy} onClick={() => editPosition(row)}>ویرایش</Button>
+              <Button disabled={busy} onClick={() => togglePosition(row)}>{row.isActive ? "غیرفعال‌سازی" : "فعال‌سازی"}</Button>
+              <Button disabled={busy || row.isSystem || (row.memberCount ?? 0) > 0}
+                title={row.isSystem ? "سمت پیش‌فرض حذف نمی‌شود؛ آن را غیرفعال کنید." : (row.memberCount ?? 0) > 0 ? "ابتدا انتساب کاربران به این سمت را بردارید." : undefined}
+                onClick={() => removePosition(row)}>حذف</Button>
+            </div>
+          </PermissionGuard>
+        ),
+      },
+    ];
 
   const assignmentColumns: DataTableColumn<AssignmentRow>[] = useMemo(
     () => [
@@ -603,7 +651,7 @@ export function OrganizationStructurePage(): JSX.Element {
                   permission={PERMISSIONS.organizationPositionManage}
                   fallback="hide"
                 >
-                  <Button onClick={() => setShowPositionForm((open) => !open)}>
+                  <Button disabled={busy} onClick={() => { setEditingPositionId(null); setPositionForm(emptyPositionForm); setShowPositionForm((open) => !open); }}>
                     {showPositionForm ? "بستن" : "＋ افزودن سمت"}
                   </Button>
                 </PermissionGuard>
@@ -634,8 +682,10 @@ export function OrganizationStructurePage(): JSX.Element {
                     setPositionForm({ ...positionForm, level: event.target.value })
                   }
                 />
+                <TextInput label="توضیحات" maxLength={500} value={positionForm.description}
+                  onChange={(event) => setPositionForm({ ...positionForm, description: event.target.value })} />
                 <Button disabled={busy || positionForm.name.trim() === ""} onClick={submitPosition}>
-                  ثبت سمت
+                  {editingPositionId ? "ذخیره تغییرات" : "ثبت سمت"}
                 </Button>
               </div>
             ) : null}
@@ -667,7 +717,7 @@ export function OrganizationStructurePage(): JSX.Element {
               <div className="inline-form">
                 <UserPicker
                   label="کاربر"
-                  hint="نام یا نام کاربری را تایپ کنید و از فهرست انتخاب کنید."
+                  hint="برای دیدن فهرست کاربران کلیک کنید؛ با تایپ نام می‌توانید فهرست را جستجو کنید."
                   value={
                     assignmentForm.userId
                       ? {
@@ -679,6 +729,8 @@ export function OrganizationStructurePage(): JSX.Element {
                   }
                   onSelect={pickAssignmentUser}
                   search={searchUsers}
+                  browse
+                  placeholder="انتخاب کاربر از فهرست یا جستجوی نام…"
                 />
                 <SelectInput
                   label="واحد"

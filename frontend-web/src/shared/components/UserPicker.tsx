@@ -9,6 +9,7 @@ export interface UserPickerUser {
 
 export interface UserPickerProps {
   label?: string;
+  browse?: boolean;
   /** The chosen user, or null while nobody is picked. */
   value: UserPickerUser | null;
   /** Receives the picked user; null when the choice is cleared or retyped away. */
@@ -36,6 +37,7 @@ const DEBOUNCE_MS = 200;
  */
 export function UserPicker({
   label,
+  browse = false,
   value,
   onSelect,
   search,
@@ -66,7 +68,7 @@ export function UserPicker({
   // Debounced search; a newer keystroke cancels the previous answer.
   useEffect(() => {
     const trimmed = query.trim();
-    if (!open || trimmed.length < MIN_QUERY) {
+    if (!open || (!browse && trimmed.length < MIN_QUERY)) {
       setResults([]);
       setActiveIndex(-1);
       setLoading(false);
@@ -95,7 +97,7 @@ export function UserPicker({
       stale = true;
       window.clearTimeout(timer);
     };
-  }, [query, open]);
+  }, [query, open, browse]);
 
   const pick = (user: UserPickerUser): void => {
     setQuery(user.displayName.trim() !== "" ? user.displayName : user.username);
@@ -135,7 +137,7 @@ export function UserPicker({
   };
 
   const trimmed = query.trim();
-  const showMinHint = open && trimmed.length > 0 && trimmed.length < MIN_QUERY;
+  const showMinHint = !browse && open && trimmed.length > 0 && trimmed.length < MIN_QUERY;
 
   return (
     <div className={`user-picker ${className}`}>
@@ -163,6 +165,7 @@ export function UserPicker({
               // Typing after a pick drops the previous person — a name in
               // the box is a choice, not text the user is committed to.
               if (value !== null) onSelect(null);
+              setOpen(true);
               setQuery(event.target.value);
             }}
             onKeyDown={onKeyDown}
@@ -192,7 +195,7 @@ export function UserPicker({
         </span>
       ) : null}
       {open ? (
-        <div className="user-picker__menu" id={listboxId} role="listbox">
+        <div className="user-picker__menu" style={{ maxHeight: "320px", overflowY: "auto" }} id={listboxId} role="listbox">
           {showMinHint ? (
             <p className="user-picker__state">حداقل دو حرف تایپ کنید…</p>
           ) : loading ? (

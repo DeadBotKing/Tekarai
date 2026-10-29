@@ -290,6 +290,11 @@ export function DashboardPage(): JSX.Element {
   });
 
   return <div className="page page--dashboard">
+    <section className="warm-welcome" aria-label={locale === "fa" ? "خوش آمدید" : "Welcome"}>
+      <span className="warm-welcome__symbol" aria-hidden="true">🌿</span>
+      <div><strong>{locale === "fa" ? `سلام ${session?.user.displayName || "دوست عزیز"}، خوش آمدی` : `Welcome, ${session?.user.displayName || "friend"}`}</strong>
+      <p>{locale === "fa" ? "از اینجا شروع کن؛ کارها، بخش‌ها و مسیرهای موردنیازت در دسترس توست." : "Your work, teams and shortcuts — a calmer place to start your day."}</p></div>
+    </section>
     <SectionHeader
       eyebrow={t("nav.workspace")}
       title={t("dashboard.title")}

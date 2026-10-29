@@ -126,7 +126,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "matrix", label: "ماتریس دسترسی" },
 ];
 
-export function OrganizationStructurePage(): JSX.Element {
+export function OrganizationStructurePage({ embedded = false }: { embedded?: boolean } = {}): JSX.Element {
   const api = useApiClient();
   const [tab, setTab] = useState<TabKey>("departments");
   const [departments, setDepartments] = useState<DepartmentRow[]>([]);
@@ -516,7 +516,7 @@ export function OrganizationStructurePage(): JSX.Element {
   const activeDepartments = departments.filter((row) => row.status === "active");
 
   return (
-    <div className="page organization-page">
+    <div className={embedded ? "organization-page" : "page organization-page"}>
       <Card>
         <CardHeader
           title="ساختار سازمانی و دسترسی‌ها"
@@ -698,6 +698,7 @@ export function OrganizationStructurePage(): JSX.Element {
             />
           </Card>
 
+          {!embedded && (
           <Card>
             <CardHeader
               title="انتساب کاربران"
@@ -777,6 +778,7 @@ export function OrganizationStructurePage(): JSX.Element {
               empty={{ title: "هنوز کاربری منتسب نشده است" }}
             />
           </Card>
+          )}
           </div>
         </>
       ) : null}

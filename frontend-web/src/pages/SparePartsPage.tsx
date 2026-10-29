@@ -272,7 +272,7 @@ export function SparePartsPage(): JSX.Element {
         <Button variant="primary" icon="plus" onClick={openCreate}>{t("warehouse.addPart")}</Button>
       </PermissionGuard>
     </>} />
-    <div className="file-stats">
+    <div className="file-stats file-stats--inventory">
       <div><span>{t("warehouse.totalParts")}</span><strong>{parts.length}</strong></div>
       <div><span>{t("warehouse.lowStock")}</span><strong>{lowCount}</strong></div>
       <div><span>{t("warehouse.stockValue")}</span><strong>{formatNumber(totalValue, "fa")}</strong></div>

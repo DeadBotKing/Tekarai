@@ -454,6 +454,7 @@ const filterNavigationItems = (
     .map((item) => ({ ...item, children: filterNavigationItems(item.children, has, isEnabled) }))
     .filter((item) => {
       if (item.permission && !has(item.permission)) return false;
+      if (item.anyPermission && !item.anyPermission.some((permission) => has(permission))) return false;
       if (item.featureFlag && !isEnabled(item.featureFlag)) return false;
       return Boolean(item.route) || Boolean(item.children?.length);
     })

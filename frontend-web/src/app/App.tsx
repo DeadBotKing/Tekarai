@@ -25,6 +25,7 @@ import "../styles/pageCanvas.css";
 import "../styles/metricsPolish.css";
 import "../styles/dashboardHierarchy.css";
 import "../styles/contextStickers.css";
+import "../styles/warmHome.css";
 
 export function App(): JSX.Element {
   return <BrowserRouter><AppProviders><AppRouter /></AppProviders></BrowserRouter>;

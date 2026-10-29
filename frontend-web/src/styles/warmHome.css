@@ -1,0 +1,151 @@
+/* Warm theme: shared palette plus home/sidebar refinements. Semantic status colours are unchanged. */
+:root:not([data-theme="dark"]) .page--dashboard {
+  --primary: #176b60;
+  --primary-strong: #115348;
+  --primary-soft: #e6f2ec;
+  --surface-1: #fffefa;
+  --surface-2: #f5f1e8;
+  --border: #e5dfd2;
+  background: radial-gradient(ellipse at 5% 0%, #f7e9cd80, transparent 48%), #faf7f0;
+  padding: clamp(14px, 2vw, 26px);
+  border-radius: 22px;
+}
+.warm-welcome {
+  display: flex; align-items: center; gap: 14px;
+  margin-block-end: 24px; padding: 20px 24px;
+  border: 1px solid #d9e7dc; border-inline-start: 4px solid #b88736;
+  border-radius: 18px; background: linear-gradient(110deg, #fffaf0, #edf5ee);
+  color: #244b40;
+}
+.warm-welcome__symbol { font-size: 28px; flex-shrink: 0; }
+.warm-welcome strong { display: block; font-size: clamp(17px, 2vw, 22px); line-height: 1.8; }
+.warm-welcome p { margin: 3px 0 0; color: #566a5f; font-size: 13px; line-height: 1.9; }
+.page--dashboard .card, .page--dashboard .metric-card, .page--dashboard .dashboard-area-card {
+  border-radius: 18px; box-shadow: 0 4px 20px rgb(71 59 33 / .045);
+}
+.page--dashboard .dashboard-area-card__icon { color: var(--primary); background: var(--primary-soft); }
+.page--dashboard .dashboard-onboarding { border-radius: 18px; }
+:root:not([data-theme="dark"]) .page--dashboard .dashboard-onboarding { background: #fffaf0; border-color: #e8dcc3; }
+.sidenav {
+  --primary: #287e6c; --primary-soft: #dcece3;
+  --sidebar-bg: #173e36; --sidebar-border: #244f42;
+  --sidebar-text: #e0ebe2; --sidebar-muted: #b0c6b7; --sidebar-active: #347b64;
+  background: radial-gradient(ellipse at 100% 0%, #547d4d55, transparent 45%), linear-gradient(165deg, #234c3e, #173e36 65%, #14362f);
+  border-inline-end-color: #365e4c;
+  box-shadow: 4px 0 24px rgb(30 57 40 / .10);
+}
+.sidenav .brand-mark { background: #f2dfb6; color: #254c3d; box-shadow: none; border-color: #f2dfb6; }
+.sidenav .sidenav__tenant { border-color: #ffffff18; background: #ffffff08; border-radius: 14px; }
+.sidenav .sidenav__tenant strong { color: #f5f5e9; }
+.sidenav .side-item { border-radius: 12px; }
+.sidenav .side-item:hover { background: #ffffff0d; color: #fff; }
+.sidenav .side-item.is-active, .sidenav .side-item.is-active:hover {
+  color: #fff; background: #34745e; border-color: #6c998052;
+  box-shadow: inset -3px 0 0 #e2bc76, 0 3px 10px #102d2420;
+}
+.sidenav .side-item.is-active .icon { color: #f1d69f; }
+:root[data-theme="dark"] .warm-welcome { background: #203a30; color: #e3ecdf; border-color: #4c6251; }
+:root[data-theme="dark"] .warm-welcome p { color: #bacabd; }
+@media (prefers-reduced-motion: no-preference) {
+  .page--dashboard .dashboard-area-card, .sidenav .side-item { transition: background-color .18s ease, box-shadow .18s ease; }
+  .page--dashboard .dashboard-area-card:hover { box-shadow: 0 6px 22px rgb(42 77 53 / .10); }
+}
+@media (max-width: 640px) { .warm-welcome { padding: 16px; gap: 10px; } }
+
+/* Shared warm palette. Keep semantic success/warning/danger tokens intact. */
+:root:not([data-theme="dark"]) {
+  --primary: #176b60;
+  --primary-strong: #115348;
+  --primary-soft: #e6f2ec;
+  --surface-0: #f7f4ed;
+  --surface-1: #fffefa;
+  --surface-2: #f3f0e7;
+  --surface-3: #e9e4d8;
+  --border: #e5dfd2;
+  --border-strong: #d4cbb9;
+  --text-strong: #283c33;
+  --text: #435448;
+  --text-muted: #69756b;
+  --brand-gradient: linear-gradient(135deg, #287e6b, #176b60 65%, #12564d);
+  --brand-glow: 0 6px 18px rgb(23 107 96 / .16);
+  --ring: 0 0 0 3px rgb(23 107 96 / .14);
+}
+:root[data-theme="dark"] {
+  --primary: #74c8b3;
+  --primary-strong: #9cddcc;
+  --primary-soft: #213e35;
+  --brand-gradient: linear-gradient(135deg, #286d5d, #20584c);
+  --brand-glow: 0 6px 18px rgb(0 0 0 / .2);
+  --ring: 0 0 0 3px rgb(116 200 179 / .22);
+}
+.app-shell .card, .app-shell .content-card, .app-shell .metric-card,
+.modal, .drawer {
+  border-radius: 16px;
+  box-shadow: 0 3px 16px rgb(60 51 31 / .045);
+}
+:root:not([data-theme="dark"]) .app-shell .topbar {
+  background: #fffefa;
+  border-color: var(--border);
+}
+.app-shell .button, .modal .button, .drawer .button { border-radius: 11px; }
+.button--primary {
+  background: var(--brand-gradient);
+  border-color: #176b60;
+  color: #fff;
+  box-shadow: var(--brand-glow);
+}
+.button--primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #226f5e, #12584e);
+  border-color: #12584e;
+  box-shadow: 0 6px 18px rgb(23 107 96 / .22);
+}
+.field__control input:focus-visible, .field__control select:focus-visible,
+.field__control textarea:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.app-shell .field__control { border-radius: 10px; }
+:root:not([data-theme="dark"]) .app-shell .data-table th {
+  background: #f2efe5;
+  color: #536448;
+}
+:root:not([data-theme="dark"]) .app-shell .data-table tbody tr:hover td {
+  background-color: #edf4ec;
+}
+.modal__header, .drawer__header { border-color: var(--border); }
+:root:not([data-theme="dark"]) .modal__footer { background: #f8f5ed; }
+@media (prefers-reduced-motion: no-preference) {
+  .button { transition: background-color .16s ease, box-shadow .16s ease; }
+}
+
+
+/* Shared summary cards: inventory, documents, and any future file-stats consumer. */
+:root .file-stats > div {
+  --summary-accent: #286f62;
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-inline-start: 3px solid var(--summary-accent);
+  border-radius: 14px;
+  box-shadow: 0 2px 10px rgb(61 53 34 / .045);
+}
+:root .file-stats > div:nth-child(2) { --summary-accent: #6c7d71; }
+:root .file-stats > div:nth-child(3) { --summary-accent: #697b4d; }
+:root .file-stats > div:nth-child(4) { --summary-accent: #758178; }
+:root .file-stats > div span { color: var(--text-muted); font-weight: 500; }
+:root .file-stats > div strong { color: var(--text-strong); font-weight: 800; }
+:root .file-stats--inventory > div:nth-child(2) {
+  --summary-accent: #a77b32;
+  background: #fcf8ef;
+}
+:root[data-theme="dark"] .file-stats > div { --summary-accent: #82b8a5; }
+:root[data-theme="dark"] .file-stats > div:nth-child(3) { --summary-accent: #a9b98d; }
+:root[data-theme="dark"] .file-stats--inventory > div:nth-child(2) {
+  --summary-accent: #c4a76e;
+  background: #302a20;
+}
+@media print {
+  :root .file-stats > div { background: #fff; border-color: #bbb; box-shadow: none; }
+  :root .file-stats > div span, :root .file-stats > div strong { color: #111; }
+}

@@ -8,6 +8,7 @@ export interface NavigationItem {
   icon: IconName;
   route?: string;
   permission?: string;
+  anyPermission?: string[];
   featureFlag?: string;
   children?: NavigationItem[];
   badge?: number;
@@ -22,7 +23,7 @@ export const navigationConfig: NavigationItem[] = [
     label: "nav.workspace",
     icon: "grid",
     children: [
-      { id: "dashboard", label: "nav.dashboard", icon: "home", route: "/app/dashboard", permission: PERMISSIONS.dashboardView },
+      { id: "dashboard", label: "nav.home", icon: "home", route: "/app/dashboard", exact: true },
     ],
   },
   {
@@ -64,7 +65,6 @@ export const navigationConfig: NavigationItem[] = [
       { id: "maintenanceWarehouse", label: "nav.warehouse", icon: "layers", route: "/app/maintenance/warehouse", permission: PERMISSIONS.maintenanceInventoryView },
       { id: "maintenanceProcurement", label: "nav.procurement", icon: "briefcase", route: "/app/maintenance/procurement", permission: PERMISSIONS.procurementSupplierView },
       { id: "safetyPermits", label: "nav.safetyPermits", icon: "shield", route: "/app/maintenance/permits", permission: PERMISSIONS.safetyPermitView },
-      { id: "organizationStructure", label: "nav.organizationStructure", icon: "users", route: "/app/organization/structure", permission: PERMISSIONS.organizationDepartmentView },
       {
         id: "maintenanceAssets",
         label: "nav.cmmsAssets",
@@ -129,7 +129,7 @@ export const navigationConfig: NavigationItem[] = [
     label: "nav.administration",
     icon: "shield",
     children: [
-      { id: "users", label: "nav.users", icon: "users", route: "/app/administration/users", permission: PERMISSIONS.userList },
+      { id: "users", label: "nav.users", icon: "users", route: "/app/administration/users", anyPermission: [PERMISSIONS.userList, PERMISSIONS.organizationDepartmentView] },
       { id: "roles", label: "nav.roles", icon: "key", route: "/app/administration/roles", permission: PERMISSIONS.roleList },
       { id: "settings", label: "nav.settings", icon: "settings", route: "/app/settings" },
       { id: "account", label: "nav.account", icon: "user", route: "/app/account" },

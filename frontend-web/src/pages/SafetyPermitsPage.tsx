@@ -1,3 +1,5 @@
+import { JalaliDateTimePicker } from "../shared/components/JalaliDateTimePicker";
+import "../styles/safetyPermits.css";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiClientError } from "../core/api/apiClient";
 import { useApiClient } from "../core/api/apiContext";
@@ -11,6 +13,8 @@ import {
   EmptyState,
   ErrorState,
   PermissionGuard,
+  TextInput,
+  SelectInput,
 } from "../shared/components/primitives";
 
 /**
@@ -170,7 +174,9 @@ const formatDateTime = (raw: string | null): string => {
   if (!raw) return "—";
   const date = new Date(raw);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleString("fa-IR", {
+  return date.toLocaleString("fa-IR-u-ca-persian", {
+    calendar: "persian",
+    hour12: false,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -287,6 +293,14 @@ export function SafetyPermitsPage(): JSX.Element {
   };
 
   const createPermit = (): void => {
+    const start = form.validFrom ? new Date(form.validFrom).getTime() : null;
+    const end = form.validTo ? new Date(form.validTo).getTime() : null;
+    if ((start !== null && Number.isNaN(start)) || (end !== null && Number.isNaN(end))) {
+      setNotice("تاریخ یا ساعت اعتبار معتبر نیست؛ دوباره انتخاب کنید."); return;
+    }
+    if (start !== null && end !== null && end <= start) {
+      setNotice("پایان اعتبار باید بعد از شروع اعتبار باشد."); return;
+    }
     setBusy(true);
     setNotice("");
     void api
@@ -392,7 +406,7 @@ export function SafetyPermitsPage(): JSX.Element {
 
   return (
     <PermissionGuard permission={PERMISSIONS.safetyPermitView}>
-      <div className="page">
+      <div className="page safety-permits-page">
         <Card>
           <CardHeader
             title="مجوز کار (Permit to Work)"
@@ -431,96 +445,39 @@ export function SafetyPermitsPage(): JSX.Element {
           )}
 
           {showForm && (
-            <div className="form-grid">
-              <label>
-                نوع مجوز
-                <select
-                  value={form.permitType}
-                  onChange={(event) => setForm({ ...form, permitType: event.target.value })}
-                >
-                  {typeOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            <div className="form-grid permit-form-grid">
+              <SelectInput label="نوع مجوز" value={form.permitType} options={typeOptions} onChange={(event) => setForm({ ...form, permitType: event.target.value })} />
               {selectedType && (
                 // Stating the limits before the form is filled in, rather
                 // than refusing afterwards.
-                <p className="hint">
+                <p className="hint permit-form-note">
                   بیشترین مدت مجاز: {faNumber(selectedType.maxValidityHours)} ساعت
                   {selectedType.requiresIsolation
                     ? " — برای این نوع، ثبت و تأیید نقاط جداسازی الزامی است."
                     : ""}
                 </p>
               )}
-              <label>
-                شرح کار
-                <input
+              <TextInput label="شرح کار"
                   value={form.title}
-                  onChange={(event) => setForm({ ...form, title: event.target.value })}
-                />
-              </label>
-              <label>
-                سطح ریسک
-                <select
-                  value={form.riskLevel}
-                  onChange={(event) => setForm({ ...form, riskLevel: event.target.value })}
-                >
-                  {(payload?.options.riskLevels ?? []).map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                محل کار
-                <input
+                  onChange={(event) => setForm({ ...form, title: event.target.value })} />
+              <SelectInput label="سطح ریسک" value={form.riskLevel} options={payload?.options.riskLevels ?? []} onChange={(event) => setForm({ ...form, riskLevel: event.target.value })} />
+              <TextInput label="محل کار"
                   value={form.locationName}
-                  onChange={(event) => setForm({ ...form, locationName: event.target.value })}
-                />
-              </label>
-              <label>
-                مجری کار
-                <input
+                  onChange={(event) => setForm({ ...form, locationName: event.target.value })} />
+              <TextInput label="مجری کار"
                   value={form.performerName}
-                  onChange={(event) => setForm({ ...form, performerName: event.target.value })}
-                />
-              </label>
-              <label>
-                پیمانکار
-                <input
+                  onChange={(event) => setForm({ ...form, performerName: event.target.value })} />
+              <TextInput label="پیمانکار"
                   value={form.contractorName}
-                  onChange={(event) => setForm({ ...form, contractorName: event.target.value })}
-                />
-              </label>
-              <label>
-                تعداد نفرات
-                <input
+                  onChange={(event) => setForm({ ...form, contractorName: event.target.value })} />
+              <TextInput label="تعداد نفرات"
                   type="number"
                   min={1}
                   value={form.personnelCount}
-                  onChange={(event) => setForm({ ...form, personnelCount: event.target.value })}
-                />
-              </label>
-              <label>
-                شروع اعتبار
-                <input
-                  type="datetime-local"
-                  value={form.validFrom}
-                  onChange={(event) => setForm({ ...form, validFrom: event.target.value })}
-                />
-              </label>
-              <label>
-                پایان اعتبار
-                <input
-                  type="datetime-local"
-                  value={form.validTo}
-                  onChange={(event) => setForm({ ...form, validTo: event.target.value })}
-                />
-              </label>
+                  onChange={(event) => setForm({ ...form, personnelCount: event.target.value })} />
+              <JalaliDateTimePicker label="شروع اعتبار" value={form.validFrom} onChange={(value) => setForm({ ...form, validFrom: value })} />
+              <JalaliDateTimePicker label="پایان اعتبار" value={form.validTo} onChange={(value) => setForm({ ...form, validTo: value })} />
+              <p className="hint permit-form-note">تاریخ‌ها شمسی‌اند؛ ساعت بر اساس منطقهٔ زمانی همین دستگاه ثبت می‌شود ({Intl.DateTimeFormat().resolvedOptions().timeZone}).</p>
               <Button onClick={createPermit} disabled={busy || !form.title.trim()}>
                 ثبت پیش‌نویس مجوز
               </Button>
@@ -672,7 +629,7 @@ export function SafetyPermitsPage(): JSX.Element {
                   : "برای این مجوز نقطه جداسازی ثبت نشده است."}
               </p>
             ) : (
-              <table className="table">
+              <div className="table-scroll"><table className="table data-table">
                 <thead>
                   <tr>
                     <th>نقطه</th>
@@ -728,54 +685,28 @@ export function SafetyPermitsPage(): JSX.Element {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             )}
 
             {(selected.status === "draft" || selected.status === "submitted") && (
               <PermissionGuard permission={PERMISSIONS.safetyPermitIsolate} fallback="hide">
-                <div className="form-grid">
-                  <label>
-                    کد نقطه
-                    <input
+                <div className="form-grid permit-form-grid">
+                  <TextInput label="کد نقطه"
                       value={isolationForm.pointCode}
                       onChange={(event) =>
                         setIsolationForm({ ...isolationForm, pointCode: event.target.value })
-                      }
-                    />
-                  </label>
-                  <label>
-                    شرح
-                    <input
+                      } />
+                  <TextInput label="شرح"
                       value={isolationForm.description}
                       onChange={(event) =>
                         setIsolationForm({ ...isolationForm, description: event.target.value })
-                      }
-                    />
-                  </label>
-                  <label>
-                    نوع انرژی
-                    <select
-                      value={isolationForm.energyType}
-                      onChange={(event) =>
-                        setIsolationForm({ ...isolationForm, energyType: event.target.value })
-                      }
-                    >
-                      {(payload?.options.energyTypes ?? []).map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    شماره قفل/برچسب
-                    <input
+                      } />
+                  <SelectInput label="نوع انرژی" value={isolationForm.energyType} options={payload?.options.energyTypes ?? []} onChange={(event) => setIsolationForm({ ...isolationForm, energyType: event.target.value })} />
+                  <TextInput label="شماره قفل/برچسب"
                       value={isolationForm.lockTag}
                       onChange={(event) =>
                         setIsolationForm({ ...isolationForm, lockTag: event.target.value })
-                      }
-                    />
-                  </label>
+                      } />
                   <Button
                     onClick={() => addIsolation(selected.id)}
                     disabled={

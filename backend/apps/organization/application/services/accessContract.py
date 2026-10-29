@@ -88,6 +88,10 @@ def scopeFilterForUser(tenantId: uuid.UUID, userId: uuid.UUID, actionCode: str) 
     The team roster is fetched here rather than inside the domain because
     "who reports to me" is a database question.
     """
+    from apps.identity.application.services.principalDirectory import isTenantAdministratorForAction
+
+    if isTenantAdministratorForAction(tenantId, userId, actionCode):
+        return ScopeFilter(unrestricted=True, scope="all")
     profile = accessProfileFor(tenantId, userId)
     teamUserIds: tuple[str, ...] = ()
     if profile.scopeFor(actionCode) == "team":
@@ -104,6 +108,10 @@ def userCanActOnRecord(
     departmentId: str = "",
 ) -> bool:
     """Per-record check — the other half of ``scopeFilterForUser``."""
+    from apps.identity.application.services.principalDirectory import isTenantAdministratorForAction
+
+    if isTenantAdministratorForAction(tenantId, userId, actionCode):
+        return True
     profile = accessProfileFor(tenantId, userId)
     teamUserIds: tuple[str, ...] = ()
     if profile.scopeFor(actionCode) == "team":

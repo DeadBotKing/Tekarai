@@ -53,6 +53,15 @@ class ScenarioEnforcementTestBase(TestCase):
         self.assertEqual(profile.status_code, 200, profile.content)
         self.me = uuid.UUID(str(profile.json()["data"]["userId"]))
 
+        # These scenarios simulate ordinary posted managers/technicians, not
+        # tenant administrators. Seed credentials only bootstrap the fixture;
+        # keep the operational grants, but remove tenant-wide admin authority.
+        from apps.identity.infrastructure.models import RoleModel
+        from apps.identity.infrastructure.repositories.identityRepositoriesImpl import AccessRepositoryDjango
+
+        for roleId in RoleModel.objects.filter(code__in=("platformAdmin", "tenantAdmin")).values_list("id", flat=True):
+            AccessRepositoryDjango().revokeRoleFromUser(self.me, roleId)
+
     def post(self, *, department, owner=None, title="کار") -> WorkOrderModel:
         return WorkOrderModel.objects.create(
             tenantId=self.tenantId,

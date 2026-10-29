@@ -61,3 +61,39 @@ def userIdOfUsername(tenantId: uuid.UUID, username: str) -> uuid.UUID | None:
 
     user = UserRepositoryDjango().getByUsername(tenantId, username.lstrip("@"))
     return user.id if user else None
+
+
+def isTenantAdministratorForAction(tenantId: uuid.UUID, userId: uuid.UUID, actionCode: str) -> bool:
+    """Explicit active admin role, in this tenant, with the action still allowed.
+
+    This is not a username check or a general role-grant bypass. Membership,
+    role assignment scope and explicit permission denies remain authoritative.
+    Other contexts use this facade without importing identity's ORM.
+    """
+    from apps.identity.infrastructure.models import (
+        RoleModel, TenantMembershipModel, UserModel, UserRoleModel,
+    )
+    from apps.identity.infrastructure.services.permissionGate import PermissionGateDjango
+
+    if not UserModel.objects.filter(id=userId, status="active", deletedAt__isnull=True).exists():
+        return False
+    if not TenantMembershipModel.objects.filter(userId=userId, tenantId=tenantId, status="active").exists():
+        return False
+    roleIds = RoleModel.objects.filter(
+        isActive=True, code__in=("platformAdmin", "tenantAdmin"),
+    ).values_list("id", flat=True)
+    assignments = UserRoleModel.objects.filter(userId=userId, roleId__in=roleIds)
+    allowedRole = any(
+        (row.scopeType == "GLOBAL" and not row.scopeRef)
+        or (
+            row.scopeType == "TENANT"
+            and row.tenantId == tenantId
+            and (not row.scopeRef or row.scopeRef == str(tenantId))
+        )
+        for row in assignments
+    )
+    if not allowedRole:
+        return False
+    return PermissionGateDjango().hasPermission(
+        userId, actionCode, tenantId=tenantId, targetTenantId=tenantId,
+    )

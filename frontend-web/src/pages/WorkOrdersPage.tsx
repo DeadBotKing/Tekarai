@@ -377,6 +377,8 @@ export function WorkOrdersPage(): JSX.Element {
   // کار بدون اینترنت: آخرین فهرست خوانده‌شده و زمان آن.
   const offline = useOptionalOffline();
   const [staleSince, setStaleSince] = useState("");
+  const [listError, setListError] = useState("");
+  const [listLoading, setListLoading] = useState(!runtimeConfig.demoMode);
   const [searchParams, setSearchParams] = useSearchParams();
   const [partCode, setPartCode] = useState("");
   const [partName, setPartName] = useState("");
@@ -402,12 +404,14 @@ export function WorkOrdersPage(): JSX.Element {
 
   const refresh = useCallback(async (): Promise<void> => {
     if (runtimeConfig.demoMode) return;
+    setListLoading(true);
     try {
       const [woList, deviceList, partList] = await Promise.all([
         service.listWorkOrders(),
         service.listDevices().catch(() => [] as MaintenanceDevice[]),
         service.listSpareParts().catch(() => [] as SparePart[]),
       ]);
+      setListError("");
       setOrders(woList);
       setDevices(deviceList);
       setParts(partList);
@@ -418,6 +422,7 @@ export function WorkOrdersPage(): JSX.Element {
       await offline?.queue.cacheRead("maintenance:devices", deviceList);
       await offline?.queue.cacheRead("maintenance:spareParts", partList);
     } catch (error) {
+      setListError(error instanceof Error ? `دریافت فهرست درخواست‌ها ناموفق بود: ${error.message}` : "دریافت فهرست درخواست‌ها ناموفق بود؛ اتصال و دسترسی را بررسی کنید.");
       if (!offline || !isConnectivityFailure(error)) return;
       const [cachedOrders, cachedDevices, cachedParts] = await Promise.all([
         offline.queue.readCached<WorkOrder[]>("maintenance:workOrders"),
@@ -430,6 +435,8 @@ export function WorkOrdersPage(): JSX.Element {
       if (cachedParts) setParts(cachedParts.payload);
       // Never let a cached list look live — people act on what they read.
       setStaleSince(cachedOrders.cachedAt);
+    } finally {
+      setListLoading(false);
     }
   }, [offline, service]);
   useEffect(() => {
@@ -1215,13 +1222,14 @@ export function WorkOrdersPage(): JSX.Element {
             </Button>
           </div>
         </div>
-        {view === "list" ? (
+        {listError && <div className="card-pad" role="alert"><p>{listError}</p><p>این خطا به معنی ثبت‌نشدن درخواست‌های قبلی نیست؛ درخواست را دوباره ثبت نکنید.</p><Button disabled={listLoading} onClick={() => { void refresh(); }}>تلاش دوباره</Button></div>}
+        {listError && orders.length === 0 ? null : view === "list" ? (
           <DataTable
             columns={columns}
             data={filtered}
             rowKey={(row) => row.id}
             search=""
-            empty={{ title: t("cmms.wo.empty"), sticker: <ContextSticker kind="workOrder" size="md" /> }}
+            empty={{ title: listLoading ? "در حال دریافت درخواست‌ها…" : t("cmms.wo.empty"), sticker: <ContextSticker kind="workOrder" size="md" /> }}
             exportName="tekarai-work-orders"
           />
         ) : (

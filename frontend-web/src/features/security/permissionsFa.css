@@ -1,0 +1,15 @@
+.permissions-fa { margin-block-start: 14px; min-width: 0; }
+.permissions-fa__summary { color: var(--text-muted); font-size: 12px; line-height: 1.9; }
+.permissions-fa__group { margin-block: 18px; }
+.permissions-fa__group h3 { display: flex; align-items: center; gap: 10px; padding-block-end: 9px; border-bottom: 1px solid var(--border); color: var(--text-strong); font-size: 13px; }
+.permissions-fa__group h3 span { color: var(--primary); background: var(--primary-soft); padding: 1px 9px; border-radius: 12px; font-size: 11px; }
+.permissions-fa__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.permissions-fa__item { display: flex; align-items: flex-start; gap: 10px; min-width: 0; margin: 0; padding: 12px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface-1); line-height: 1.8; }
+label.permissions-fa__item { cursor: pointer; }
+.permissions-fa__item:focus-within { outline: 2px solid var(--primary); outline-offset: 2px; }
+.permissions-fa__item input { flex: 0 0 auto; width: 16px; height: 16px; margin-block-start: 4px; accent-color: var(--primary); }
+.permissions-fa__copy { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.permissions-fa__copy strong { font-size: 12px; font-weight: 600; color: var(--text-strong); }
+.permissions-fa__copy code { font-size: 10px; color: var(--text-muted); overflow-wrap: anywhere; text-align: start; unicode-bidi: isolate; }
+.permissions-fa__copy small { font-size: 10px; color: var(--text-muted); }
+@media (max-width: 760px) { .permissions-fa__grid { grid-template-columns: minmax(0, 1fr); } }

@@ -1,0 +1,8 @@
+.organization-brand { display: inline-flex; align-items: center; gap: 10px; min-width: 0; max-width: 250px; flex-shrink: 0; }
+.organization-brand img { display: block; width: 108px; height: 34px; object-fit: contain; padding: 3px 5px; border-radius: 5px; background: #fff; }
+.organization-brand strong { color: var(--text-strong); font-size: 12px; white-space: nowrap; }
+@media (max-width: 700px) {
+  .organization-brand { max-width: 90px; }
+  .organization-brand img { width: 84px; height: 29px; }
+  .organization-brand strong { display: none; }
+}

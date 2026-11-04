@@ -1,3 +1,5 @@
+import { organizationBranding } from "../app/configuration/organizationBranding";
+import { OrganizationBrand } from "../shared/components/OrganizationBrand";
 import { BrandLogo } from "../shared/components/BrandLogo";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -40,6 +42,8 @@ export function AppShell(): JSX.Element {
   const { t, locale, cycleLocale } = useLocalization();
   const { theme, toggleTheme } = useTheme();
   const { tenants, selectedTenant, selectTenant } = useTenant();
+  const singleOrganization = organizationBranding.singleOrganization && !runtimeConfig.demoMode;
+  const organizationName = singleOrganization ? organizationBranding.name : selectedTenant.name;
   const { session, logout } = useAuth();
   const { has } = usePermissions();
   const { isEnabled } = useFeatureFlags();
@@ -222,10 +226,10 @@ export function AppShell(): JSX.Element {
           </div>
         </div>
         <div className="sidenav__tenant">
-          <span className="tenant-avatar">{selectedTenant.name.slice(0, 1)}</span>
+          <span className="tenant-avatar">{organizationName.slice(0, 1)}</span>
           <div>
             <span>{t("header.tenant")}</span>
-            <strong>{selectedTenant.name}</strong>
+            <strong>{organizationName}</strong>
           </div>
         </div>
         <SideNav groups={visibleNavigation} currentPath={currentPath} onNavigate={closeOverlays} />
@@ -266,7 +270,7 @@ export function AppShell(): JSX.Element {
               <span>{t("header.help")}</span>
             </button>
             <div className="topbar__divider" />
-            {tenants.length > 1 && (
+            {singleOrganization ? <OrganizationBrand /> : tenants.length > 1 && (
               <div className="topbar__select">
                 <Icon name="building" size={16} />
                 <select aria-label={t("header.tenant")} value={selectedTenant.id} onChange={(event) => selectTenant(event.target.value)}>
@@ -343,7 +347,7 @@ export function AppShell(): JSX.Element {
           <Avatar name={session?.user.displayName ?? "User"} size="md" tone="purple" />
           <div>
             <strong>{session?.user.displayName}</strong>
-            <span>{selectedTenant.name}</span>
+            <span>{organizationName}</span>
           </div>
         </div>
         <MobileNav groups={visibleNavigation} currentPath={currentPath} onNavigate={() => setMenuOpen(false)} />

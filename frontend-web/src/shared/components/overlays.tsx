@@ -29,15 +29,28 @@ export function Modal({ open, title, description, onClose, children, footer, wid
     const layer = ++nextModalLayer;
     activeModalLayers.set(titleId, layer);
     setDepth(layer);
+    const dialog = document.getElementById(titleId)?.closest<HTMLElement>('[role="dialog"]');
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusables = (): HTMLElement[] => Array.from(dialog?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]') ?? [])
+      .filter(element => !element.hidden && element.getAttribute("aria-hidden") !== "true");
+    focusables()[0]?.focus();
     const onKey = (event: KeyboardEvent): void => {
-      if (event.key !== "Escape") return;
       const topLayer = Math.max(...activeModalLayers.values());
-      if (activeModalLayers.get(titleId) === topLayer) onCloseRef.current();
+      if (activeModalLayers.get(titleId) !== topLayer) return;
+      if (event.key === "Escape") { event.preventDefault(); onCloseRef.current(); }
+      if (event.key === "Tab") {
+        const items = focusables();
+        const first = items[0], last = items[items.length - 1];
+        if (!first) { event.preventDefault(); return; }
+        if (event.shiftKey && (document.activeElement === first || !dialog?.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && (document.activeElement === last || !dialog?.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
+      }
     };
     document.addEventListener("keydown", onKey);
     return () => {
       document.removeEventListener("keydown", onKey);
       activeModalLayers.delete(titleId);
+      if (previousFocus?.isConnected && (dialog?.contains(document.activeElement) || document.activeElement === document.body)) previousFocus.focus();
       if (activeModalLayers.size === 0) {
         document.body.style.overflow = bodyOverflowBeforeFirstModal ?? "";
         bodyOverflowBeforeFirstModal = null;

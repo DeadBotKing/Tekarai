@@ -10,6 +10,12 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.exceptions import MethodNotAllowed
+from apps.documents.infrastructure import container as documentsContainer
+from apps.documents.application.commands import ListDocumentsQuery, DownloadDocumentQuery
+from apps.documents.infrastructure.models import DocumentModel
+from apps.maintenance.infrastructure.models import MaintenanceAttachmentModel
+from apps.maintenance.application.services.tenantResolver import resolveTenantId
 
 from apps.maintenance.application.commands.maintenanceAttachmentCommands import (
     DeleteMaintenanceAttachmentCommand,
@@ -56,10 +62,12 @@ class DeviceAttachmentView(IdempotencyMixin, APIView):
     parser_classes = [MultiPartParser, FormParser]
 
     def get(self, request: Request, deviceId: str) -> Response:  # noqa: ARG002
-        return _list("device", str(deviceId))
+        result = documentsContainer.listDocumentsUseCase().execute(ListDocumentsQuery(deviceId=str(deviceId), limit=200))
+        items = [{"id": item.id, "targetType": "device", "targetId": str(deviceId), "category": "other", "originalName": item.name, "mimeType": item.contentType, "sizeBytes": item.sizeBytes, "uploadedAt": item.uploadedAt, "downloadUrl": f"/api/v1/documents/{item.id}/download"} for item in result.items]
+        return Response(successEnvelope(items, meta=result.asMeta()))
 
     def post(self, request: Request, deviceId: str) -> Response:
-        return _upload(request, "device", str(deviceId))
+        raise MethodNotAllowed("POST", detail="ثبت مدارک دستگاه فقط از بخش اسناد انجام می‌شود.")
 
 
 class WorkOrderAttachmentView(IdempotencyMixin, APIView):
@@ -79,6 +87,12 @@ class MaintenanceAttachmentDownloadView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request: Request, attachmentId: str) -> FileResponse:  # noqa: ARG002
+        if DocumentModel.objects.filter(id=attachmentId, tenantId=resolveTenantId(""), legacyDeviceDocument=True).exists():
+            result = documentsContainer.downloadDocumentUseCase().execute(DownloadDocumentQuery(documentId=str(attachmentId)))
+            response = FileResponse(result.stream, content_type=result.contentType)
+            response["Content-Disposition"] = content_disposition_header(True, result.name)
+            response["X-Content-Type-Options"] = "nosniff"
+            return response
         result = container.downloadMaintenanceAttachmentUseCase().execute(
             DownloadMaintenanceAttachmentQuery(attachmentId=str(attachmentId))
         )
@@ -100,6 +114,8 @@ class MaintenanceAttachmentDetailView(IdempotencyMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def delete(self, request: Request, attachmentId: str) -> Response:  # noqa: ARG002
+        if MaintenanceAttachmentModel.objects.filter(id=attachmentId, tenantId=resolveTenantId(""), targetType="device").exists():
+            raise MethodNotAllowed("DELETE", detail="مدیریت مدارک دستگاه فقط از بخش اسناد انجام می‌شود.")
         container.deleteMaintenanceAttachmentUseCase().execute(
             DeleteMaintenanceAttachmentCommand(attachmentId=str(attachmentId))
         )

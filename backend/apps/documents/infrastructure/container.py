@@ -7,6 +7,7 @@ from apps.documents.application.useCases import (
     GetDocumentStreamUseCase,
     ListDocumentsUseCase,
     UploadDocumentUseCase,
+    UpdateDocumentUseCase,
 )
 from apps.documents.infrastructure.repositories.documentRepositoryImpl import (
     DocumentRepositoryImpl,
@@ -57,4 +58,10 @@ def deleteDocumentUseCase() -> DeleteDocumentUseCase:
     useCase = DeleteDocumentUseCase(**_kernelPorts())
     useCase.repository = documentRepository()
     useCase.storage = documentStorage()
+    return useCase
+
+
+def updateDocumentUseCase() -> UpdateDocumentUseCase:
+    useCase = UpdateDocumentUseCase(**_kernelPorts())
+    useCase.repository = documentRepository()
     return useCase

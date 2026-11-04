@@ -1,3 +1,4 @@
+import { metricDetail } from "../shared/components/metricDetails";
 // گزارشنامه‌ی هفتگی‌ی کار — دستگاه‌محور، قابل چاپ برای مدیر (راست‌به‌چپ فارسی).
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useApiClient } from "../core/api/apiContext";
@@ -14,7 +15,7 @@ import {
 } from "../features/maintenance/workReports";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import type { MaintenanceDevice, WorkOrder } from "../shared/types/domain";
-import { Badge, Button, Card, SectionHeader } from "../shared/components/primitives";
+import { Badge, Button, Card, MetricCard, SectionHeader } from "../shared/components/primitives";
 import { JalaliDatePicker } from "../shared/components/JalaliDatePicker";
 import { Toast } from "../shared/components/overlays";
 import { formatJalali } from "../core/localization/jalali";
@@ -120,11 +121,11 @@ export default function MaintenanceWorkReportPage(): JSX.Element {
       </Card>
 
       <div className="weekly-report-summary metric-grid">
-        <Card padding="md"><span>کل اقدام‌ها</span><strong>{summary.totalOrders}</strong></Card>
-        <Card padding="md"><span>تکمیل‌شده</span><strong>{summary.completedOrders}</strong></Card>
-        <Card padding="md"><span>مجموع توقف</span><strong>{formatNumber(summary.totalDowntimeMinutes, "fa")} دقیقه</strong></Card>
-        <Card padding="md"><span>مجموع ساعت تعمیر</span><strong>{formatNumber(summary.totalLabourHours, "fa")} ساعت</strong></Card>
-        <Card padding="md"><span>هزینه‌ی کل (ریال)</span><strong>{formatNumber(summary.totalCost, "fa")}</strong></Card>
+        <MetricCard compact icon="chart" label="کل اقدام‌ها" value={summary.totalOrders} detail={metricDetail(rangedOrders, [["title", "اقدام"], ["status", "وضعیت"], ["downtimeMinutes", "توقف (دقیقه)"], ["labourHours", "ساعت تعمیر"], ["labourCost", "هزینه دستمزد (ریال)"], ["partsCost", "هزینه قطعات (ریال)"]], undefined, row => `/app/maintenance/work-orders?focus=${encodeURIComponent(row.id)}`)} />
+        <MetricCard compact icon="chart" label="تکمیل‌شده" value={summary.completedOrders} detail={metricDetail(rangedOrders.filter(order => order.status === "completed"), [["title", "اقدام"], ["status", "وضعیت"], ["downtimeMinutes", "توقف (دقیقه)"], ["labourHours", "ساعت تعمیر"], ["labourCost", "هزینه دستمزد (ریال)"], ["partsCost", "هزینه قطعات (ریال)"]], undefined, row => `/app/maintenance/work-orders?focus=${encodeURIComponent(row.id)}`)} />
+        <MetricCard compact icon="chart" label="مجموع توقف" value={`${formatNumber(summary.totalDowntimeMinutes, "fa")} دقیقه`} detail={metricDetail(rangedOrders, [["title", "اقدام"], ["status", "وضعیت"], ["downtimeMinutes", "توقف (دقیقه)"], ["labourHours", "ساعت تعمیر"], ["labourCost", "هزینه دستمزد (ریال)"], ["partsCost", "هزینه قطعات (ریال)"]], undefined, row => `/app/maintenance/work-orders?focus=${encodeURIComponent(row.id)}`)} />
+        <MetricCard compact icon="chart" label="مجموع ساعت تعمیر" value={`${formatNumber(summary.totalLabourHours, "fa")} ساعت`} detail={metricDetail(rangedOrders, [["title", "اقدام"], ["status", "وضعیت"], ["downtimeMinutes", "توقف (دقیقه)"], ["labourHours", "ساعت تعمیر"], ["labourCost", "هزینه دستمزد (ریال)"], ["partsCost", "هزینه قطعات (ریال)"]], undefined, row => `/app/maintenance/work-orders?focus=${encodeURIComponent(row.id)}`)} />
+        <MetricCard compact icon="chart" label="هزینه‌ی کل (ریال)" value={formatNumber(summary.totalCost, "fa")} detail={metricDetail(rangedOrders, [["title", "اقدام"], ["status", "وضعیت"], ["downtimeMinutes", "توقف (دقیقه)"], ["labourHours", "ساعت تعمیر"], ["labourCost", "هزینه دستمزد (ریال)"], ["partsCost", "هزینه قطعات (ریال)"]], undefined, row => `/app/maintenance/work-orders?focus=${encodeURIComponent(row.id)}`)} />
       </div>
 
       {groups.length === 0 && (

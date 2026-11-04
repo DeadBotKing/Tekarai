@@ -123,7 +123,7 @@ type TabKey = "departments" | "positions" | "matrix";
 const TABS: { key: TabKey; label: string }[] = [
   { key: "departments", label: "واحدها" },
   { key: "positions", label: "سمت‌ها" },
-  { key: "matrix", label: "ماتریس دسترسی" },
+  { key: "matrix", label: "اختیارات سمت‌ها" },
 ];
 
 export function OrganizationStructurePage({ embedded = false }: { embedded?: boolean } = {}): JSX.Element {
@@ -181,7 +181,7 @@ export function OrganizationStructurePage({ embedded = false }: { embedded?: boo
         setError(null);
       })
       .catch((cause: unknown) =>
-        setError(failureMessage(cause, "دریافت ماتریس دسترسی ناموفق بود.")),
+        setError(failureMessage(cause, "دریافت اختیارات سمت‌ها ناموفق بود.")),
       );
   }, [api, matrixUnitId]);
 
@@ -266,7 +266,7 @@ export function OrganizationStructurePage({ embedded = false }: { embedded?: boo
       .then(() => {
         setPositionForm(emptyPositionForm);
         setShowPositionForm(false);
-        setNotice(editingPositionId ? "سمت ویرایش شد." : "سمت جدید ثبت شد. تا زمانی که در ماتریس دسترسی تعیین نشود، هیچ اختیاری ندارد.");
+        setNotice(editingPositionId ? "سمت ویرایش شد." : "سمت جدید ثبت شد. تا زمانی که در اختیارات سمت‌ها تعیین نشود، هیچ اختیاری ندارد.");
         setEditingPositionId(null);
         load();
       })
@@ -645,7 +645,7 @@ export function OrganizationStructurePage({ embedded = false }: { embedded?: boo
           <Card>
             <CardHeader
               title="سمت‌ها"
-              subtitle="سمت به‌تنهایی دسترسی نمی‌دهد؛ اختیارات آن در ماتریس و برای هر واحد تعیین می‌شود."
+              subtitle="سمت به‌تنهایی دسترسی نمی‌دهد؛ اختیارات آن در بخش «اختیارات سمت‌ها» و برای هر واحد تعیین می‌شود."
               action={
                 <PermissionGuard
                   permission={PERMISSIONS.organizationPositionManage}
@@ -786,8 +786,8 @@ export function OrganizationStructurePage({ embedded = false }: { embedded?: boo
       {tab === "matrix" ? (
         <Card>
           <CardHeader
-            title="ماتریس دسترسی"
-            subtitle="برای هر سمت، در هر واحد، مشخص کنید چه کاری مجاز است و تا چه محدوده‌ای."
+            title="اختیارات سمت‌ها"
+            subtitle="مشخص کنید هر سمت، در هر واحد، چه کارهایی و در چه محدوده‌ای می‌تواند انجام دهد."
             action={
               <SelectInput
                 label="واحد"
@@ -807,7 +807,7 @@ export function OrganizationStructurePage({ embedded = false }: { embedded?: boo
             </p>
           ) : null}
           {matrix === null ? (
-            <EmptyState icon="folder" title="در حال دریافت ماتریس…" />
+            <EmptyState icon="folder" title="در حال دریافت اختیارات سمت‌ها…" />
           ) : (
             <AccessMatrixGrid
               payload={matrix}

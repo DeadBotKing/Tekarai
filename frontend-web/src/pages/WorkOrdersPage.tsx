@@ -1,3 +1,4 @@
+import { metricDetail } from "../shared/components/metricDetails";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useApiClient } from "../core/api/apiContext";
@@ -1146,9 +1147,9 @@ export function WorkOrdersPage(): JSX.Element {
       )}
 
       <div className="metric-grid">
-        <MetricCard label={t("cmms.metric.openWo")} value={openCount} icon="checkSquare" tone="amber" />
-        <MetricCard label={t("cmms.woStatus.inProgress")} value={inProgressCount} icon="activity" tone="blue" />
-        <MetricCard label={t("cmms.metric.totalDevices")} value={devices.length} icon="cpu" tone="purple" />
+        <MetricCard detail={metricDetail(orders.filter(order => order.status !== "completed" && order.status !== "cancelled"), [["title", "عنوان درخواست"], ["status", "وضعیت"], ["priority", "اولویت"], ["assignedToName", "مسئول"], ["createdAt", "تاریخ ثبت"]], undefined, row => `/app/maintenance/work-orders?focus=${encodeURIComponent(row.id)}`)}  label={t("cmms.metric.openWo")} value={openCount} icon="checkSquare" tone="amber" />
+        <MetricCard detail={metricDetail(orders.filter(order => order.status === "inProgress"), [["title", "عنوان درخواست"], ["status", "وضعیت"], ["priority", "اولویت"], ["assignedToName", "مسئول"], ["createdAt", "تاریخ ثبت"]], undefined, row => `/app/maintenance/work-orders?focus=${encodeURIComponent(row.id)}`)}  label={t("cmms.woStatus.inProgress")} value={inProgressCount} icon="activity" tone="blue" />
+        <MetricCard detail={metricDetail(devices, [["name", "نام تجهیز"], ["code", "کد"], ["status", "وضعیت"], ["nextDueDate", "موعد سرویس"]], undefined, row => `/app/maintenance/devices/${encodeURIComponent(row.id)}/profile`)}  label={t("cmms.metric.totalDevices")} value={devices.length} icon="cpu" tone="purple" />
       </div>
 
       <Card className="content-card" padding="none">

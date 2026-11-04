@@ -10,7 +10,6 @@ from rest_framework.views import APIView
 
 from apps.identity.application.commands.identityCommands import (
     AssignUserToTenantCommand,
-    CreateUserCommand,
 )
 from apps.identity.application.queries.identityQueries import (
     GetCurrentAccountQuery,
@@ -20,7 +19,6 @@ from apps.identity.application.queries.identityQueries import (
 from apps.identity.infrastructure import container
 from apps.identity.presentation.api.serializers.identitySerializers import (
     AssignMembershipSerializer,
-    CreateUserSerializer,
 )
 from apps.sharedKernel.presentation.api.idempotency import IdempotencyMixin
 from apps.sharedKernel.presentation.api.openapi import EndpointSpec, registerEndpoint
@@ -37,7 +35,7 @@ USER_ERRORS = [
 ]
 
 
-class UserListView(IdempotencyMixin, APIView):
+class UserListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request: Request) -> Response:
@@ -58,21 +56,8 @@ class UserListView(IdempotencyMixin, APIView):
         )
 
     def post(self, request: Request) -> Response:
-        serializer = CreateUserSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        from apps.sharedKernel.application.requestContext import currentContext
-
-        context = currentContext()
-        dto = container.createUserUseCase().execute(
-            CreateUserCommand(
-                tenantId=context.tenantId or context.actorTenantId,
-                username=str(serializer.validated_data["username"]),
-                email=str(serializer.validated_data["email"]),
-                password=str(serializer.validated_data["password"]),
-                displayName=str(serializer.validated_data.get("displayName", "")),
-            )
-        )
-        return Response(successEnvelope(dataclasses.asdict(dto)), status=201)
+        from apps.identity.presentation.api.views.mobileViews import createAccountResponse
+        return createAccountResponse(request)
 
 
 class UserDetailView(APIView):
@@ -128,11 +113,11 @@ def registerUserEndpoints() -> None:
         EndpointSpec(
             method="POST",
             path="api/v1/users",
-            summary="Create a user in the caller's tenant.",
+            summary="Create a mobile account; generated temporary credential is returned once.",
             permission="user.create",
-            requestExample={"username": "sara", "email": "sara@acme.com", "password": "…"},
+            requestExample={"phone": "09123456789", "displayName": "Sara", "email": "sara@acme.com"},
             errorCodes=USER_ERRORS,
-            idempotent=True,
+            idempotent=False,
         )
     )
     registerEndpoint(

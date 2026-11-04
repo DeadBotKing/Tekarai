@@ -1,3 +1,4 @@
+import { metricDetail } from "../shared/components/metricDetails";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApiClient } from "../core/api/apiContext";
@@ -213,19 +214,19 @@ export function MaintenanceLocationsPage(): JSX.Element {
       />
 
       <div className="metric-grid">
-        <MetricCard
+        <MetricCard detail={metricDetail(locations.filter(item => item.kind === "site"), [["name", "نام"], ["code", "کد"], ["path", "مسیر"]])} 
           label={t("registry.location.site")}
           value={locations.filter((item) => item.kind === "site").length}
           icon="building"
           tone="blue"
         />
-        <MetricCard
+        <MetricCard detail={metricDetail(locations.filter(item => item.kind === "building"), [["name", "نام"], ["code", "کد"], ["path", "مسیر"]])} 
           label={t("registry.location.building")}
           value={locations.filter((item) => item.kind === "building").length}
           icon="home"
           tone="green"
         />
-        <MetricCard
+        <MetricCard detail={metricDetail(locations.filter(item => item.kind === "room"), [["name", "نام"], ["code", "کد"], ["path", "مسیر"]])} 
           label={t("registry.location.room")}
           value={locations.filter((item) => item.kind === "room").length}
           icon="layers"

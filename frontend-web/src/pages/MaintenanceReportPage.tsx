@@ -1,3 +1,4 @@
+import { metricDetail } from "../shared/components/metricDetails";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
@@ -179,10 +180,10 @@ export function MaintenanceReportPage(): JSX.Element {
       </Card>
 
       <div className="metric-grid">
-        <MetricCard label="کل درخواست‌ها" value={stats.total} icon="checkSquare" tone="purple" />
-        <MetricCard label="درخواست‌های باز" value={stats.open} icon="activity" tone="blue" />
-        <MetricCard label="تکمیل‌شده" value={stats.completed} icon="checkCircle" tone="green" />
-        <MetricCard label="دارای تأخیر" value={stats.overdue} icon="warning" tone="amber" />
+        <MetricCard detail={metricDetail(filteredOrders, [["title", "عنوان درخواست"], ["status", "وضعیت"], ["priority", "اولویت"], ["assignedToName", "مسئول"], ["createdAt", "تاریخ ثبت"]], undefined, row => `/app/maintenance/work-orders?focus=${encodeURIComponent(row.id)}`)}  label="کل درخواست‌ها" value={stats.total} icon="checkSquare" tone="purple" />
+        <MetricCard detail={metricDetail(filteredOrders.filter(order => order.status !== "completed" && order.status !== "cancelled"), [["title", "عنوان درخواست"], ["status", "وضعیت"], ["priority", "اولویت"], ["assignedToName", "مسئول"], ["createdAt", "تاریخ ثبت"]], undefined, row => `/app/maintenance/work-orders?focus=${encodeURIComponent(row.id)}`)}  label="درخواست‌های باز" value={stats.open} icon="activity" tone="blue" />
+        <MetricCard detail={metricDetail(filteredOrders.filter(order => order.status === "completed"), [["title", "عنوان درخواست"], ["status", "وضعیت"], ["priority", "اولویت"], ["assignedToName", "مسئول"], ["createdAt", "تاریخ ثبت"]], undefined, row => `/app/maintenance/work-orders?focus=${encodeURIComponent(row.id)}`)}  label="تکمیل‌شده" value={stats.completed} icon="checkCircle" tone="green" />
+        <MetricCard detail={metricDetail(filteredOrders.filter(order => Boolean(order.overdue)), [["title", "عنوان درخواست"], ["status", "وضعیت"], ["priority", "اولویت"], ["assignedToName", "مسئول"], ["createdAt", "تاریخ ثبت"]], undefined, row => `/app/maintenance/work-orders?focus=${encodeURIComponent(row.id)}`)}  label="دارای تأخیر" value={stats.overdue} icon="warning" tone="amber" />
       </div>
 
       <Card className="dashboard-widget" padding="md">

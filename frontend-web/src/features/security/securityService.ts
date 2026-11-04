@@ -11,7 +11,11 @@ export interface UserAccount {
   displayName: string;
   status: string;
   createdAt: string;
+  phone?: string;
 }
+
+export interface IssuedCredential { tenantCode?: string; user: UserAccount; temporaryPassword: string; temporaryExpiresAt: string; }
+export interface MobileUserInput { displayName: string; email: string; phone: string; username?: string; }
 
 export interface RoleRecord {
   id: string;
@@ -56,6 +60,9 @@ export interface InviteUserInput {
 export interface SecurityService {
   listUsers: (search?: string, signal?: AbortSignal) => Promise<UserAccount[]>;
   inviteUser: (input: InviteUserInput, signal?: AbortSignal) => Promise<UserAccount>;
+  createMobileUser: (input: MobileUserInput) => Promise<IssuedCredential>;
+  updateMobile: (userId: string, phone: string) => Promise<UserAccount>;
+  issueTemporaryPassword: (userId: string) => Promise<IssuedCredential>;
   listRoles: (signal?: AbortSignal) => Promise<RoleRecord[]>;
   createRole: (input: { code: string; name: string; scopeType: string; actions: string[] }, signal?: AbortSignal) => Promise<RoleRecord>;
   updateRole: (roleId: string, input: { name: string; actions: string[] }, signal?: AbortSignal) => Promise<RoleRecord>;
@@ -87,6 +94,9 @@ export const createSecurityService = (api: ApiClient): SecurityService => ({
   },
   inviteUser: (input, signal) =>
     api.post<UserAccount>(apiEndpoints.users, input, { signal, ...authOptions }),
+  createMobileUser: (input) => api.post<IssuedCredential>(apiEndpoints.users, input, authOptions),
+  updateMobile: (id, phone) => api.patch<UserAccount>(`users/${id}/mobile`, { phone }, authOptions),
+  issueTemporaryPassword: (id) => api.post<IssuedCredential>(`users/${id}/temporary-password`, {}, authOptions),
   listRoles: (signal) => api.get<RoleRecord[]>(apiEndpoints.roles, { signal }),
   createRole: (input, signal) => api.post<RoleRecord>(apiEndpoints.roles, input, { signal, ...authOptions }),
   updateRole: (roleId, input, signal) => api.patch<RoleRecord>(`${apiEndpoints.roles}/${roleId}`, input, { signal, ...authOptions }),

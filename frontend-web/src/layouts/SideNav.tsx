@@ -1,24 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { NavLink } from "react-router-dom";
 import type { NavigationItem } from "../app/configuration/navigation";
 import { useLocalization } from "../core/localization/localizationContext";
-import { Icon, type IconName } from "../shared/components/Icon";
-
-/**
- * The navigation sidebar, drawn after MaintainX: a light, friendly rail on
- * the start edge (the right, in Persian) — small-caps section labels, one
- * pill-highlighted item for the current page, sub-menus that expand in
- * place. Every page stays two clicks away: section → item, with parents
- * pre-opening to reveal the active child.
- */
-
-const routeOf = (item: NavigationItem): string =>
-  item.route ?? item.children?.find((child) => child.route)?.route ?? "/app/dashboard";
-
-const isActivePath = (path: string, route: string, exact = false): boolean => {
-  if (exact || route === "/app/dashboard") return path === route;
-  return path === route || path.startsWith(`${route}/`);
-};
+import { Icon } from "../shared/components/Icon";
 
 interface SideNavProps {
   groups: NavigationItem[];
@@ -26,162 +10,86 @@ interface SideNavProps {
   onNavigate?: () => void;
 }
 
-export function SideNav({ groups, currentPath, onNavigate }: SideNavProps): JSX.Element {
-  const { t } = useLocalization();
-  return (
-    <nav className="sidenav__nav" aria-label={t("nav.workspace")}>
-      {groups.map((group) => (
-        <div className="sidenav__group" key={group.id}>
-          <div className="sidenav__group-label">{t(group.label)}</div>
-          {(group.children ?? []).map((item) => (
-            <SideItem key={item.id} item={item} currentPath={currentPath} onNavigate={onNavigate} />
-          ))}
-        </div>
-      ))}
-    </nav>
-  );
+const isActivePath = (path: string, item: NavigationItem): boolean => {
+  if (!item.route) return false;
+  const route = item.route;
+  if (item.exact || route === "/app/dashboard") return path === route;
+  return path === route || path.startsWith(`${route}/`);
+};
+
+const isDirect = (group: NavigationItem): boolean =>
+  ["workspace", "records", "communication"].includes(group.id) &&
+  group.children?.length === 1 && Boolean(group.children[0].route);
+
+export function SideNav(props: SideNavProps): JSX.Element {
+  return <GroupedNavigation {...props} mobile={false} />;
 }
 
-function SideItem({
-  item,
-  currentPath,
-  onNavigate,
-}: {
-  item: NavigationItem;
-  currentPath: string;
-  onNavigate?: () => void;
-}): JSX.Element {
-  const { t } = useLocalization();
-  const children = item.children?.filter((child) => child.route) ?? [];
-  const route = routeOf(item);
-  const active = isActivePath(currentPath, route, item.exact);
-
-  if (children.length === 0) {
-    return (
-      <NavLink
-        to={route}
-        className={`side-item ${active ? "is-active" : ""}`}
-        onClick={onNavigate}
-      >
-        <Icon name={item.icon as IconName} size={16} />
-        <span>{t(item.label)}</span>
-        {item.badge ? <span className="side-item__badge">{item.badge}</span> : null}
-      </NavLink>
-    );
-  }
-
-  return <SideParent item={item} children={children} currentPath={currentPath} onNavigate={onNavigate} />;
+export function MobileNav(props: SideNavProps): JSX.Element {
+  return <GroupedNavigation {...props} mobile />;
 }
 
-function SideParent({
-  item,
-  children,
-  currentPath,
-  onNavigate,
-}: {
-  item: NavigationItem;
-  children: NavigationItem[];
-  currentPath: string;
-  onNavigate?: () => void;
-}): JSX.Element {
+function GroupedNavigation({ groups, currentPath, onNavigate, mobile }: SideNavProps & { mobile: boolean }): JSX.Element {
   const { t } = useLocalization();
-  const childActive = children.some((child) => isActivePath(currentPath, child.route ?? "", child.exact));
-  const [open, setOpen] = useState(childActive);
-  const childActiveRef = childActive;
+  const instance = useId();
+  const sections = groups.filter((group) => !isDirect(group));
+  const activeGroup = sections.find((group) => group.children?.some((item) => isActivePath(currentPath, item)))?.id ?? null;
+  const [openGroup, setOpenGroup] = useState<string | null>(activeGroup);
+
   useEffect(() => {
-    if (childActiveRef) setOpen(true);
-  }, [childActiveRef]);
+    setOpenGroup(activeGroup);
+  }, [activeGroup, currentPath]);
 
-  return (
-    <div className="side-item-group">
-      <button
-        type="button"
-        className={`side-item side-item--parent ${childActive ? "is-active" : ""} ${open ? "is-open" : ""}`}
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-      >
-        <Icon name={item.icon as IconName} size={16} />
-        <span>{t(item.label)}</span>
-        <Icon name="chevronDown" size={12} className="side-item__chevron" />
-      </button>
-      {open &&
-        children.map((child) => {
-          const active = isActivePath(currentPath, child.route ?? "", child.exact);
-          return (
-            <NavLink
-              key={child.id}
-              to={child.route ?? "/app/dashboard"}
-              className={`side-item side-item--sub ${active ? "is-active" : ""}`}
-              onClick={onNavigate}
-            >
-              <Icon name={child.icon as IconName} size={15} />
-              <span>{t(child.label)}</span>
-            </NavLink>
-          );
-        })}
-    </div>
-  );
-}
-
-/**
- * The same tree for the mobile drawer: sections as native disclosure
- * widgets, the active section pre-opened — a plain list a phone can scroll.
- */
-export function MobileNav({ groups, currentPath, onNavigate }: SideNavProps): JSX.Element {
-  const { t } = useLocalization();
-  return (
-    <nav className="mobilenav" aria-label={t("nav.workspace")}>
-      {groups.map((group) => {
-        const children = group.children ?? [];
-        const childActive = children.some((child) => isActivePath(currentPath, routeOf(child), child.exact));
-        const directs = children.filter((child) => child.route);
-        const submenus = children.filter((child) => !child.route && child.children?.length);
-        return (
-          <details className="mobilenav__group" key={group.id} open={childActive || undefined}>
-            <summary className="mobilenav__group-label">
-              <Icon name={group.icon as IconName} size={16} />
-              <span>{t(group.label)}</span>
-              <Icon name="chevronDown" size={13} className="mobilenav__chevron" />
-            </summary>
-            <div className="mobilenav__group-body">
-              {directs.map((item) => (
-                <MobileLink key={item.id} item={item} currentPath={currentPath} onNavigate={onNavigate} />
-              ))}
-              {submenus.map((submenu) => (
-                <div className="mobilenav__section" key={submenu.id}>
-                  <span className="mobilenav__section-label">{t(submenu.label)}</span>
-                  {(submenu.children ?? []).map((item) => (
-                    <MobileLink key={item.id} item={item} currentPath={currentPath} onNavigate={onNavigate} />
-                  ))}
-                </div>
-              ))}
-            </div>
-          </details>
-        );
-      })}
-    </nav>
-  );
-}
-
-function MobileLink({
-  item,
-  currentPath,
-  onNavigate,
-}: {
-  item: NavigationItem;
-  currentPath: string;
-  onNavigate?: () => void;
-}): JSX.Element {
-  const { t } = useLocalization();
-  const active = isActivePath(currentPath, item.route ?? "", item.exact);
-  return (
+  const renderLink = (item: NavigationItem, nested: boolean): JSX.Element => (
     <NavLink
+      key={item.id}
       to={item.route ?? "/app/dashboard"}
-      className={`mobilenav__item ${active ? "is-active" : ""}`}
+      end={item.exact}
+      className={`side-item ${nested ? "side-item--sub" : "nav-quick-link"} ${isActivePath(currentPath, item) ? "is-active" : ""}`}
       onClick={onNavigate}
     >
-      <Icon name={item.icon as IconName} size={15} />
+      <Icon name={item.icon} size={17} />
       <span>{t(item.label)}</span>
+      {item.badge ? <span className="side-item__badge">{item.badge}</span> : null}
     </NavLink>
+  );
+
+  return (
+    <nav className={`${mobile ? "mobilenav" : "sidenav__nav"} grouped-nav`} aria-label={t("nav.workspace")}>
+      <div className="nav-quick-links">
+        {groups.filter(isDirect).map((group) => renderLink(group.children![0], false))}
+      </div>
+      <div className="nav-sections">
+        {sections.map((group) => {
+          const children = group.children ?? [];
+          const open = openGroup === group.id;
+          const active = activeGroup === group.id;
+          const panelId = `navigation-${instance}-${group.id}`;
+          const triggerId = `${panelId}-trigger`;
+          return (
+            <section className={`nav-section ${open ? "is-open" : ""} ${active ? "is-active" : ""}`} key={group.id}>
+              <button
+                id={triggerId}
+                type="button"
+                className={`nav-section__trigger ${active ? "is-active" : ""}`}
+                aria-expanded={open}
+                aria-controls={panelId}
+                onClick={() => setOpenGroup(open ? null : group.id)}
+              >
+                <span className="nav-section__icon"><Icon name={group.icon} size={18} /></span>
+                <span className="nav-section__title">{t(group.label)}</span>
+                <span className="nav-section__count" aria-hidden="true">{children.length}</span>
+                <Icon name="chevronDown" size={13} className="nav-section__chevron" />
+              </button>
+              {open && (
+                <div id={panelId} role="region" aria-labelledby={triggerId} className="nav-section__body">
+                  {children.map((item) => renderLink(item, true))}
+                </div>
+              )}
+            </section>
+          );
+        })}
+      </div>
+    </nav>
   );
 }

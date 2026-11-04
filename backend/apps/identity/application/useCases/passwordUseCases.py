@@ -118,6 +118,8 @@ class ChangePasswordUseCase(UseCase[ChangePasswordCommand, object]):
         )
         user.changePassword(newHash, now)
         self.userRepository.update(user)
+        from apps.identity.infrastructure.services.mobileOnboarding import clearPending
+        clearPending(user.id)
         self.collectEventsFrom(user)
         revoked = self.sessionRepository.revokeAllForUser(userId, now)  # §35
         self.securityEvents.record("PASSWORD_CHANGED", userId=userId, tenantId=user.tenantId)
@@ -221,6 +223,8 @@ class ConfirmPasswordResetUseCase(UseCase[ConfirmPasswordResetCommand, object]):
         validatePasswordStrength(command.newPassword)  # §23 policy (raises)
         user.changePassword(self.passwordHasher.hash(command.newPassword), now)
         self.userRepository.update(user)
+        from apps.identity.infrastructure.services.mobileOnboarding import clearPending
+        clearPending(user.id)
         self.collectEventsFrom(user)
         self.credentialRepository.markResetTokenUsed(token.id)  # single-use
         revoked = self.sessionRepository.revokeAllForUser(user.id, now)

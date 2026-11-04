@@ -28,6 +28,11 @@ vi.mock("../app/configuration/runtimeConfig", () => ({
   },
 }));
 
+// Keep unrelated global notification polling outside this page's API stub.
+vi.mock("../features/notifications/notificationService", () => ({
+  createNotificationService: () => ({ list: async () => [], markRead: async () => {}, markAllRead: async () => {} }),
+}));
+
 import { AppProviders } from "../app/providers/AppProviders";
 import { sessionStore } from "../core/auth/sessionStore";
 import { SafetyPermitsPage, formatDuration, validitySummary } from "../pages/SafetyPermitsPage";

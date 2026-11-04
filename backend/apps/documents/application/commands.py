@@ -14,6 +14,7 @@ class ListDocumentsQuery(Query):
     category: str = ""
     limit: int = 50
     offset: int = 0
+    deviceId: str = ""
 
 
 @dataclass(frozen=True)
@@ -21,6 +22,7 @@ class UploadDocumentCommand(Command):
     uploadedFile: Any = None
     category: str = ""
     description: str = ""
+    deviceIds: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -31,3 +33,11 @@ class DownloadDocumentQuery(Query):
 @dataclass(frozen=True)
 class DeleteDocumentCommand(Command):
     documentId: str = ""
+
+
+@dataclass(frozen=True)
+class UpdateDocumentCommand(Command):
+    documentId: str = ""
+    category: str | None = None
+    description: str | None = None
+    deviceIds: tuple[str, ...] | None = None

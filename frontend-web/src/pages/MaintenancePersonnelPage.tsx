@@ -1,3 +1,4 @@
+import { metricDetail } from "../shared/components/metricDetails";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApiClient } from "../core/api/apiContext";
@@ -298,19 +299,19 @@ export function MaintenancePersonnelPage(): JSX.Element {
       />
 
       <div className="metric-grid">
-        <MetricCard
+        <MetricCard detail={metricDetail(people, [["fullName", "نام"], ["specialty", "تخصص"], ["unit", "واحد"], ["active", "فعال"]])} 
           label={t("registry.personnel.pageTitle")}
           value={people.length}
           icon="users"
           tone="blue"
         />
-        <MetricCard
+        <MetricCard detail={metricDetail(people.filter(person => person.active), [["fullName", "نام"], ["specialty", "تخصص"], ["unit", "واحد"], ["active", "فعال"]])} 
           label={t("registry.personnel.active")}
           value={people.filter((person) => person.active).length}
           icon="checkCircle"
           tone="green"
         />
-        <MetricCard
+        <MetricCard detail={metricDetail(Array.from(new Set(people.map(person => person.specialty))).map(specialty => ({specialty, count: people.filter(person => person.specialty === specialty).length})), [["specialty", "تخصص"], ["count", "تعداد افراد"]])} 
           label={t("registry.personnel.allSpecialties")}
           value={new Set(people.map((person) => person.specialty)).size}
           icon="layers"

@@ -90,7 +90,7 @@ const QUICK_ACTIONS: QuickAction[] = [
     icon: "cpu",
     titleKey: "home.action.devices",
     captionKey: "home.action.devicesCaption",
-    path: "/app/maintenance/registry",
+    path: "/app/maintenance/equipment",
     permission: PERMISSIONS.maintenanceDeviceList,
   },
 ];
@@ -148,7 +148,7 @@ export function HomeStartPage(): JSX.Element {
   const todayRows = [
     { id: "open", label: t("home.today.open"), value: openOrders.length, path: "/app/maintenance/work-orders" },
     { id: "mine", label: t("home.today.mine"), value: myOpen.length, path: "/app/maintenance/dashboard/user" },
-    { id: "devices", label: t("home.today.devices"), value: data.devices.length, path: "/app/maintenance/registry" },
+    { id: "devices", label: t("home.today.devices"), value: data.devices.length, path: "/app/maintenance/equipment" },
   ];
 
   const steps = [

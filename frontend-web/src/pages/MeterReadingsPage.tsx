@@ -1,3 +1,4 @@
+import { loadMeterMetricDetails } from "../features/maintenance/meterMetricDetails";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useApiClient } from "../core/api/apiContext";
 import { ApiClientError } from "../core/api/apiClient";
@@ -504,24 +505,24 @@ export function MeterReadingsPage(): JSX.Element {
       {/* -- summary --------------------------------------------------------- */}
       {summary ? (
         <div className="metric-grid">
-          <MetricCard
+          <MetricCard loadDetail={signal => loadMeterMetricDetails(meters, selectedPointId, "trusted", signal)} 
             label={t("meter.summary.total")}
             value={formatValue(summary.totalConsumption, summary.unit)}
             icon="activity"
           />
-          <MetricCard
+          <MetricCard loadDetail={signal => loadMeterMetricDetails(meters, selectedPointId, "manual", signal)} 
             label={t("meter.summary.manual")}
             value={toPersianDigits(String(summary.manualCount))}
             icon="edit"
             tone="purple"
           />
-          <MetricCard
+          <MetricCard loadDetail={signal => loadMeterMetricDetails(meters, selectedPointId, "sensor", signal)} 
             label={t("meter.summary.sensor")}
             value={toPersianDigits(String(summary.sensorCount))}
             icon="cpu"
             tone="green"
           />
-          <MetricCard
+          <MetricCard loadDetail={signal => loadMeterMetricDetails(meters, selectedPointId, "suspect", signal)} 
             label={t("meter.summary.suspect")}
             value={toPersianDigits(String(summary.suspectCount))}
             icon="bell"

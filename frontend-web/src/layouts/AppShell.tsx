@@ -1,3 +1,4 @@
+import { BrandLogo } from "../shared/components/BrandLogo";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { navigationConfig, type NavigationItem } from "../app/configuration/navigation";
@@ -212,9 +213,9 @@ export function AppShell(): JSX.Element {
 
   return (
     <div className="app-shell">
-      <aside className="sidenav" aria-label={t("nav.workspace")}>
+      <aside className="sidenav grouped-sidebar" aria-label={t("nav.workspace")}>
         <div className="sidenav__brand">
-          <span className="brand-mark">T</span>
+          <BrandLogo />
           <div>
             <strong>{runtimeConfig.appName}</strong>
             <span>{t("app.tagline")}</span>
@@ -454,6 +455,7 @@ const filterNavigationItems = (
     .map((item) => ({ ...item, children: filterNavigationItems(item.children, has, isEnabled) }))
     .filter((item) => {
       if (item.permission && !has(item.permission)) return false;
+      if (item.allPermissions && !item.allPermissions.every((permission) => has(permission))) return false;
       if (item.anyPermission && !item.anyPermission.some((permission) => has(permission))) return false;
       if (item.featureFlag && !isEnabled(item.featureFlag)) return false;
       return Boolean(item.route) || Boolean(item.children?.length);

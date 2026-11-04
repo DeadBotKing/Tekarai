@@ -40,7 +40,7 @@ AUTH_ERRORS = [
 ]
 
 
-class LoginView(IdempotencyMixin, APIView):
+class LoginView(APIView):
     authentication_classes: list[type] = []
     permission_classes: list[type] = []
 
@@ -58,7 +58,9 @@ class LoginView(IdempotencyMixin, APIView):
                 device=str(request.data.get("device", ""))[:120],
             )
         )
-        return Response(successEnvelope(dataclasses.asdict(dto)))
+        response = Response(successEnvelope(dataclasses.asdict(dto)))
+        response["Cache-Control"] = "no-store"
+        return response
 
 
 class MfaChallengeView(APIView):
@@ -139,7 +141,7 @@ def registerAuthEndpoints() -> None:
                 "errors": [],
             },
             errorCodes=AUTH_ERRORS,
-            idempotent=True,
+            idempotent=False,
             rateLimitScope="auth:login",
         )
     )

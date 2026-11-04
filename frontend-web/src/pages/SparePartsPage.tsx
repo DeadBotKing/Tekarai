@@ -1,3 +1,4 @@
+import { metricDetail } from "../shared/components/metricDetails";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { useApiClient } from "../core/api/apiContext";
@@ -20,7 +21,7 @@ import { CreatableSelect } from "../shared/components/CreatableSelect";
 import { mergeOptions } from "../features/maintenance/optionCatalog";
 import { DataTable, type DataTableColumn } from "../shared/components/DataTable";
 import { Modal, Toast } from "../shared/components/overlays";
-import { Badge, Button, Card, CardHeader, PermissionGuard, SectionHeader, SelectInput, TextInput } from "../shared/components/primitives";
+import { Badge, Button, Card, CardHeader, PermissionGuard, MetricCard, SectionHeader, SelectInput, TextInput } from "../shared/components/primitives";
 import { Icon } from "../shared/components/Icon";
 import { ErrorState } from "../shared/components/ErrorState";
 import { formatNumber } from "../core/localization/format";
@@ -273,10 +274,10 @@ export function SparePartsPage(): JSX.Element {
       </PermissionGuard>
     </>} />
     <div className="file-stats file-stats--inventory">
-      <div><span>{t("warehouse.totalParts")}</span><strong>{parts.length}</strong></div>
-      <div><span>{t("warehouse.lowStock")}</span><strong>{lowCount}</strong></div>
-      <div><span>{t("warehouse.stockValue")}</span><strong>{formatNumber(totalValue, "fa")}</strong></div>
-      <div><span>{t("warehouse.totalStock")}</span><strong>{formatNumber(parts.reduce((sum, part) => sum + part.quantityOnHand, 0), "fa")}</strong></div>
+      <MetricCard compact icon="layers" label={t("warehouse.totalParts")} value={parts.length} detail={metricDetail(parts, [["name", "قطعه"], ["code", "کد"], ["quantityOnHand", "موجودی"], ["minimumStock", "حداقل"], ["unit", "واحد"], ["unitCost", "قیمت واحد"]])} />
+      <MetricCard compact icon="layers" label={t("warehouse.lowStock")} value={lowCount} detail={metricDetail(parts.filter(lowStock), [["name", "قطعه"], ["code", "کد"], ["quantityOnHand", "موجودی"], ["minimumStock", "حداقل"], ["unit", "واحد"], ["unitCost", "قیمت واحد"]])} />
+      <MetricCard compact icon="layers" label={t("warehouse.stockValue")} value={formatNumber(totalValue, "fa")} detail={metricDetail(parts, [["name", "قطعه"], ["code", "کد"], ["quantityOnHand", "موجودی"], ["minimumStock", "حداقل"], ["unit", "واحد"], ["unitCost", "قیمت واحد"]], "ارزش کل = مجموع موجودی هر قطعه × قیمت واحد آن.")} />
+      <MetricCard compact icon="layers" label={t("warehouse.totalStock")} value={formatNumber(parts.reduce((sum, part) => sum + part.quantityOnHand, 0), "fa")} detail={metricDetail(parts, [["name", "قطعه"], ["code", "کد"], ["quantityOnHand", "موجودی"], ["minimumStock", "حداقل"], ["unit", "واحد"], ["unitCost", "قیمت واحد"]])} />
     </div>
     {(() => {
       const suggestions = buildReorderSuggestions(parts);

@@ -2,6 +2,7 @@ import { Suspense, lazy, type ComponentType } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell, ProtectedRoute } from "../../layouts/AppShell";
 import { LoginPage } from "../../pages/LoginPage";
+import { EquipmentListRedirect } from "../../features/maintenance/EquipmentListRedirect";
 import { RouteFallback } from "./RouteFallback";
 
 /**
@@ -33,10 +34,6 @@ const TasksPage = named(() => import("../../pages/TasksPage"), "TasksPage");
 const MaintenanceDashboardPage = named(
   () => import("../../pages/MaintenanceDashboardPage"),
   "MaintenanceDashboardPage",
-);
-const MaintenanceDevicesPage = named(
-  () => import("../../pages/MaintenanceDevicesPage"),
-  "MaintenanceDevicesPage",
 );
 const MaintenanceInspectionsPage = lazy(() => import("../../pages/MaintenanceInspectionsPage"));
 const EquipmentRegistryPage = named(
@@ -113,8 +110,9 @@ export function AppRouter(): JSX.Element {
         <Route path="tasks" element={<TasksPage />} />
         <Route path="maintenance/dashboard" element={<MaintenanceDashboardPage />} />
         <Route path="maintenance/dashboard/:view" element={<MaintenanceDashboardPage />} />
-        <Route path="maintenance/devices" element={<MaintenanceDevicesPage />} />
-        <Route path="maintenance/registry" element={<EquipmentRegistryPage />} />
+        <Route path="maintenance/equipment" element={<EquipmentRegistryPage />} />
+        <Route path="maintenance/devices" element={<EquipmentListRedirect />} />
+        <Route path="maintenance/registry" element={<EquipmentListRedirect />} />
         <Route path="maintenance/devices/:deviceId/profile" element={<DeviceProfilePage />} />
         <Route path="maintenance/locations" element={<MaintenanceLocationsPage />} />
         <Route path="maintenance/asset-tree" element={<AssetHierarchyPage />} />

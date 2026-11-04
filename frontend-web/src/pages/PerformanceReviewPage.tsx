@@ -1,3 +1,4 @@
+import { metricDetail } from "../shared/components/metricDetails";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 
 import { useApiClient } from "../core/api/apiContext";
@@ -407,25 +408,25 @@ export function PerformanceReviewPage(): JSX.Element {
         {tab === "comparison" ? (
           <>
             <div className="metric-grid">
-              <MetricCard
+              <MetricCard detail={metricDetail(results, [["personnelName", "فرد"], ["rank", "رتبه"], ["finalScore", "امتیاز نهایی"], ["humanScore", "امتیاز انسانی"], ["systemScore", "امتیاز سیستمی"], ["raterCount", "تعداد ارزیاب"]])} 
                 icon="users"
                 tone="blue"
                 label={t("review.peopleScored")}
                 value={locale === "fa" ? toPersianDigits(String(summary.count)) : String(summary.count)}
               />
-              <MetricCard
+              <MetricCard detail={metricDetail(results.filter(result => result.finalScore === summary.highestScore), [["personnelName", "فرد"], ["rank", "رتبه"], ["finalScore", "امتیاز نهایی"], ["humanScore", "امتیاز انسانی"], ["systemScore", "امتیاز سیستمی"], ["raterCount", "تعداد ارزیاب"]])} 
                 icon="target"
                 tone="green"
                 label={t("review.highest")}
                 value={number(summary.highestScore)}
               />
-              <MetricCard
+              <MetricCard detail={metricDetail(results, [["personnelName", "فرد"], ["rank", "رتبه"], ["finalScore", "امتیاز نهایی"], ["humanScore", "امتیاز انسانی"], ["systemScore", "امتیاز سیستمی"], ["raterCount", "تعداد ارزیاب"]], "میانگین، بر اساس امتیاز نهایی افراد همین دوره است.")} 
                 icon="chart"
                 tone="purple"
                 label={t("review.average")}
                 value={number(summary.averageScore)}
               />
-              <MetricCard
+              <MetricCard detail={metricDetail(results.flatMap(result => result.raters.filter(rater => rater.damped).map(rater => ({personnelName: result.personnelName, ...rater}))), [["personnelName", "فرد"], ["raterName", "ارزیاب"], ["rawScore", "امتیاز خام"], ["damping", "ضریب تعدیل"], ["reason", "علت"]])} 
                 icon="warning"
                 tone="amber"
                 label={t("review.damped")}

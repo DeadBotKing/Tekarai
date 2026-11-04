@@ -1,153 +1,176 @@
-import { useEffect, useMemo, useState } from "react";
+import { metricDetail } from "../shared/components/metricDetails";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { useApiClient } from "../core/api/apiContext";
 import { triggerDownload } from "../core/files/downloadUtils";
 import { formatJalali } from "../core/localization/jalali";
-import { faText } from "../core/localization/i18n";
-import { PERMISSIONS } from "../core/permissions/permissionContext";
-import { createDocumentService, type LibraryDocument } from "../features/documents/documentService";
+import { PERMISSIONS, usePermissions } from "../core/permissions/permissionContext";
+import { createDocumentService, type LibraryDocument, type RelatedDevice } from "../features/documents/documentService";
+import { RelatedDevicePicker } from "../features/documents/RelatedDevicePicker";
+import { createMaintenanceService } from "../features/maintenance/maintenanceService";
 import { DataTable } from "../shared/components/DataTable";
-import { DocumentViewer, FileUpload, UploadProgress } from "../shared/components/featureComponents";
+import { FileUpload, UploadProgress } from "../shared/components/featureComponents";
 import { Modal, Toast } from "../shared/components/overlays";
-import { Badge, Button, Card, CardHeader, PermissionGuard, SectionHeader, SelectInput, TextInput } from "../shared/components/primitives";
-import { Icon } from "../shared/components/Icon";
+import { Badge, Button, Card, CardHeader, MetricCard, SectionHeader, SelectInput, TextInput } from "../shared/components/primitives";
 import { demoDocuments } from "../features/demo/demoData";
+import { demoDevices } from "../features/maintenance/maintenanceDemoData";
 
-interface UploadItem { name: string; progress: number; state: "uploading" | "complete" | "error"; }
-
-const EXTENSION_COLOR: Record<string, string> = { pdf: "pdf", docx: "docx", xlsx: "xlsx", png: "png", jpg: "png", jpeg: "png" };
+type PendingFile = { file: File; progress: number; state: "pending" | "uploading" | "complete" | "error" };
+const formatBytes = (n: number): string => n < 1024 ? `${n} B` : n < 1048576 ? `${Math.round(n / 1024)} KB` : `${(n / 1048576).toFixed(1)} MB`;
+const demoRows = (): LibraryDocument[] => demoDocuments.map((r, i) => ({ id: r.id ?? `demo-${i}`, name: r.name, contentType: "", sizeBytes: 0, category: r.category, description: "", uploadedByIdentifier: r.owner, uploadedAt: r.modifiedAt, relatedDevices: [] }));
 
 export function DocumentsPage(): JSX.Element {
-  const t = faText;
   const api = useApiClient();
   const service = useMemo(() => createDocumentService(api), [api]);
-  const [searchParams, setSearchParams] = useSearchParams();
+  const maintenance = useMemo(() => createMaintenanceService(api), [api]);
+  const { has } = usePermissions();
+  const canChooseDevices = has(PERMISSIONS.maintenanceDeviceList);
+  const [params, setParams] = useSearchParams();
+  const deviceFilter = params.get("deviceId") || "";
   const [documents, setDocuments] = useState<LibraryDocument[]>([]);
-  const [loading, setLoading] = useState(!runtimeConfig.demoMode);
+  const [devices, setDevices] = useState<RelatedDevice[]>([]);
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("all");
-  const [uploadOpen, setUploadOpen] = useState(false);
-  const [uploadCategory, setUploadCategory] = useState("");
-  const [uploads, setUploads] = useState<UploadItem[]>([]);
-  const [selected, setSelected] = useState<LibraryDocument | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<LibraryDocument | null>(null);
+  const [category, setCategory] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [revision, setRevision] = useState(0);
+  const [modal, setModal] = useState<"upload" | LibraryDocument | null>(null);
+  const [metaCategory, setMetaCategory] = useState("");
+  const [description, setDescription] = useState("");
+  const [deviceIds, setDeviceIds] = useState<string[]>([]);
+  const [files, setFiles] = useState<PendingFile[]>([]);
+  const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+  const [deleting, setDeleting] = useState<LibraryDocument | null>(null);
   const [toast, setToast] = useState("");
-
+  const refresh = useCallback(() => setRevision(n => n + 1), []);
   useEffect(() => {
-    if (searchParams.get("upload") === "1") { setUploadOpen(true); setSearchParams({}, { replace: true }); }
-  }, [searchParams, setSearchParams]);
-
-  const refresh = (filters?: { search?: string; category?: string }): void => {
-    if (runtimeConfig.demoMode) {
-      setDocuments(demoDocuments.map((row, index) => ({ id: row.id ?? `demo-${index}`, name: row.name, contentType: "", sizeBytes: 0, category: row.category, description: "", uploadedByIdentifier: row.owner, uploadedAt: row.modifiedAt })));
-      return;
-    }
+    const controller = new AbortController();
+    if (!canChooseDevices) { setDevices([]); return; }
+    if (runtimeConfig.demoMode) { setDevices(demoDevices); return; }
+    maintenance.listDevices({}, controller.signal).then(setDevices).catch(() => { if (!controller.signal.aborted) setToast("دریافت فهرست دستگاه‌ها ناموفق بود؛ دوباره صفحه را باز کنید."); });
+    return () => controller.abort();
+  }, [maintenance, canChooseDevices]);
+  useEffect(() => {
+    const controller = new AbortController();
     setLoading(true);
-    service.list({
-      search: filters?.search ?? search,
-      category: (filters?.category ?? category) === "all" ? "" : (filters?.category ?? category),
-    })
-      .then(setDocuments)
-      .catch(() => setToast(t("document.loadFailed")))
-      .finally(() => setLoading(false));
+    const timer = window.setTimeout(() => {
+      if (runtimeConfig.demoMode) {
+        setDocuments(current => {
+          const source = current.length ? current : demoRows();
+          return source.filter(d => d.name.includes(search) && (!category || d.category === category) && (!deviceFilter || d.relatedDevices?.some(x => x.id === deviceFilter)));
+        }); setLoading(false); return;
+      }
+      service.list({ search, category, deviceId: deviceFilter || undefined }, controller.signal)
+        .then(rows => { if (!controller.signal.aborted) setDocuments(rows); })
+        .catch(() => { if (!controller.signal.aborted) { setDocuments([]); setToast("بارگذاری اسناد ناموفق بود."); } })
+        .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    }, 200);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [service, search, category, deviceFilter, revision]);
+  const open = (document: LibraryDocument | "upload"): void => {
+    setModal(document); setFiles([]);
+    setMetaCategory(document === "upload" ? "" : document.category);
+    setDescription(document === "upload" ? "" : document.description);
+    setDeviceIds(document === "upload" ? (canChooseDevices && devices.some(d => d.id === deviceFilter) ? [deviceFilter] : []) : (document.relatedDevices ?? []).map(d => d.id));
   };
-  useEffect(() => { refresh({ search: "", category: "all" }); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
   useEffect(() => {
-    if (runtimeConfig.demoMode) return;
-    const timer = window.setTimeout(() => refresh(), 350);
-    return () => window.clearTimeout(timer);
+    if (params.get("upload") !== "1") return;
+    if (has(PERMISSIONS.maintenanceDocumentUpload)) open("upload");
+    const next = new URLSearchParams(params); next.delete("upload"); setParams(next, { replace: true });
+    // Initial app shortcut, not a second upload location.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, category]);
-
-  const categories = [...new Set(documents.map((document) => document.category).filter(Boolean))];
-
-  const handleFiles = (files: File[]): void => {
-    setUploads(files.map((file) => ({ name: file.name, progress: 0, state: "uploading" })));
-    files.forEach((file, index) => {
-      service.upload(file, { category: uploadCategory }, (progress) => {
-        setUploads((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, progress } : item));
-      })
-        .then(() => {
-          setUploads((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, progress: 100, state: "complete" } : item));
-          refresh();
-        })
-        .catch(() => {
-          setUploads((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, state: "error" } : item));
-          setToast(t("document.uploadFailed"));
-        });
-    });
+  }, [params, setParams]);
+  const close = (): void => { if (!busyRef.current) { setModal(null); setFiles([]); } };
+  const editable = (doc: LibraryDocument): boolean => has(PERMISSIONS.maintenanceDocumentManage) && (!doc.legacyDeviceDocument || has(PERMISSIONS.maintenanceAttachmentManage));
+  const save = async (): Promise<void> => {
+    if (!modal || busyRef.current) return;
+    if (modal === "upload" && !files.some(f => f.state === "pending" || f.state === "error")) { setToast("ابتدا فایل را انتخاب کنید."); return; }
+    busyRef.current = true; setBusy(true);
+    try {
+      if (modal !== "upload") {
+        const oldIds = (modal.relatedDevices ?? []).map(d => d.id).sort().join();
+        const changed = [...deviceIds].sort().join() !== oldIds;
+        const metadata = { category: metaCategory, description, ...(changed ? { deviceIds } : {}) };
+        if (runtimeConfig.demoMode) setDocuments(rows => rows.map(d => d.id === modal.id ? { ...d, category: metaCategory, description, relatedDevices: devices.filter(x => deviceIds.includes(x.id)) } : d));
+        else await service.update(modal.id, metadata);
+        setModal(null); setToast("مشخصات و دستگاه‌های مرتبط ذخیره شد."); if (!runtimeConfig.demoMode) refresh();
+      } else {
+        let failures = 0;
+        for (let i = 0; i < files.length; i++) {
+          if (files[i].state === "complete") continue;
+          const update = (patch: Partial<PendingFile>): void => setFiles(rows => rows.map((f, index) => index === i ? { ...f, ...patch } : f));
+          update({ state: "uploading", progress: 0 });
+          try {
+            if (runtimeConfig.demoMode) {
+              setDocuments(rows => [{ id: `demo-${Date.now()}-${i}`, name: files[i].file.name, category: metaCategory, description, sizeBytes: files[i].file.size, contentType: files[i].file.type, uploadedByIdentifier: "نمایشی", uploadedAt: new Date().toISOString(), relatedDevices: devices.filter(x => deviceIds.includes(x.id)) }, ...rows]);
+            } else await service.upload(files[i].file, { category: metaCategory, description, deviceIds }, progress => update({ progress }));
+            update({ state: "complete", progress: 100 });
+          } catch { failures++; update({ state: "error" }); }
+        }
+        if (!runtimeConfig.demoMode) refresh();
+        setToast(failures ? "بعضی فایل‌ها ثبت نشدند؛ فقط موارد ناموفق را دوباره ثبت کنید." : "مدارک در اسناد ثبت شدند.");
+      }
+    } catch (error) { setToast(error instanceof Error ? error.message : "ذخیرهٔ سند ناموفق بود."); }
+    finally { busyRef.current = false; setBusy(false); }
   };
-
-  const closeUpload = (): void => {
-    const completed = uploads.some((upload) => upload.state === "complete");
-    setUploadOpen(false); setUploads([]);
-    if (completed) setToast(t("document.uploaded"));
+  const download = async (doc: LibraryDocument): Promise<void> => {
+    if (runtimeConfig.demoMode) { setToast("دانلود فایل در حالت نمایشی فعال نیست."); return; }
+    try { triggerDownload(await service.download(doc.id), doc.name); }
+    catch { setToast("دریافت فایل ناموفق بود."); }
   };
-
-  const download = (document: LibraryDocument): void => {
-    if (runtimeConfig.demoMode) return;
-    service.download(document.id)
-      .then((blob) => triggerDownload(blob, document.name))
-      .catch(() => setToast(t("document.loadFailed")));
+  const remove = async (): Promise<void> => {
+    if (!deleting || busyRef.current) return;
+    busyRef.current = true; setBusy(true);
+    try {
+      if (runtimeConfig.demoMode) setDocuments(rows => rows.filter(d => d.id !== deleting.id));
+      else { await service.remove(deleting.id); refresh(); }
+      setDeleting(null); setToast("سند از بایگانی فعال حذف شد.");
+    } catch { setToast("حذف سند ناموفق بود."); }
+    finally { busyRef.current = false; setBusy(false); }
   };
-
-  const remove = (): void => {
-    if (!confirmDelete) return;
-    if (runtimeConfig.demoMode) { setConfirmDelete(null); return; }
-    service.remove(confirmDelete.id)
-      .then(() => { setConfirmDelete(null); setToast(t("document.deleted")); refresh(); })
-      .catch(() => { setConfirmDelete(null); setToast(t("document.loadFailed")); });
-  };
-
-  const columns = useMemo(() => [
-    { key: "name", label: t("document.title"), accessor: (row: LibraryDocument) => row.name, sortable: true, width: "34%", render: (row: LibraryDocument) => {
-      const ext = row.name.split(".").pop()?.toLowerCase() ?? "";
-      const iconClass = EXTENSION_COLOR[ext] ?? "txt";
-      return <div className="document-cell"><span className={`document-cell__icon document-cell__icon--${iconClass}`}><Icon name="file" size={18} /></span><div><strong>{row.name}</strong><span>{row.contentType || ext.toUpperCase()}</span></div></div>;
-    } },
-    { key: "category", label: t("document.category"), accessor: (row: LibraryDocument) => row.category, sortable: true, render: (row: LibraryDocument) => row.category ? <Badge tone="purple">{row.category}</Badge> : <span className="muted-cell">—</span> },
-    { key: "uploader", label: t("document.uploader"), accessor: (row: LibraryDocument) => row.uploadedByIdentifier, sortable: true, render: (row: LibraryDocument) => <span>{row.uploadedByIdentifier || "—"}</span> },
-    { key: "uploadedAt", label: t("document.modified"), accessor: (row: LibraryDocument) => row.uploadedAt, sortable: true, render: (row: LibraryDocument) => <span>{formatJalali(row.uploadedAt, { withTime: true })}</span> },
-    { key: "size", label: t("document.size"), accessor: (row: LibraryDocument) => row.sizeBytes, sortable: true, render: (row: LibraryDocument) => <span>{formatBytes(row.sizeBytes)}</span> },
-    { key: "actions", label: t("project.actions"), hideable: false, render: (row: LibraryDocument) => <div className="list-toolbar">
-      <Button variant="ghost" size="sm" icon="download" onClick={() => download(row)}>{t("document.download")}</Button>
-      <PermissionGuard permission={PERMISSIONS.maintenanceDocumentManage}>
-        <Button variant="ghost" size="sm" icon="close" onClick={() => setConfirmDelete(row)}>{t("document.delete")}</Button>
-      </PermissionGuard>
+  const categories = [...new Set([category, ...documents.map(d => d.category)].filter(Boolean))];
+  const knownDevices = [...new Map([...devices, ...documents.flatMap(d => d.relatedDevices ?? [])].map(d => [d.id, d])).values()];
+  const pickerDevices = [...new Map([...devices, ...(modal && modal !== "upload" ? modal.relatedDevices ?? [] : [])].map(d => [d.id, d])).values()];
+  const columns = [
+    { key: "name", label: "نام مدرک", accessor: (d: LibraryDocument) => d.name, sortable: true, render: (d: LibraryDocument) => <div><strong>{d.name}</strong>{d.description && <p className="muted-cell">{d.description}</p>}</div> },
+    { key: "category", label: "دسته‌بندی", accessor: (d: LibraryDocument) => d.category, sortable: true },
+    { key: "devices", label: "دستگاه‌های مرتبط", accessor: (d: LibraryDocument) => (d.relatedDevices ?? []).map(x => `${x.code} ${x.name}`).join("، "), render: (d: LibraryDocument) => <div>{d.relatedDevices?.length ? d.relatedDevices.map(x => <Badge key={x.id} tone="neutral">{x.code} — {x.name}</Badge>) : <span className="muted-cell">عمومی</span>}</div> },
+    { key: "uploader", label: "ثبت‌کننده", accessor: (d: LibraryDocument) => d.uploadedByIdentifier || "—" },
+    { key: "date", label: "تاریخ ثبت", accessor: (d: LibraryDocument) => d.uploadedAt, sortable: true, render: (d: LibraryDocument) => formatJalali(d.uploadedAt, { withTime: true }) },
+    { key: "size", label: "حجم", accessor: (d: LibraryDocument) => d.sizeBytes, render: (d: LibraryDocument) => formatBytes(d.sizeBytes) },
+    { key: "actions", label: "عملیات", render: (d: LibraryDocument) => <div className="list-toolbar">
+      <Button variant="ghost" size="sm" icon="download" onClick={() => void download(d)}>دانلود</Button>
+      {editable(d) && <><Button variant="ghost" size="sm" icon="edit" onClick={() => open(d)}>ویرایش ارتباطات و مشخصات</Button><Button variant="ghost" size="sm" icon="close" onClick={() => setDeleting(d)}>حذف</Button></>}
     </div> },
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [t]);
-
+  ];
   return <div className="page">
-    <SectionHeader eyebrow={t("nav.documents")} title={t("document.title")} subtitle={t("document.subtitle")} actions={<PermissionGuard permission={PERMISSIONS.maintenanceDocumentUpload}><Button variant="primary" icon="upload" onClick={() => setUploadOpen(true)}>{t("document.upload")}</Button></PermissionGuard>} />
+    <SectionHeader title="اسناد" subtitle="مرکز ثبت و مدیریت همهٔ مدارک؛ هر مدرک می‌تواند به چند دستگاه مرتبط باشد." actions={has(PERMISSIONS.maintenanceDocumentUpload) && <Button variant="primary" icon="upload" onClick={() => open("upload")}>ثبت مدرک</Button>} />
     <div className="file-stats">
-      <div><span>{t("document.title")}</span><strong>{documents.length}</strong></div>
-      <div><span>{t("document.category")}</span><strong>{categories.length}</strong></div>
-      <div><span>{t("document.size")}</span><strong>{formatBytes(documents.reduce((sum, doc) => sum + doc.sizeBytes, 0))}</strong></div>
+      <MetricCard compact icon="file" label="مدارک نمایش‌داده‌شده" value={documents.length} detail={metricDetail(documents, [["name", "مدرک"], ["category", "دسته‌بندی"], ["uploadedAt", "تاریخ ثبت"]])} />
+      <MetricCard compact icon="layers" label="دسته‌بندی‌ها" value={new Set(documents.map(d => d.category).filter(Boolean)).size} detail={metricDetail(Array.from(new Set(documents.map(d => d.category).filter(Boolean))).map(category => ({category, count: documents.filter(d => d.category === category).length})), [["category", "دسته‌بندی"], ["count", "تعداد مدارک"]])} />
+      <MetricCard compact icon="file" label="حجم مدارک نمایش‌داده‌شده" value={formatBytes(documents.reduce((sum, d) => sum + d.sizeBytes, 0))} detail={metricDetail(documents.map(d => ({name: d.name, size: formatBytes(d.sizeBytes)})), [["name", "مدرک"], ["size", "حجم"]])} />
     </div>
-    <Card className="content-card" padding="none"><CardHeader title={`${documents.length} ${t("document.title").toLowerCase()}`} action={<div className="list-toolbar">
-      <div className="search-box"><Icon name="search" size={16} /><input value={search} aria-label={t("document.search")} placeholder={t("document.search")} onChange={(event) => setSearch(event.target.value)} /></div>
-      <SelectInput aria-label={t("document.category")} value={category} onChange={(event) => setCategory(event.target.value)} options={[{ value: "all", label: t("document.category") }, ...categories.map((item) => ({ value: item, label: item }))]} />
-    </div>} />
-      <DataTable columns={columns} data={documents} rowKey={(row) => row.id} search="" exportName="tekarai-documents" empty={{ title: loading ? t("common.loading") : t("document.empty") }} />
-    </Card>
-    <Modal open={uploadOpen} title={t("document.uploadTitle")} onClose={closeUpload} footer={<Button variant="primary" onClick={closeUpload}>{t("common.close")}</Button>}>
-      <TextInput label={t("document.category")} placeholder={t("document.category")} value={uploadCategory} onChange={(event) => setUploadCategory(event.target.value)} />
-      <FileUpload onFiles={handleFiles} />
-      {uploads.length > 0 && <div className="upload-list">{uploads.map((upload) => <UploadProgress key={upload.name} fileName={upload.name} progress={upload.progress} state={upload.state} />)}</div>}
+    <Card padding="none" className="content-card"><CardHeader title={`${documents.length} مدرک`} action={<div className="list-toolbar">
+      <TextInput label="جست‌وجوی اسناد" value={search} onChange={e => setSearch(e.target.value)} />
+      <SelectInput label="دسته‌بندی" value={category} onChange={e => setCategory(e.target.value)} options={[{ value: "", label: "همهٔ دسته‌ها" }, ...categories.map(value => ({ value, label: value }))]} />
+      <SelectInput label="فیلتر دستگاه" value={deviceFilter} onChange={e => { const next = new URLSearchParams(params); if (e.target.value) next.set("deviceId", e.target.value); else next.delete("deviceId"); setParams(next); }} options={[{ value: "", label: "همهٔ دستگاه‌ها و اسناد عمومی" }, ...knownDevices.map(d => ({ value: d.id, label: `${d.code} — ${d.name}` }))]} />
+    </div>} /><DataTable columns={columns} data={documents} rowKey={d => d.id} search="" exportName="tekarai-documents" empty={{ title: loading ? "در حال بارگذاری…" : "مدرکی یافت نشد." }} /></Card>
+    <Modal open={modal !== null} title={modal === "upload" ? "ثبت مدرک در اسناد" : "ویرایش مشخصات و ارتباطات مدرک"} onClose={close} footer={<>
+      <Button variant="secondary" disabled={busy} onClick={close}>بستن</Button><Button variant="primary" disabled={busy || (modal === "upload" && (!files.length || files.every(f => f.state === "complete")))} onClick={() => void save()}>{busy ? "در حال ذخیره…" : "ذخیره"}</Button>
+    </>}>
+      {modal && modal !== "upload" && <p>{modal.name}</p>}
+      <TextInput label="دسته‌بندی مدرک" maxLength={80} disabled={busy || files.some(f => f.state === "complete")} value={metaCategory} onChange={e => setMetaCategory(e.target.value)} />
+      <TextInput label="توضیحات" maxLength={2000} disabled={busy || files.some(f => f.state === "complete")} value={description} onChange={e => setDescription(e.target.value)} />
+      {canChooseDevices ? <RelatedDevicePicker devices={pickerDevices} value={deviceIds} onChange={setDeviceIds} disabled={busy || files.some(f => f.state === "complete")} /> : <p>برای انتخاب دستگاه، دسترسی فهرست تجهیزات لازم است.</p>}
+      {modal === "upload" && <>
+        {!busy && !files.some(f => f.state === "complete") && <FileUpload onFiles={chosen => setFiles(chosen.map(file => ({ file, progress: 0, state: "pending" })))} />}
+        {files.map((f, i) => f.state === "pending" ? <p key={i}>{f.file.name} — آمادهٔ ثبت</p> : <UploadProgress key={i} fileName={f.file.name} progress={f.progress} state={f.state} />)}
+      </>}
     </Modal>
-    <Modal open={confirmDelete !== null} title={t("document.delete")} onClose={() => setConfirmDelete(null)} footer={<>
-      <Button variant="secondary" onClick={() => setConfirmDelete(null)}>{t("common.cancel")}</Button>
-      <Button variant="primary" onClick={remove}>{t("document.delete")}</Button>
-    </>}><p>{t("document.deleteConfirm")}</p><p><strong>{confirmDelete?.name}</strong></p></Modal>
-    {selected && <Modal open title={t("document.title")} onClose={() => setSelected(null)}><DocumentViewer document={selected as never} onClose={() => setSelected(null)} /></Modal>}
+    <Modal open={deleting !== null} title="حذف سند" onClose={() => { if (!busy) setDeleting(null); }} footer={<><Button disabled={busy} onClick={() => setDeleting(null)}>انصراف</Button><Button disabled={busy} onClick={() => void remove()}>حذف</Button></>}>
+      <p>این مدرک از اسناد و نمایش تمام دستگاه‌های مرتبط حذف شود؟</p><strong>{deleting?.name}</strong>
+    </Modal>
     {toast && <Toast message={toast} onClose={() => setToast("")} />}
   </div>;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }

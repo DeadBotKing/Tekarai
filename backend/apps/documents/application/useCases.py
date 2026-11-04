@@ -11,6 +11,7 @@ from apps.documents.application.commands import (
     DownloadDocumentQuery,
     ListDocumentsQuery,
     UploadDocumentCommand,
+    UpdateDocumentCommand,
 )
 from apps.documents.domain.entities.document import Document
 from apps.documents.domain.repositories.documentRepositories import (
@@ -22,9 +23,10 @@ from apps.sharedKernel.application.requestContext import currentContext
 from apps.sharedKernel.application.useCase import (
     AUDIT_CREATE,
     AUDIT_DELETE,
+    AUDIT_UPDATE,
     UseCase,
 )
-from apps.sharedKernel.domain.errors import EntityNotFoundError, ValidationFailedError
+from apps.sharedKernel.domain.errors import EntityNotFoundError, ValidationFailedError, PermissionDeniedError
 
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024  # 25 MB guard rail (§trusted-server policy)
 
@@ -39,6 +41,8 @@ class DocumentDto:
     description: str
     uploadedByIdentifier: str
     uploadedAt: str
+    relatedDevices: tuple[dict[str, str], ...] = ()
+    legacyDeviceDocument: bool = False
 
 
 @dataclass(frozen=True)
@@ -69,6 +73,8 @@ def _dto(document: Document) -> DocumentDto:
         description=document.description,
         uploadedByIdentifier=document.uploadedByIdentifier,
         uploadedAt=document.uploadedAt.isoformat(),
+        relatedDevices=document.relatedDevices,
+        legacyDeviceDocument=document.legacyDeviceDocument,
     )
 
 
@@ -76,6 +82,14 @@ class DocumentUseCaseBase(UseCase):
     # Injected by apps.documents.infrastructure.container at construction time.
     repository: DocumentRepository
     storage: DocumentFileStorage
+
+    def _has(self, action: str) -> bool:
+        context = currentContext()
+        return bool(context.actorId) and self.permissionGate.hasPermission(uuid.UUID(context.actorId), action, tenantId=uuid.UUID(context.actorTenantId) if context.actorTenantId else None)
+
+    def _require(self, action: str) -> None:
+        if not self._has(action):
+            raise PermissionDeniedError(action=action)
 
     def _getOrRaise(self, tenantId: uuid.UUID, rawId: str) -> Document:
         try:
@@ -94,6 +108,10 @@ class DocumentUseCaseBase(UseCase):
 class ListDocumentsUseCase(DocumentUseCaseBase):
     requiredAction = "maintenance.document.view"
 
+    def checkAuthorization(self, query: ListDocumentsQuery) -> None:
+        if not query.deviceId or not self._has("maintenance.attachment.view"):
+            super().checkAuthorization(query)
+
     def perform(self, query: ListDocumentsQuery) -> DocumentListDto:
         tenantId = resolveTenantId("")
         documents, total = self.repository.listForTenant(
@@ -102,12 +120,19 @@ class ListDocumentsUseCase(DocumentUseCaseBase):
             category=query.category.strip(),
             limit=max(1, min(query.limit, 200)),
             offset=max(0, query.offset),
+            deviceId=query.deviceId,
+            includeLegacy=self._has("maintenance.attachment.view"),
+            includeGeneral=self._has("maintenance.document.view"),
         )
         return DocumentListDto(items=[_dto(d) for d in documents], totalCount=total)
 
 
 class GetDocumentStreamUseCase(DocumentUseCaseBase):
     requiredAction = "maintenance.document.view"
+
+    def checkAuthorization(self, query: DownloadDocumentQuery) -> None:
+        document = self._getOrRaise(resolveTenantId(""), query.documentId)
+        self._require("maintenance.attachment.view" if document.legacyDeviceDocument else "maintenance.document.view")
 
     def perform(self, query: DownloadDocumentQuery) -> DocumentFileResult:
         tenantId = resolveTenantId("")
@@ -134,6 +159,9 @@ class UploadDocumentUseCase(DocumentUseCaseBase):
                 fieldErrors={"file": "invalid_size"},
             )
         tenantId = resolveTenantId("")
+        if command.deviceIds:
+            self._require("maintenance.device.list")
+        self.repository.validateDevices(tenantId, command.deviceIds)
         context = currentContext()
         uploader = context.actorName or context.actorId or ""
         storedPath = self.storage.save(tenantId=tenantId, fileName=fileName, stream=uploaded)
@@ -147,6 +175,7 @@ class UploadDocumentUseCase(DocumentUseCaseBase):
                 description=command.description.strip(),
                 uploadedByIdentifier=uploader,
                 storagePath=storedPath,
+                deviceIds=command.deviceIds,
             )
         except Exception:
             self.storage.delete(storedPath)
@@ -163,8 +192,27 @@ class DeleteDocumentUseCase(DocumentUseCaseBase):
     def perform(self, command: DeleteDocumentCommand) -> DocumentDto:
         tenantId = resolveTenantId("")
         document = self._getOrRaise(tenantId, command.documentId)
+        if document.legacyDeviceDocument:
+            self._require("maintenance.attachment.manage")
         self.repository.softDelete(tenantId, document.id)
-        self.storage.delete(document.storagePath)
+        # Logical deletion only: keep bytes for backup/recovery and never delete
+        # a transferred file still referenced by an original attachment row.
         dto = _dto(document)
         self.audit(AUDIT_DELETE, "Document", str(document.id), tenantId, before=dto.__dict__)
         return dto
+
+
+class UpdateDocumentUseCase(DocumentUseCaseBase):
+    requiredAction = "maintenance.document.manage"
+
+    def perform(self, command: UpdateDocumentCommand) -> DocumentDto:
+        tenantId = resolveTenantId("")
+        document = self._getOrRaise(tenantId, command.documentId)
+        if document.legacyDeviceDocument:
+            self._require("maintenance.attachment.manage")
+        if command.deviceIds is not None:
+            self._require("maintenance.device.list")
+            self.repository.validateDevices(tenantId, command.deviceIds)
+        updated = self.repository.update(tenantId, document.id, category=command.category, description=command.description, deviceIds=command.deviceIds)
+        self.audit(AUDIT_UPDATE, "Document", str(document.id), tenantId, before=_dto(document).__dict__, after=_dto(updated).__dict__)
+        return _dto(updated)

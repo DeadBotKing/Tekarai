@@ -41,7 +41,12 @@ from apps.identity.presentation.api.views.userViews import (
     registerUserEndpoints,
 )
 
+from apps.identity.presentation.api.views.mobileViews import FirstPasswordView, MobileEditView, TemporaryPasswordView, registerMobileEndpoints
+
 urlpatterns = [
+    path("auth/password/first", FirstPasswordView.as_view(), name="firstPassword"),
+    path("users/<uuid:userId>/mobile", MobileEditView.as_view(), name="userMobile"),
+    path("users/<uuid:userId>/temporary-password", TemporaryPasswordView.as_view(), name="userTemporaryPassword"),
     path("auth/login", LoginView.as_view(), name="authLogin"),
     path("auth/mfa/challenge", MfaChallengeView.as_view(), name="authMfaChallenge"),
     path("auth/refresh", RefreshView.as_view(), name="authRefresh"),
@@ -94,3 +99,5 @@ urlpatterns = [
 registerAuthEndpoints()
 registerUserEndpoints()
 registerPhase7Endpoints()
+
+registerMobileEndpoints()

@@ -1,12 +1,14 @@
+import { metricDetail } from "../shared/components/metricDetails";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { useNavigate, useParams } from "react-router-dom";
 import { useApiClient } from "../core/api/apiContext";
 import { useLocalization } from "../core/localization/localizationContext";
-import { PERMISSIONS } from "../core/permissions/permissionContext";
+import { PERMISSIONS, usePermissions } from "../core/permissions/permissionContext";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
 import { createMaintenanceService } from "../features/maintenance/maintenanceService";
-import { MaintenanceAttachments } from "../features/maintenance/MaintenanceAttachments";
+import { DeviceMaintenanceControls } from "../features/maintenance/DeviceMaintenanceControls";
+import { DeviceDocuments } from "../features/documents/DeviceDocuments";
 import {
   createRegistryService,
   type AssignmentRowInput,
@@ -72,7 +74,6 @@ import { mergeOptions } from "../features/maintenance/optionCatalog";
 
 type TabId =
   | "nameplate"
-  | "specifications"
   | "pm"
   | "parts"
   | "documents"
@@ -82,7 +83,6 @@ type TabId =
 
 const TABS: { id: TabId; labelKey: string; icon: "file" | "table" | "calendar" | "layers" | "building" | "users" | "chart" }[] = [
   { id: "nameplate", labelKey: "registry.tab.nameplate", icon: "file" },
-  { id: "specifications", labelKey: "registry.tab.specifications", icon: "table" },
   { id: "pm", labelKey: "registry.tab.pm", icon: "calendar" },
   { id: "parts", labelKey: "registry.tab.parts", icon: "layers" },
   { id: "documents", labelKey: "registry.tab.documents", icon: "file" },
@@ -113,6 +113,7 @@ const formatMoney = (value: number): string =>
 /** The complete equipment file: nameplate, specs, PM, parts, location, people, KPIs. */
 export function DeviceProfilePage(): JSX.Element {
   const { t, locale } = useLocalization();
+  const { has } = usePermissions();
   const navigate = useNavigate();
   const { deviceId = "" } = useParams<{ deviceId: string }>();
   const api = useApiClient();
@@ -290,7 +291,7 @@ export function DeviceProfilePage(): JSX.Element {
           icon="warning"
           title={t("registry.profile.notFound")}
           action={
-            <Button variant="secondary" icon="arrowRight" onClick={() => navigate("/app/maintenance/registry")}>
+            <Button variant="secondary" icon="arrowRight" onClick={() => navigate("/app/maintenance/equipment")}>
               {t("registry.profile.back")}
             </Button>
           }
@@ -757,6 +758,15 @@ export function DeviceProfilePage(): JSX.Element {
 
   const renderPm = (): JSX.Element => (
     <div className="registry-pm">
+      <Card padding="md">
+        <h3>سرویس دوره‌ای دستگاه</h3>
+        <div className="form-grid form-grid--compact">
+          <span>{t("cmms.device.pmInterval")}: {device.pmIntervalDays}</span>
+          <span>{t("cmms.device.lastPm")}: {device.lastPmDate ? formatJalali(device.lastPmDate, { style: "short" }) : "—"}</span>
+          <span className={device.pmDue ? "cmms-due" : ""}>{t("cmms.device.nextPm")}: {device.nextDueDate ? formatJalali(device.nextDueDate, { style: "short" }) : "—"}</span>
+        </div>
+        <p className="muted-cell">ثبت سرویس دوره‌ای از دکمهٔ «ثبت PM» بالای شناسنامه انجام می‌شود. اجرای هر برنامهٔ PM را جداگانه از همان برنامه ثبت کنید.</p>
+      </Card>
       <Card className="content-card" padding="md">
         <SectionHeader title={t("registry.pm.title")} subtitle={t("registry.pm.subtitle")} />
         {profile.pmPlans.length === 0 && <EmptyState icon="calendar" title={t("registry.pm.emptyAll")} />}
@@ -1844,25 +1854,25 @@ export function DeviceProfilePage(): JSX.Element {
       ) : (
         <>
           <div className="metric-grid">
-            <MetricCard
+            <MetricCard detail={metricDetail([analytics], [["fromDate", "از تاریخ"], ["toDate", "تا تاریخ"], ["operatingHours", "کارکرد (ساعت)"], ["repairCount", "تعداد تعمیر"], ["mtbfHours", "MTBF (ساعت)"]], "مقادیر گزارش تجهیز در همان بازهٔ انتخاب‌شده.")} 
               label={t("registry.analytics.mtbf")}
               value={formatNumber(analytics.mtbfHours)}
               icon="clock"
               tone="blue"
             />
-            <MetricCard
+            <MetricCard detail={metricDetail([analytics], [["fromDate", "از تاریخ"], ["toDate", "تا تاریخ"], ["totalDowntimeHours", "توقف (ساعت)"], ["repairCount", "تعداد تعمیر"], ["mttrHours", "MTTR (ساعت)"]], "مقادیر گزارش تجهیز در همان بازهٔ انتخاب‌شده.")} 
               label={t("registry.analytics.mttr")}
               value={formatNumber(analytics.mttrHours)}
               icon="refresh"
               tone="amber"
             />
-            <MetricCard
+            <MetricCard detail={metricDetail([analytics], [["fromDate", "از تاریخ"], ["toDate", "تا تاریخ"], ["operatingHours", "کارکرد (ساعت)"], ["totalDowntimeHours", "توقف (ساعت)"], ["availabilityPercent", "دسترس‌پذیری (٪)"]], "مقادیر گزارش تجهیز در همان بازهٔ انتخاب‌شده.")} 
               label={t("registry.analytics.availability")}
               value={formatNumber(analytics.availabilityPercent)}
               icon="activity"
               tone="green"
             />
-            <MetricCard
+            <MetricCard detail={metricDetail([analytics], [["fromDate", "از تاریخ"], ["toDate", "تا تاریخ"], ["pmScheduled", "سرویس برنامه‌ریزی‌شده"], ["pmCompleted", "سرویس انجام‌شده"], ["pmOnTime", "به‌موقع"], ["pmOverdue", "عقب‌افتاده"], ["pmCompliancePercent", "انطباق (٪)"]], "مقادیر گزارش تجهیز در همان بازهٔ انتخاب‌شده.")} 
               label={t("registry.analytics.pmCompliance")}
               value={formatNumber(analytics.pmCompliancePercent)}
               icon="checkCircle"
@@ -1959,10 +1969,13 @@ export function DeviceProfilePage(): JSX.Element {
         subtitle={profile.locationPath || device.location}
         actions={
           <div className="cmms-header-actions">
+            <DeviceMaintenanceControls device={device} service={maintenance}
+              onUpdate={(updated) => setProfile((current) => current ? { ...current, device: updated } : current)}
+              onMessage={setToast} />
             <Button
               variant="secondary"
               icon="arrowRight"
-              onClick={() => navigate("/app/maintenance/registry")}
+              onClick={() => navigate("/app/maintenance/equipment")}
             >
               {t("registry.profile.back")}
             </Button>
@@ -2011,20 +2024,21 @@ export function DeviceProfilePage(): JSX.Element {
         ))}
       </div>
 
-      {tab === "nameplate" && renderNameplate()}
-      {tab === "specifications" && renderSpecifications()}
+      {tab === "nameplate" && (
+        <>
+          {renderNameplate()}
+          <section aria-label={t("registry.spec.title")}>
+            {renderSpecifications()}
+          </section>
+        </>
+      )}
       {tab === "pm" && renderPm()}
       {tab === "parts" && renderParts()}
       {tab === "documents" && (
         <Card className="content-card asset-documents" padding="md">
           <SectionHeader title={t("registry.tab.documents")} subtitle={device.name} />
-          <PermissionGuard permission={PERMISSIONS.maintenanceAttachmentView} fallback="denied">
-            <MaintenanceAttachments
-              targetType="device"
-              targetId={device.id}
-              service={maintenance}
-              onMessage={setToast}
-            />
+          <PermissionGuard permission={has(PERMISSIONS.maintenanceDocumentView) ? PERMISSIONS.maintenanceDocumentView : PERMISSIONS.maintenanceAttachmentView} fallback="denied">
+            <DeviceDocuments deviceId={device.id} onMessage={setToast} />
           </PermissionGuard>
         </Card>
       )}

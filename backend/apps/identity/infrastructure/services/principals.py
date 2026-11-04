@@ -68,7 +68,9 @@ class SessionVerifierDjango:
             raise TokenExpiredError("Session expired.")  # §35.5
         user = UserModel.objects.filter(id=session.userId, deletedAt__isnull=True).first()
         if user is None or user.status != "active":
-            raise AuthenticationRequiredError("Account is not active.")  # §35.7
+            raise AuthenticationRequiredError("Account is not active.")
+        from apps.identity.infrastructure.services.mobileOnboarding import denyPendingAccess
+        denyPendingAccess(user.id)  # §35.7
         SessionModel.objects.filter(id=session.id).update(lastActivityAt=now)
         return SessionPrincipalImpl(
             userId=user.id,
@@ -114,6 +116,8 @@ class ApiKeyVerifierDjango:
         user = UserModel.objects.filter(id=apiKey.ownerId, deletedAt__isnull=True).first()
         if user is None or user.status != "active":
             raise AuthenticationRequiredError("Account is not active.")
+        from apps.identity.infrastructure.services.mobileOnboarding import denyPendingAccess
+        denyPendingAccess(user.id)
         return SessionPrincipalImpl(
             userId=user.id,
             tenantId=apiKey.tenantId,

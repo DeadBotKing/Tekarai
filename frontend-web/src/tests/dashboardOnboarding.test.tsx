@@ -141,3 +141,23 @@ describe("dashboard first-visit experience", () => {
     expect(screen.getByRole("heading", { name: "نمایی روشن از فضای کاری شما" })).toBeInTheDocument();
   });
 });
+
+describe("unified people shortcut", () => {
+  it.each([
+    ["user directory access", [PERMISSIONS.userList], true],
+    ["organization access", [PERMISSIONS.organizationDepartmentView], true],
+    ["no people access", [], false],
+  ] as const)("shows one consistent entry for %s", async (_name, permissions, visible) => {
+    sessionStore.set({accessToken:"test-access",refreshToken:"test-refresh",user:{...user,permissions:[...permissions,PERMISSIONS.roleList]}});
+    renderDashboard();
+    const section = screen.getByRole("heading",{name:"هر چیز را کجا پیدا کنم؟"}).closest("section") as HTMLElement;
+    const area = within(section);
+    await userEvent.click(area.getByRole("button",{name:"نمایش نقشهٔ فضای کاری"}));
+    const combined = area.queryAllByRole("link",{name:"افراد و سازمان"});
+    expect(combined).toHaveLength(visible ? 1 : 0);
+    if (visible) expect(combined[0]).toHaveAttribute("href","/app/administration/users");
+    expect(area.queryByRole("link",{name:"ساختار سازمانی"})).not.toBeInTheDocument();
+    expect(area.queryByRole("link",{name:"کاربران"})).not.toBeInTheDocument();
+    expect(area.getByRole("link",{name:"نقش‌ها و دسترسی‌ها"})).toHaveAttribute("href","/app/administration/roles");
+  });
+});

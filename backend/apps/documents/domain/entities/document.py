@@ -21,3 +21,6 @@ class Document:
     uploadedByIdentifier: str
     uploadedAt: datetime
     storagePath: str
+
+    relatedDevices: tuple[dict[str, str], ...] = ()
+    legacyDeviceDocument: bool = False

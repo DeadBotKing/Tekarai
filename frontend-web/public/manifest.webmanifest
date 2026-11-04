@@ -11,24 +11,53 @@
   "orientation": "portrait-primary",
   "background_color": "#0b1220",
   "theme_color": "#0b1220",
-  "categories": ["business", "productivity", "utilities"],
+  "categories": [
+    "business",
+    "productivity",
+    "utilities"
+  ],
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "/icons/tk-gear-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/tk-gear-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/tk-gear-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
   "shortcuts": [
     {
       "name": "اسکن کد",
       "short_name": "اسکن",
       "url": "/app/maintenance/devices?scan=1",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icons/tk-gear-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "صف آفلاین",
       "short_name": "صف",
       "url": "/app/maintenance/offline-queue",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icons/tk-gear-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }

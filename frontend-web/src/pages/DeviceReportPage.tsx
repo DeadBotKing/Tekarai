@@ -1,3 +1,4 @@
+import { metricDetail } from "../shared/components/metricDetails";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useApiClient } from "../core/api/apiContext";
@@ -249,25 +250,25 @@ export function DeviceReportPage(): JSX.Element {
           </Card>
 
           <div className="metric-grid">
-            <MetricCard
+            <MetricCard detail={metricDetail(report?.workOrders ?? [], [["title", "عنوان درخواست"], ["status", "وضعیت"], ["priority", "اولویت"], ["assignedToName", "مسئول"], ["createdAt", "تاریخ ثبت"]], undefined, row => `/app/maintenance/work-orders?focus=${encodeURIComponent(row.id)}`)} 
               label={t("cmms.report.totalOrders")}
               value={summary?.totalOrders ?? 0}
               icon="checkSquare"
               tone="purple"
             />
-            <MetricCard
+            <MetricCard detail={metricDetail((report?.workOrders ?? []).filter(order => order.status !== "completed" && order.status !== "cancelled"), [["title", "عنوان درخواست"], ["status", "وضعیت"], ["priority", "اولویت"], ["assignedToName", "مسئول"], ["createdAt", "تاریخ ثبت"]], undefined, row => `/app/maintenance/work-orders?focus=${encodeURIComponent(row.id)}`)} 
               label={t("cmms.report.openOrders")}
               value={summary?.openOrders ?? 0}
               icon="activity"
               tone="amber"
             />
-            <MetricCard
+            <MetricCard detail={metricDetail((report?.workOrders ?? []).filter(order => Boolean(order.overdue)), [["title", "عنوان درخواست"], ["status", "وضعیت"], ["priority", "اولویت"], ["assignedToName", "مسئول"], ["createdAt", "تاریخ ثبت"]], undefined, row => `/app/maintenance/work-orders?focus=${encodeURIComponent(row.id)}`)} 
               label={t("cmms.report.overdueOrders")}
               value={summary?.overdueOrders ?? 0}
               icon="warning"
               tone="orange"
             />
-            <MetricCard
+            <MetricCard detail={metricDetail(report?.workOrders.filter(order => order.status === "completed") ?? [], [["title", "درخواست تکمیل‌شده"], ["repairStartedAt", "شروع تعمیر"], ["repairFinishedAt", "پایان تعمیر"], ["downtimeMinutes", "توقف (دقیقه)"]], "درخواست‌های تکمیل‌شدهٔ تجهیز در بازهٔ انتخاب‌شده.", row => `/app/maintenance/work-orders?focus=${encodeURIComponent(row.id)}`)} 
               label={t("cmms.report.mttr")}
               value={summary?.mttrHours === null || summary === null ? t("cmms.common.none") : summary.mttrHours}
               icon="clock"

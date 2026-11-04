@@ -133,41 +133,43 @@ class AuthenticateUserUseCase(UseCase[AuthenticateUserCommand, AuthTokenDto]):
         if tenant is None:
             return
         tenantId = asUuid(tenant.id)
-        user = self.userRepository.getByIdentifier(tenantId, command.identifier)
-        userId = user.id if user is not None else None
-        locked = False
-        if user is not None:
-            locked = user.registerFailedLogin(
-                self.clock.nowUtc(),
-                maxFailedAttempts=MAX_FAILED_LOGINS,
-                lockMinutes=LOCK_MINUTES,
-            )
-            self.userRepository.update(user)
-        self.securityEvents.record(
-            "LOGIN_FAILED",
-            userId=userId,
-            tenantId=tenantId,
-            result="failure",
-            reason=command.identifier[:120],
-        )
-        if locked:
+        from apps.identity.infrastructure.services.mobileOnboarding import serializedAccount
+        with serializedAccount(tenantId, command.identifier):
+            user = self.userRepository.getByIdentifier(tenantId, command.identifier)
+            userId = user.id if user is not None else None
+            locked = False
+            if user is not None:
+                locked = user.registerFailedLogin(
+                    self.clock.nowUtc(),
+                    maxFailedAttempts=MAX_FAILED_LOGINS,
+                    lockMinutes=LOCK_MINUTES,
+                )
+                self.userRepository.update(user)
             self.securityEvents.record(
-                "ACCOUNT_LOCKED",
+                "LOGIN_FAILED",
                 userId=userId,
                 tenantId=tenantId,
-                reason="Too many failed logins.",
+                result="failure",
+                reason=command.identifier[:120],
             )
-        self.audit(
-            AUDIT_LOGIN,
-            resourceType="Session",
-            resourceId="",
-            tenantId=tenantId,
-            after={
-                "outcome": "failure",
-                "identifier": command.identifier[:120],
-                "locked": locked,
-            },
-        )
+            if locked:
+                self.securityEvents.record(
+                    "ACCOUNT_LOCKED",
+                    userId=userId,
+                    tenantId=tenantId,
+                    reason="Too many failed logins.",
+                )
+            self.audit(
+                AUDIT_LOGIN,
+                resourceType="Session",
+                resourceId="",
+                tenantId=tenantId,
+                after={
+                    "outcome": "failure",
+                    "identifier": command.identifier[:120],
+                    "locked": locked,
+                },
+            )
 
     def businessRules(self, command: AuthenticateUserCommand) -> None:
         tenant = self.tenantDirectory.getByCode(command.tenantCode)
@@ -185,6 +187,8 @@ class AuthenticateUserUseCase(UseCase[AuthenticateUserCommand, AuthTokenDto]):
             raise InvalidCredentialsError("Invalid credentials.")
         tenantId = asUuid(tenant.id)
 
+        from apps.identity.infrastructure.services.mobileOnboarding import lockAccountForLogin
+        lockAccountForLogin(tenantId, command.identifier)
         user = self.userRepository.getByIdentifier(tenantId, command.identifier)
         if user is None or not self.passwordHasher.verify(command.password, user.passwordHash):
             # Failure counting happens post-rollback in _registerFailure (§10).
@@ -205,6 +209,11 @@ class AuthenticateUserUseCase(UseCase[AuthenticateUserCommand, AuthTokenDto]):
 
         user.registerSuccessfulLogin(now)
         self.userRepository.update(user)
+
+        from apps.identity.infrastructure.services.mobileOnboarding import passwordChallenge
+        firstPassword = passwordChallenge(user.id, user.passwordHash, now)
+        if firstPassword:
+            return AuthTokenDto(accessToken='', refreshToken='', expiresAt='', user=userDtoFromDomain(user), permissions=[], passwordChangeRequired=True, passwordChangeChallenge=firstPassword)
 
         mfaFactor = self.mfaRepository.activeFactorOf(user.id)
         if mfaFactor is not None:
@@ -301,9 +310,13 @@ class VerifyMfaChallengeUseCase(UseCase[VerifyMfaChallengeCommand, AuthTokenDto]
     def perform(self, command: VerifyMfaChallengeCommand) -> AuthTokenDto:
         now = self.clock.nowUtc()
         claims = self.tokenIssuer.verifyMfaChallenge(command.challengeToken)
+        from apps.identity.infrastructure.services.mobileOnboarding import _lockUser
+        _lockUser(uuid.UUID(claims["sub"]))
         user = self.userRepository.getById(uuid.UUID(claims["sub"]))
         if user is None or not user.isActive():
             raise AuthenticationRequiredError("Account is not active.")
+        from apps.identity.infrastructure.services.mobileOnboarding import denyPendingAccess
+        denyPendingAccess(user.id)
         factor = self.mfaRepository.activeFactorOf(user.id)
         if factor is None:
             raise AuthenticationRequiredError("No active MFA factor.")
@@ -384,9 +397,15 @@ class RefreshSessionUseCase(UseCase[RefreshSessionCommand, AuthTokenDto]):
         now = self.clock.nowUtc()
         if session.isExpiredAt(now):
             raise TokenExpiredError("Session expired.")  # §35.5
+        from apps.identity.infrastructure.services.mobileOnboarding import _lockUser
+        _lockUser(session.userId)
+        session = self.sessionRepository.findActiveByRefreshHash(hashToken(command.refreshToken))
+        if session is None: raise InvalidCredentialsError("Invalid refresh token.")
         user = self.userRepository.getById(session.userId)
         if user is None or not user.isActive():
             raise AuthenticationRequiredError("Account is not active.")
+        from apps.identity.infrastructure.services.mobileOnboarding import denyPendingAccess
+        denyPendingAccess(user.id)
 
         newRefreshToken = generateRefreshToken()
         session.rotateRefreshToken(hashToken(newRefreshToken), now)

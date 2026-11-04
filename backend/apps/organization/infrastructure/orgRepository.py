@@ -15,7 +15,8 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from django.db import transaction
+from django.db import connection, transaction
+from django.db.models import F
 
 from apps.organization.domain.services.accessMatrix import AssignmentSnapshot, RuleSnapshot
 from apps.organization.domain.valueObjects.orgStructure import (
@@ -306,8 +307,51 @@ def assignmentExists(tenantId: uuid.UUID, userId, departmentId, positionId) -> b
     ).exists()
 
 
+def _guardSingleActiveAssignment(tenantId, userId, *, excludeId=None) -> None:
+    """Transaction-scoped writer lock covers first-assignment races too.
+
+    SQL Server uses sp_getapplock, so inserting/deleting a department cannot
+    change the lock identity. SQLite tests use its global writer lock.
+    No rows are automatically cleaned up and no schema change is required.
+    """
+    from apps.organization.application.services.orgService import OrganizationRuleViolation
+
+    if connection.vendor in ("microsoft", "mssql"):
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "DECLARE @restoreNoCount bit = CASE WHEN (@@OPTIONS & 512) = 0 THEN 1 ELSE 0 END; "
+                "SET NOCOUNT ON; DECLARE @r int; EXEC @r = sys.sp_getapplock @Resource=%s, "
+                "@LockMode='Exclusive', @LockOwner='Transaction', @LockTimeout=15000; "
+                "IF @restoreNoCount = 1 SET NOCOUNT OFF; SELECT @r;",
+                ["tekarai.organization.single-position." + str(tenantId)],
+            )
+            if cursor.fetchone()[0] < 0:
+                raise OrganizationRuleViolation("assignment.busy", "ثبت جایگاه هم‌زمان در حال انجام است؛ دوباره تلاش کنید.")
+    elif connection.vendor == "postgresql":
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT pg_advisory_xact_lock(%s)", [int(uuid.UUID(str(tenantId))) & ((1 << 63) - 1)])
+    elif connection.vendor == "sqlite":
+        anchor = OrganizationDepartmentModel.objects.filter(tenantId=tenantId).order_by("id").values_list("id", flat=True).first()
+        if anchor is None:
+            raise OrganizationNotFound("No department exists in this tenant")
+        OrganizationDepartmentModel.objects.filter(tenantId=tenantId, id=anchor).update(status=F("status"))
+    else:
+        raise OrganizationRuleViolation("assignment.unsupportedDatabase", "قفل ایمن ثبت جایگاه برای این پایگاه داده پشتیبانی نشده است.")
+    others = OrganizationAssignmentModel.objects.filter(tenantId=tenantId, userId=userId, isActive=True)
+    if excludeId is not None:
+        others = others.exclude(id=excludeId)
+    if others.exists():
+        raise OrganizationRuleViolation(
+            "assignment.singleActivePosition",
+            "این فرد قبلاً واحد و سمت فعال دارد؛ برای تغییر آن، انتساب موجود را ویرایش کنید. ثبت سمت دوم مجاز نیست.",
+        )
+
+
 @transaction.atomic
 def createAssignment(*, tenantId: uuid.UUID, now: datetime, **fields):
+    if fields.get("isActive", True):
+        _guardSingleActiveAssignment(tenantId, fields["userId"])
+        fields["isPrimary"] = True
     assignment = OrganizationAssignmentModel.objects.create(
         tenantId=tenantId, updatedAt=now, **fields
     )
@@ -318,6 +362,9 @@ def createAssignment(*, tenantId: uuid.UUID, now: datetime, **fields):
 
 @transaction.atomic
 def saveAssignment(assignment, now: datetime) -> None:
+    if assignment.isActive:
+        _guardSingleActiveAssignment(assignment.tenantId, assignment.userId, excludeId=assignment.id)
+        assignment.isPrimary = True
     assignment.updatedAt = now
     assignment.save()
     if assignment.isPrimary:

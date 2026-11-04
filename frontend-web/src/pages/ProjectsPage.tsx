@@ -1,31 +1,42 @@
+import { metricDetail } from "../shared/components/metricDetails";
+import { createTaskService } from "../features/tasks/taskService";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useApiClient } from "../core/api/apiContext";
 import { useAuth } from "../core/auth/authContext";
 import { useLocalization } from "../core/localization/localizationContext";
-import { PERMISSIONS } from "../core/permissions/permissionContext";
-import { demoProjects } from "../features/demo/demoData";
+import { PERMISSIONS, usePermissions } from "../core/permissions/permissionContext";
+import { demoProjects, demoTasks } from "../features/demo/demoData";
 import { createProjectService } from "../features/projects/projectService";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
-import type { Project } from "../shared/types/domain";
+import type { Project, Task } from "../shared/types/domain";
 import { DataTable, type DataTableColumn } from "../shared/components/DataTable";
 import { Drawer, Modal, Toast } from "../shared/components/overlays";
-import { Avatar, Button, Card, CardHeader, PermissionGuard, ProgressBar, SectionHeader, SelectInput, StatusBadge, TextArea, TextInput } from "../shared/components/primitives";
+import { Avatar, Button, Card, CardHeader, MetricCard, PermissionGuard, ProgressBar, SectionHeader, SelectInput, StatusBadge, TextArea, TextInput } from "../shared/components/primitives";
 import { Icon } from "../shared/components/Icon";
 import { JalaliDatePicker } from "../shared/components/JalaliDatePicker";
+import { toPersianDigits } from "../core/localization/jalali";
 import { formatJalali } from "../core/localization/jalali";
 
 interface ProjectForm { name: string; description: string; owner: string; dueDate: string; }
 const emptyForm: ProjectForm = { name: "", description: "", owner: "", dueDate: "2026-12-31" };
 
 export function ProjectsPage(): JSX.Element {
-  const { t } = useLocalization();
+  const { t, locale } = useLocalization();
   const { session } = useAuth();
+  const { has } = usePermissions();
+  const canViewTasks = has(PERMISSIONS.taskView);
   const api = useApiClient();
   const service = useMemo(() => createProjectService(api), [api]);
+  const taskService = useMemo(() => createTaskService(api), [api]);
+  const [tasks, setTasks] = useState<Task[]>(runtimeConfig.demoMode ? demoTasks : []);
+  const [tasksLoading, setTasksLoading] = useState(!runtimeConfig.demoMode);
+  const [tasksFailed, setTasksFailed] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const defaultForm = useCallback((): ProjectForm => ({ ...emptyForm, owner: session?.user.displayName ?? "" }), [session]);
-  const [projects, setProjects] = useState<Project[]>(demoProjects);
+  const [projects, setProjects] = useState<Project[]>(runtimeConfig.demoMode ? demoProjects : []);
+  const [loading, setLoading] = useState(!runtimeConfig.demoMode);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [form, setForm] = useState<ProjectForm>(emptyForm);
@@ -37,9 +48,24 @@ export function ProjectsPage(): JSX.Element {
 
   const refresh = useCallback(async (): Promise<void> => {
     if (runtimeConfig.demoMode) return;
-    try { setProjects(await service.list()); } catch { /* keep last known state */ }
+    setLoading(true); setLoadFailed(false);
+    try { setProjects(await service.list()); } catch { setLoadFailed(true); /* retain last known live state */ }
+    finally { setLoading(false); }
   }, [service]);
   useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    if (!canViewTasks) { setTasks([]); setTasksLoading(false); return; }
+    if (runtimeConfig.demoMode) { setTasksLoading(false); return; }
+    const controller = new AbortController();
+    setTasksLoading(true); setTasksFailed(false);
+    taskService.list({}, controller.signal)
+      .then(rows => { if (!controller.signal.aborted) setTasks(rows); })
+      .catch(() => { if (!controller.signal.aborted) setTasksFailed(true); })
+      .finally(() => { if (!controller.signal.aborted) setTasksLoading(false); });
+    return () => controller.abort();
+  }, [canViewTasks, taskService]);
+  const activeProjects = projects.filter(project => project.status !== "completed" && project.status !== "archived");
+  const openProjectTasks = tasks.filter(task => task.status !== "done");
 
   useEffect(() => {
     if (searchParams.get("create") === "1") {
@@ -90,6 +116,38 @@ export function ProjectsPage(): JSX.Element {
   const filtered = status === "all" ? projects : projects.filter((project) => project.status === status);
 
   return <div className="page"><SectionHeader eyebrow={t("nav.workspace")} title={t("project.title")} subtitle={t("project.subtitle")} actions={<PermissionGuard permission={PERMISSIONS.projectCreate}><Button variant="primary" icon="plus" onClick={() => openEditor()}>{t("project.new")}</Button></PermissionGuard>} />
+    <PermissionGuard permission={PERMISSIONS.projectView}>
+      <div className="metric-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))" }}>
+        <MetricCard label={t("dashboard.activeProjects")} value={loading ? "…" : loadFailed ? "—" : locale === "fa" ? toPersianDigits(activeProjects.length) : activeProjects.length} icon="briefcase" tone="blue"
+          loadDetail={async () => {
+            if (loading || loadFailed) throw new Error("Project data is not available");
+            return metricDetail(activeProjects, [["name", "پروژه"], ["status", "وضعیت"], ["progress", "پیشرفت (٪)"], ["dueDate", "موعد"]]);
+          }} />
+        <PermissionGuard permission={PERMISSIONS.taskView}>
+          <MetricCard label={t("dashboard.openTasks")} value={tasksLoading ? "…" : tasksFailed ? "—" : locale === "fa" ? toPersianDigits(openProjectTasks.length) : openProjectTasks.length} icon="checkSquare" tone="purple"
+            loadDetail={async () => {
+              if (tasksLoading || tasksFailed) throw new Error("Task data is not available");
+              return metricDetail(openProjectTasks, [["title", "کار"], ["project", "پروژه"], ["status", "وضعیت"], ["assignee", "مسئول"], ["dueDate", "موعد"]]);
+            }} />
+        </PermissionGuard>
+      </div>
+      {canViewTasks && tasksFailed && <p role="status">دریافت وظایف پروژه‌ای ناموفق بود؛ دوباره صفحه را باز کنید.</p>}
+    </PermissionGuard>
+    <PermissionGuard permission={PERMISSIONS.projectView}>
+      <section aria-label={t("dashboard.projectPulse")}>
+        <Card className="content-card" padding="md">
+          <CardHeader title={t("dashboard.projectPulse")} subtitle={t("dashboard.projectPulseCaption")} />
+          {loading ? <p className="muted-cell">{t("common.loading")}</p> : <>
+            {loadFailed && <p role="status">دریافت اطلاعات پروژه‌ها ناموفق بود؛ دوباره صفحه را باز کنید.</p>}
+            {!projects.length ? (!loadFailed && <div className="dash-chart-empty">{t("dashboard.emptyNote")}</div>) :
+              <div className="project-pulse">{projects.slice(0, 4).map(project => <div className="pulse-row" key={project.id}>
+                <div className="pulse-row__name"><span className="project-dot" style={{ backgroundColor: project.color }} /><strong>{project.name}</strong><StatusBadge status={project.status} /></div>
+                <div className="pulse-row__progress"><ProgressBar value={project.progress} tone={project.status === "atRisk" ? "amber" : project.status === "completed" ? "green" : "blue"} /><span>{locale === "fa" ? toPersianDigits(project.progress) : project.progress}%</span></div>
+              </div>)}</div>}
+          </>}
+        </Card>
+      </section>
+    </PermissionGuard>
     <Card className="content-card" padding="none"><CardHeader title={`${projects.length} ${t("project.title").toLowerCase()}`} action={<div className="list-toolbar"><div className="search-box"><Icon name="search" size={16} /><input value={search} aria-label={t("project.search")} placeholder={t("project.search")} onChange={(event) => setSearch(event.target.value)} /></div><SelectInput aria-label={t("project.status")} value={status} onChange={(event) => setStatus(event.target.value)} options={[{ value: "all", label: t("project.status") }, { value: "active", label: t("common.status.active") }, { value: "inProgress", label: t("common.status.inProgress") }, { value: "atRisk", label: t("common.status.atRisk") }, { value: "onHold", label: t("common.status.onHold") }, { value: "completed", label: t("common.status.completed") }, { value: "archived", label: t("common.status.archived") }]} /></div>} /><DataTable columns={columns} data={filtered} rowKey={(row) => row.id} search={search} onRowClick={setSelectedProject} empty={{ title: t("common.noResults"), description: t("project.search") }} exportName="tekarai-projects" /></Card>
     <Modal open={editorOpen} title={editing ? t("project.editTitle") : t("project.createTitle")} onClose={() => { setEditing(null); setEditorOpen(false); setSearchParams({}, { replace: true }); }} footer={<><Button variant="secondary" onClick={() => { setEditing(null); setEditorOpen(false); setSearchParams({}, { replace: true }); }}>{t("project.cancel")}</Button><Button variant="primary" icon="check" onClick={saveProject}>{t("project.save")}</Button></>}><div className="form-grid"><TextInput label={t("project.name")} required value={form.name} error={formError} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} /><TextInput label={t("project.ownerField")} value={form.owner} onChange={(event) => setForm((current) => ({ ...current, owner: event.target.value }))} /><TextArea className="form-grid__full" label={t("project.description")} rows={4} value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} /><JalaliDatePicker label={t("project.dueField")} value={form.dueDate} onChange={(date) => setForm((current) => ({ ...current, dueDate: date }))} /></div></Modal>
     <Drawer open={Boolean(selectedProject)} title={selectedProject?.name ?? t("project.title")} onClose={() => setSelectedProject(null)}>{selectedProject && <ProjectDetail project={selectedProject} onEdit={() => { setSelectedProject(null); openEditor(selectedProject); }} />}</Drawer>

@@ -31,6 +31,9 @@ class DocumentRepository(Protocol):
         category: str = "",
         limit: int = 50,
         offset: int = 0,
+        deviceId: str = "",
+        includeLegacy: bool = True,
+        includeGeneral: bool = True,
     ) -> tuple[builtins.list[Document], int]: ...
 
     def byId(self, tenantId: uuid.UUID, documentId: uuid.UUID) -> Document | None: ...
@@ -46,7 +49,12 @@ class DocumentRepository(Protocol):
         description: str,
         uploadedByIdentifier: str,
         storagePath: str,
+        deviceIds: tuple[str, ...] = (),
     ) -> Document: ...
+
+    def validateDevices(self, tenantId: uuid.UUID, deviceIds: tuple[str, ...]) -> None: ...
+
+    def update(self, tenantId: uuid.UUID, documentId: uuid.UUID, *, category: str | None, description: str | None, deviceIds: tuple[str, ...] | None) -> Document: ...
 
     def softDelete(self, tenantId: uuid.UUID, documentId: uuid.UUID) -> None: ...
 

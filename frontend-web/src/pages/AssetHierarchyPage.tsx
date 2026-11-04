@@ -1,3 +1,4 @@
+import { metricDetail } from "../shared/components/metricDetails";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApiClient } from "../core/api/apiContext";
@@ -126,6 +127,10 @@ function TreeRow({ node, depth, expanded, onToggle, onOpenDevice }: TreeRowProps
   );
 }
 
+function flattenMetricAssets(nodes: AssetTreeNode[]): AssetTreeNode[] {
+  return nodes.flatMap(node => [node, ...flattenMetricAssets(node.children)]);
+}
+
 export function AssetHierarchyPage(): JSX.Element {
   const { t } = useLocalization();
   const navigate = useNavigate();
@@ -219,13 +224,13 @@ export function AssetHierarchyPage(): JSX.Element {
         <SectionHeader title={t("assets.tree.title")} subtitle={t("assets.tree.subtitle")} />
 
         <div className="metric-grid">
-          <MetricCard
+          <MetricCard detail={metricDetail(flattenMetricAssets(tree?.roots ?? []).filter(node => node.nodeType === "location"), [["name", "موقعیت"], ["code", "کد"], ["path", "مسیر"]])} 
             icon="building"
             label={t("assets.tree.locations")}
             value={tree?.counts.locations ?? 0}
           />
-          <MetricCard icon="cpu" label={t("assets.tree.devices")} value={tree?.counts.devices ?? 0} />
-          <MetricCard
+          <MetricCard detail={metricDetail([...flattenMetricAssets(tree?.roots ?? []).filter(node => node.nodeType === "device"), ...flattenMetricAssets(tree?.unplacedDevices ?? [])], [["name", "تجهیز"], ["code", "کد"], ["path", "مسیر"], ["status", "وضعیت"]])}  icon="cpu" label={t("assets.tree.devices")} value={tree?.counts.devices ?? 0} />
+          <MetricCard detail={metricDetail(tree?.unplacedDevices ?? [], [["name", "تجهیز"], ["code", "کد"], ["status", "وضعیت"]])} 
             icon="warning"
             tone={tree && tree.counts.unplacedDevices > 0 ? "amber" : "blue"}
             label={t("assets.tree.unplaced")}

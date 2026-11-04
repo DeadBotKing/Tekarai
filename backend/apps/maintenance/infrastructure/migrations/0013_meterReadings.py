@@ -6,6 +6,34 @@ import django.db.models.deletion
 from django.db import migrations, models
 
 
+class AddSensorKeyUniqueConstraint(migrations.AddConstraint):
+    """Use SQL Server's supported filtered-index predicate without changing state."""
+
+    def database_forwards(self, app_label, schema_editor, from_state, to_state):
+        if schema_editor.connection.vendor not in {"microsoft", "mssql"}:
+            return super().database_forwards(
+                app_label, schema_editor, from_state, to_state
+            )
+
+        model = to_state.apps.get_model(app_label, self.model_name)
+        if not self.allow_migrate_model(schema_editor.connection.alias, model):
+            return
+
+        quote = schema_editor.quote_name
+        columns = ", ".join(
+            quote(model._meta.get_field(name).column)
+            for name in self.constraint.fields
+        )
+        deleted = quote(model._meta.get_field("deletedAt").column)
+        sensor = quote(model._meta.get_field("sensorKey").column)
+        # SQL Server filtered indexes reject NOT (...), but accept <>.
+        schema_editor.execute(
+            f"CREATE UNIQUE INDEX {quote(self.constraint.name)} "
+            f"ON {quote(model._meta.db_table)} ({columns}) "
+            f"WHERE {deleted} IS NULL AND {sensor} <> N''"
+        )
+
+
 class Migration(migrations.Migration):
     dependencies = [
         ("maintenance", "0012_pm_metric_triggers"),
@@ -167,7 +195,7 @@ class Migration(migrations.Migration):
                 name="uq_meter_point_device_code",
             ),
         ),
-        migrations.AddConstraint(
+        AddSensorKeyUniqueConstraint(
             model_name="meterpointmodel",
             constraint=models.UniqueConstraint(
                 condition=models.Q(

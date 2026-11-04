@@ -6,7 +6,7 @@ import dataclasses
 
 from django.http import FileResponse
 from django.utils.http import content_disposition_header
-from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -16,10 +16,13 @@ from apps.documents.application.commands import (
     DownloadDocumentQuery,
     ListDocumentsQuery,
     UploadDocumentCommand,
+    UpdateDocumentCommand,
 )
 from apps.documents.infrastructure import container
 from apps.documents.presentation.api.serializers.documentSerializers import (
     DocumentUploadSerializer,
+    DocumentUpdateSerializer,
+    DocumentListSerializer,
 )
 from apps.sharedKernel.presentation.api.authentication import BearerSessionAuthentication
 from apps.sharedKernel.presentation.api.idempotency import IdempotencyMixin
@@ -35,12 +38,10 @@ class DocumentListView(IdempotencyMixin, APIView):
     parser_classes = [MultiPartParser, FormParser]
 
     def get(self, request: Request) -> Response:
-        query = ListDocumentsQuery(
-            search=str(request.query_params.get("search", "")),
-            category=str(request.query_params.get("category", "")),
-            limit=int(request.query_params.get("limit", 50) or 50),
-            offset=int(request.query_params.get("offset", 0) or 0),
-        )
+        serializer = DocumentListSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        values = serializer.validated_data
+        query = ListDocumentsQuery(search=values["search"], category=values["category"], limit=values["limit"], offset=values["offset"], deviceId=str(values.get("deviceId", "")))
         result = container.listDocumentsUseCase().execute(query)
         return Response(
             successEnvelope(
@@ -54,6 +55,7 @@ class DocumentListView(IdempotencyMixin, APIView):
         result = container.uploadDocumentUseCase().execute(
             UploadDocumentCommand(
                 uploadedFile=serializer.validated_data["file"],
+                deviceIds=tuple(str(value) for value in serializer.validated_data["deviceIds"]),
                 category=str(serializer.validated_data.get("category") or ""),
                 description=str(serializer.validated_data.get("description") or ""),
             )
@@ -80,10 +82,21 @@ class DocumentDownloadView(APIView):
 
 
 class DocumentDetailView(IdempotencyMixin, APIView):
-    """DELETE /api/v1/documents/<id> — soft-delete the record + remove bytes."""
+    """DELETE /api/v1/documents/<id> — archive the record; retain private bytes for recovery."""
 
     authentication_classes = [BearerSessionAuthentication]
     permission_classes = [IsAuthenticated]
+
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+
+    def patch(self, request: Request, documentId: str) -> Response:
+        serializer = DocumentUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        values = dict(serializer.validated_data)
+        if "deviceIds" in values:
+            values["deviceIds"] = tuple(str(value) for value in values["deviceIds"])
+        result = container.updateDocumentUseCase().execute(UpdateDocumentCommand(documentId=str(documentId), **values))
+        return Response(successEnvelope(dataclasses.asdict(result)))
 
     def delete(self, request: Request, documentId: str) -> Response:  # noqa: ARG002
         result = container.deleteDocumentUseCase().execute(

@@ -8,7 +8,7 @@ from rest_framework import serializers
 class LoginSerializer(serializers.Serializer):
     tenantCode = serializers.CharField(max_length=64)
     identifier = serializers.CharField(max_length=320, help_text="username or email (§4)")
-    password = serializers.CharField(max_length=200, write_only=True)
+    password = serializers.CharField(max_length=200, write_only=True, trim_whitespace=False)
 
 
 class RefreshSerializer(serializers.Serializer):
@@ -21,8 +21,8 @@ class MfaChallengeSerializer(serializers.Serializer):
 
 
 class ChangePasswordSerializer(serializers.Serializer):
-    currentPassword = serializers.CharField(max_length=200, write_only=True)
-    newPassword = serializers.CharField(max_length=200, write_only=True)
+    currentPassword = serializers.CharField(max_length=200, write_only=True, trim_whitespace=False)
+    newPassword = serializers.CharField(max_length=200, write_only=True, trim_whitespace=False)
 
 
 class PasswordResetRequestSerializer(serializers.Serializer):
@@ -32,7 +32,7 @@ class PasswordResetRequestSerializer(serializers.Serializer):
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
     token = serializers.CharField(max_length=200)
-    newPassword = serializers.CharField(max_length=200)
+    newPassword = serializers.CharField(max_length=200, trim_whitespace=False)
 
 
 class SendVerificationSerializer(serializers.Serializer):
@@ -94,14 +94,14 @@ class ConfirmMfaSerializer(serializers.Serializer):
 
 
 class DisableMfaSerializer(serializers.Serializer):
-    password = serializers.CharField(max_length=200, write_only=True)
+    password = serializers.CharField(max_length=200, write_only=True, trim_whitespace=False)
 
 
 class CreateUserSerializer(serializers.Serializer):
-    username = serializers.CharField(max_length=64)
+    phone = serializers.CharField(max_length=40)
+    displayName = serializers.CharField(max_length=160)
     email = serializers.EmailField(max_length=320)
-    password = serializers.CharField(max_length=200, write_only=True, min_length=12)
-    displayName = serializers.CharField(max_length=160, required=False, allow_blank=True)
+    username = serializers.CharField(max_length=64, required=False, allow_blank=True, default='')
 
 
 class AssignMembershipSerializer(serializers.Serializer):

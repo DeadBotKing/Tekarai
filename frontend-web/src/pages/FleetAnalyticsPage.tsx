@@ -1,3 +1,4 @@
+import { metricDetail } from "../shared/components/metricDetails";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApiClient } from "../core/api/apiContext";
@@ -161,25 +162,25 @@ export function FleetAnalyticsPage(): JSX.Element {
       />
 
       <div className="metric-grid">
-        <MetricCard
+        <MetricCard detail={metricDetail(fleet?.rows ?? [], [["name", "تجهیز"], ["code", "کد"], ["repairCount", "تعداد تعمیر"], ["downtimeHours", "توقف (ساعت)"], ["totalCost", "هزینه کل"]])} 
           label={t("registry.fleet.deviceCount")}
           value={fleet?.deviceCount ?? 0}
           icon="cpu"
           tone="blue"
         />
-        <MetricCard
+        <MetricCard detail={metricDetail(fleet?.rows ?? [], [["name", "تجهیز"], ["code", "کد"], ["repairCount", "تعداد تعمیر"], ["downtimeHours", "توقف (ساعت)"], ["totalCost", "هزینه کل"]])} 
           label={t("registry.fleet.totalRepairs")}
           value={fleet?.totalRepairs ?? 0}
           icon="warning"
           tone="amber"
         />
-        <MetricCard
+        <MetricCard detail={metricDetail(fleet?.rows ?? [], [["name", "تجهیز"], ["code", "کد"], ["repairCount", "تعداد تعمیر"], ["downtimeHours", "توقف (ساعت)"], ["totalCost", "هزینه کل"]])} 
           label={t("registry.fleet.totalDowntime")}
           value={formatNumber(fleet?.totalDowntimeHours ?? 0)}
           icon="clock"
           tone="purple"
         />
-        <MetricCard
+        <MetricCard detail={metricDetail(fleet?.rows ?? [], [["name", "تجهیز"], ["code", "کد"], ["repairCount", "تعداد تعمیر"], ["downtimeHours", "توقف (ساعت)"], ["totalCost", "هزینه کل"]])} 
           label={t("registry.fleet.totalCost")}
           value={formatMoney(fleet?.totalCost ?? 0)}
           icon="chart"

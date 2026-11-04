@@ -49,7 +49,7 @@ from apps.identity.infrastructure.models import (
     UserRoleModel,
     VerificationTokenModel,
 )
-from apps.sharedKernel.domain.errors import DuplicateIdentifierError
+from apps.sharedKernel.domain.errors import DuplicateIdentifierError, ConcurrencyConflictError
 
 USER_SORTABLE = {"createdAt": "createdAt", "username": "username", "status": "status"}
 
@@ -84,19 +84,25 @@ class UserRepositoryDjango:
                 details={"ruleId": "BR-TEN-005"},
             ) from exc
 
+    @staticmethod
+    def _writeValues(user: User) -> dict:
+        return {name: str(getattr(user, name)) if name == 'status' else getattr(user, name)
+                for name in ('displayName', 'status', 'phone', 'passwordHash', 'lastLoginAt',
+                             'passwordChangedAt', 'failedLoginCount', 'lockedUntil', 'expiresAt')}
+
     def update(self, user: User) -> None:
-        UserModel.objects.filter(id=user.id).update(
-            displayName=user.displayName,
-            status=str(user.status),
-            phone=user.phone,
-            passwordHash=user.passwordHash,
-            lastLoginAt=user.lastLoginAt,
-            passwordChangedAt=user.passwordChangedAt,
-            failedLoginCount=user.failedLoginCount,
-            lockedUntil=user.lockedUntil,
-            expiresAt=user.expiresAt,
-            updatedAt=utcnow(),
-        )
+        values = self._writeValues(user)
+        original = getattr(user, '_persistedIdentityState', None)
+        query = UserModel.objects.filter(id=user.id, deletedAt__isnull=True)
+        if original is not None:
+            query = query.filter(passwordHash=original['passwordHash'], status=original['status'])
+            changes = {key: value for key, value in values.items() if value != original[key]}
+        else:
+            changes = values
+        changes['updatedAt'] = utcnow()
+        if not query.update(**changes):
+            raise ConcurrencyConflictError('حساب هم‌زمان تغییر کرده است؛ دوباره تلاش کنید.')
+        user._persistedIdentityState = values
 
     def getById(self, userId: uuid.UUID, tenantId: uuid.UUID | None = None) -> User | None:
         queryset = UserModel.objects.filter(id=userId, deletedAt__isnull=True)
@@ -158,7 +164,7 @@ class UserRepositoryDjango:
 
     @staticmethod
     def toDomain(model: UserModel) -> User:
-        return User(
+        user = User(
             id=model.id,
             tenantId=model.tenantId,
             username=model.username,
@@ -177,6 +183,9 @@ class UserRepositoryDjango:
             updatedAt=model.updatedAt,
             deletedAt=model.deletedAt,
         )
+
+        user._persistedIdentityState = UserRepositoryDjango._writeValues(user)
+        return user
 
 
 class SessionRepositoryDjango:

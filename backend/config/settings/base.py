@@ -222,6 +222,7 @@ SHARED_KERNEL_PROVIDERS: dict[str, str] = {}
 # their phases.
 API_RATE_LIMIT_POLICIES: dict[str, tuple[int, int]] = {
     "auth:login": (5, 60),
+    "auth:first-password": (10, 60),
     "auth:refresh": (30, 60),
     # Phase 10 communication scopes (docs/Phases/Phase10.md §68) —
     # (limit per window, window seconds). Send/presence are generous;

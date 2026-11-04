@@ -28,6 +28,8 @@ class DocumentModel(models.Model):
     uploadedByIdentifier = models.CharField(max_length=200, blank=True, default="")
     uploadedAt = models.DateTimeField(default=timezone.now)
     deletedAt = models.DateTimeField(null=True, blank=True)
+    legacyDeviceDocument = models.BooleanField(default=False)
+    relatedDevices = models.ManyToManyField("maintenance.DeviceModel", related_name="libraryDocuments", blank=True)
 
     class Meta:
         db_table = "documents_document"

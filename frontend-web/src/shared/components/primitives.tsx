@@ -1,4 +1,8 @@
-import { forwardRef, useId, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
+import "./metricCards.css";
+import { createPortal } from "react-dom";
+import { Modal } from "./overlays";
+import type { MetricDetails } from "./metricDetails";
+import { useState, useRef, useEffect, forwardRef, useId, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
 import { Icon, type IconName } from "./Icon";
 import { useLocalization } from "../../core/localization/localizationContext";
 import type { TranslationKey } from "../../core/localization/i18n";
@@ -157,13 +161,46 @@ export function Avatar({ name, size = "md", tone = "blue", src }: { name: string
   return src ? <img className={`avatar avatar--${size}`} src={src} alt={name} /> : <span className={`avatar avatar--${size} avatar--${tone}`} aria-label={name} title={name}>{initials}</span>;
 }
 
-export function MetricCard({ label, value, trend, trendLabel, icon, tone = "blue" }: { label: string; value: string | number; trend?: string; trendLabel?: string; icon: IconName; tone?: "blue" | "green" | "purple" | "amber" | "orange" }): JSX.Element {
-  return <Card className={`metric-card metric-card--${tone}`} padding="md">
+export function MetricCard({ label, value, trend, trendLabel, icon, tone = "blue", onClick, detail, loadDetail, compact = false }: { label: string; value: string | number; trend?: string; trendLabel?: string; icon: IconName; tone?: "blue" | "green" | "purple" | "amber" | "orange"; onClick?: () => void; detail?: MetricDetails; loadDetail?: (signal?: AbortSignal) => Promise<MetricDetails>; compact?: boolean }): JSX.Element {
+  const [open, setOpen] = useState(false);
+  const [loaded, setLoaded] = useState<MetricDetails | null>(null);
+  const [pending, setPending] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const request = useRef(0);
+  const controller = useRef<AbortController | null>(null);
+  useEffect(() => () => { request.current++; controller.current?.abort(); }, []);
+  const interactive = Boolean(onClick || detail || loadDetail);
+  const shown = loadDetail ? loaded : detail;
+  const close = (): void => { request.current++; controller.current?.abort(); setOpen(false); };
+  const activate = (): void => {
+    if (onClick) { onClick(); return; }
+    if (!detail && !loadDetail) return;
+    setOpen(true);
+    if (loadDetail) {
+      const id = ++request.current; setLoaded(null); setPending(true); setFailed(false);
+      controller.current?.abort(); controller.current = new AbortController();
+      loadDetail(controller.current.signal).then(rows => { if (id === request.current) setLoaded(rows); })
+        .catch(() => { if (id === request.current) setFailed(true); })
+        .finally(() => { if (id === request.current) setPending(false); });
+    }
+  };
+  return <><Card className={`${compact ? "metric-summary" : `metric-card metric-card--${tone}`}${interactive ? " metric-card--interactive" : ""}`} padding="md"
+    role={interactive ? "button" : undefined} tabIndex={interactive ? 0 : undefined} aria-label={interactive ? label : undefined} aria-description={interactive ? String(value) : undefined} aria-haspopup={interactive && !onClick ? "dialog" : undefined} aria-expanded={interactive && !onClick ? open : undefined}
+    onClick={interactive ? activate : undefined} onKeyDown={interactive ? e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); activate(); } } : undefined}>
+    {compact ? <><span>{label}</span><strong>{value}</strong></> : <>
     <div className="metric-card__top"><span className={`metric-card__icon metric-card__icon--${tone}`}><Icon name={icon} size={19} /></span>{trend && <span className={`metric-card__trend ${trend.startsWith("-") ? "is-negative" : ""}`}><Icon name={trend.startsWith("-") ? "arrowDown" : "arrowUp"} size={13} />{trend}</span>}</div>
     <div className="metric-card__value">{value}</div>
     <div className="metric-card__label">{label}</div>
     {trendLabel && <div className="metric-card__hint">{trendLabel}</div>}
-  </Card>;
+    </>}
+  </Card>
+  {open && (detail || loadDetail) && createPortal(<Modal open title={label} onClose={close} wide>
+    {pending ? <p role="status">در حال بارگذاری جزئیات…</p> : failed ? <p role="alert">بارگذاری جزئیات ناموفق بود؛ پنجره را ببندید و دوباره روی کارت بزنید.</p> : shown && <>
+      {shown.note && <p className="muted-cell">{shown.note}</p>}
+      {!shown.rows.length ? <p>موردی مطابق این کارت وجود ندارد.</p> : <div className="metric-detail-table"><table className="data-table"><thead><tr>{shown.columns.map((column, i) => <th key={i}>{column}</th>)}</tr></thead><tbody>{shown.rows.map((row, i) => <tr key={i}>{row.map((cell, j) => <td key={j}>{j === 0 && shown.links?.[i] ? <a className="link-cell" href={shown.links[i]}>{cell}</a> : cell}</td>)}</tr>)}</tbody></table></div>}
+    </>}
+  </Modal>, document.body)}
+  </>;
 }
 
 export function SectionHeader({ eyebrow, title, subtitle, actions }: { eyebrow?: string; title: string; subtitle?: string; actions?: ReactNode }): JSX.Element {

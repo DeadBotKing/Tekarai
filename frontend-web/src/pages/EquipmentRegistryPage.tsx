@@ -1,9 +1,13 @@
+import { metricDetail } from "../shared/components/metricDetails";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useApiClient } from "../core/api/apiContext";
 import { useLocalization } from "../core/localization/localizationContext";
-import { PERMISSIONS } from "../core/permissions/permissionContext";
+import { PERMISSIONS, usePermissions } from "../core/permissions/permissionContext";
 import { runtimeConfig } from "../app/configuration/runtimeConfig";
+import { DeviceMaintenanceControls } from "../features/maintenance/DeviceMaintenanceControls";
+import { DeviceScanModal } from "../features/maintenance/DeviceScanModal";
+import { EquipmentTree } from "../features/maintenance/EquipmentTree";
 import { createMaintenanceService } from "../features/maintenance/maintenanceService";
 import { createRegistryService } from "../features/maintenance/registryService";
 import {
@@ -21,6 +25,8 @@ import {
   type MaintenanceLocation,
 } from "../shared/types/domain";
 import { DataTable, type DataTableColumn } from "../shared/components/DataTable";
+import { Icon } from "../shared/components/Icon";
+import { formatJalali } from "../core/localization/jalali";
 import { Modal, Toast } from "../shared/components/overlays";
 import {
   Badge,
@@ -77,6 +83,7 @@ const criticalityTone = (
 export function EquipmentRegistryPage(): JSX.Element {
   const { t } = useLocalization();
   const navigate = useNavigate();
+  const { has } = usePermissions();
   const api = useApiClient();
   const maintenance = useMemo(() => createMaintenanceService(api), [api]);
   const registry = useMemo(
@@ -95,6 +102,18 @@ export function EquipmentRegistryPage(): JSX.Element {
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [criticalityFilter, setCriticalityFilter] = useState("all");
   const [locationFilter, setLocationFilter] = useState("all");
+  const [scanOpen, setScanOpen] = useState(false);
+  const [treeOpen, setTreeOpen] = useState(false);
+  const [pmFrom, setPmFrom] = useState("");
+  const [pmTo, setPmTo] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get("scan") !== "1") return;
+    setScanOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete("scan");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
   const [createOpen, setCreateOpen] = useState(false);
   const [quickLocationOpen, setQuickLocationOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -160,6 +179,8 @@ export function EquipmentRegistryPage(): JSX.Element {
         const criticality = device.criticality ?? "medium";
         return (
           (statusFilter === "all" || device.status === statusFilter) &&
+          (!pmFrom || Boolean(device.nextDueDate && device.nextDueDate >= pmFrom)) &&
+          (!pmTo || Boolean(device.nextDueDate && device.nextDueDate <= pmTo)) &&
           (departmentFilter === "all" || device.department === departmentFilter) &&
           (criticalityFilter === "all" || criticality === criticalityFilter) &&
           (locationFilter === "all" || device.locationId === locationFilter) &&
@@ -170,7 +191,7 @@ export function EquipmentRegistryPage(): JSX.Element {
             .includes(search.toLowerCase())
         );
       }),
-    [devices, search, statusFilter, departmentFilter, criticalityFilter, locationFilter],
+    [devices, search, statusFilter, departmentFilter, criticalityFilter, locationFilter, pmFrom, pmTo],
   );
 
   const criticalCount = devices.filter((device) => device.criticality === "critical").length;
@@ -344,11 +365,41 @@ export function EquipmentRegistryPage(): JSX.Element {
       ),
     },
     {
+      key: "lastPmDate",
+      label: t("cmms.device.lastPm"),
+      accessor: (row) => row.lastPmDate,
+      sortable: true,
+      render: (row) =>
+        row.lastPmDate ? (
+          <span>{formatJalali(row.lastPmDate, { style: "short" })}</span>
+        ) : (
+          <span className="muted-cell">{t("cmms.common.none")}</span>
+        ),
+    },
+    {
+      key: "nextDueDate",
+      label: t("cmms.device.nextPm"),
+      accessor: (row) => row.nextDueDate,
+      sortable: true,
+      render: (row) =>
+        row.nextDueDate ? (
+          <span className={row.pmDue ? "cmms-due" : ""}>
+            {row.pmDue && <Icon name="warning" size={14} />} {formatJalali(row.nextDueDate, { style: "short" })}
+          </span>
+        ) : (
+          <span className="muted-cell">{t("cmms.common.none")}</span>
+        ),
+    },
+    {
       key: "actions",
       label: t("registry.column.actions"),
       accessor: () => "",
       render: (row) => (
         <div className="cmms-row-actions">
+          {!has(PERMISSIONS.maintenanceDeviceView) && <DeviceMaintenanceControls device={row} service={maintenance}
+            onUpdate={(updated) => setDevices((current) => current.map((item) => item.id === updated.id ? updated : item))}
+            onMessage={setToast} />}
+          <PermissionGuard permission={PERMISSIONS.maintenanceDeviceView}>
           <Button
             variant="ghost"
             size="sm"
@@ -357,6 +408,7 @@ export function EquipmentRegistryPage(): JSX.Element {
           >
             {t("registry.openProfile")}
           </Button>
+          </PermissionGuard>
         </div>
       ),
     },
@@ -370,6 +422,8 @@ export function EquipmentRegistryPage(): JSX.Element {
         subtitle={t("registry.subtitle")}
         actions={
           <div className="cmms-header-actions">
+            <Button variant="secondary" icon="target" onClick={() => setScanOpen(true)}>اسکن QR دستگاه</Button>
+            <Button variant="secondary" icon="grid" onClick={() => setTreeOpen(!treeOpen)}>{treeOpen ? "نمای فهرست" : "نمای درخت"}</Button>
             <PermissionGuard permission={PERMISSIONS.maintenanceDeviceList}>
               <Button
                 variant="secondary"
@@ -403,20 +457,20 @@ export function EquipmentRegistryPage(): JSX.Element {
       />
 
       <div className="metric-grid">
-        <MetricCard label={t("registry.metric.total")} value={devices.length} icon="cpu" tone="blue" />
-        <MetricCard
+        <MetricCard detail={metricDetail(devices, [["name", "نام تجهیز"], ["code", "کد"], ["status", "وضعیت"], ["nextDueDate", "موعد سرویس"]], undefined, row => `/app/maintenance/devices/${encodeURIComponent(row.id)}/profile`)}  label={t("registry.metric.total")} value={devices.length} icon="cpu" tone="blue" />
+        <MetricCard detail={metricDetail(devices.filter(device => device.criticality === "critical"), [["name", "نام تجهیز"], ["code", "کد"], ["status", "وضعیت"], ["nextDueDate", "موعد سرویس"]], undefined, row => `/app/maintenance/devices/${encodeURIComponent(row.id)}/profile`)} 
           label={t("registry.metric.critical")}
           value={criticalCount}
           icon="shield"
           tone="purple"
         />
-        <MetricCard
+        <MetricCard detail={metricDetail(devices.filter(device => device.status === "underMaintenance"), [["name", "نام تجهیز"], ["code", "کد"], ["status", "وضعیت"], ["nextDueDate", "موعد سرویس"]], undefined, row => `/app/maintenance/devices/${encodeURIComponent(row.id)}/profile`)} 
           label={t("registry.metric.underMaintenance")}
           value={underMaintenanceCount}
           icon="settings"
           tone="amber"
         />
-        <MetricCard label={t("registry.metric.pmDue")} value={dueCount} icon="warning" tone="orange" />
+        <MetricCard detail={metricDetail(devices.filter(device => device.pmDue), [["name", "نام تجهیز"], ["code", "کد"], ["status", "وضعیت"], ["nextDueDate", "موعد سرویس"]], undefined, row => `/app/maintenance/devices/${encodeURIComponent(row.id)}/profile`)}  label={t("registry.metric.pmDue")} value={dueCount} icon="warning" tone="orange" />
       </div>
 
       <Card className="content-card" padding="md">
@@ -478,7 +532,12 @@ export function EquipmentRegistryPage(): JSX.Element {
             ]}
           />
         </div>
-        <DataTable
+        <div className="form-grid form-grid--compact" style={{ padding: 12 }}>
+          <JalaliDatePicker label="PM از تاریخ" value={pmFrom} onChange={(value) => { if (value && pmTo && value > pmTo) { setToast("تاریخ شروع نباید بعد از تاریخ پایان باشد."); return; } setPmFrom(value); }} />
+          <JalaliDatePicker label="PM تا تاریخ" value={pmTo} onChange={(value) => { if (value && pmFrom && value < pmFrom) { setToast("تاریخ پایان نباید قبل از تاریخ شروع باشد."); return; } setPmTo(value); }} />
+          {(pmFrom || pmTo) && <Button variant="ghost" icon="close" onClick={() => { setPmFrom(""); setPmTo(""); }}>پاک کردن بازه PM</Button>}
+        </div>
+        {treeOpen ? <EquipmentTree devices={filtered} service={maintenance} onMessage={setToast} /> : <DataTable
           columns={columns}
           data={filtered}
           rowKey={(row) => row.id}
@@ -487,7 +546,7 @@ export function EquipmentRegistryPage(): JSX.Element {
           empty={{ title: t("registry.empty") }}
           onRowClick={(row) => navigate(`/app/maintenance/devices/${row.id}/profile`)}
           exportName="tekarai-equipment-registry"
-        />
+        />}
       </Card>
 
       <Modal
@@ -645,6 +704,7 @@ export function EquipmentRegistryPage(): JSX.Element {
         onCreated={setFormLocationId}
       />
 
+      <DeviceScanModal open={scanOpen} onClose={() => setScanOpen(false)} />
       {toast && <Toast message={toast} onClose={() => setToast("")} />}
     </div>
   );

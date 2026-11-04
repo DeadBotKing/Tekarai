@@ -1,3 +1,4 @@
+import { metricDetail } from "../shared/components/metricDetails";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApiClient } from "../core/api/apiContext";
@@ -237,9 +238,9 @@ export function MaintenancePmCalendarPage(): JSX.Element {
       />
 
       <div className="metric-grid">
-        <MetricCard label={t("cmms.pmCal.overdue")} value={overdueCount} icon="warning" tone={overdueCount > 0 ? "amber" : "green"} />
-        <MetricCard label={t("cmms.pmCal.thisMonth")} value={upcomingCount} icon="calendar" tone="blue" />
-        <MetricCard label={t("cmms.pmCal.undated")} value={undatedItems.length} icon="clock" tone={undatedItems.length > 0 ? "amber" : "green"} />
+        <MetricCard detail={metricDetail(items.filter(item => item.overdue), [["title", "برنامه"], ["deviceName", "تجهیز"], ["deviceCode", "کد تجهیز"], ["dueOn", "موعد"], ["responsibleName", "مسئول"]])}  label={t("cmms.pmCal.overdue")} value={overdueCount} icon="warning" tone={overdueCount > 0 ? "amber" : "green"} />
+        <MetricCard detail={metricDetail(datedItems.filter(item => !item.overdue), [["title", "برنامه"], ["deviceName", "تجهیز"], ["deviceCode", "کد تجهیز"], ["dueOn", "موعد"], ["responsibleName", "مسئول"]])}  label={t("cmms.pmCal.thisMonth")} value={upcomingCount} icon="calendar" tone="blue" />
+        <MetricCard detail={metricDetail(undatedItems, [["title", "برنامه"], ["deviceName", "تجهیز"], ["deviceCode", "کد تجهیز"], ["dueOn", "موعد"], ["responsibleName", "مسئول"]])}  label={t("cmms.pmCal.undated")} value={undatedItems.length} icon="clock" tone={undatedItems.length > 0 ? "amber" : "green"} />
       </div>
 
       <Card className="content-card" padding="md">

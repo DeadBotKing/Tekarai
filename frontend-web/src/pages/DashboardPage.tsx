@@ -1,3 +1,4 @@
+import { metricDetail } from "../shared/components/metricDetails";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useApiClient } from "../core/api/apiContext";
@@ -20,13 +21,12 @@ import { BarChart, DonutChart } from "../shared/components/charts";
 import { GUIDE_OPEN_EVENT } from "../shared/components/GuideDrawer";
 import { Icon, type IconName } from "../shared/components/Icon";
 import { ContextSticker } from "../shared/components/ContextSticker";
-import { Button, Card, CardHeader, MetricCard, PermissionGuard, ProgressBar, SectionHeader, StatusBadge } from "../shared/components/primitives";
+import { Button, Card, CardHeader, MetricCard, PermissionGuard, SectionHeader } from "../shared/components/primitives";
 import type { ActivityItem, Project, Task, WorkOrder } from "../shared/types/domain";
 
-interface WidgetConfig { id: string; title: string; kind: "pulse" | "throughput" | "activity" | "health"; size: "wide" | "half"; }
+interface WidgetConfig { id: string; title: string; kind: "throughput" | "activity" | "health"; size: "wide" | "half"; }
 
 const defaultWidgets: WidgetConfig[] = [
-  { id: "pulse", title: "Project pulse", kind: "pulse", size: "wide" },
   { id: "throughput", title: "Task throughput", kind: "throughput", size: "half" },
   { id: "activity", title: "Recent activity", kind: "activity", size: "half" },
   { id: "health", title: "Health by domain", kind: "health", size: "half" },
@@ -38,6 +38,7 @@ interface DashboardAreaLink {
   route: string;
   icon: IconName;
   permission?: string;
+  anyPermission?: string[];
   featureFlag?: string;
 }
 
@@ -68,7 +69,7 @@ const dashboardAreas: DashboardArea[] = [
     icon: "cpu",
     links: [
       { id: "work-orders", label: "dashboard.link.workOrders", route: "/app/maintenance/work-orders", icon: "checkSquare", permission: PERMISSIONS.maintenanceWorkOrderList },
-      { id: "assets", label: "dashboard.link.assets", route: "/app/maintenance/devices", icon: "cpu", permission: PERMISSIONS.maintenanceDeviceList },
+      { id: "assets", label: "dashboard.link.assets", route: "/app/maintenance/equipment", icon: "cpu", permission: PERMISSIONS.maintenanceDeviceList },
       { id: "preventive", label: "dashboard.link.pmCalendar", route: "/app/maintenance/pm-calendar", icon: "calendar", permission: PERMISSIONS.maintenanceDeviceList },
       { id: "inspections", label: "dashboard.link.inspections", route: "/app/maintenance/inspections", icon: "shield", permission: PERMISSIONS.maintenanceWorkOrderList },
     ],
@@ -100,8 +101,7 @@ const dashboardAreas: DashboardArea[] = [
     icon: "users",
     links: [
       { id: "chat", label: "dashboard.link.chat", route: "/app/chat", icon: "message" },
-      { id: "organization", label: "dashboard.link.organization", route: "/app/organization/structure", icon: "users", permission: PERMISSIONS.organizationDepartmentView },
-      { id: "users", label: "dashboard.link.users", route: "/app/administration/users", icon: "users", permission: PERMISSIONS.userList },
+      { id: "users", label: "dashboard.link.users", route: "/app/administration/users", icon: "users", anyPermission: [PERMISSIONS.userList, PERMISSIONS.organizationDepartmentView] },
       { id: "roles", label: "dashboard.link.roles", route: "/app/administration/roles", icon: "key", permission: PERMISSIONS.roleList },
       { id: "settings", label: "dashboard.link.settings", route: "/app/settings", icon: "settings" },
       { id: "account", label: "dashboard.link.account", route: "/app/account", icon: "user" },
@@ -194,7 +194,7 @@ export function DashboardPage(): JSX.Element {
     .map((area) => ({
       ...area,
       links: area.links.filter((link) =>
-        (!link.permission || has(link.permission)) && (!link.featureFlag || isEnabled(link.featureFlag)),
+        (!link.permission || has(link.permission)) && (!link.anyPermission || link.anyPermission.some((permission) => has(permission))) && (!link.featureFlag || isEnabled(link.featureFlag)),
       ),
     }))
     .filter((area) => area.links.length > 0), [has, isEnabled]);
@@ -253,11 +253,9 @@ export function DashboardPage(): JSX.Element {
     void refresh();
   }, [refresh]);
 
-  const activeProjects = projects.filter((project) => project.status !== "completed" && project.status !== "archived").length;
-  const openTasks = tasks.filter((task) => task.status !== "done").length;
   const openWorkOrders = workOrders.filter(isOpenOrder).length;
   const averageHealth = projects.length ? Math.round(projects.reduce((sum, project) => sum + project.health, 0) / projects.length) : null;
-  const healthLabel = averageHealth === null ? "—" : `${locale === "fa" ? toPersianDigits(averageHealth) : averageHealth}%`;
+  const overdueWorkOrders = workOrders.filter(order => isOpenOrder(order) && Boolean(order.overdue));
 
   const statusCounts = useMemo(() => {
     const buckets: Record<string, number> = { backlog: 0, inProgress: 0, review: 0, done: 0 };
@@ -278,7 +276,7 @@ export function DashboardPage(): JSX.Element {
   const atRiskCount = projects.filter((project) => project.status === "atRisk").length;
   const completedCount = projects.filter((project) => project.status === "completed").length;
 
-  const widgetTitle = useMemo(() => (widget: WidgetConfig): string => widget.kind === "pulse" ? t("dashboard.projectPulse") : widget.kind === "throughput" ? t("dashboard.taskThroughput") : widget.kind === "activity" ? t("dashboard.activity") : t("dashboard.healthScore"), [t]);
+  const widgetTitle = useMemo(() => (widget: WidgetConfig): string => widget.kind === "throughput" ? t("dashboard.taskThroughput") : widget.kind === "activity" ? t("dashboard.activity") : t("dashboard.healthScore"), [t]);
   const removeWidget = (id: string): void => setWidgets((current) => current.filter((widget) => widget.id !== id));
   const moveWidget = (id: string, direction: -1 | 1): void => setWidgets((current) => {
     const index = current.findIndex((widget) => widget.id === id);
@@ -301,11 +299,9 @@ export function DashboardPage(): JSX.Element {
       subtitle={t("dashboard.subtitle")}
       actions={<div className="section-actions"><span className="updated-label"><span className="live-dot" />{loading ? "…" : t("dashboard.lastUpdated")}</span>{isEnabled("dashboardCustomization") && <Button variant={customizing ? "primary" : "secondary"} icon={customizing ? "check" : "settings"} onClick={() => setCustomizing((value) => !value)}>{customizing ? t("dashboard.done") : t("dashboard.customize")}</Button>}</div>}
     />
-    <div className="metric-grid dashboard-metric-grid">
-      <MetricCard label={t("dashboard.activeProjects")} value={locale === "fa" ? toPersianDigits(activeProjects) : activeProjects} icon="briefcase" tone="blue" />
-      <MetricCard label={t("dashboard.openTasks")} value={locale === "fa" ? toPersianDigits(openTasks) : openTasks} icon="checkSquare" tone="purple" />
-      <MetricCard label={t("dashboard.openWorkOrders")} value={locale === "fa" ? toPersianDigits(openWorkOrders) : openWorkOrders} icon="activity" tone="green" />
-      <MetricCard label={t("dashboard.healthScore")} value={healthLabel} icon="chart" tone="amber" />
+    <div className="metric-grid dashboard-metric-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))" }}>
+      <MetricCard detail={metricDetail(workOrders.filter(isOpenOrder), [["title", "عنوان درخواست"], ["status", "وضعیت"], ["priority", "اولویت"], ["assignedToName", "مسئول"], ["createdAt", "تاریخ ثبت"]], undefined, row => `/app/maintenance/work-orders?focus=${encodeURIComponent(row.id)}`)}  label={t("dashboard.openWorkOrders")} value={locale === "fa" ? toPersianDigits(openWorkOrders) : openWorkOrders} icon="activity" tone="green" />
+      <MetricCard detail={metricDetail(overdueWorkOrders, [["title", "عنوان درخواست"], ["status", "وضعیت"], ["priority", "اولویت"], ["assignedToName", "مسئول"], ["slaDueAt", "مهلت انجام"]], "فقط درخواست‌های باز که طبق گزارش سامانه از مهلت انجام گذشته‌اند؛ تکمیل‌شده و لغوشده در این فهرست نیستند.", row => `/app/maintenance/work-orders?focus=${encodeURIComponent(row.id)}`)} label={t("dashboard.overdueWorkOrders")} value={locale === "fa" ? toPersianDigits(overdueWorkOrders.length) : overdueWorkOrders.length} icon="warning" tone="amber" />
     </div>
     <div className="quick-actions dashboard-quick-actions">
       <span className="quick-actions__label">{t("dashboard.quickActions")}</span>
@@ -325,14 +321,9 @@ export function DashboardPage(): JSX.Element {
           <Card key={widget.id} className={`dashboard-widget dashboard-widget--${widget.size}`} padding="md">
             <CardHeader
               title={widgetTitle(widget)}
-              subtitle={widget.kind === "pulse" ? t("dashboard.projectPulseCaption") : widget.kind === "throughput" ? t("dashboard.taskThroughputCaption") : undefined}
+              subtitle={widget.kind === "throughput" ? t("dashboard.taskThroughputCaption") : undefined}
               action={customizing ? <div className="widget-controls"><button type="button" aria-label="جابه‌جایی کارت به بالا" disabled={index === 0} onClick={() => moveWidget(widget.id, -1)}><Icon name="arrowUp" size={14} /></button><button type="button" aria-label="جابه‌جایی کارت به پایین" disabled={index === widgets.length - 1} onClick={() => moveWidget(widget.id, 1)}><Icon name="arrowDown" size={14} /></button><button type="button" aria-label="حذف کارت" onClick={() => removeWidget(widget.id)}><Icon name="close" size={14} /></button></div> : <button type="button" className="card-kebab" aria-label={t("common.more")}><Icon name="more" size={17} /></button>}
             />
-            {widget.kind === "pulse" && (
-              projects.length === 0
-                ? <div className="dash-chart-empty">{t("dashboard.emptyNote")}</div>
-                : <div className="project-pulse">{projects.slice(0, 4).map((project) => <div className="pulse-row" key={project.id}><div className="pulse-row__name"><span className="project-dot" style={{ backgroundColor: project.color }} /> <strong>{project.name}</strong><StatusBadge status={project.status} /></div><div className="pulse-row__progress"><ProgressBar value={project.progress} tone={project.status === "atRisk" ? "amber" : project.status === "completed" ? "green" : "blue"} /><span>{locale === "fa" ? toPersianDigits(project.progress) : project.progress}%</span></div></div>)}</div>
-            )}
             {widget.kind === "throughput" && (
               tasks.length === 0
                 ? <div className="dash-chart-empty">{t("dashboard.emptyNote")}</div>

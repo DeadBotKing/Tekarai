@@ -1,3 +1,4 @@
+import { metricDetail } from "../shared/components/metricDetails";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useApiClient } from "../core/api/apiContext";
@@ -743,24 +744,24 @@ export function WorkCalendarPage(): JSX.Element {
         <SectionHeader title={t("calendar.title")} subtitle={t("calendar.subtitle")} />
 
         <div className="metric-grid">
-          <MetricCard
+          <MetricCard detail={metricDetail(calendars, [["name", "تقویم"], ["code", "کد"], ["locationPath", "موقعیت"], ["active", "فعال"]])} 
             icon="calendar"
             label={t("calendar.metric.calendars")}
             value={toPersianDigits(calendars.length)}
           />
-          <MetricCard
+          <MetricCard detail={metricDetail(holidays, [["name", "تعطیلی"], ["onDate", "تاریخ"], ["kind", "نوع"]])} 
             icon="sun"
             tone="purple"
             label={t("calendar.metric.holidays")}
             value={toPersianDigits(holidays.length)}
           />
-          <MetricCard
+          <MetricCard detail={metricDetail(selected?.shifts.filter(shift => shift.active) ?? [], [["name", "شیفت"], ["startTime", "شروع"], ["endTime", "پایان"], ["effectiveHeadcount", "تعداد مؤثر"], ["capacityHours", "ظرفیت روزانه (ساعت)"]], "ظرفیت هفتگی کارت = مجموع ظرفیت روزانهٔ شیفت‌های فعال × تعداد روزهای غیرتعطیل هفته.")} 
             icon="clock"
             tone="green"
             label={t("calendar.metric.capacity")}
             value={toPersianDigits(weeklyCapacity)}
           />
-          <MetricCard
+          <MetricCard detail={metricDetail(plan?.days.filter(day => Number(day.utilisationPercent) > 100) ?? [], [["onDate", "روز"], ["capacityHours", "ظرفیت (ساعت)"], ["demandHours", "تقاضا (ساعت)"], ["utilisationPercent", "بهره‌برداری (٪)"], ["jobCount", "تعداد کار"]])} 
             icon="warning"
             tone={plan && plan.summary.overloadedDays > 0 ? "amber" : "blue"}
             label={t("calendar.metric.overloaded")}

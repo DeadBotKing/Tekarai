@@ -297,3 +297,15 @@ class SecurityEventModel(models.Model):
             models.Index(fields=["tenantId", "occurredAt"], name="IX_SecEvent_t_occ"),
             models.Index(fields=["userId", "eventType"], name="IX_SecEvent_u_event"),
         ]
+
+
+class MobileAccountModel(models.Model):
+    """Admin-managed mobile identity; missing row means legacy account unchanged."""
+    userId = models.UUIDField(primary_key=True)
+    phone = models.CharField(max_length=11, unique=True)
+    mustChangePassword = models.BooleanField(default=False)
+    temporaryExpiresAt = models.DateTimeField(null=True, blank=True)
+    updatedAt = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "IdentityMobileAccount"

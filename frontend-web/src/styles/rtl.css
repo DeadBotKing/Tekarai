@@ -159,7 +159,7 @@ input[type="time"],
 [dir="rtl"] .quick-link .icon:last-child,
 [dir="rtl"] .wizard-nav .icon,
 [dir="rtl"] .jdp__nav .icon,
-[dir="rtl"] .cmms-header-actions .button .icon,
+[dir="rtl"] .cmms-header-actions .button .icon:is([data-icon="arrowLeft"], [data-icon="arrowRight"], [data-icon="chevronLeft"], [data-icon="chevronRight"]),
 [dir="rtl"] .auth-submit .icon {
   transform: scaleX(-1);
 }

@@ -1,3 +1,4 @@
+import { metricDetail } from "../shared/components/metricDetails";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useApiClient } from "../core/api/apiContext";
@@ -461,9 +462,9 @@ export function MaintenanceDevicesPage(): JSX.Element {
       />
 
       <div className="metric-grid">
-        <MetricCard label={t("cmms.metric.totalDevices")} value={totalDevices} icon="cpu" tone="blue" />
-        <MetricCard label={t("cmms.metric.operational")} value={operationalCount} icon="checkCircle" tone="green" />
-        <MetricCard label={t("cmms.metric.duePm")} value={dueCount} icon="warning" tone="amber" />
+        <MetricCard detail={metricDetail(devices, [["name", "نام تجهیز"], ["code", "کد"], ["status", "وضعیت"], ["nextDueDate", "موعد سرویس"]], undefined, row => `/app/maintenance/devices/${encodeURIComponent(row.id)}/profile`)}  label={t("cmms.metric.totalDevices")} value={totalDevices} icon="cpu" tone="blue" />
+        <MetricCard detail={metricDetail(devices.filter(device => device.status === "operational"), [["name", "نام تجهیز"], ["code", "کد"], ["status", "وضعیت"], ["nextDueDate", "موعد سرویس"]], undefined, row => `/app/maintenance/devices/${encodeURIComponent(row.id)}/profile`)}  label={t("cmms.metric.operational")} value={operationalCount} icon="checkCircle" tone="green" />
+        <MetricCard detail={metricDetail(devices.filter(device => device.pmDue), [["name", "نام تجهیز"], ["code", "کد"], ["status", "وضعیت"], ["nextDueDate", "موعد سرویس"]], undefined, row => `/app/maintenance/devices/${encodeURIComponent(row.id)}/profile`)}  label={t("cmms.metric.duePm")} value={dueCount} icon="warning" tone="amber" />
       </div>
 
       <Card className="content-card" padding="md">

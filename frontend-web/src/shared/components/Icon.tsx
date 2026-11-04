@@ -90,6 +90,7 @@ export function Icon({ name, size = 18, className = "", title, style }: IconProp
       aria-hidden={title ? undefined : true}
       aria-label={title}
       className={`icon ${className}`}
+      data-icon={name}
       fill="none"
       height={size}
       role={title ? "img" : undefined}

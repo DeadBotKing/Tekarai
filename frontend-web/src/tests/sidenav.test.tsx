@@ -171,7 +171,7 @@ describe("the sidebar — سایدبار روشن", () => {
   it("pills the dashboard for a section with a single page", () => {
     renderShell("/app/dashboard");
     // Exact name: «داشبورد نگهداری» also lives in the rail.
-    const dashboard = within(rail()).getByRole("link", { name: "داشبورد" });
+    const dashboard = within(rail()).getByRole("link", { name: "صفحه اصلی" });
     expect(dashboard.className).toContain("is-active");
   });
 
@@ -210,7 +210,7 @@ describe("the sidebar — سایدبار روشن", () => {
     // «مدیریت» stays — settings and one's own account belong to everyone.
     expect(within(nav).getByText("مدیریت")).toBeInTheDocument();
     // The dashboard itself stays reachable.
-    expect(within(nav).getByRole("link", { name: "داشبورد" })).toBeInTheDocument();
+    expect(within(nav).getByRole("link", { name: "صفحه اصلی" })).toBeInTheDocument();
   });
 
   it("closes an expanded sub-menu on a second click", async () => {

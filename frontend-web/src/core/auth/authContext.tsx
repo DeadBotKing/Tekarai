@@ -6,6 +6,16 @@ import { demoLogin, demoLogout } from "../../features/demo/demoData";
 import { useApiClient } from "../api/apiContext";
 import { clearCachedApiResponses } from "../offline/registerServiceWorker";
 
+export class FirstPasswordRequiredError extends Error {
+  challenge: string;
+  constructor(challenge: string) { super('تغییر رمز اولیه لازم است.'); this.challenge = challenge; }
+}
+
+export class MfaRequiredError extends Error {
+  challenge: string;
+  constructor(challenge: string) { super('تأیید دومرحله‌ای لازم است.'); this.challenge = challenge; }
+}
+
 interface LoginCredentials {
   tenantCode: string;
   identifier: string;
@@ -20,6 +30,7 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => Promise<void>;
+  completeMfa: (challenge: string, code: string, remember: boolean) => Promise<void>;
   updateSessionTokens: (tokens: TokenPair) => void;
 }
 
@@ -44,7 +55,12 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
         ({ tokens, user } = await demoLogin(credentials));
       } else {
         const { remember: _remember, ...payload } = credentials;
-        const response = await api.post<TokenPair & { user?: UserSession; permissions?: string[] }>("auth/login", payload);
+        const response = await api.post<TokenPair & { user?: UserSession; permissions?: string[]; passwordChangeRequired?: boolean; passwordChangeChallenge?: string; mfaRequired?: boolean; mfaChallenge?: string }>("auth/login", payload);
+        if (response.passwordChangeRequired && response.passwordChangeChallenge) {
+          throw new FirstPasswordRequiredError(response.passwordChangeChallenge);
+        }
+        if (response.mfaRequired && response.mfaChallenge) throw new MfaRequiredError(response.mfaChallenge);
+        if (!response.accessToken || !response.refreshToken) throw new Error('تأیید ورود تکمیل نشده است.');
         tokens = response;
         const fallback: UserSession = {
           id: "unknown",
@@ -61,6 +77,16 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     } finally {
       setIsLoading(false);
     }
+  }, [api]);
+
+  const completeMfa = useCallback(async (challenge: string, code: string, remember: boolean): Promise<void> => {
+    setIsLoading(true);
+    try {
+      const response = await api.post<TokenPair & { user: UserSession; permissions?: string[] }>('auth/mfa/challenge', { challengeToken: challenge, code }, { retry: 0 });
+      if (!response.accessToken || !response.refreshToken) throw new Error('تأیید ورود تکمیل نشده است.');
+      const next: StoredSession = { ...response, user: { ...response.user, permissions: response.permissions || response.user?.permissions || [] } };
+      sessionStore.set(next, remember); setSession(next);
+    } finally { setIsLoading(false); }
   }, [api]);
 
   const logout = useCallback(async (): Promise<void> => {
@@ -91,7 +117,8 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     login,
     logout,
     updateSessionTokens,
-  }), [isLoading, login, logout, session, updateSessionTokens]);
+    completeMfa,
+  }), [isLoading, login, logout, session, updateSessionTokens, completeMfa]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

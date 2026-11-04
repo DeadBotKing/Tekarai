@@ -1,3 +1,4 @@
+import { metricDetail } from "../shared/components/metricDetails";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useApiClient } from "../core/api/apiContext";
@@ -698,21 +699,21 @@ export function MaintenanceDashboardPage(): JSX.Element {
           />
           {costReport ? (
             <div className="dash-cost__grid">
-              <MetricCard
+              <MetricCard detail={metricDetail(costReport.byDevice, [["label", "تجهیز"], ["workOrderCount", "تعداد درخواست"], ["totalCost", "هزینه کل"]], "توزیع هزینهٔ کل در همان بازهٔ گزارش هزینهٔ صفحه.")} 
                 label={t("cmms.costDash.totalCost")}
                 value={formatMoney(costReport.totalCost)}
                 icon="chart"
                 tone="blue"
                 trendLabel={t("cmms.costDash.orders", { count: costReport.workOrderCount })}
               />
-              <MetricCard
+              <MetricCard detail={metricDetail(costReport.byTechnician, [["technicianName", "تکنسین"], ["entryCount", "تعداد ثبت"], ["hours", "ساعت کار"], ["cost", "هزینه"]])} 
                 label={t("cmms.costDash.labour")}
                 value={formatMoney(costReport.totalLabourCost)}
                 icon="clock"
                 tone="purple"
                 trendLabel={t("cmms.costDash.labourHours", { hours: toPersianDigits(costReport.totalLabourHours) })}
               />
-              <MetricCard
+              <MetricCard detail={metricDetail([costReport], [["fromDate", "از تاریخ"], ["toDate", "تا تاریخ"], ["itemCount", "تعداد اقلام مصرفی"], ["totalPartsCost", "هزینه قطعات"], ["workOrderCount", "تعداد درخواست‌های گزارش"]], "خلاصهٔ هزینهٔ قطعات در بازهٔ گزارش؛ این پنجره ریز اقلام مصرفی نیست.")} 
                 label={t("cmms.costDash.parts")}
                 value={formatMoney(costReport.totalPartsCost)}
                 icon="grid"
@@ -730,21 +731,21 @@ export function MaintenanceDashboardPage(): JSX.Element {
 
       {(view === "daily" || view === "performance") && (
         <div className="metric-grid">
-        <MetricCard
+        <MetricCard detail={metricDetail(rangedOrders.filter(order => isOpen(order.status)), [["title", "عنوان درخواست"], ["status", "وضعیت"], ["priority", "اولویت"], ["assignedToName", "مسئول"], ["createdAt", "تاریخ ثبت"]], undefined, row => `/app/maintenance/work-orders?focus=${encodeURIComponent(row.id)}`)} 
           label={t("cmms.dash.openWo")}
           value={stats.open}
           icon="checkSquare"
           tone="blue"
           trendLabel={t("cmms.dash.openWoHint", { critical: stats.criticalOpen })}
         />
-        <MetricCard
+        <MetricCard detail={metricDetail(devices.filter(device => device.pmDue), [["name", "نام تجهیز"], ["code", "کد"], ["status", "وضعیت"], ["nextDueDate", "موعد سرویس"]], undefined, row => `/app/maintenance/devices/${encodeURIComponent(row.id)}/profile`)} 
           label={t("cmms.dash.duePm")}
           value={stats.duePm}
           icon="clock"
           tone="amber"
           trendLabel={t("cmms.dash.duePmHint")}
         />
-        <MetricCard
+        <MetricCard detail={metricDetail(rangedOrders.filter(order => order.status !== "cancelled"), [["title", "عنوان درخواست"], ["status", "وضعیت"], ["priority", "اولویت"], ["assignedToName", "مسئول"], ["createdAt", "تاریخ ثبت"]], "مخرج نرخ تکمیل، همهٔ درخواست‌های این بازه به‌جز لغوشده‌هاست؛ صورت، درخواست‌های تکمیل‌شده است.", row => `/app/maintenance/work-orders?focus=${encodeURIComponent(row.id)}`)} 
           label={t("cmms.dash.completionRate")}
           value={`${stats.completionRate}%`}
           icon="checkCircle"
@@ -754,7 +755,7 @@ export function MaintenanceDashboardPage(): JSX.Element {
             total: stats.total,
           })}
         />
-        <MetricCard
+        <MetricCard detail={metricDetail(rangedOrders.filter(order => order.status === "completed" && daysBetween(order.createdAt, order.closedAt) !== null), [["title", "درخواست"], ["createdAt", "تاریخ ثبت"], ["closedAt", "تاریخ تکمیل"]], "میانگین زمان حل، فاصلهٔ ثبت تا تکمیل درخواست‌های دارای تاریخ معتبر است (روز).", row => `/app/maintenance/work-orders?focus=${encodeURIComponent(row.id)}`)} 
           label={t("cmms.dash.mttr")}
           value={stats.mttr === null ? t("cmms.common.none") : stats.mttr}
           icon="activity"

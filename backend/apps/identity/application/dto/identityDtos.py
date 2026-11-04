@@ -15,6 +15,7 @@ class UserDto:
     displayName: str
     status: str
     createdAt: str
+    phone: str = ""
 
 
 @dataclass(frozen=True)
@@ -60,6 +61,7 @@ def userDtoFromDomain(user: Any) -> UserDto:
         displayName=user.displayName,
         status=str(user.status),
         createdAt=user.createdAt.isoformat(),
+        phone=user.phone,
     )
 
 
@@ -76,6 +78,8 @@ class AuthTokenDto:
     permissions: list[str] = field(default_factory=list)
     mfaRequired: bool = False
     mfaChallenge: str = ""
+    passwordChangeRequired: bool = False
+    passwordChangeChallenge: str = ""
 
 
 @dataclass(frozen=True)

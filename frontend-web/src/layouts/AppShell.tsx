@@ -1,3 +1,5 @@
+import { useOrganizationWorkspace, workspaceAllows, composeWorkspaceNavigation } from '../core/tenant/organizationWorkspace';
+import { useOrganizationAppearance, useOrganizationTheme } from "../core/tenant/organizationAppearance";
 import { organizationBranding } from "../app/configuration/organizationBranding";
 import { OrganizationBrand } from "../shared/components/OrganizationBrand";
 import { BrandLogo } from "../shared/components/BrandLogo";
@@ -39,13 +41,17 @@ interface EntityResult {
 const OPEN_ORDER_STATUSES = new Set(["submitted", "routed", "assigned", "inProgress", "waitingApproval"]);
 
 export function AppShell(): JSX.Element {
+  const isDemo = runtimeConfig.demoMode;
   const { t, locale, cycleLocale } = useLocalization();
   const { theme, toggleTheme } = useTheme();
   const { tenants, selectedTenant, selectTenant } = useTenant();
-  const singleOrganization = organizationBranding.singleOrganization && !runtimeConfig.demoMode;
-  const organizationName = singleOrganization ? organizationBranding.name : selectedTenant.name;
+  const singleOrganization = organizationBranding.singleOrganization && !isDemo;
+  const appearance = useOrganizationAppearance(undefined, !isDemo);
+  useOrganizationTheme(appearance, !isDemo);
+  const organizationName = singleOrganization ? appearance.displayName : selectedTenant.name;
   const { session, logout } = useAuth();
   const { has } = usePermissions();
+  const {workspace}=useOrganizationWorkspace();
   const { isEnabled } = useFeatureFlags();
   const { unreadCount } = useNotifications();
   const location = useLocation();
@@ -79,7 +85,7 @@ export function AppShell(): JSX.Element {
   // Live entity search (devices + work orders) while typing — debounced.
   const api = useApiClient();
   useEffect(() => {
-    if (runtimeConfig.demoMode) { setEntityResults([]); return; }
+    if (isDemo || !workspace?.enabledModules.includes('maintenance')) { setEntityResults([]); return; }
     const query = search.trim();
     if (query.length < 2) { setEntityResults([]); return; }
     let cancelled = false;
@@ -107,11 +113,11 @@ export function AppShell(): JSX.Element {
       });
     }, 350);
     return () => { cancelled = true; window.clearTimeout(timer); };
-  }, [search, api]);
+  }, [search, api, workspace]);
 
   const visibleNavigation = useMemo(
-    () => filterNavigationItems(navigationConfig, has, isEnabled).filter((group) => (group.children?.length ?? 0) > 0),
-    [has, isEnabled],
+    () => filterNavigationItems(composeWorkspaceNavigation(navigationConfig,workspace), has, isEnabled).filter(group=>(group.children?.length??0)>0),
+    [has, isEnabled, workspace],
   );
 
   const allFlatItems = useMemo(() => {
@@ -131,8 +137,8 @@ export function AppShell(): JSX.Element {
     () =>
       allFlatItems.map(({ item, group }) => ({
         id: item.id,
-        title: t(item.label),
-        group: t(group.label),
+        title: item.displayLabel ?? t(item.label),
+        group: group.displayLabel ?? t(group.label),
         route: item.route ?? "/app/dashboard",
         icon: item.icon,
       })),
@@ -157,7 +163,7 @@ export function AppShell(): JSX.Element {
       if (match && (!best || item.route.length > (best.item.route?.length ?? 0))) best = { item, group };
     }
     return best
-      ? { group: t(best.group.label), page: t(best.item.label) }
+      ? { group: best.group.displayLabel ?? t(best.group.label), page: best.item.displayLabel ?? t(best.item.label) }
       : { group: t("nav.workspace"), page: t("nav.dashboard") };
   }, [visibleNavigation, location.pathname, t]);
 
@@ -270,7 +276,8 @@ export function AppShell(): JSX.Element {
               <span>{t("header.help")}</span>
             </button>
             <div className="topbar__divider" />
-            {singleOrganization ? <OrganizationBrand /> : tenants.length > 1 && (
+            {session?.user.role === "Superadmin" && <NavLink to="/superadmin">مدیریت کل</NavLink>}
+            {singleOrganization ? <OrganizationBrand appearance={appearance} /> : tenants.length > 1 && (
               <div className="topbar__select">
                 <Icon name="building" size={16} />
                 <select aria-label={t("header.tenant")} value={selectedTenant.id} onChange={(event) => selectTenant(event.target.value)}>
@@ -468,6 +475,8 @@ const filterNavigationItems = (
 
 export function ProtectedRoute({ children }: { children: ReactNode }): JSX.Element {
   const { isAuthenticated, isLoading } = useAuth();
+  const {workspace,loading,error,reload}=useOrganizationWorkspace();
+  const location=useLocation();
   if (isLoading)
     return (
       <div className="full-page-state">
@@ -475,6 +484,11 @@ export function ProtectedRoute({ children }: { children: ReactNode }): JSX.Eleme
       </div>
     );
   if (!isAuthenticated) return <NavigateToLogin />;
+  if(location.pathname.startsWith('/app')) {
+    if(loading)return <p role="status">در حال دریافت محیط سازمان…</p>;
+    if(error||!workspace)return <section dir="rtl"><p role="alert">{error||'محیط سازمان دریافت نشد.'}</p><button onClick={reload}>تلاش دوباره</button></section>;
+    if(!workspaceAllows(workspace,location.pathname))return <section dir="rtl"><p role="alert">این امکان برای سازمان شما فعال نیست.</p><NavLink to="/app/dashboard">صفحه اصلی سازمان</NavLink></section>;
+  }
   return <>{children}</>;
 }
 

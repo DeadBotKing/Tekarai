@@ -6,3 +6,6 @@
   .organization-brand img { width: 84px; height: 29px; }
   .organization-brand strong { display: none; }
 }
+:root[data-org-theme="light"]:not([data-theme="dark"]){--surface-0:#f5f6f5;--surface-1:#ffffff;--surface-2:#f0f2f0;--surface-3:#e5e9e5;--border:#dfe4df}
+:root[data-org-theme="forest"]:not([data-theme="dark"]){--surface-0:#edf2eb;--surface-1:#fafcf7;--surface-2:#e9efe5;--surface-3:#dce6d7;--border:#d7e0d1}
+:root[data-org-theme="warm"]:not([data-theme="dark"]){--surface-0:#f5f3ed;--surface-1:#fcfbf7;--surface-2:#f2f0e9;--surface-3:#e8e4d9;--border:#e5e1d7}

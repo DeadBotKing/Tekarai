@@ -149,6 +149,8 @@ class GetCurrentAccountUseCase(UseCase[GetCurrentAccountQuery, AccountDto]):
         if user is None:
             raise EntityNotFoundError("User", str(userId))
         grants = self.accessRepository.grantsOfUser(userId, user.tenantId)
+        from apps.identity.infrastructure.services.administrativeAuthentication import administrativeGrants
+        grants = list(grants) + administrativeGrants(userId)
         from apps.identity.domain.services.permissionEvaluator import PermissionEvaluator
 
         evaluator = PermissionEvaluator()

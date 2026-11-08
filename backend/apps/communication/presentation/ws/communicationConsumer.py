@@ -28,6 +28,20 @@ logger = logging.getLogger(__name__)
 class CommunicationConsumer(AsyncJsonWebsocketConsumer):
     """One socket per connected user; group membership per subscription."""
 
+    @database_sync_to_async
+    def workspaceEnabled(self):
+        from apps.tenancy.infrastructure.services.organizationWorkspace import profile
+        try:
+            return 'communication' in profile(self.tenantId)['enabledModules']
+        except Exception:
+            return False
+
+    async def send_json(self, content, close=False):
+        if not await self.workspaceEnabled():
+            await self.close(code=4403)
+            return
+        await super().send_json(content, close=close)
+
     async def connect(self) -> None:
         principal = await self.authenticate()
         if principal is None:
@@ -37,7 +51,11 @@ class CommunicationConsumer(AsyncJsonWebsocketConsumer):
         self.tenantId = principal.tenantId
         self.sessionId = principal.sessionId
         self.groups: set[str] = set()
+        if not await self.workspaceEnabled():
+            await self.close(code=4403)
+            return
         await self.accept()
+        self.workspaceConnectionAccepted = True
         import asyncio as _asyncio
 
         from apps.communication.infrastructure.metrics.communicationMetrics import (
@@ -57,6 +75,8 @@ class CommunicationConsumer(AsyncJsonWebsocketConsumer):
         relay.markOnline(self.tenantId, self.userId, await self.nowUtc())
 
     async def disconnect(self, code: int) -> None:
+        if not getattr(self, "workspaceConnectionAccepted", False):
+            return
         from apps.communication.infrastructure.metrics.communicationMetrics import (
             communicationMetrics,
         )
@@ -97,6 +117,9 @@ class CommunicationConsumer(AsyncJsonWebsocketConsumer):
     # -- §8: transport validation + delegation ----------------------------------
 
     async def receive_json(self, content: dict, **kwargs) -> None:
+        if not await self.workspaceEnabled():
+            await self.close(code=4403)
+            return
         action = str(content.get("type", "") or "")
         payload = content.get("payload") or {}
         context = RequestContext(

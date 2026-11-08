@@ -34,6 +34,7 @@ class SessionPrincipalImpl:
         sessionId: uuid.UUID | None = None,
         isServiceAccount: bool = False,
         scopes: tuple[str, ...] = (),
+        administrativeIdentityId: str = "",
     ) -> None:
         self.userId = userId
         self.tenantId = tenantId
@@ -41,6 +42,7 @@ class SessionPrincipalImpl:
         self.sessionId = sessionId
         self.isServiceAccount = isServiceAccount
         self.scopes = tuple(scopes)
+        self.administrativeIdentityId = administrativeIdentityId
 
     @property
     def id(self) -> uuid.UUID:  # DRF identity
@@ -69,14 +71,23 @@ class SessionVerifierDjango:
         user = UserModel.objects.filter(id=session.userId, deletedAt__isnull=True).first()
         if user is None or user.status != "active":
             raise AuthenticationRequiredError("Account is not active.")
+        from apps.tenancy.infrastructure.models import TenantModel
+        from apps.identity.infrastructure.models import TenantMembershipModel
+        if not TenantModel.objects.filter(id=session.tenantId, status='active', deletedAt__isnull=True).exists():
+            raise AuthenticationRequiredError('Organization is not active.')
+        if not TenantMembershipModel.objects.filter(userId=user.id, tenantId=session.tenantId, status='active', leftAt__isnull=True).exists():
+            raise AuthenticationRequiredError('Membership is not active.')
         from apps.identity.infrastructure.services.mobileOnboarding import denyPendingAccess
         denyPendingAccess(user.id)  # §35.7
+        from apps.identity.infrastructure.services.administrativeAuthentication import verifiedAdministrativeSession
+        administrativeIdentity = verifiedAdministrativeSession(session, user, now=now)
         SessionModel.objects.filter(id=session.id).update(lastActivityAt=now)
         return SessionPrincipalImpl(
             userId=user.id,
             tenantId=session.tenantId,
             displayName=user.displayName or user.username,
             sessionId=session.id,
+            administrativeIdentityId=str(administrativeIdentity.id) if administrativeIdentity else "",
         )
 
 
@@ -101,6 +112,9 @@ class ApiKeyVerifierDjango:
             raise AuthenticationRequiredError("API key revoked.")  # §35.6
         if apiKey.expiresAt is not None and apiKey.expiresAt <= now:
             raise TokenExpiredError("API key expired.")  # §35.6
+        from apps.tenancy.infrastructure.models import TenantModel
+        if not TenantModel.objects.filter(id=apiKey.tenantId, status='active', deletedAt__isnull=True).exists():
+            raise AuthenticationRequiredError('Organization is not active.')
         ApiKeyModel.objects.filter(id=apiKey.id).update(lastUsedAt=now)
         if apiKey.ownerType == "serviceAccount":
             account = ServiceAccountModel.objects.filter(id=apiKey.ownerId).first()
@@ -116,6 +130,9 @@ class ApiKeyVerifierDjango:
         user = UserModel.objects.filter(id=apiKey.ownerId, deletedAt__isnull=True).first()
         if user is None or user.status != "active":
             raise AuthenticationRequiredError("Account is not active.")
+        from apps.identity.infrastructure.models import TenantMembershipModel
+        if not TenantMembershipModel.objects.filter(userId=user.id, tenantId=apiKey.tenantId, status='active', leftAt__isnull=True).exists():
+            raise AuthenticationRequiredError('Membership is not active.')
         from apps.identity.infrastructure.services.mobileOnboarding import denyPendingAccess
         denyPendingAccess(user.id)
         return SessionPrincipalImpl(

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import uuid
 
-CACHE_PREFIX = "tekarai:authz"
+CACHE_PREFIX = "tekarai:authz:administration-v1"
 DEFAULT_TTL_SECONDS = 60
 
 

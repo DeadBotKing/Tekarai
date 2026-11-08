@@ -1,3 +1,4 @@
+import { OrganizationHomePage, OrganizationExtensionPage } from '../../pages/OrganizationHomePage';
 import { Suspense, lazy, type ComponentType } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell, ProtectedRoute } from "../../layouts/AppShell";
@@ -28,7 +29,10 @@ const named = <T extends Record<string, unknown>, K extends keyof T>(
     loader().then((module) => ({ default: module[exportName] as ComponentType<unknown> })),
   );
 
-const DashboardPage = named(() => import("../../pages/DashboardPage"), "DashboardPage");
+const SuperadminPanelPage = named(() => import("../../pages/SuperadminPanelPage"), "SuperadminPanelPage");
+const SuperadminSetupPage = named(() => import("../../pages/SuperadminSetupPage"), "SuperadminSetupPage");
+const SuperadminLoginPage = named(() => import("../../pages/SuperadminLoginPage"), "SuperadminLoginPage");
+
 const ProjectsPage = named(() => import("../../pages/ProjectsPage"), "ProjectsPage");
 const TasksPage = named(() => import("../../pages/TasksPage"), "TasksPage");
 const MaintenanceDashboardPage = named(
@@ -102,10 +106,15 @@ export function AppRouter(): JSX.Element {
   return <Suspense fallback={<RouteFallback />}>
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/login/:organizationCode" element={<LoginPage />} />
+      <Route path="/superadmin/login" element={<SuperadminLoginPage />} />
+      <Route path="/superadmin" element={<ProtectedRoute><SuperadminPanelPage /></ProtectedRoute>} />
+      <Route path="/superadmin/setup" element={<ProtectedRoute><SuperadminSetupPage /></ProtectedRoute>} />
       <Route path="/" element={<Navigate to="/app/dashboard" replace />} />
       <Route path="/app" element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
         <Route index element={<Navigate to="dashboard" replace />} />
-        <Route path="dashboard" element={<DashboardPage />} />
+        <Route path="dashboard" element={<OrganizationHomePage />} />
+        <Route path="extensions/:extensionCode" element={<OrganizationExtensionPage />} />
         <Route path="projects" element={<ProjectsPage />} />
         <Route path="tasks" element={<TasksPage />} />
         <Route path="maintenance/dashboard" element={<MaintenanceDashboardPage />} />

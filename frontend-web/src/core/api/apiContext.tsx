@@ -20,7 +20,7 @@ export function ApiProvider({ children }: { children: ReactNode }): JSX.Element 
       getRefreshToken: () => sessionStore.get()?.refreshToken ?? null,
       setTokens: (tokens) => sessionStore.updateTokens(tokens),
       clearTokens: () => sessionStore.clear(),
-      getTenantId: () => tenant.selectedTenant?.id ?? null,
+      getTenantId: () => sessionStore.get()?.user.tenantId ?? null,
     });
   }, [tenant.selectedTenant?.id]);
   return <ApiContext.Provider value={client}>{children}</ApiContext.Provider>;

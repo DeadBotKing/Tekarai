@@ -36,6 +36,8 @@ class BearerSessionAuthentication(BaseAuthentication):
             raise AuthenticationRequiredError("Authentication required.")
         verifier = sharedKernelProvider("sessionVerifier")()
         principal = verifier.verifyToken(token)
+        from apps.tenancy.infrastructure.services.organizationWorkspace import enforceRequest
+        enforceRequest(principal.tenantId, request.path)
         bindPrincipalIntoContext(principal)
         return principal, token
 
@@ -64,6 +66,8 @@ class ApiKeyAuthentication(BaseAuthentication):
             return None  # not an API-key request — the Bearer path applies
         verifier = sharedKernelProvider("apiKeyVerifier")()
         principal = verifier.verifyApiKey(rawKey)
+        from apps.tenancy.infrastructure.services.organizationWorkspace import enforceRequest
+        enforceRequest(principal.tenantId, request.path)
         bindPrincipalIntoContext(principal)
         return principal, rawKey
 
@@ -79,6 +83,7 @@ def bindPrincipalIntoContext(principal: SessionPrincipal) -> None:
     context.actorId = str(principal.userId)
     context.actorName = str(getattr(principal, "displayName", "") or "")
     context.actorTenantId = str(principal.tenantId)
+    context.administrativeIdentityId = str(getattr(principal, "administrativeIdentityId", "") or "")
     if not context.tenantId:
         context.tenantId = str(principal.tenantId)
     sessionId = getattr(principal, "sessionId", None)

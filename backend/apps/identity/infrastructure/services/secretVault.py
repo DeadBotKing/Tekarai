@@ -1,8 +1,9 @@
-"""Secret vault — protects TOTP secrets at rest (Phase 07 §24, §41).
+"""Legacy tamper-evident TOTP storage, NOT confidential encryption.
 
-Uses Django's HMAC signer (keyed by SECRET_KEY): the stored ``secretRef``
-is signed, tamper-evident and reversible only with the server key — no raw
-secret ever lands in the database or logs.
+Django's HMAC signer authenticates plaintext; a database reader can see the
+secret. Kept for compatibility with existing factors. New administrative
+factors MUST use EncryptedAdministrativeSecretVault instead. Changing this
+format requires a deliberate legacy factor migration, never a silent swap.
 """
 
 from __future__ import annotations

@@ -3,6 +3,7 @@ import type { TranslationKey } from "../../core/localization/i18n";
 import type { IconName } from "../../shared/components/Icon";
 
 export interface NavigationItem {
+  displayLabel?: string;
   id: string;
   label: TranslationKey;
   icon: IconName;

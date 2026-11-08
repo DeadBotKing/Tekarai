@@ -26,6 +26,7 @@ class RequestContext:
     actorId: str = ""
     actorName: str = ""
     actorTenantId: str = ""
+    administrativeIdentityId: str = ""
     tenantId: str = ""
     sessionId: str = ""
     ipAddress: str = ""
@@ -87,6 +88,7 @@ def snapshotContext() -> ContextSnapshot:
         sessionId=context.sessionId,
         ipAddress=context.ipAddress,
         userAgent=context.userAgent,
+        extra={"administrativeIdentityId": context.administrativeIdentityId} if context.administrativeIdentityId else {},
     )
 
 

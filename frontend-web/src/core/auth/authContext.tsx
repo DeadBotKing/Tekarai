@@ -28,11 +28,15 @@ interface AuthContextValue {
   session: StoredSession | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  offlinePreview: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => Promise<void>;
   completeMfa: (challenge: string, code: string, remember: boolean) => Promise<void>;
   updateSessionTokens: (tokens: TokenPair) => void;
+  adoptAdministrativeSession: (response: TokenPair & { user: UserSession; permissions?: string[] }) => void;
 }
+
+const offlinePreview = runtimeConfig.demoMode;
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -51,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     try {
       let tokens: TokenPair;
       let user: UserSession;
-      if (runtimeConfig.demoMode) {
+      if (offlinePreview) {
         ({ tokens, user } = await demoLogin(credentials));
       } else {
         const { remember: _remember, ...payload } = credentials;
@@ -89,11 +93,23 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     } finally { setIsLoading(false); }
   }, [api]);
 
+  const adoptAdministrativeSession = useCallback((response: TokenPair & { user: UserSession; permissions?: string[] }): void => {
+    if (!response.accessToken || !response.refreshToken || !response.user?.id) throw new Error('ورود مدیریت تکمیل نشده است.');
+    // Never spread the response: enrollment secrets/recovery codes are transient.
+    const next: StoredSession = {
+      accessToken: response.accessToken, refreshToken: response.refreshToken,
+      expiresIn: response.expiresIn, tokenType: response.tokenType,
+      user: { ...response.user, role: 'Superadmin', permissions: response.permissions ?? [] },
+    };
+    clearCachedApiResponses();
+    sessionStore.set(next, false); setSession(next);
+  }, []);
+
   const logout = useCallback(async (): Promise<void> => {
     setIsLoading(true);
     try {
       const refreshToken = sessionStore.get()?.refreshToken;
-      if (runtimeConfig.demoMode) {
+      if (offlinePreview) {
         await demoLogout();
       } else if (refreshToken) {
         await api.post("auth/logout", { refreshToken }, { retry: 0 });
@@ -113,12 +129,14 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
   const value = useMemo<AuthContextValue>(() => ({
     session,
     isAuthenticated: Boolean(session),
+    offlinePreview,
     isLoading,
     login,
     logout,
     updateSessionTokens,
     completeMfa,
-  }), [isLoading, login, logout, session, updateSessionTokens, completeMfa]);
+    adoptAdministrativeSession,
+  }), [isLoading, login, logout, session, updateSessionTokens, completeMfa, adoptAdministrativeSession]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

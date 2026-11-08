@@ -23,6 +23,8 @@ from apps.tenancy.domain.repositories.tenantRepository import TenantRepository
 from apps.tenancy.domain.valueObjects.tenantState import TenantCode
 
 
+from apps.identity.infrastructure.services.administrativeGovernance import administrativeTenantMutation
+
 class CreateTenantUseCase(UseCase[CreateTenantCommand, TenantDto]):
     requiredAction = "tenant.create"
 
@@ -50,6 +52,7 @@ class CreateTenantUseCase(UseCase[CreateTenantCommand, TenantDto]):
                 details={"code": command.code, "ruleId": "BR-TEN-004"},
             )
 
+    @administrativeTenantMutation
     def perform(self, command: CreateTenantCommand) -> TenantDto:
         tenant = Tenant.create(
             TenantCode(command.code),

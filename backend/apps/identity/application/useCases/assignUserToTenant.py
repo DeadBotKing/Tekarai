@@ -24,6 +24,8 @@ from apps.sharedKernel.domain.errors import (
 from apps.sharedKernel.domain.valueObjects import asUuid
 
 
+from apps.identity.infrastructure.services.administrativeGovernance import administrativeMembershipMutation
+
 class AssignUserToTenantUseCase(UseCase[AssignUserToTenantCommand, UserDto]):
     requiredAction = "user.assignTenant"
 
@@ -41,6 +43,7 @@ class AssignUserToTenantUseCase(UseCase[AssignUserToTenantCommand, UserDto]):
         self.userRepository = userRepository
         self.membershipRepository = membershipRepository
 
+    @administrativeMembershipMutation
     def perform(self, command: AssignUserToTenantCommand) -> UserDto:
         userId = asUuid(command.userId)
         targetTenantId = asUuid(command.targetTenantId)

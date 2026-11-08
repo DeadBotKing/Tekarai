@@ -43,7 +43,28 @@ from apps.identity.presentation.api.views.userViews import (
 
 from apps.identity.presentation.api.views.mobileViews import FirstPasswordView, MobileEditView, TemporaryPasswordView, registerMobileEndpoints
 
+from apps.identity.presentation.api.views.administrativeAuthViews import (
+    AdministrativeLoginView, AdministrativeFirstPasswordView, AdministrativeMfaView,
+)
+
+from apps.identity.presentation.api.views.administrativePanelViews import SetupView, PanelView, AppearanceView, CurrentAppearanceView, OrganizationEntryView, DiagnosticsView, ReviewPreviewView, ReviewCommitView, ReviewReportView, DatabaseConsoleView, DatabasePreviewView, DatabaseCommitView
+
 urlpatterns = [
+    path("superadmin/setup", SetupView.as_view(), name="administrativeSetup"),
+    path("superadmin/panel/people/<uuid:userId>/diagnostics", DiagnosticsView.as_view(), name="administrativeDiagnostics"),
+    path("superadmin/panel/preview", ReviewPreviewView.as_view(), name="administrativePreview"),
+    path("superadmin/panel/commit", ReviewCommitView.as_view(), name="administrativeCommit"),
+    path("superadmin/panel/database", DatabaseConsoleView.as_view(), name="administrativeDatabase"),
+    path("superadmin/panel/database/preview", DatabasePreviewView.as_view(), name="administrativeDatabasePreview"),
+    path("superadmin/panel/database/commit", DatabaseCommitView.as_view(), name="administrativeDatabaseCommit"),
+    path("superadmin/panel/reports", ReviewReportView.as_view(), name="administrativeReports"),
+    path("superadmin/panel", PanelView.as_view(), name="administrativePanel"),
+    path("organization-appearance/current", CurrentAppearanceView.as_view(), name="currentAppearance"),
+    path("organization-entry", OrganizationEntryView.as_view(), name="organizationEntry"),
+    path("organization-appearance/<slug:code>", AppearanceView.as_view(), name="organizationAppearance"),
+    path("superadmin/auth/login", AdministrativeLoginView.as_view(), name="administrativeLogin"),
+    path("superadmin/auth/password", AdministrativeFirstPasswordView.as_view(), name="administrativeFirstPassword"),
+    path("superadmin/auth/mfa", AdministrativeMfaView.as_view(), name="administrativeMfa"),
     path("auth/password/first", FirstPasswordView.as_view(), name="firstPassword"),
     path("users/<uuid:userId>/mobile", MobileEditView.as_view(), name="userMobile"),
     path("users/<uuid:userId>/temporary-password", TemporaryPasswordView.as_view(), name="userTemporaryPassword"),
@@ -101,3 +122,11 @@ registerUserEndpoints()
 registerPhase7Endpoints()
 
 registerMobileEndpoints()
+
+from apps.identity.presentation.api.views.administrativeAuthViews import registerAdministrativeAuthEndpoints
+from apps.identity.presentation.api.views.administrativePanelViews import registerAdministrativePanelEndpoints
+registerAdministrativeAuthEndpoints()
+registerAdministrativePanelEndpoints()
+
+from apps.tenancy.presentation.api.workspaceViews import CurrentWorkspaceView, ManageWorkspaceView
+urlpatterns += [path('organization-workspace/current',CurrentWorkspaceView.as_view(),name='currentWorkspace'),path('superadmin/organizations/<uuid:tenantId>/workspace',ManageWorkspaceView.as_view(),name='manageWorkspace')]

@@ -108,6 +108,9 @@ def createMobileAccount(*, phone, displayName, email, username=''):
         raise DuplicateIdentifierError('شمارهٔ موبایل، نام کاربری یا ایمیل تکراری است.') from error
     return result
 
+from apps.identity.infrastructure.services.administrativeGovernance import administrativeAccountMutation
+
+@administrativeAccountMutation('mobile')
 def updateMobile(userId, phone):
     tenant = _authorize('user.update'); phone = normalizeMobile(phone)
     try:
@@ -124,6 +127,7 @@ def updateMobile(userId, phone):
     except IntegrityError as error:
         raise DuplicateIdentifierError('این شمارهٔ موبایل برای حساب دیگری ثبت شده است.', details={'field': 'phone'}) from error
 
+@administrativeAccountMutation('temporaryPassword')
 def issueTemporaryPassword(userId):
     tenant = _authorize('user.update')
     if str(userId) == str(currentContext().actorId):

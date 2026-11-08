@@ -407,6 +407,15 @@ class RefreshSessionUseCase(UseCase[RefreshSessionCommand, AuthTokenDto]):
         from apps.identity.infrastructure.services.mobileOnboarding import denyPendingAccess
         denyPendingAccess(user.id)
 
+        from apps.tenancy.infrastructure.models import TenantModel
+        from apps.identity.infrastructure.models import TenantMembershipModel
+        if not TenantModel.objects.filter(id=session.tenantId, status='active', deletedAt__isnull=True).exists():
+            raise AuthenticationRequiredError('Organization is not active.')
+        if not TenantMembershipModel.objects.filter(userId=user.id, tenantId=session.tenantId, status='active', leftAt__isnull=True).exists():
+            raise AuthenticationRequiredError('Membership is not active.')
+        from apps.identity.infrastructure.services.administrativeAuthentication import verifiedAdministrativeSession
+        verifiedAdministrativeSession(session, user, now=now)
+
         newRefreshToken = generateRefreshToken()
         session.rotateRefreshToken(hashToken(newRefreshToken), now)
         session.touch(now)

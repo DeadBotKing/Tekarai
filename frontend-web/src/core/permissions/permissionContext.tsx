@@ -1,3 +1,4 @@
+import { useOrganizationWorkspace, workspaceActionAllows } from '../tenant/organizationWorkspace';
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { useAuth } from "../auth/authContext";
 
@@ -84,18 +85,19 @@ const PermissionContext = createContext<PermissionContextValue | null>(null);
 
 export function PermissionProvider({ children }: { children: ReactNode }): JSX.Element {
   const { session } = useAuth();
-  const permissions = session?.user.permissions ?? [];
+  const {workspace}=useOrganizationWorkspace();
+  const permissions = workspace?.permissions ?? session?.user.permissions ?? [];
   const roles = session ? [session.user.role] : [];
   const value = useMemo<PermissionContextValue>(() => {
     const hasOne = (permission: string): boolean =>
-      permissions.includes(permission) || permissions.includes("*");
+      workspaceActionAllows(workspace,permission) && (permissions.includes(permission) || permissions.includes("*"));
     return {
       permissions,
       roles,
       has: (permission) => Array.isArray(permission) ? permission.every(hasOne) : hasOne(permission),
       hasAny: (required) => required.some(hasOne),
     };
-  }, [permissions, roles]);
+  }, [permissions, roles, workspace]);
   return <PermissionContext.Provider value={value}>{children}</PermissionContext.Provider>;
 }
 

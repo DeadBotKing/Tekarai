@@ -53,6 +53,11 @@ class AuditRecorderDjango:
         from apps.sharedKernel.infrastructure.models import AuditEventModel
 
         snapshot = snapshotContext()
+        if snapshot.extra.get("administrativeIdentityId"):
+            after = dict(after or {})
+            after["_administrativeIdentityId"] = snapshot.extra["administrativeIdentityId"]
+            after["_administrativeSessionId"] = snapshot.sessionId
+
         AuditEventModel.objects.create(
             actorUserId=uuid.UUID(snapshot.actorId) if snapshot.actorId else None,
             tenantId=tenantId or (uuid.UUID(snapshot.tenantId) if snapshot.tenantId else None),

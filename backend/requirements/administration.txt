@@ -1,0 +1,3 @@
+# Optional independent superadmin runtime dependencies; install only into the verified production venv.
+cryptography>=46,<51
+Pillow>=11.3,<13

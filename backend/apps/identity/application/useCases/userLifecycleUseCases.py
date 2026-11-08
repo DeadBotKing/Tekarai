@@ -30,6 +30,9 @@ from apps.sharedKernel.domain.errors import (
 from apps.sharedKernel.domain.valueObjects import asUuid
 
 
+from apps.identity.infrastructure.services.administrativeGovernance import administrativeLifecycleMutation
+
+
 class ChangeUserStatusUseCase(UseCase[ChangeUserStatusCommand, UserDto]):
     requiredAction = "user.suspend"
 
@@ -45,6 +48,7 @@ class ChangeUserStatusUseCase(UseCase[ChangeUserStatusCommand, UserDto]):
         super().__init__(unitOfWork, auditRecorder, eventDispatcher, permissionGate, clock)
         self.repository = repository
 
+    @administrativeLifecycleMutation
     def perform(self, command: ChangeUserStatusCommand) -> UserDto:
         context = currentContext()
         actorId = uuid.UUID(context.actorId) if context.actorId else None
@@ -62,7 +66,7 @@ class ChangeUserStatusUseCase(UseCase[ChangeUserStatusCommand, UserDto]):
             isGlobalScope=self.permissionGate.hasPermission(
                 actorId, "tenant.list", tenantId=user.tenantId
             ),
-            actions=frozenset({"user.update"}),
+            actions=frozenset({"user.disable", "user.suspend"} if command.target == "disabled" else {"user.update"}),
         )
         policy = POLICIES["User"]
         allowed = (

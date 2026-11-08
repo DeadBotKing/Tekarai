@@ -27,3 +27,27 @@ class TenantModel(models.Model):
 
     def __str__(self) -> str:  # pragma: no cover — debug helper
         return f"{self.code}:{self.name}"
+
+
+class TenantAppearanceModel(models.Model):
+    """Runtime per-organization display data; no HTML, SVG or remote resources."""
+    tenantId = models.UUIDField(primary_key=True)
+    displayName = models.CharField(max_length=160)
+    logoData = models.TextField(blank=True, default='')
+    primaryColor = models.CharField(max_length=7, default='#214d3d')
+    theme = models.CharField(max_length=16, default='warm')
+    revision = models.PositiveIntegerField(default=1)
+    updatedAt = models.DateTimeField(auto_now=True)
+
+
+class TenantWorkspaceModel(models.Model):
+    """Organization composition, not personal permissions and never executable content."""
+    tenantId = models.UUIDField(primary_key=True)
+    title = models.CharField(max_length=160)
+    introduction = models.TextField(blank=True, default='')
+    homeMode = models.CharField(max_length=16, default='cards')
+    homeModule = models.CharField(max_length=40, blank=True, default='')
+    enabledModules = models.JSONField(default=list)
+    menuOrder = models.JSONField(default=list)
+    revision = models.PositiveIntegerField(default=1)
+    updatedAt = models.DateTimeField(auto_now=True)

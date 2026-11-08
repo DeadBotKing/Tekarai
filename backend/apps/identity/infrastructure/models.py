@@ -309,3 +309,12 @@ class MobileAccountModel(models.Model):
 
     class Meta:
         db_table = "IdentityMobileAccount"
+
+# Separate administrative credentials; no duplicate people or owner contact details.
+from apps.identity.infrastructure.administrationModels import (  # noqa: E402,F401
+    AdministrativeGovernanceModel,
+    AdministrativeIdentityModel,
+    AdministrativePasswordHistoryModel,
+    AdministrativeRecoveryCodeModel,
+    AdministrativeSessionModel,
+)

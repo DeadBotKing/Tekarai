@@ -18,7 +18,7 @@ import uuid
 from datetime import UTC, datetime
 
 from django.core.management import call_command
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 from apps.identity.application.commands.identityCommands import CreateUserCommand
 from apps.identity.domain.entities.tenantMembership import TenantMembership
@@ -138,6 +138,9 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options) -> None:  # noqa: ANN002, ANN003
+        from django.conf import settings
+        if getattr(settings, 'environment', '') == 'production':
+            raise CommandError('Demo workspace seeding is forbidden in production; no data was created.')
         password = options["password"] or os.environ.get(
             "WORKSPACE_SEED_PASSWORD", DEFAULT_PASSWORD
         )

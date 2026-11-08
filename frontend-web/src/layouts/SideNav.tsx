@@ -49,7 +49,7 @@ function GroupedNavigation({ groups, currentPath, onNavigate, mobile }: SideNavP
       onClick={onNavigate}
     >
       <Icon name={item.icon} size={17} />
-      <span>{t(item.label)}</span>
+      <span>{item.displayLabel ?? t(item.label)}</span>
       {item.badge ? <span className="side-item__badge">{item.badge}</span> : null}
     </NavLink>
   );
@@ -77,7 +77,7 @@ function GroupedNavigation({ groups, currentPath, onNavigate, mobile }: SideNavP
                 onClick={() => setOpenGroup(open ? null : group.id)}
               >
                 <span className="nav-section__icon"><Icon name={group.icon} size={18} /></span>
-                <span className="nav-section__title">{t(group.label)}</span>
+                <span className="nav-section__title">{group.displayLabel ?? t(group.label)}</span>
                 <span className="nav-section__count" aria-hidden="true">{children.length}</span>
                 <Icon name="chevronDown" size={13} className="nav-section__chevron" />
               </button>

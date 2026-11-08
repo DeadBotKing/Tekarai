@@ -24,6 +24,8 @@ ACTION_BY_TARGET = {
 }
 
 
+from apps.identity.infrastructure.services.administrativeGovernance import administrativeTenantMutation
+
 class ChangeTenantStatusUseCase(UseCase[ChangeTenantStatusCommand, TenantDto]):
     def __init__(
         self,
@@ -48,6 +50,7 @@ class ChangeTenantStatusUseCase(UseCase[ChangeTenantStatusCommand, TenantDto]):
         # Action depends on the target state — set before authorization runs.
         self.requiredAction = ACTION_BY_TARGET[command.target]
 
+    @administrativeTenantMutation
     def perform(self, command: ChangeTenantStatusCommand) -> TenantDto:
         tenantId = asUuid(command.tenantId)
         tenant = self.repository.getById(tenantId)

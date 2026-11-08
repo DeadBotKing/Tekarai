@@ -312,9 +312,13 @@ class AccessRepositoryDjango:
 
         cached = authorizationCache.readGrants(userId, tenantId)
         if cached is not None:
-            return [self.toGrant(row) for row in cached]
+            return self.primarySessionGrants([self.toGrant(row) for row in cached])
         grants: list[AccessGrant] = []
-        roleRows = UserRoleModel.objects.filter(userId=userId).values(
+        ownerTenantId = UserModel.objects.filter(id=userId).values_list('tenantId', flat=True).first()
+        scopedRoles = UserRoleModel.objects.filter(userId=userId).filter(
+            Q(tenantId=tenantId) | Q(scopeType__in=['GLOBAL', 'SYSTEM']) |
+            (Q(tenantId__isnull=True) if ownerTenantId == tenantId else Q(pk__in=[])))
+        roleRows = scopedRoles.values(
             "roleId", "scopeType", "scopeRef"
         )
         for roleRow in roleRows:
@@ -342,6 +346,8 @@ class AccessRepositoryDjango:
         grants.extend(self.organizationGrants(userId, tenantId))
 
         for direct in UserPermissionModel.objects.filter(userId=userId):
+            if direct.effect == 'allow' and direct.scopeType not in {'GLOBAL', 'SYSTEM'} and not direct.scopeRef and ownerTenantId != tenantId:
+                continue
             grants.append(
                 AccessGrant(
                     actionPattern=direct.actionPattern,
@@ -363,7 +369,15 @@ class AccessRepositoryDjango:
                 for g in grants
             ],
         )
-        return grants
+        return self.primarySessionGrants(grants)
+
+    @staticmethod
+    def primarySessionGrants(grants):
+        # After explicit handoff no primary login/API key may retain GLOBAL
+        # authority, even through an old custom role, direct exception or cache.
+        from apps.identity.infrastructure.models import AdministrativeGovernanceModel
+        retired = AdministrativeGovernanceModel.objects.filter(legacyAdminRetiredAt__isnull=False).exists()
+        return [g for g in grants if not (retired and g.effect == 'allow' and g.scopeType in {'GLOBAL','SYSTEM'})]
 
     @staticmethod
     def organizationGrants(userId: uuid.UUID, tenantId: uuid.UUID) -> list[AccessGrant]:

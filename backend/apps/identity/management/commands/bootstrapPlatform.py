@@ -45,6 +45,21 @@ class Command(BaseCommand):
     help = "Seed the platform tenant, permission catalogue and admin account."
 
     def handle(self, *args, **options) -> None:  # noqa: ANN002, ANN003
+        # Bootstrap must never reset primary credentials or restore GLOBAL roles
+        # after separate administration setup, including an unfinished setup.
+        from django.core.management.base import CommandError
+        from apps.identity.infrastructure.administrationModels import (
+            AdministrativeGovernanceModel, AdministrativeIdentityModel,
+        )
+        from apps.identity.infrastructure.services.administrationLock import lockedAdministrationState
+        with lockedAdministrationState():
+            if (AdministrativeIdentityModel.objects.exists()
+                    or AdministrativeGovernanceModel.objects.exists()
+                    or AdministrativeGovernanceModel.objects.filter(legacyAdminRetiredAt__isnull=False).exists()):
+                raise CommandError('مدیریت مستقل راه‌اندازی شده است؛ bootstrap اجازه تغییر رمز یا بازگرداندن دسترسی قدیمی را ندارد.')
+            return self._bootstrap(*args, **options)
+
+    def _bootstrap(self, *args, **options):
         username = os.environ.get("PLATFORM_ADMIN_USERNAME", "platform-admin")
         password = os.environ.get("PLATFORM_ADMIN_PASSWORD", "")
         email = os.environ.get("PLATFORM_ADMIN_EMAIL", "platform-admin@tekarai.local")

@@ -1,3 +1,4 @@
+import { OrganizationWorkspaceProvider } from '../../core/tenant/organizationWorkspace';
 import type { ReactNode } from "react";
 import { ErrorBoundary } from "../../core/errors/errorBoundary";
 import { ApiProvider } from "../../core/api/apiContext";
@@ -18,13 +19,13 @@ export function AppProviders({ children }: { children: ReactNode }): JSX.Element
           <TenantProvider>
             <ApiProvider>
               <AuthProvider>
-                <PermissionProvider>
+                <OrganizationWorkspaceProvider><PermissionProvider>
                   <FeatureFlagProvider>
                     <NotificationProvider>
                       <OfflineProvider>{children}</OfflineProvider>
                     </NotificationProvider>
                   </FeatureFlagProvider>
-                </PermissionProvider>
+                </PermissionProvider></OrganizationWorkspaceProvider>
               </AuthProvider>
             </ApiProvider>
           </TenantProvider>

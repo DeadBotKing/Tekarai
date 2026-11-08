@@ -32,6 +32,7 @@ export interface StoredSession extends TokenPair {
 }
 
 export interface UserSession {
+  tenantId?: string;
   id: string;
   displayName: string;
   email: string;

@@ -40,6 +40,8 @@ from apps.sharedKernel.domain.errors import (
 )
 from apps.sharedKernel.domain.valueObjects import asUuid
 
+from apps.identity.infrastructure.services.administrativeGovernance import administrativeRoleMutation
+
 VALID_SCOPES = {"SYSTEM", "GLOBAL", "TENANT", "ORGANIZATION", "DEPARTMENT", "PROJECT", "RESOURCE"}
 
 
@@ -74,6 +76,7 @@ class CreateRoleUseCase(UseCase[CreateRoleCommand, RoleDto]):
                     fieldErrors={"actions": action},
                 )
 
+    @administrativeRoleMutation("create")
     def perform(self, command: CreateRoleCommand) -> RoleDto:
         roleId = self.roleRepository.create(
             command.code.lower(), command.name, command.scopeType, command.actions
@@ -113,6 +116,7 @@ class UpdateRoleUseCase(UseCase[UpdateRoleCommand, RoleDto]):
         self.accessRepository = accessRepository
         self.securityEvents = securityEvents
 
+    @administrativeRoleMutation("update")
     def perform(self, command: UpdateRoleCommand) -> RoleDto:
         roleId = asUuid(command.roleId)
         role = self.roleRepository.getById(roleId)
@@ -157,6 +161,7 @@ class DeleteRoleUseCase(UseCase[DeleteRoleCommand, object]):
         super().__init__(unitOfWork, auditRecorder, eventDispatcher, permissionGate, clock)
         self.roleRepository = roleRepository
 
+    @administrativeRoleMutation("delete")
     def perform(self, command: DeleteRoleCommand) -> object:
         roleId = asUuid(command.roleId)
         self.roleRepository.delete(roleId)  # raises ConflictError if assigned
@@ -189,6 +194,7 @@ class AssignRoleUseCase(UseCase[AssignRoleCommand, object]):
         self.userRepository = userRepository
         self.securityEvents = securityEvents
 
+    @administrativeRoleMutation("assign")
     def perform(self, command: AssignRoleCommand) -> object:
         userId = asUuid(command.userId)
         roleId = asUuid(command.roleId)
@@ -237,6 +243,7 @@ class RemoveRoleUseCase(UseCase[RemoveRoleCommand, object]):
         self.accessRepository = accessRepository
         self.securityEvents = securityEvents
 
+    @administrativeRoleMutation("remove")
     def perform(self, command: RemoveRoleCommand) -> object:
         userId = asUuid(command.userId)
         roleId = asUuid(command.roleId)

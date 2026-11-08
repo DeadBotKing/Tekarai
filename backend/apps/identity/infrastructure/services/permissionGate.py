@@ -28,7 +28,23 @@ class PermissionGateDjango:
         targetTenantId: uuid.UUID | None = None,
         targetId: uuid.UUID | None = None,
     ) -> bool:
+        from apps.tenancy.infrastructure.services.organizationWorkspace import allowsAction
+        if (targetTenantId or tenantId) is not None and not allowsAction(targetTenantId or tenantId, action):
+            return False
+        return self.hasDelegationAuthority(actorId, action, tenantId=tenantId, targetTenantId=targetTenantId, targetId=targetId)
+
+    def hasDelegationAuthority(self, actorId, action, *, tenantId=None, targetTenantId=None, targetId=None):
+        """Internal role-delegation check only: module enablement is not a role grant.
+        All scope/deny/MFA/retirement checks still apply. Never use for business access.
+        """
         grants = self.accessRepository.grantsOfUser(actorId, tenantId or actorId)
+        from apps.identity.infrastructure.services.administrativeAuthentication import administrativeGrants
+        additions = administrativeGrants(actorId, requireFresh=True)
+        from apps.identity.infrastructure.models import AdministrativeGovernanceModel
+        if action in {'tenant.create','tenant.list','tenant.suspend','tenant.activate','tenant.close'}:
+            if AdministrativeGovernanceModel.objects.filter(legacyAdminRetiredAt__isnull=False).exists() and not additions:
+                return False
+        grants = list(grants) + additions
         return self.evaluator.hasPermission(
             grants,
             actorId,

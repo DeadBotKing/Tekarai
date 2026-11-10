@@ -1,11 +1,12 @@
 """Tenant-bound, read-only evidence. Authorization precedes reading text or inference."""
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import hashlib
 import json
 import re
 import uuid
 from django.utils import timezone
+from apps.sharedKernel.domain.errors import ValidationFailedError
 from apps.sharedKernel.application.requestContext import currentContext
 from apps.sharedKernel.domain.errors import PermissionDeniedError
 from apps.sharedKernel.infrastructure.wiring import sharedKernelProvider
@@ -35,6 +36,8 @@ class Source:
     href: str
     version: str
     page: int | None = None
+    tables: list = field(default_factory=list)
+    documentFormat: str = ''
 
 class Reader:
     def __init__(self):
@@ -91,7 +94,8 @@ class Reader:
 
     def collect(self, scope, *, deviceId='', projectId='', documentIds=(), question=''):
         cap = self.capabilities()
-        scopes = {key for key, yes in cap.items() if yes} if scope == 'all' else {scope}
+        # Explicit documents mean document-grounded evidence, never other records.
+        scopes = {'documents'} if documentIds else ({key for key, yes in cap.items() if yes} if scope == 'all' else {scope})
         if not scopes or any(not cap.get(s, False) for s in scopes):
             raise PermissionDeniedError('این بخش فعال نیست یا دسترسی لازم را ندارید.')
         if deviceId:
@@ -139,6 +143,8 @@ class Reader:
             candidates.sort(key=lambda r: self.score(question, r.name + ' ' + r.description), reverse=True)
             for row in candidates[:2]:
                 if row.sizeBytes > MAX_BYTES:
+                    if documentIds:
+                        raise ValidationFailedError('سند انتخاب‌شده بزرگ‌تر از ۴ مگابایت است؛ پاسخی از منابع دیگر تولید نشد.')
                     self.warnings.append('سندی بزرگ‌تر از ۴ مگابایت کنار گذاشته شد.'); continue
                 from apps.documents.infrastructure import container
                 from apps.documents.application.commands import DownloadDocumentQuery
@@ -150,12 +156,14 @@ class Reader:
                 segments = extract(data, row.name)
                 version = hashlib.sha256(data).hexdigest()
                 if not segments or not any(s['text'].strip() for s in segments):
+                    if documentIds:
+                        raise ValidationFailedError('متن سند انتخاب‌شده قابل استخراج نبود؛ پاسخی از منابع دیگر تولید نشد.')
                     self.warnings.append('سندی متن قابل استخراج نداشت؛ PDF تصویری، فایل رمزدار یا قالب نامعتبر نیاز به بررسی دارد.'); continue
                 self.warnings.append('استخراج سند محدود به ۱۵ صفحهٔ نخست و ۳۲هزار نویسه است؛ OCR انجام نمی‌شود.')
                 for segment in segments:
                     text = clean(segment['text'])
                     for offset in range(0, len(text), 600):
-                        self.sources.append(Source('document', str(row.id), clean(row.name), text[offset:offset + 750], '/app/documents', version, segment.get('page')))
+                        self.sources.append(Source('document', str(row.id), clean(row.name), text[offset:offset + 750], '/app/documents', version, segment.get('page'), [{**table,'headers':[clean(c) for c in table['headers']],'rows':[[clean(c) for c in cells] for cells in table['rows']]} for table in segment.get('tables',[])], 'pdf' if row.name.lower().endswith('.pdf') else ''))
         return self.sources
 
     @staticmethod

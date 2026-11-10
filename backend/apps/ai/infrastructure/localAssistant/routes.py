@@ -73,9 +73,9 @@ class AssistantAsk(AssistantBase):
             if str(principal.userId) != str(reader.actor) or str(principal.tenantId) != str(reader.tenant):
                 raise PermissionDeniedError()
             reader.revalidate(selected)
-            sources = [{'id': item['id'], 'kind': source.kind, 'recordId': source.record, 'title': source.title, 'href': source.href, 'version': source.version, 'page': source.page, 'excerpt': item['text']} for item, source in zip(evidence, selected) if item['id'] in citations]
+            sources = [{'id': item['id'], 'kind': source.kind, 'recordId': source.record, 'title': source.title, 'href': source.href, 'version': source.version, 'page': source.page, 'excerpt': item['text'], 'tables': source.tables, 'documentFormat': source.documentFormat, 'citedByModel': item['id'] in citations} for item, source in zip(evidence, selected) if item['id'] in citations or source.tables]
         from django.utils import timezone
-        return Response(successEnvelope({'answer': answer, 'sources': sources, 'warnings': list(dict.fromkeys(reader.warnings)), 'model': readiness_model(), 'asOf': as_of, 'readOnly': True, 'localOnly': True}))
+        return Response(successEnvelope({'answer': answer, 'sources': sources, 'warnings': list(dict.fromkeys(reader.warnings)), 'model': readiness_model(), 'coverage': {'scope': values['scope'], 'selectionMode': 'documents' if values['documentIds'] else ('filtered' if values.get('deviceId') or values.get('projectId') else 'sample'), 'selectedDocumentCount': len(values['documentIds']), 'excerptOnly': True, 'reviewedSources': [{'id': item['id'], 'title': source.title, 'page': source.page, 'documentFormat': source.documentFormat, 'citedByModel': item['id'] in citations} for item, source in zip(evidence, selected)]}, 'asOf': as_of, 'readOnly': True, 'localOnly': True}))
 
 def readiness_model():
     from .runtime import MODEL

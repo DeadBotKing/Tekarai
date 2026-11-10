@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+from .documentWorker import valid_tables
 
 MAX_BYTES = 4 * 1024 * 1024
 FORMATS = {'.txt', '.md', '.csv', '.pdf', '.docx'}
@@ -41,11 +42,14 @@ def extract(data: bytes, name: str) -> list[dict]:
     worker = Path(__file__).with_name('documentWorker.py')
     packages = []
     if suffix == '.pdf':
-        spec = importlib.util.find_spec('pypdf')
-        if spec is None or not spec.origin:
-            return []
-        packages = [str(Path(spec.origin).resolve().parent.parent)]
-    process = subprocess.Popen([sys.executable, '-I', str(worker), suffix] + packages, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+        for package in ('pypdfium2','pypdf'):
+            spec = importlib.util.find_spec(package)
+            if spec is None or not spec.origin:
+                return []
+            packages.append(str(Path(spec.origin).resolve().parent.parent))
+    # Avoid a Windows venv redirector spawning a child before Job assignment.
+    interpreter = getattr(sys, '_base_executable', None) or sys.executable
+    process = subprocess.Popen([interpreter, '-I', str(worker), suffix] + packages, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
     close_job = lambda: None
     try:
         # The child blocks on stdin until its Windows limits are installed.
@@ -57,7 +61,7 @@ def extract(data: bytes, name: str) -> list[dict]:
         result = json.loads(output).get('segments', [])
         if not isinstance(result, list) or len(result) > 15:
             return []
-        return [s for s in result if isinstance(s, dict) and isinstance(s.get('text'), str) and (s.get('page') is None or isinstance(s.get('page'), int))]
+        return [{**s, 'tables': valid_tables(s.get('tables', []))} for s in result if isinstance(s, dict) and isinstance(s.get('text'), str) and (s.get('page') is None or isinstance(s.get('page'), int))]
     except (OSError, ValueError, subprocess.TimeoutExpired):
         return []
     finally:

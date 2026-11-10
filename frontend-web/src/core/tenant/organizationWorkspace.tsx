@@ -7,6 +7,7 @@ export interface WorkspaceModule {code:string;label:string;route:string;actionPr
 export interface OrganizationWorkspace {permissions?:string[];tenantId:string;tenantCode:string;title:string;introduction:string;homeMode:'legacy'|'cards'|'list';homeModule?:string;enabledModules:string[];menuOrder:string[];revision:number;catalog:WorkspaceModule[]}
 export function routeModule(path:string):string|null {
  const p=path.split('?')[0];
+ if(p==='/app/assistant'||p.startsWith('/app/assistant/'))return 'assistant';
  if(p.startsWith('/app/extensions/'))return p.split('/')[3]||'__unknown';
  for(const [prefix,key] of [['/app/documents','documents'],['/app/projects','projects'],['/app/tasks','tasks'],['/app/chat','communication'],['/app/intelligence','intelligence'],['/app/maintenance/procurement','procurement'],['/app/maintenance/permits','safety'],['/app/maintenance','maintenance']]) {
   if(p===prefix||p.startsWith(prefix+'/'))return key;

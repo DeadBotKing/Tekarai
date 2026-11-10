@@ -15,6 +15,8 @@ from apps.sharedKernel.infrastructure.models import AuditEventModel
 from apps.sharedKernel.application.requestContext import currentContext
 from apps.sharedKernel.domain.errors import ValidationFailedError, PermissionDeniedError, ConflictError, EntityNotFoundError
 
+from apps.identity.domain.valueObjects.persianIdentity import validatePersianFullName
+
 SALT='tekarai.superadmin.database.v1'
 FIELD_LABELS={'id':'شناسه رکورد','tenantId':'شناسه سازمان','username':'نام کاربری','displayName':'نام نمایشی شخص','phone':'موبایل','status':'وضعیت','kind':'نوع حساب','code':'کد','name':'نام','description':'توضیحات','isActive':'فعال','level':'سطح','location':'محل استقرار','manufacturer':'سازنده','modelNumber':'مدل','serialNumber':'سریال','assetType':'نوع تجهیز','manufactureYear':'سال ساخت','capacity':'ظرفیت','powerRating':'توان','electricalSpec':'مشخصات برق','notes':'یادداشت','category':'دسته‌بندی','sizeBytes':'حجم فایل','uploadedAt':'زمان بارگذاری','userId':'شناسه شخص','isPrimary':'اصلی','joinedAt':'شروع عضویت','leftAt':'پایان عضویت','departmentId':'شناسه واحد','positionId':'شناسه سمت','userDisplayName':'نام ثبت‌شده در انتساب','roleId':'شناسه نقش','scopeType':'نوع دامنه','scopeRef':'دامنه','grantedAt':'زمان اعطا'}
 # (model, label, read action, write action, visible columns, editable fields)
@@ -64,6 +66,9 @@ def _public(row,spec):
  return result
 
 def records(params):
+ if params.get('purpose'):
+  from apps.identity.infrastructure.services import legacyIdentityCorrections
+  return legacyIdentityCorrections.records(params)
  _access();key=params.get('table');spec,tenant,query=_scope(key,params.get('tenantId'))
  try:offset=int(params.get('offset',0))
  except (ValueError,TypeError):raise ValidationFailedError('شماره صفحه معتبر نیست.')
@@ -104,7 +109,9 @@ def _prepare(data,lock=False):
   if len(str(getattr(row,f)))>4000:raise ValidationFailedError('متن بسیار بلند را از صفحهٔ اصلی همان ماژول اصلاح کنید.')
   v=v.strip()
   if not field.blank and not v:raise ValidationFailedError(FIELD_LABELS[f]+' نباید خالی باشد.')
-  if v!=getattr(row,f):normalized[f]=v
+  if v!=getattr(row,f):
+   if key=='people' and f=='displayName':validatePersianFullName(v)
+   normalized[f]=v
  if not normalized:raise ValidationFailedError('تغییری برای ثبت وجود ندارد.')
  return spec,tenant,row,normalized
 
@@ -113,6 +120,9 @@ def _audit(key,row,values):return {'databaseTable':key,'databaseRecord':str(row.
 
 def preview(envelope):
  _access()
+ if isinstance(envelope,dict) and isinstance(envelope.get('request'),dict) and envelope['request'].get('purpose')=='persianIdentityCorrection':
+  from apps.identity.infrastructure.services import legacyIdentityCorrections
+  return legacyIdentityCorrections.preview(envelope)
  if not isinstance(envelope,dict):raise ValidationFailedError('درخواست معتبر نیست.')
  data=envelope.get('request');context=currentContext()
  with lockedAdministrationState():
@@ -123,6 +133,9 @@ def preview(envelope):
 
 def commit(envelope):
  _access()
+ if isinstance(envelope,dict) and isinstance(envelope.get('request'),dict) and envelope['request'].get('purpose')=='persianIdentityCorrection':
+  from apps.identity.infrastructure.services import legacyIdentityCorrections
+  return legacyIdentityCorrections.commit(envelope)
  if not isinstance(envelope,dict) or envelope.get('confirm') is not True:raise ValidationFailedError('تأیید نهایی لازم است.')
  reason=panel._text(envelope,'reason',500)
  if len(reason)<3:raise ValidationFailedError('علت تغییر باید حداقل سه نویسه باشد.')
@@ -153,4 +166,5 @@ def auditState(value):
  if not isinstance(value,dict) or not isinstance(value.get('databaseTable'),str) or value['databaseTable'] not in TABLES:return {}
  spec=TABLES[value['databaseTable']];values=value.get('databaseValues')
  if not isinstance(values,dict) or not _is_uuid(value.get('databaseRecord')):return {}
- return {'جدول':spec[1],'شناسه رکورد':value['databaseRecord'],**{FIELD_LABELS[k]:v for k,v in values.items() if k in spec[5] and isinstance(v,str) and len(v)<=4000}}
+ editable=spec[5]+(('username',) if value['databaseTable']=='people' and value.get('identityCorrection') is True else ())
+ return {'جدول':spec[1],'شناسه رکورد':value['databaseRecord'],**{FIELD_LABELS[k]:v for k,v in values.items() if k in editable and isinstance(v,str) and len(v)<=4000}}

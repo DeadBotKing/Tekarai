@@ -18,17 +18,21 @@ BUILTINS = (
 )
 
 
+# Optional helper: never added to existing/new organizations automatically.
+HELPERS = (dict(code='assistant', label='دستیار هوشمند', route='/app/assistant', actionPrefixes=['assistant.'], apiPrefixes=['assistant'], permissions=['maintenance.device.view','maintenance.workorder.view','maintenance.document.view','project.view','task.view'], requires=[]),)
+
+
 def catalog():
-    items = [dict(x) for x in BUILTINS] + [dict(x) for x in EXTENSIONS]
+    items = [dict(x) for x in BUILTINS + HELPERS] + [dict(x) for x in EXTENSIONS]
     seen = set()
     for item in items:
         code = item['code']
         if not re.fullmatch(r'[a-z][a-z0-9-]{1,39}', code) or code in seen:
             raise RuntimeError('Invalid/duplicate installed workspace module.')
         seen.add(code)
-        if item not in BUILTINS and item['route'] != '/app/extensions/'+code:
+        if item not in BUILTINS + HELPERS and item['route'] != '/app/extensions/'+code:
             raise RuntimeError('Extensions require their dedicated internal route.')
-        if item not in BUILTINS and (item['apiPrefixes'] != ['extensions/'+code] or item['actionPrefixes'] != ['extension.'+code+'.'] or not all(p.startswith('extension.'+code+'.') for p in item['permissions'])):
+        if item not in BUILTINS + HELPERS and (item['apiPrefixes'] != ['extensions/'+code] or item['actionPrefixes'] != ['extension.'+code+'.'] or not all(p.startswith('extension.'+code+'.') for p in item['permissions'])):
             raise RuntimeError('Extensions cannot shadow core APIs or actions.')
         for prefix in item['apiPrefixes']:
             if not re.fullmatch(r'[a-zA-Z0-9/-]+', prefix) or prefix.startswith('/') or '..' in prefix:

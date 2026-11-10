@@ -1,3 +1,4 @@
+import { persianAccountError, persianNameMessage, persianUsernameMessage } from '../shared/persianIdentity';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApiClient } from "../core/api/apiContext";
 import { PERMISSIONS, usePermissions } from "../core/permissions/permissionContext";
@@ -94,6 +95,8 @@ export function PeopleOrganizationPage(): JSX.Element {
     let user = created;
     try {
       if (!user) {
+        const invalid = persianAccountError(account);
+        if (invalid) throw new Error(invalid);
         const credential = await service.createMobileUser(account);
         user = credential.user;
         setIssued(credential);
@@ -193,11 +196,11 @@ export function PeopleOrganizationPage(): JSX.Element {
       <p>رمز موقت: <strong dir="ltr" style={{ userSelect: 'all', fontFamily: 'monospace', overflowWrap: 'anywhere' }}>{issued?.temporaryPassword}</strong></p>
       <p>اعتبار: ۲۴ ساعت. در اولین ورود، انتخاب رمز شخصی الزامی است. اگر اطلاعات تحویل نشد، از فهرست افراد رمز موقت جدید صادر کنید.</p>
     </Modal>
-    <Modal open={createOpen} title="افزودن فرد و جایگاه سازمانی" onClose={closeCreate} footer={<><Button disabled={busy} onClick={closeCreate}>{created ? "تکمیل در زمان دیگر" : "انصراف"}</Button><Button variant="primary" loading={busy} disabled={busy || partialSelection || (!!departmentId && (!assignmentValid || !canAssign || !!orgError)) || (!created && (!account.displayName.trim() || !account.email.trim() || !account.phone.trim()))} onClick={() => {void createPerson();}}>{created ? "تکمیل انتساب" : "ثبت فرد و انتساب"}</Button></>}>
+    <Modal open={createOpen} title="افزودن فرد و جایگاه سازمانی" onClose={closeCreate} footer={<><Button disabled={busy} onClick={closeCreate}>{created ? "تکمیل در زمان دیگر" : "انصراف"}</Button><Button variant="primary" loading={busy} disabled={busy || partialSelection || (!!departmentId && (!assignmentValid || !canAssign || !!orgError)) || (!created && (!account.displayName.trim() || !account.username.trim() || !account.email.trim() || !account.phone.trim()))} onClick={() => {void createPerson();}}>{created ? "تکمیل انتساب" : "ثبت فرد و انتساب"}</Button></>}>
       {formError && <PeopleFormError text={formError} />}
       {created && <p role="status">حساب {created.displayName || created.username} ایجاد شده؛ فقط مرحلهٔ انتساب باقی مانده است.</p>}
-      <div className="form-grid"><TextInput label="نام و نام خانوادگی" required disabled={busy || !!created} value={account.displayName} onChange={(event) => setAccount({...account,displayName:event.target.value})} />
-      <TextInput label="نام کاربری (اختیاری)" hint="اگر خالی بماند، سیستم از روی موبایل می‌سازد." disabled={busy || !!created} value={account.username} onChange={(event) => setAccount({...account,username:event.target.value})} />
+      <div className="form-grid"><TextInput label="نام و نام خانوادگی" hint={persianNameMessage} dir="rtl" lang="fa" maxLength={160} required disabled={busy || !!created} value={account.displayName} onChange={(event) => setAccount({...account,displayName:event.target.value})} />
+      <TextInput label="نام کاربری" required hint={persianUsernameMessage} dir="rtl" lang="fa" maxLength={64} disabled={busy || !!created} value={account.username} onChange={(event) => setAccount({...account,username:event.target.value})} />
       <TextInput label="ایمیل" type="email" required disabled={busy || !!created} value={account.email} onChange={(event) => setAccount({...account,email:event.target.value})} />
       <TextInput label="موبایل" type="tel" required disabled={busy || !!created} hint="شمارهٔ یکتا؛ مانند 09123456789 یا +989123456789" value={account.phone} onChange={(event) => setAccount({...account,phone:event.target.value})} />
       <p>سیستم رمز موقت می‌سازد؛ آن را خصوصی به فرد تحویل دهید. تغییر رمز در اولین ورود اجباری است. پیامکی ارسال نمی‌شود.</p>

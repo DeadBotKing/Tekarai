@@ -33,6 +33,9 @@ export const navigationConfig: NavigationItem[] = [
       { id: "documents", label: "nav.documents", icon: "file", route: "/app/documents", permission: PERMISSIONS.maintenanceDocumentView },
     ],
   },
+  { id: "assistant", label: "nav.intelligence", displayLabel: "دستیار هوشمند", icon: "sparkles", children: [
+    { id: "localAssistant", label: "nav.intelligence", displayLabel: "دستیار هوشمند", icon: "sparkles", route: "/app/assistant", anyPermission: [PERMISSIONS.maintenanceDeviceView, PERMISSIONS.maintenanceWorkOrderView, PERMISSIONS.maintenanceDocumentView, PERMISSIONS.projectView, PERMISSIONS.taskView] },
+  ] },
   {
     id: "communication", label: "nav.chat", icon: "message",
     children: [

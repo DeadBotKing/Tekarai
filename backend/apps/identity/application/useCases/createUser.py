@@ -7,6 +7,7 @@ UQ_User_email / UQ_User_username → DUP_IDENTIFIER), password policy (§31).
 
 from __future__ import annotations
 
+from apps.identity.domain.valueObjects.persianIdentity import validatePersianFullName, validatePersianUsername
 from apps.identity.application.commands.identityCommands import CreateUserCommand
 from apps.identity.application.dto.identityDtos import UserDto, userDtoFromDomain
 from apps.identity.domain.entities.user import User
@@ -46,6 +47,11 @@ class CreateUserUseCase(UseCase[CreateUserCommand, UserDto]):
         self.passwordHasher = passwordHasher
 
     def validateCommand(self, command: CreateUserCommand) -> None:
+        # Only the trusted first-run bootstrap disables requiredAction in Python.
+        # No request field controls this; all ordinary account writes enforce the policy.
+        if self.requiredAction:
+            validatePersianFullName(command.displayName)
+            validatePersianUsername(command.username)
         if (
             command.username.strip().lower() != command.username.lower()
             or not command.username.strip()

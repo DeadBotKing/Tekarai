@@ -1,3 +1,4 @@
+import { persianNameError, persianNameMessage } from '../persianIdentity';
 import { useEffect, useState } from "react";
 import { Modal } from "./overlays";
 import { Button, SelectInput, TextInput } from "./primitives";
@@ -463,8 +464,9 @@ export function QuickPersonModal({
   }, [open, setError]);
 
   const submit = async (): Promise<void> => {
-    if (!fullName.trim()) {
-      setError("نام فرد الزامی است.");
+    const invalidName = persianNameError(fullName.trim());
+    if (invalidName) {
+      setError(invalidName);
       return;
     }
     setBusy(true);
@@ -493,7 +495,7 @@ export function QuickPersonModal({
       footer={modalFooter(onClose, () => void submit(), busy, t("cmms.common.cancel"))}
     >
       <TextInput
-        label="نام و نام خانوادگی"
+        label="نام و نام خانوادگی" hint={persianNameMessage} lang="fa" dir="rtl" maxLength={160}
         required
         value={fullName}
         onChange={(event) => setFullName(event.target.value)}

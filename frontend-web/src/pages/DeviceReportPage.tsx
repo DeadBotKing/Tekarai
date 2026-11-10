@@ -1,6 +1,6 @@
 import { metricDetail } from "../shared/components/metricDetails";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useApiClient } from "../core/api/apiContext";
 import { useLocalization } from "../core/localization/localizationContext";
 import { createMaintenanceService } from "../features/maintenance/maintenanceService";
@@ -54,7 +54,6 @@ const triggerDownload = (blob: Blob, filename: string): void => {
 
 export function DeviceReportPage(): JSX.Element {
   const { t } = useLocalization();
-  const navigate = useNavigate();
   const api = useApiClient();
   const service = useMemo(() => createMaintenanceService(api), [api]);
   const { deviceId = "" } = useParams<{ deviceId: string }>();
@@ -121,9 +120,6 @@ export function DeviceReportPage(): JSX.Element {
         subtitle={t("cmms.report.subtitle")}
         actions={
           <div className="section-actions dash-actions--noprint">
-            <Button variant="ghost" icon="arrowRight" onClick={() => navigate(-1)}>
-              {t("cmms.common.back")}
-            </Button>
             <Button
               variant="secondary"
               icon="download"

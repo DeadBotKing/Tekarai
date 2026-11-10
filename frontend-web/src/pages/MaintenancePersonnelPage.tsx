@@ -1,3 +1,4 @@
+import { persianNameError, persianNameMessage } from '../shared/persianIdentity';
 import { metricDetail } from "../shared/components/metricDetails";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -142,6 +143,10 @@ export function MaintenancePersonnelPage(): JSX.Element {
     if (!formName.trim()) {
       setToast(t("registry.common.required"));
       return;
+    }
+    if (!editing || editing.fullName !== formName.trim()) {
+      const invalid = persianNameError(formName.trim());
+      if (invalid) { setToast(invalid); return; }
     }
     const lines = (value: string): string[] =>
       value
@@ -372,6 +377,7 @@ export function MaintenancePersonnelPage(): JSX.Element {
         <div className="form-grid form-grid--compact">
           <TextInput
             label={t("registry.personnel.fullName")}
+            hint={persianNameMessage} lang="fa" dir="rtl" maxLength={160}
             required
             value={formName}
             onChange={(event) => setFormName(event.target.value)}

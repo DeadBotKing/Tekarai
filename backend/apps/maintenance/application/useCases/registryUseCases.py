@@ -441,6 +441,11 @@ class SavePersonnelUseCase(RegistryUseCaseBase):
     def perform(self, command: SavePersonnelCommand) -> PersonnelDto:
         tenantId = resolveTenantId("")
         now = self.clock.nowUtc()
+        # Keep legacy names unchanged when editing other fields; new/changed names are Persian.
+        from apps.identity.domain.valueObjects.persianIdentity import validatePersianFullName
+        existing = self.personnelRepository.getById(tenantId, uuid.UUID(command.personnelId)) if command.personnelId else None
+        if existing is None or existing.fullName != command.fullName.strip():
+            validatePersianFullName(command.fullName.strip())
         linkedUserId = self.resolveLinkedUser(tenantId, command.linkedUserId, command.personnelId)
         if command.personnelId:
             person = self.personnelRepository.update(

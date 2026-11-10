@@ -30,6 +30,7 @@ urlpatterns = [
                     "notifications/",
                     include("apps.notifications.presentation.api.urls.notificationRoutes"),
                 ),
+                path("assistant/", include("apps.ai.infrastructure.localAssistant.routes")),
                 path("ai/", include("apps.ai.presentation.api.urls")),
                 path(
                     "learning/",

@@ -30,17 +30,20 @@ export const loadIntelligence = async (api: ApiClient, projectId: string, signal
   return createIntelligenceService(api).getOverview(projectId, signal);
 };
 
-const normalizeOverview = (response: Partial<IntelligenceData>, projectId: string): IntelligenceData => ({
-  ...demoIntelligence,
-  ...response,
+export const normalizeOverview = (response: Partial<IntelligenceData>, projectId: string): IntelligenceData => ({
   projectId,
-  projectName: response.projectName ?? demoIntelligence.projectName,
-  healthBreakdown: response.healthBreakdown ?? demoIntelligence.healthBreakdown,
-  languages: response.languages ?? demoIntelligence.languages,
-  architecture: response.architecture ?? demoIntelligence.architecture,
-  dependencies: response.dependencies ?? demoIntelligence.dependencies,
-  changes: response.changes ?? demoIntelligence.changes,
-  insights: response.insights ?? demoIntelligence.insights,
-  recommendations: response.recommendations ?? demoIntelligence.recommendations,
-  contextFiles: response.contextFiles ?? demoIntelligence.contextFiles,
+  projectName: response.projectName ?? 'تحلیل معتبر موجود نیست',
+  state: response.state ?? 'error',
+  lastAnalysis: response.lastAnalysis ?? '',
+  analysisVersion: response.analysisVersion ?? '',
+  healthScore: response.healthScore ?? 0,
+  filesAnalyzed: response.filesAnalyzed ?? 0,
+  healthBreakdown: response.healthBreakdown ?? [],
+  languages: response.languages ?? [],
+  architecture: response.architecture ?? [],
+  dependencies: response.dependencies ?? [],
+  changes: response.changes ?? [],
+  insights: response.insights ?? [],
+  recommendations: response.recommendations ?? [],
+  contextFiles: response.contextFiles ?? [],
 });

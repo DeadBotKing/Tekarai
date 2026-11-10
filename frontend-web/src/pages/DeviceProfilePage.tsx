@@ -290,11 +290,6 @@ export function DeviceProfilePage(): JSX.Element {
         <EmptyState
           icon="warning"
           title={t("registry.profile.notFound")}
-          action={
-            <Button variant="secondary" icon="arrowRight" onClick={() => navigate("/app/maintenance/equipment")}>
-              {t("registry.profile.back")}
-            </Button>
-          }
         />
       </div>
     );
@@ -1972,13 +1967,6 @@ export function DeviceProfilePage(): JSX.Element {
             <DeviceMaintenanceControls device={device} service={maintenance}
               onUpdate={(updated) => setProfile((current) => current ? { ...current, device: updated } : current)}
               onMessage={setToast} />
-            <Button
-              variant="secondary"
-              icon="arrowRight"
-              onClick={() => navigate("/app/maintenance/equipment")}
-            >
-              {t("registry.profile.back")}
-            </Button>
             <Button
               variant="secondary"
               icon="clock"

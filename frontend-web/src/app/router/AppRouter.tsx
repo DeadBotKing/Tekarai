@@ -1,3 +1,7 @@
+import { useOrganizationWorkspace } from '../../core/tenant/organizationWorkspace';
+import { usePermissions } from '../../core/permissions/permissionContext';
+import { PageBack, PageBackProvider } from '../../shared/components/PageBack';
+import { useAuth } from '../../core/auth/authContext';
 import { OrganizationHomePage, OrganizationExtensionPage } from '../../pages/OrganizationHomePage';
 import { Suspense, lazy, type ComponentType } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
@@ -102,8 +106,15 @@ const NotificationsPage = named(() => import("../../pages/NotificationsPage"), "
 const SettingsPage = named(() => import("../../pages/SettingsPage"), "SettingsPage");
 const NotFoundPage = named(() => import("../../pages/NotFoundPage"), "NotFoundPage");
 
+const AssistantPage = named(() => import("../../pages/AssistantPage"), "AssistantPage");
+
 export function AppRouter(): JSX.Element {
-  return <Suspense fallback={<RouteFallback />}>
+  const { session } = useAuth();
+  const {workspace}=useOrganizationWorkspace();const {hasAny}=usePermissions();
+  const start=workspace?.catalog.find(m=>m.code===workspace.homeModule&&workspace.enabledModules.includes(m.code));
+  const homeRoute=start&&hasAny(start.permissions)?start.route:'/app/dashboard';
+  const identityKey=session?`${session.user.id}|${workspace?.tenantId||session.user.tenantId||''}|${session.user.role}`:'';
+  return <PageBackProvider identityKey={identityKey} homeRoute={homeRoute} administrative={session?.user.role==='Superadmin'}><Suspense fallback={<><div className="page-back-loading"><PageBack /></div><RouteFallback /></>}>
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/login/:organizationCode" element={<LoginPage />} />
@@ -113,6 +124,7 @@ export function AppRouter(): JSX.Element {
       <Route path="/" element={<Navigate to="/app/dashboard" replace />} />
       <Route path="/app" element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
         <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="assistant" element={<AssistantPage />} />
         <Route path="dashboard" element={<OrganizationHomePage />} />
         <Route path="extensions/:extensionCode" element={<OrganizationExtensionPage />} />
         <Route path="projects" element={<ProjectsPage />} />
@@ -153,5 +165,5 @@ export function AppRouter(): JSX.Element {
       </Route>
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
-  </Suspense>;
+  </Suspense></PageBackProvider>;
 }

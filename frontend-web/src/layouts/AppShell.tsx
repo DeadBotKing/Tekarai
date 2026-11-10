@@ -1,3 +1,4 @@
+import { PageBack } from '../shared/components/PageBack';
 import { useOrganizationWorkspace, workspaceAllows, composeWorkspaceNavigation } from '../core/tenant/organizationWorkspace';
 import { useOrganizationAppearance, useOrganizationTheme } from "../core/tenant/organizationAppearance";
 import { organizationBranding } from "../app/configuration/organizationBranding";
@@ -342,6 +343,7 @@ export function AppShell(): JSX.Element {
           </div>
         </header>
         <main className="main-content">
+          <PageBack />
           <Outlet />
         </main>
         <footer className="app-footer">

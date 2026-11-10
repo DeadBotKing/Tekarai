@@ -17,6 +17,8 @@ from apps.sharedKernel.application.requestContext import currentContext
 from apps.sharedKernel.domain.errors import AuthenticationRequiredError, InvalidCredentialsError, DuplicateIdentifierError, EntityNotFoundError, PermissionDeniedError, ValidationFailedError
 from apps.sharedKernel.infrastructure.wiring import sharedKernelProvider
 
+from apps.identity.domain.valueObjects.persianIdentity import validatePersianFullName, validatePersianUsername
+
 SALT = 'tekarai.first-password.v1'
 TEMP_TTL_HOURS = 24
 
@@ -84,9 +86,8 @@ def clearPending(userId):
 def createMobileAccount(*, phone, displayName, email, username=''):
     tenant = _authorize('user.create')
     phone = normalizeMobile(phone)
-    if not displayName.strip(): raise ValidationFailedError('نام و نام خانوادگی الزامی است.')
-    username = (username.strip().lower() or 'u' + phone)
-    if len(username) > 64: raise ValidationFailedError('نام کاربری طولانی است.')
+    validatePersianFullName(displayName)
+    validatePersianUsername(username)
     raw = _secret(); now = timezone.now(); expires = now + timedelta(hours=TEMP_TTL_HOURS)
     repo = UserRepositoryDjango()
     try:

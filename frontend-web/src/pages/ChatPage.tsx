@@ -172,6 +172,18 @@ export function ChatPage(): JSX.Element {
       .catch(() => setDirectory([]));
   }, [chat]);
 
+  // Ask for browser-notification permission once (silent if already decided).
+  useEffect(() => {
+    if (typeof Notification !== "undefined" && Notification.permission === "default") {
+      // Small delay so it doesn't compete with first paint.
+      const t = window.setTimeout(() => {
+        void Notification.requestPermission().catch(() => undefined);
+      }, 1500);
+      return () => window.clearTimeout(t);
+    }
+    return undefined;
+  }, []);
+
   const loadThread = useCallback(
     async (conversationId: string) => {
       if (!conversationId) {
@@ -212,30 +224,136 @@ export function ChatPage(): JSX.Element {
     if (node) node.scrollTop = node.scrollHeight;
   }, [messages]);
 
+  /** Play a short beep for incoming messages using the Web Audio API — no asset files needed. */
+  const playIncomingBeep = useCallback(() => {
+    try {
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 660;
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.4);
+      osc.onended = () => ctx.close();
+    } catch {
+      /* silent */
+    }
+  }, []);
+
+  /** Fire a native browser notification if permission was granted. */
+  const showBrowserNotification = useCallback((title: string, body: string) => {
+    if (typeof Notification === "undefined") return;
+    if (Notification.permission === "granted" && document.hidden) {
+      try {
+        new Notification(title, { body, tag: "tekarai-chat" });
+      } catch {
+        /* silent */
+      }
+    }
+  }, []);
+
+  const nameFor = useCallback(
+    (userId: string): string => {
+      if (userId === selfId) return session?.user.displayName ?? "";
+      return (
+        participants.find((item) => item.userId === userId)?.displayName ||
+        directory.find((item) => item.id === userId)?.displayName ||
+        userId
+      );
+    },
+    [directory, participants, selfId, session?.user.displayName],
+  );
+
   /** Live gateway events keep the open thread and the sidebar in sync. */
   const handleRealtime = useCallback(
-    (event: { type: string; conversationId?: string; payload?: Record<string, unknown> }) => {
+    async (event: { type: string; conversationId?: string; payload?: Record<string, unknown> }) => {
       if (!event.type.startsWith("message.")) return;
+
+      // Determine if this is our own message by looking at the freshest thread we have.
+      // The backend fan-out only carries `messageId`, so we fetch the message to know the sender.
+      const isOwnMessage = async (convId: string): Promise<boolean> => {
+        try {
+          const thread = await chat.listMessages(convId);
+          const last = thread[thread.length - 1];
+          return Boolean(last && last.senderId === selfId);
+        } catch {
+          return false;
+        }
+      };
+
       if (!event.conversationId || event.conversationId === activeId) {
-        void loadThread(activeId);
+        const wasMine = event.conversationId ? await isOwnMessage(event.conversationId) : false;
+        await loadThread(activeId);
+        if (event.type === "message.created" && !wasMine && event.conversationId === activeId) {
+          playIncomingBeep();
+        }
         return;
       }
-      // A thread we are not looking at moved — bump its unread badge and preview.
-      const preview = String(event.payload?.body ?? "");
+      if (event.type !== "message.created") {
+        // Edits/reactions/etc for inactive threads just bump timestamp.
+        setConversations((current) =>
+          current.map((item) =>
+            item.id === event.conversationId ? { ...item, lastMessageAt: new Date().toISOString() } : item,
+          ),
+        );
+        return;
+      }
+      // Incoming message in a background thread — fetch the latest message to get real preview + sender name.
+      let previewText = "";
+      let senderName = "";
+      let isMine = false;
+      try {
+        const thread = await chat.listMessages(event.conversationId);
+        const last = thread[thread.length - 1];
+        if (last) {
+          isMine = last.senderId === selfId;
+          if (!isMine) {
+            previewText = isMediaMessage(last)
+              ? (last.messageType === "IMAGE" ? "📷 تصویر" : "🎤 پیام صوتی")
+              : last.body;
+            senderName = last.senderName || nameFor(last.senderId);
+          }
+        }
+      } catch {
+        previewText = String(event.payload?.body ?? "پیام جدید");
+      }
+
       setConversations((current) =>
         current.map((item) =>
           item.id === event.conversationId
             ? {
                 ...item,
-                unreadCount: item.unreadCount + (event.type === "message.created" ? 1 : 0),
+                unreadCount: item.unreadCount + (isMine ? 0 : 1),
                 lastMessageAt: new Date().toISOString(),
-                lastMessagePreview: preview || item.lastMessagePreview,
+                lastMessagePreview: isMine ? (previewText || item.lastMessagePreview) : (previewText || item.lastMessagePreview),
               }
             : item,
         ),
       );
+
+      if (!isMine) {
+        const conv = conversations.find((c) => c.id === event.conversationId);
+        const convTitle = conv?.name || "گفتگو";
+        playIncomingBeep();
+        showBrowserNotification(
+          `${senderName || "پیام جدید"} — ${convTitle}`,
+          previewText || "یک پیام جدید دریافت کردید",
+        );
+        notify(
+          senderName
+            ? `${senderName}: ${previewText.slice(0, 60)}`
+            : `پیام جدید در ${convTitle}`,
+          "success",
+        );
+      }
     },
-    [activeId, loadThread],
+    [activeId, loadThread, chat, conversations, selfId, nameFor, notify, playIncomingBeep, showBrowserNotification],
   );
 
   const realtime = useChatRealtime({
@@ -253,18 +371,6 @@ export function ChatPage(): JSX.Element {
       `${item.name} ${item.description} ${item.lastMessagePreview}`.toLowerCase().includes(needle),
     );
   }, [conversations, filter]);
-
-  const nameFor = useCallback(
-    (userId: string): string => {
-      if (userId === selfId) return session?.user.displayName ?? "";
-      return (
-        participants.find((item) => item.userId === userId)?.displayName ||
-        directory.find((item) => item.id === userId)?.displayName ||
-        userId
-      );
-    },
-    [directory, participants, selfId, session?.user.displayName],
-  );
 
   // ---- رسانه: عکس و ویس ----
   const [stagedImage, setStagedImage] = useState<{ dataUrl: string; file: File; fileName: string; sizeBytes: number } | null>(null);
@@ -834,7 +940,7 @@ export function ChatPage(): JSX.Element {
                     description={t("chat.noMessagesHint")}
                   />
                 ) : (
-                  messages.map((message) => {
+                  messages.map((message, idx) => {
                     const mine = message.senderId === selfId;
                     const day = dayLabel(message.createdAt);
                     const showDay = day !== lastDay;
@@ -842,26 +948,114 @@ export function ChatPage(): JSX.Element {
                     const parent = message.replyToId
                       ? messages.find((item) => item.id === message.replyToId)
                       : undefined;
+                    // Mizito-style message grouping: hide avatar if previous message was from the same sender and same day.
+                    const prevMsg = idx > 0 ? messages[idx - 1] : null;
+                    const groupedWithPrev =
+                      prevMsg &&
+                      prevMsg.senderId === message.senderId &&
+                      dayLabel(prevMsg.createdAt) === day &&
+                      !message.replyToId &&
+                      !prevMsg.replyToId;
+                    const showAvatar = !groupedWithPrev;
+                    const showSenderName = !mine && !groupedWithPrev && active && active.type !== "DIRECT";
+
+                    // Mizito color palette:
+                    //   - Others: white bubble, soft shadow, black text
+                    //   - Mine:    #dcf3f4 (soft cyan/teal) bubble, black text (just like mizito)
+                    // Radius pattern: tail is on the upper corner nearest the avatar,
+                    // i.e. top-right for others (avatar is on the right in RTL),
+                    //      top-left  for mine  (avatar is on the left  in RTL).
+                    const mzBlue = "#1a8bb9";       // header / primary
+                    const mzMint = "#dcf3f4";       // outgoing bubble (mine)
+                    const mzTimeMine = "#5b9ca9";
+                    const mzTimeOther = "#a0a0a0";
+                    const mzBorderRadius = "12px";
+
+                    const msgRowStyle: React.CSSProperties = {
+                      display: "flex",
+                      flexDirection: mine ? "row-reverse" : "row",
+                      gap: "8px",
+                      alignItems: "flex-end",
+                      width: "100%",
+                      justifyContent: "flex-start",
+                      marginTop: groupedWithPrev ? "2px" : "8px",
+                    };
+                    const bubbleWrapStyle: React.CSSProperties = {
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "2px",
+                      maxWidth: "min(70%, 600px)",
+                      alignItems: mine ? "flex-end" : "flex-start",
+                      marginRight: mine ? "auto" : "0",
+                      marginLeft: mine ? "0" : "auto",
+                    };
+                    const senderStyle: React.CSSProperties = {
+                      fontSize: "0.76rem",
+                      fontWeight: 700,
+                      color: mzBlue,
+                      marginBottom: "2px",
+                      paddingInlineStart: "10px",
+                      userSelect: "none",
+                    };
+                    const tailRadius = mine
+                      ? { borderTopLeftRadius: "4px", borderTopRightRadius: mzBorderRadius, borderBottomLeftRadius: mzBorderRadius, borderBottomRightRadius: mzBorderRadius }
+                      : { borderTopRightRadius: "4px", borderTopLeftRadius: mzBorderRadius, borderBottomLeftRadius: mzBorderRadius, borderBottomRightRadius: mzBorderRadius };
+                    const groupedRadius = { borderTopLeftRadius: mzBorderRadius, borderTopRightRadius: mzBorderRadius, borderBottomLeftRadius: mzBorderRadius, borderBottomRightRadius: mzBorderRadius };
+                    const bubbleStyle: React.CSSProperties = {
+                      position: "relative",
+                      padding: "8px 12px 6px",
+                      background: mine ? mzMint : "#ffffff",
+                      color: "#1f2937",
+                      boxShadow: "0 1px 1px rgba(0,0,0,.06)",
+                      border: "none",
+                      lineHeight: "1.6",
+                      fontSize: "0.92rem",
+                      ...(groupedWithPrev ? groupedRadius : tailRadius),
+                      wordBreak: "break-word",
+                    };
+                    const metaStyle: React.CSSProperties = {
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "3px",
+                      fontSize: "0.68rem",
+                      color: mine ? mzTimeMine : mzTimeOther,
+                      marginInlineStart: "8px",
+                      float: mine ? "left" : "right",
+                      marginInlineEnd: "2px",
+                      whiteSpace: "nowrap",
+                    };
+
                     return (
                       <div key={message.id}>
-                        {showDay ? <div className="chat-day-divider">{day}</div> : null}
-                        <article className={`chat-message ${mine ? "is-mine" : ""}`}>
-                          {!mine ? <Avatar name={nameFor(message.senderId)} size="sm" /> : null}
-                          <div className="chat-bubble-wrap">
-                            {!mine ? (
-                              <span className="chat-sender">{nameFor(message.senderId)}</span>
-                            ) : null}
+                        {showDay ? (
+                          <div style={{ textAlign: "center", margin: "16px 0 10px" }}>
+                            <span style={{ display: "inline-block", padding: "3px 14px", background: "#eef5f8", color: "#1a8bb9", borderRadius: "12px", fontSize: "0.78rem", fontWeight: 600 }}>{day}</span>
+                          </div>
+                        ) : null}
+                        <article style={{ width: "100%" }}>
+                          <div style={msgRowStyle}>
+                            {showAvatar ? (
+                              <Avatar name={nameFor(message.senderId)} size="sm" />
+                            ) : (
+                              <span style={{ width: "32px", flexShrink: 0 }} />
+                            )}
+                            <div style={bubbleWrapStyle}>
+                              {showSenderName ? (
+                                <span style={senderStyle}>{nameFor(message.senderId)}</span>
+                              ) : null}
                             {parent ? (
-                              <div className="chat-quote">
+                              <div className="chat-quote" style={{ background: mine ? "rgba(26,139,185,.10)" : "#f4f4f5", borderInlineStartColor: mzBlue, fontSize: "0.78rem", padding: "6px 8px", borderRadius: "8px", marginBottom: "4px" }}>
                                 <span>{t("chat.replyingTo")}</span>
-                                <strong>{nameFor(parent.senderId)}</strong>
-                                <em>{parent.body.slice(0, 80)}</em>
+                                <strong style={{ color: mzBlue }}>{nameFor(parent.senderId)}</strong>
+                                <em style={{ fontStyle: "normal", opacity: 0.75 }}>{parent.body.slice(0, 80)}</em>
                               </div>
                             ) : null}
                             <div
-                              className={`chat-bubble ${message.deleted ? "is-deleted" : ""} ${
-                                message.failed ? "is-failed" : ""
-                              }`}
+                              style={message.deleted
+                                ? { ...bubbleStyle, background: "transparent", border: "1px dashed #cdd0d4", color: "#9ca3af", boxShadow: "none" }
+                                : message.failed
+                                  ? { ...bubbleStyle, border: "1px solid #ef4444" }
+                                  : bubbleStyle}
                             >
                               {message.deleted ? (
                                 <em>{t("chat.deleted")}</em>
@@ -881,20 +1075,26 @@ export function ChatPage(): JSX.Element {
                                     <audio className="chat-bubble-audio" controls preload="metadata" src={mediaSrcOf(message)} aria-label={t("chat.voiceMessage")} />
                                   ) : null}
                                   {isMediaMessage(message)
-                                    ? (mediaCaptionOf(message) ? <p className="chat-bubble-caption">{mediaCaptionOf(message)}</p> : null)
-                                    : <p>{message.body}</p>}
+                                    ? (mediaCaptionOf(message) ? <p className="chat-bubble-caption" style={{ margin: "4px 0 0" }}>{mediaCaptionOf(message)}</p> : null)
+                                    : <p style={{ margin: 0 }}>{message.body}</p>}
                                 </>
                               )}
-                              <span className="chat-bubble-meta">
-                                <span className="chat-time">{timeLabel(message.createdAt)}</span>
-                                {message.editedAt ? <span>· {t("chat.edited")}</span> : null}
-                                {message.pending ? <span>· {t("chat.sending")}</span> : null}
-                                {message.failed ? <span>· {t("chat.failed")}</span> : null}
-                              </span>
+                              {!message.deleted ? (
+                                <span style={metaStyle} dir="ltr">
+                                  <span>{timeLabel(message.createdAt)}</span>
+                                  {message.editedAt ? <span>· {t("chat.edited")}</span> : null}
+                                  {message.pending ? <span>· {t("chat.sending")}</span> : null}
+                                  {message.failed ? <span>· {t("chat.failed")}</span> : null}
+                                  {mine && !message.pending && !message.failed ? (
+                                    <span style={{ color: mzBlue, display: "inline-flex", marginInlineStart: "2px" }} aria-label="delivered">✓</span>
+                                  ) : null}
+                                </span>
+                              ) : null}
+                              <div style={{ clear: "both" }} />
                             </div>
 
                             {groupReactions(message).length > 0 ? (
-                              <div className="chat-reactions">
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", ...(mine ? { justifyContent: "flex-end", width: "100%" } : {}) }}>
                                 {groupReactions(message).map((entry) => (
                                   <button
                                     key={entry.reaction}
@@ -912,7 +1112,7 @@ export function ChatPage(): JSX.Element {
                             ) : null}
 
                             {!message.deleted ? (
-                              <div className="chat-message-actions">
+                              <div className="chat-message-actions" style={mine ? { justifyContent: "flex-end", width: "100%" } : undefined}>
                                 <button type="button" onClick={() => setReplyTo(message)}>
                                   {t("chat.reply")}
                                 </button>
@@ -956,7 +1156,8 @@ export function ChatPage(): JSX.Element {
                                 ))}
                               </div>
                             ) : null}
-                          </div>
+                          </div>{/* /.chat-bubble-wrap */}
+                        </div>{/* /.chat-row */}
                         </article>
                       </div>
                     );

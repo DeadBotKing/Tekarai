@@ -129,9 +129,69 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-1);
+  padding: 12px 20px;
+  border-bottom: 1px solid #eceff1;
+  background: #ffffff;
+}
+.chat-thread-head h2 { font-size: 0.95rem; color: #111; }
+.chat-thread-head p { color: #6b7280 !important; }
+.chat-thread-identity .avatar { border: 2px solid #1a8bb9; }
+
+/* Mizito-blue header accent on active conversation */
+.chat-conversation.is-active {
+  background: #eaf6f9 !important;
+  box-shadow: inset 3px 0 0 #1a8bb9 !important;
+}
+.chat-sidebar-head {
+  background: #f8fafb;
+}
+.chat-composer {
+  border-top: 1px solid #eceff1 !important;
+  background: #ffffff !important;
+  padding: 10px 16px !important;
+}
+.chat-composer textarea {
+  border-radius: 22px !important;
+  padding: 10px 16px !important;
+  border: 1px solid #dce3e6 !important;
+  background: #f7fafb !important;
+  font-size: 0.9rem;
+  resize: none !important;
+}
+.chat-composer-row button[class*="Button"]:last-child,
+.chat-composer .btn-primary {
+  border-radius: 50% !important;
+  min-width: 42px; height: 42px;
+}
+
+.chat-day-divider {
+  background: #eef5f8 !important;
+  color: #1a8bb9 !important;
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+  padding: 3px 14px !important;
+  font-size: 0.78rem !important;
+}
+
+/* Hide sender/chat-sender class in favor of inline style; also neutralize old bubble */
+.chat-bubble {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: inherit !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+.chat-sender { display: none; }
+.chat-bubble-meta { display: none !important; }
+.chat-message-actions { opacity: 0; pointer-events: none; }
+.chat-message:hover .chat-message-actions { opacity: 1; pointer-events: auto; }
+.chat-message-actions button {
+  font-size: 0.72rem !important;
+  padding: 2px 6px !important;
+  background: #f1f5f7 !important;
+  border-radius: 6px;
+  color: #1a8bb9 !important;
 }
 
 .chat-thread-identity {
@@ -163,11 +223,12 @@
 .chat-thread {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-4);
+  padding: 16px 20px 12px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  background: var(--surface-0);
+  gap: 0;
+  background: #ffffff;
+  align-items: stretch;
 }
 
 .chat-day-divider {
@@ -180,15 +241,33 @@
   font-size: 0.72rem;
 }
 
+/*
+ * Message layout — RTL (Persian):
+ *   • .chat-row = the whole horizontal row, always flex row in RTL.
+ *   • For other people: avatar on the RIGHT, bubble to its LEFT  → margin-left:auto  on spacer-less bubble-wrap (default)
+ *   • For me:           avatar on the LEFT,  bubble to its RIGHT → margin-right:auto pushes the bubble+avatar to the LEFT edge
+ *
+ * JSX renders .chat-row containing (avatar .chat-avatar) + (.chat-bubble-wrap).
+ * For "mine" we flip via flex-direction:row-reverse so the avatar naturally
+ * ends up on the left; then margin-right:auto (RTL = left side) shoves the
+ * whole thing to the left edge.
+ */
+
 .chat-message {
-  display: flex;
-  gap: var(--space-2);
-  align-items: flex-start;
+  width: 100%;
   margin-bottom: var(--space-3);
 }
 
-.chat-message.is-mine {
-  flex-direction: row-reverse;
+.chat-row {
+  display: flex;
+  flex-direction: row; /* RTL: first child = RIGHT */
+  gap: var(--space-2);
+  align-items: flex-start;
+  width: 100%;
+}
+
+.chat-message.is-mine .chat-row {
+  flex-direction: row-reverse; /* RTL: bubble on RIGHT of avatar, avatar on LEFT */
 }
 
 .chat-bubble-wrap {
@@ -196,15 +275,36 @@
   flex-direction: column;
   gap: 4px;
   max-width: min(72%, 640px);
-}
-
-.chat-message.is-mine .chat-bubble-wrap {
   align-items: flex-start;
 }
 
+/* Push MY row to the LEFT side of the thread (in RTL, margin-right:auto = left). */
+.chat-message.is-mine .chat-bubble-wrap {
+  align-items: flex-end;
+  margin-right: auto;
+}
+
+.chat-message:not(.is-mine) .chat-bubble-wrap {
+  align-items: flex-start;
+}
+
+.chat-avatar {
+  flex-shrink: 0;
+}
+
 .chat-sender {
-  font-size: 0.75rem;
-  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #2563eb;
+  margin-bottom: 3px;
+  padding-inline-start: 4px;
+  user-select: none;
+}
+
+/* Reactions + actions follow the bubble side. */
+.chat-message.is-mine .chat-reactions,
+.chat-message.is-mine .chat-message-actions {
+  justify-content: flex-end;
 }
 
 .chat-quote {
@@ -222,13 +322,27 @@
 .chat-bubble {
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-lg);
-  background: var(--surface-2);
+  background: #ffffff;
+  border: 1px solid var(--border);
   color: var(--text);
   box-shadow: var(--shadow-sm);
+  border-start-start-radius: 6px;
 }
 
 .chat-message.is-mine .chat-bubble {
-  background: var(--primary-soft);
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+  border-start-start-radius: var(--radius-lg);
+  border-start-end-radius: 6px;
+}
+
+.chat-message.is-mine .chat-bubble .chat-bubble-meta {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.chat-message.is-mine .chat-bubble .chat-bubble-meta span {
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .chat-bubble.is-deleted {

@@ -55,16 +55,12 @@ const parseSession = (raw: string | null): StoredSession | null => {
 
 const readStored = (): StoredSession | null => {
   try {
-    // This tab first: a session kept only for the tab must win over a
-    // remembered one, otherwise signing in as someone else here would
-    // silently revert on the next reload.
+    // Security: always wipe any persisted (localStorage) session — only the
+    // current tab's sessionStorage is trusted. This guarantees the next
+    // person to open the browser starts at the login screen.
+    localStorage.removeItem(SESSION_KEY);
     const tabSession = parseSession(sessionStorage.getItem(SESSION_KEY));
     if (tabSession) return tabSession;
-
-    const persisted = parseSession(localStorage.getItem(SESSION_KEY));
-    if (persisted?.remember === true) return persisted;
-    // Unmarked ⇒ written before the checkbox existed. Drop it.
-    if (persisted) localStorage.removeItem(SESSION_KEY);
     return null;
   } catch {
     // Private mode, disabled storage, quota: run from memory only.
@@ -74,29 +70,25 @@ const readStored = (): StoredSession | null => {
 
 let memorySession: StoredSession | null = readStored();
 
-/** True while the active session was stored with "keep me signed in". */
-const isRemembered = (): boolean => memorySession?.remember === true;
-
 export const sessionStore = {
   get: (): StoredSession | null => memorySession,
-  /** @param remember persist beyond this tab (the login checkbox). */
-  set: (session: StoredSession, remember = isRemembered()): void => {
-    const stamped: StoredSession = { ...session, remember };
+  /** @param _remember IGNORED — persistence is always disabled (shared-PC safety). */
+  set: (session: StoredSession, _remember = false): void => {
+    // Security policy: never persist across tabs/windows. Session dies with
+    // the tab (shared-office-PC safety). Any existing persisted entry from
+    // older versions is wiped out.
+    const stamped: StoredSession = { ...session, remember: false };
     memorySession = stamped;
     try {
-      const target = remember ? localStorage : sessionStorage;
-      const other = remember ? sessionStorage : localStorage;
-      target.setItem(SESSION_KEY, JSON.stringify(stamped));
-      other.removeItem(SESSION_KEY);
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(stamped));
+      localStorage.removeItem(SESSION_KEY);
     } catch {
       // Memory-only fallback keeps the UI usable when storage is unavailable.
     }
   },
   updateTokens: (tokens: TokenPair): void => {
     if (!memorySession) return;
-    // A token refresh must not quietly promote a tab-only session to a
-    // remembered one, so the current choice is preserved.
-    sessionStore.set({ ...memorySession, ...tokens }, isRemembered());
+    sessionStore.set({ ...memorySession, ...tokens }, false);
   },
   clear: (): void => {
     memorySession = null;

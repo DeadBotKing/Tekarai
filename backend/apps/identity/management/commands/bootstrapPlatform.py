@@ -22,6 +22,7 @@ from apps.identity.application.services.permissionCatalog import (
     MAINTENANCE_REQUESTER_ROLE,
     MAINTENANCE_TECHNICIAN_ROLE,
     PLATFORM_ADMIN_ROLE,
+    PRODUCTION_PLANNER_ROLE,
     ROLE_PRESETS,
 )
 from apps.identity.domain.valueObjects.userState import validatePasswordStrength
@@ -77,6 +78,7 @@ class Command(BaseCommand):
             MAINTENANCE_TECHNICIAN_ROLE: ("تکنسین نگهداری", "TENANT"),
             MAINTENANCE_MANAGER_ROLE: ("مدیر نگهداری", "TENANT"),
             HR_MANAGER_ROLE: ("مدیر منابع انسانی", "TENANT"),
+            PRODUCTION_PLANNER_ROLE: ("مدیر برنامه‌ریزی تولید", "TENANT"),
         }
         for roleCode, (roleName, scopeType) in roleSeeds.items():
             access.ensureRole(roleCode, roleName, ROLE_PRESETS[roleCode], scopeType)

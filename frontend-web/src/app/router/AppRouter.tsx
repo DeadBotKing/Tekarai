@@ -102,6 +102,7 @@ const AdministrationPage = named(
   "AdministrationPage",
 );
 const ChatPage = named(() => import("../../pages/ChatPage"), "ChatPage");
+const ProductionPlanningDashboardPage = named(() => import("../../pages/ProductionPlanningDashboardPage"), "ProductionPlanningDashboardPage");
 const NotificationsPage = named(() => import("../../pages/NotificationsPage"), "NotificationsPage");
 const SettingsPage = named(() => import("../../pages/SettingsPage"), "SettingsPage");
 const NotFoundPage = named(() => import("../../pages/NotFoundPage"), "NotFoundPage");
@@ -159,6 +160,7 @@ export function AppRouter(): JSX.Element {
         <Route path="intelligence" element={<IntelligencePage />} />
         <Route path="administration/*" element={<AdministrationPage />} />
         <Route path="chat" element={<ChatPage />} />
+        <Route path="production/planning" element={<ProductionPlanningDashboardPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="*" element={<NotFoundPage />} />

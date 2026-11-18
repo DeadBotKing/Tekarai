@@ -148,6 +148,9 @@ ACTIONS: list[tuple[str, str]] = [
         "maintenance.review.manage",
         "Create and manage performance-review cycles, record rater scores and compute results",
     ),
+    # Production planning dashboard (factory production dashboard + line plan editing)
+    ("production.view", "View the production planning dashboard"),
+    ("production.manage", "Edit and publish the production line plan (production planner / owner)"),
 ]
 
 
@@ -166,6 +169,10 @@ MAINTENANCE_MANAGER_ROLE = "maintenanceManager"
 # where and how they scored, but cannot rewrite the org, the users or a
 # single work order.
 HR_MANAGER_ROLE = "hrManager"
+
+# Production planner — can view the production dashboard AND edit/publish
+# the line production plan. Only view-level access on other modules.
+PRODUCTION_PLANNER_ROLE = "productionPlanner"
 
 # Reusable Analytics permission bundles. Definitions are governed by admins;
 # operations clients can ingest and all authenticated business roles may read.
@@ -360,10 +367,13 @@ ROLE_PRESETS: dict[str, list[str]] = {
         "task.update",
         *_MAINTENANCE_MANAGER_ACTIONS,
         *_PROCUREMENT_MANAGER_ACTIONS,
+        "production.view",
+        "production.manage",
     ],
     MEMBER_ROLE: [
         "user.view",
         "tenant.view",
+        "production.view",
         "ai.agent.read",
         "ai.agent.run",
         "learning.view",
@@ -388,4 +398,21 @@ ROLE_PRESETS: dict[str, list[str]] = {
     + list(_PROCUREMENT_MANAGER_ACTIONS)
     + list(_ANALYTICS_MANAGER_ACTIONS),
     HR_MANAGER_ROLE: list(_HR_MANAGER_ACTIONS),
+    PRODUCTION_PLANNER_ROLE: [
+        # Production planner can see the dashboards, chat, docs, and manage the plan.
+        "dashboard.view",
+        "document.view",
+        "report.view",
+        "notification.view",
+        "communication.chat.use",
+        "project.view",
+        "project.list",
+        "task.view",
+        "task.list",
+        "task.create",
+        "task.update",
+        *_ANALYTICS_READER_ACTIONS,
+        "production.view",
+        "production.manage",
+    ],
 }

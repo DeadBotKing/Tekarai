@@ -1,0 +1,65 @@
+import os, sys, django
+sys.path.insert(0, r'C:\Users\Mitra\Desktop\Tekarai\backend')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.base')
+os.chdir(r'C:\Users\Mitra\Desktop\Tekarai\backend')
+django.setup()
+from apps.identity.infrastructure.models import RoleModel, UserModel, UserRoleModel
+from apps.identity.infrastructure.repositories.identityRepositoriesImpl import AccessRepositoryDjango
+from apps.identity.infrastructure.services.authorizationCache import bumpVersion
+from apps.identity.application.services.permissionCatalog import ACTIONS, ROLE_PRESETS
+
+access = AccessRepositoryDjango()
+access.ensureCatalogue(ACTIONS)
+for code, name, scope in [
+    ("tenantAdmin", "Tenant Administrator", "TENANT"),
+    ("member", "Member", "TENANT"),
+    ("productionPlanner", "مدیر برنامه‌ریزی تولید", "TENANT"),
+]:
+    access.ensureRole(code, name, ROLE_PRESETS.get(code, []), scope)
+prod_role = RoleModel.objects.get(code='productionPlanner')
+admin_role = RoleModel.objects.get(code='tenantAdmin')
+print("[OK] Roles ensured.")
+
+target = None
+for u in UserModel.objects.filter(deletedAt__isnull=True):
+    uname = (u.username or '').replace(' ', '')
+    dname = (u.displayName or '').replace(' ', '')
+    if 'آمنه' in uname and ('صادقی' in uname or 'صادقي' in uname or 'صادق' in uname):
+        target = u; break
+    if 'آمنه' in dname and 'صادق' in dname:
+        target = u; break
+if not target:
+    for u in UserModel.objects.filter(deletedAt__isnull=True):
+        if 'آمنه' in (u.username or '') or 'آمنه' in (u.displayName or ''):
+            target = u; break
+if not target:
+    print("[ERROR] آمنه_صادقی پیدا نشد. لیست کاربران:")
+    for u in UserModel.objects.filter(deletedAt__isnull=True)[:30]:
+        print(f"    user='{u.username}' name='{u.displayName}'")
+    sys.exit(1)
+existing = UserRoleModel.objects.filter(userId=target.id, roleId=prod_role.id).first()
+if existing:
+    print(f"[OK] {target.username} از قبل دسترسی داشت.")
+else:
+    UserRoleModel.objects.create(userId=target.id, roleId=prod_role.id, tenantId=target.tenantId, scopeType='TENANT')
+    bumpVersion(target.id)
+    print(f"[OK] دسترسی تولید به {target.username} ({target.displayName}) داده شد.")
+
+owner = None
+aid = UserRoleModel.objects.filter(roleId=admin_role.id).values_list('userId', flat=True).first()
+if aid: owner = UserModel.objects.filter(id=aid, deletedAt__isnull=True).first()
+if not owner:
+    glob = RoleModel.objects.filter(code='platformAdmin').first()
+    if glob:
+        uid = UserRoleModel.objects.filter(roleId=glob.id).values_list('userId', flat=True).first()
+        if uid: owner = UserModel.objects.filter(id=uid, deletedAt__isnull=True).first()
+if not owner:
+    owner = UserModel.objects.filter(deletedAt__isnull=True).order_by('createdAt').first()
+if owner and owner.id != target.id:
+    if not UserRoleModel.objects.filter(userId=owner.id, roleId=admin_role.id).first():
+        UserRoleModel.objects.create(userId=owner.id, roleId=admin_role.id, tenantId=owner.tenantId, scopeType='TENANT')
+        bumpVersion(owner.id)
+        print(f"[OK] دسترسی مالک به {owner.username} داده شد.")
+    else:
+        print(f"[OK] {owner.username} از قبل مالک بود.")
+print("\n[DONE] الان در cmd تایپ کن: iisreset")

@@ -72,6 +72,8 @@ export const PERMISSIONS = {
   roleList: "role.list",
   maintenanceAttachmentView: "maintenance.attachment.view",
   maintenanceAttachmentManage: "maintenance.attachment.manage",
+  productionView: "production.view",
+  productionManage: "production.manage",
 } as const;
 
 interface PermissionContextValue {

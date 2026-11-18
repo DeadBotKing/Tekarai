@@ -134,7 +134,13 @@ function Roles({ reloadToken = 0 }: { reloadToken?: number }): JSX.Element {
       // failed request.
       .catch((error: unknown) => setRolesError(error instanceof Error ? error.message : "خطای نامشخص"));
   }, [service, reloadToken]);
-  const allActions = Array.from(new Set(roles.flatMap((role) => role.actions))).sort();
+  const allActions = Array.from(new Set([
+    ...roles.flatMap((role) => role.actions),
+    // Always show production permissions even before any role has them,
+    // so admins can grant production.view / production.manage
+    "production.view",
+    "production.manage",
+  ])).sort();
   const openEdit = (role: import("../features/security/securityService").RoleRecord): void => { setEditing(role); setName(role.name); setSelected(role.actions); };
   const save = (): void => { if (!editing || !name.trim()) return; setSaving(true); service.updateRole(editing.id, { name: name.trim(), actions: selected }).then((updated) => { setRoles((items) => items.map((item) => item.id === updated.id ? updated : item)); setEditing(null); setToast("نقش و مجوزهای آن ذخیره شد."); }).catch(() => setToast("ذخیره نقش ناموفق بود.")).finally(() => setSaving(false)); };
   const rows = runtimeConfig.demoMode ? demoRoles : roles;

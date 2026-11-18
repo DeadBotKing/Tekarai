@@ -66,6 +66,12 @@ export const navigationConfig: NavigationItem[] = [
     ],
   },
   {
+    id: "production", label: "nav.reports" as TranslationKey, displayLabel: "تولید", icon: "target",
+    children: [
+      { id: "productionPlanning", label: "nav.reports" as TranslationKey, displayLabel: "داشبورد برنامه‌ریزی", icon: "chart", route: "/app/production/planning" },
+    ],
+  },
+  {
     id: "reports", label: "nav.section.reports", icon: "chart",
     children: [
       { id: "maintenanceDashboardDaily", label: "nav.dashDaily", icon: "chart", route: "/app/maintenance/dashboard", permission: PERMISSIONS.maintenanceWorkOrderList, exact: true },

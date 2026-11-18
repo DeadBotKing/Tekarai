@@ -1,4 +1,4 @@
-import { persianAccountError, persianNameMessage, persianUsernameMessage } from '../shared/persianIdentity';
+import { persianAccountError, persianNameMessage, persianUsernameMessage, normalizePersianAccount } from '../shared/persianIdentity';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApiClient } from "../core/api/apiContext";
 import { PERMISSIONS, usePermissions } from "../core/permissions/permissionContext";
@@ -97,7 +97,8 @@ export function PeopleOrganizationPage(): JSX.Element {
       if (!user) {
         const invalid = persianAccountError(account);
         if (invalid) throw new Error(invalid);
-        const credential = await service.createMobileUser(account);
+        const clean = normalizePersianAccount(account);
+        const credential = await service.createMobileUser(clean);
         user = credential.user;
         setIssued(credential);
         setCreated(user);

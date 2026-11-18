@@ -127,7 +127,9 @@ export const PERMISSION_LABELS_FA: Record<string, string> = {
   "projectIntelligence.view": "مشاهدهٔ هوشمندی پروژه",
   "projectIntelligence.analyze": "تحلیل هوشمند پروژه",
   "communication.chat.use": "استفاده از گفتگو",
-  "notification.view": "مشاهدهٔ اعلان‌ها"
+  "notification.view": "مشاهدهٔ اعلان‌ها",
+  "production.view": "مشاهدهٔ داشبورد برنامه‌ریزی تولید",
+  "production.manage": "ثبت و ویرایش برنامه تولید (مدیر برنامه‌ریزی)"
 };
 const GROUPS: Record<string, string> = {
   "tenant": "سازمان‌ها و محیط‌های کاری",
@@ -163,7 +165,8 @@ const GROUPS: Record<string, string> = {
   "document": "اسناد",
   "report": "شاخص‌ها و گزارش‌ها",
   "projectIntelligence": "هوشمندی پروژه",
-  "communication": "گفتگو و جلسه‌ها"
+  "communication": "گفتگو و جلسه‌ها",
+  "production": "تولید و برنامه‌ریزی"
 };
 export const permissionLabelFa = (code: string): string => PERMISSION_LABELS_FA[code] ?? "مجوز سفارشی (عنوان فارسی تعریف نشده)";
 export const permissionGroupFa = (code: string): string => {

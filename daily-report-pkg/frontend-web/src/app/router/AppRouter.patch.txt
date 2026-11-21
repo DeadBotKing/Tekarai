@@ -1,0 +1,8 @@
+Add to imports (top):
+const DailyReportPage = named(() => import("../../pages/DailyReportPage"), "DailyReportPage");
+
+Add route inside <Route path="/app" ...>
+        <Route path="daily-report" element={<DailyReportPage />} />
+        <Route path="reports" element={<Navigate to="/app/daily-report" replace />} /> // optional alias
+
+Example location: after <Route path="maintenance/work-orders" ... />

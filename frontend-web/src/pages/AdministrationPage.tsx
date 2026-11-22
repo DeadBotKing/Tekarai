@@ -126,29 +126,48 @@ function Roles({ reloadToken = 0 }: { reloadToken?: number }): JSX.Element {
   const [selected, setSelected] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState("");
+  // Create role state
+  const [showCreate, setShowCreate] = useState(false);
+  const [newCode, setNewCode] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newSelected, setNewSelected] = useState<string[]>([]);
+  const [creating, setCreating] = useState(false);
   useEffect(() => {
     if (runtimeConfig.demoMode) return;
     service.listRoles()
       .then((items) => { setRoles(items); setRolesError(null); })
-      // An empty role list is a real, alarming answer. Do not fake it from a
-      // failed request.
       .catch((error: unknown) => setRolesError(error instanceof Error ? error.message : "خطای نامشخص"));
   }, [service, reloadToken]);
   const allActions = Array.from(new Set([
     ...roles.flatMap((role) => role.actions),
-    // Always show production permissions even before any role has them,
-    // so admins can grant production.view / production.manage
     "production.view",
     "production.manage",
   ])).sort();
   const openEdit = (role: import("../features/security/securityService").RoleRecord): void => { setEditing(role); setName(role.name); setSelected(role.actions); };
   const save = (): void => { if (!editing || !name.trim()) return; setSaving(true); service.updateRole(editing.id, { name: name.trim(), actions: selected }).then((updated) => { setRoles((items) => items.map((item) => item.id === updated.id ? updated : item)); setEditing(null); setToast("نقش و مجوزهای آن ذخیره شد."); }).catch(() => setToast("ذخیره نقش ناموفق بود.")).finally(() => setSaving(false)); };
+  const handleCreate = (): void => {
+    if (!newCode.trim() || !newName.trim()) return;
+    setCreating(true);
+    service.createRole({ code: newCode.trim(), name: newName.trim(), scopeType: "TENANT", actions: newSelected })
+      .then((created) => { setRoles((items) => [...items, created]); setShowCreate(false); setNewCode(""); setNewName(""); setNewSelected([]); setToast(`نقش "${created.name}" ساخته شد.`); })
+      .catch((err) => setToast(err instanceof Error ? err.message : "ساخت نقش ناموفق بود."))
+      .finally(() => setCreating(false));
+  };
   const rows = runtimeConfig.demoMode ? demoRoles : roles;
-  return <div className="admin-section"><Card padding="md"><CardHeader title={t("admin.roles")} subtitle="نقش‌ها را ببین، ویرایش کن و مجوزهای هر نقش را مدیریت کن." />
+  return <div className="admin-section"><Card padding="md"><CardHeader title={t("admin.roles")} subtitle="نقش‌ها را ببین، ویرایش کن و مجوزهای هر نقش را مدیریت کن." action={<Button variant="primary" icon="plus" onClick={() => setShowCreate(true)}>افزودن نقش جدید</Button>} />
     {rolesError ? <ErrorState detail={rolesError} compact /> : null}
     <div className="role-list">{rows.map((role) => <div className="role-row" key={role.code}><span className="role-row__icon"><Icon name="key" size={17} /></span><div><strong>{role.name}</strong><span>{role.code} · {role.scopeType} · {role.actions.length} مجوز</span></div>{!runtimeConfig.demoMode && <Button variant="ghost" size="sm" icon="edit" onClick={() => openEdit(role)}>ویرایش مجوزها</Button>}</div>)}</div>
   </Card><Card padding="md"><CardHeader title="فهرست مجوزهای نقش‌های موجود" subtitle="عنوان فارسی و کد فنی هر مجوز؛ جستجو بر اساس نام، دسته یا کد" /><PermissionCatalogFa actions={rows.flatMap((role) => role.actions)} roleNames={Object.fromEntries(Array.from(new Set(rows.flatMap((role) => role.actions))).map((action) => [action, rows.filter((role) => role.actions.includes(action)).map((role) => role.name)]))} /></Card>
-  <Modal wide open={Boolean(editing)} title={`ویرایش نقش ${editing?.name ?? ""}`} onClose={() => { if (!saving) setEditing(null); }} footer={<><Button variant="secondary" onClick={() => setEditing(null)}>انصراف</Button><Button variant="primary" loading={saving} onClick={save}>ذخیره مجوزها</Button></>}><TextInput label="نام نقش" disabled={saving} value={name} onChange={(event) => setName(event.target.value)} /><PermissionCatalogFa actions={allActions} selected={selected} disabled={saving} onToggle={(action, checked) => setSelected((current) => checked ? Array.from(new Set([...current, action])) : current.filter((item) => item !== action))} /></Modal>{toast && <Toast message={toast} onClose={() => setToast("")} />}</div>;
+  <Modal wide open={Boolean(editing)} title={`ویرایش نقش ${editing?.name ?? ""}`} onClose={() => { if (!saving) setEditing(null); }} footer={<><Button variant="secondary" onClick={() => setEditing(null)}>انصراف</Button><Button variant="primary" loading={saving} onClick={save}>ذخیره مجوزها</Button></>}><TextInput label="نام نقش" disabled={saving} value={name} onChange={(event) => setName(event.target.value)} /><PermissionCatalogFa actions={allActions} selected={selected} disabled={saving} onToggle={(action, checked) => setSelected((current) => checked ? Array.from(new Set([...current, action])) : current.filter((item) => item !== action))} /></Modal>
+  <Modal wide open={showCreate} title="افزودن نقش جدید" onClose={() => { if (!creating) setShowCreate(false); }} footer={<><Button variant="secondary" onClick={() => setShowCreate(false)}>انصراف</Button><Button variant="primary" loading={creating} disabled={!newCode.trim() || !newName.trim()} onClick={handleCreate}>ساخت نقش</Button></>}>
+    <div className="form-grid" style={{ marginBottom: "16px" }}>
+      <TextInput label="کد نقش (انگلیسی، بدون فاصله)" required placeholder="e.g. productionViewer" value={newCode} onChange={(e) => setNewCode(e.target.value.replace(/\s+/g, ""))} hint="فقط حروف انگلیسی، عدد و آندرلاین - مثل production_viewer" />
+      <TextInput label="نام نمایشی فارسی" required placeholder="مثلاً: ناظر تولید" value={newName} onChange={(e) => setNewName(e.target.value)} />
+    </div>
+    <div style={{ fontSize: "13px", color: "#6b7280", marginBottom: "8px" }}>مجوزهای این نقش را انتخاب کن:</div>
+    <PermissionCatalogFa actions={allActions} selected={newSelected} disabled={creating} onToggle={(action, checked) => setNewSelected((current) => checked ? Array.from(new Set([...current, action])) : current.filter((item) => item !== action))} />
+  </Modal>
+  {toast && <Toast message={toast} onClose={() => setToast("")} />}</div>;
 }
 
 function Tenants(): JSX.Element { const t = faText; return <div className="admin-section"><Card padding="md"><CardHeader title={t("admin.tenants")} subtitle="اپراتورهای سراسری سکو، چرخه‌ی حیات و جداسازی tenantها را مدیریت می‌کنند." /><div className="tenant-admin-list">{demoTenants.map((tenant) => <div className="tenant-admin-row" key={tenant.id}><span className="tenant-avatar tenant-avatar--large">{tenant.name.slice(0, 1)}</span><div><strong>{tenant.name}</strong><span>{tenant.code} · {tenant.industry}</span></div><Badge tone="success" dot>{tenant.status}</Badge><span>{tenant.members} عضو</span><Button variant="ghost" size="sm" icon="settings">{t("common.view")}</Button></div>)}</div></Card></div>; }

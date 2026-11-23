@@ -283,8 +283,11 @@ export function ProductionPlanningDashboardPage(): JSX.Element {
     const newId = lineId + "-D" + Date.now().toString().slice(-6);
     setLines(cur=>cur.map(l=> l.id!==lineId ? l : { ...l, drugs: [...l.drugs, { id:newId, name:"داروی جدید", planned:0, produced:0 }] }));
   };
+  const updateLineStatus = (lineId: string, status: LineStatus) => {
+    setLines(cur=>cur.map(l=> l.id!==lineId ? l : { ...l, status }));
+  };
   const removeDrug = (lineId: string, drugId: string) => {
-    setLines(cur=>cur.map(l=> l.id!==lineId ? l : { ...l, drugs: l.drugs.length<=1 ? l.drugs : l.drugs.filter(d=>d.id!==drugId) }));
+    setLines(cur=>cur.map(l=> l.id!==lineId ? l : { ...l, drugs: l.drugs.filter(d=>d.id!==drugId) }));
   };
 
   const groupTotals: GroupTotals[]= useMemo(()=> GROUPS.map(gm=>{
@@ -440,7 +443,14 @@ export function ProductionPlanningDashboardPage(): JSX.Element {
                       <td style={tdStyle}><span style={{ display:"inline-flex", padding:"3px 8px", borderRadius:20, background: gm.color+"10", color: gm.color, fontSize:"0.72rem", fontWeight:600, border:`1px solid ${gm.color}14`}}>{gm.label}</span></td>
                       <td style={tdStyle}><strong style={{ color:"#0f172a", fontSize:"0.80rem"}}>{line.name}</strong></td>
                       <td style={tdStyle}>{editMode && canManage ? <input value={drug.name} onChange={e=>updateDrug(line.id, drug.id, { name: e.target.value })} style={nameInputStyle} placeholder="نام دارو" /> : drug.name}</td>
-                      <td style={tdStyle}><span style={{ display:"inline-flex", alignItems:"center", gap:5, color:meta.color, fontWeight:600, fontSize:"0.76rem"}}><span style={{ width:7, height:7, borderRadius:"50%", background:meta.dot, boxShadow: line.status==="running" ? `0 0 0 3px ${meta.dot}20` : "none"}}/>{meta.label}</span></td>
+                      <td style={tdStyle}>{editMode && canManage ? (
+                        <select value={line.status} onChange={e=>updateLineStatus(line.id, e.target.value as LineStatus)} style={{ padding:"4px 8px", borderRadius:20, border:`1px solid ${meta.color}`, background:"#fff", color:meta.color, fontSize:"0.74rem", fontWeight:600 }}>
+                          <option value="running">در حال تولید</option>
+                          <option value="stopped">متوقف</option>
+                          <option value="changeover">تعویض محصول</option>
+                          <option value="maintenance">تعمیرات</option>
+                        </select>
+                      ) : <span style={{ display:"inline-flex", alignItems:"center", gap:5, color:meta.color, fontWeight:600, fontSize:"0.76rem"}}><span style={{ width:7, height:7, borderRadius:"50%", background:meta.dot, boxShadow: line.status==="running" ? `0 0 0 3px ${meta.dot}20` : "none"}}/>{meta.label}</span>}</td>
                       <td style={tdStyleNum}>{editMode && canManage ? <input type="number" min={0} value={drug.planned} onChange={e=>updateDrug(line.id, drug.id, { planned: Number(e.target.value)||0 })} style={inputStyle}/> : fmtNum(drug.planned)}</td>
                       <td style={tdStyleNum}>{editMode && canManage ? <input type="number" min={0} value={drug.produced} onChange={e=>updateDrug(line.id, drug.id, { produced: Number(e.target.value)||0 })} style={inputStyle}/> : <span style={{ fontWeight:600}}>{fmtNum(drug.produced)}</span>}</td>
                       <td style={tdStyleNum}><span style={{ color: achColor, fontWeight:700, background: achColor+"10", padding:"2px 6px", borderRadius:20, fontSize:"0.76rem"}}>{fmtPct(ach)}</span></td>
@@ -450,7 +460,7 @@ export function ProductionPlanningDashboardPage(): JSX.Element {
                       <td style={tdStyleNum}><span style={{ color: line.wastePct==null ? "#cbd5e1" : "#64748b"}}>{fmtOptPct(line.wastePct)}</span></td>
                       <td style={tdStyleNum}><span style={{ color: line.oeePct==null ? "#cbd5e1" : "#0f172a", fontWeight: line.oeePct==null ? 400 : 600}}>{fmtOptPct(line.oeePct)}</span></td>
                       <td style={tdStyleNum}>{toPersianDigits(line.shift.toString())}</td>
-                      {editMode && <td style={tdStyleNum}><button onClick={()=>removeDrug(line.id, drug.id)} disabled={line.drugs.length<=1} style={{ padding:"2px 8px", borderRadius:20, border:"1px solid #fecaca", background: line.drugs.length<=1 ? "#f8fafc":"#fff1f2", color:"#ef4444", cursor: line.drugs.length<=1?"not-allowed":"pointer", fontSize:"0.72rem"}}>حذف</button></td>}
+                      {editMode && <td style={tdStyleNum}><button onClick={()=>removeDrug(line.id, drug.id)} style={{ padding:"2px 8px", borderRadius:20, border:"1px solid #fecaca", background:"#fff1f2", color:"#ef4444", cursor:"pointer", fontSize:"0.72rem"}}>حذف</button></td>}
                     </tr>
                   );
                 })}

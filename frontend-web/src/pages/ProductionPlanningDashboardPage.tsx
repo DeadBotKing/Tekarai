@@ -9,11 +9,17 @@ type LineStatus = "running" | "stopped" | "changeover" | "maintenance";
 type ProductGroup = "tablets_capsules" | "softgel" | "vials_lyo" | "powder_filling" | "syringes_ampoules";
 type CompanyCode = "ronak_internal" | "arang" | "ronapharmed" | "hakiman" | "zistdaru";
 
+interface DrugItem { id: string; name: string; planned: number; produced: number; }
+
 interface ProductionLine {
-  id: string; name: string; product: string; group: ProductGroup; status: LineStatus; company: CompanyCode;
-  planned: number; produced: number; nominalSpeed: number; actualSpeed: number;
+  id: string; name: string; group: ProductGroup; status: LineStatus; company: CompanyCode;
+  drugs: DrugItem[];
+  nominalSpeed: number; actualSpeed: number;
   stopMinutes?: number | null; wastePct?: number | null; oeePct?: number | null; shift: number; lastUpdated: string;
 }
+
+const linePlanned = (l: ProductionLine) => l.drugs.reduce((s,d)=>s+(d.planned||0),0);
+const lineProduced = (l: ProductionLine) => l.drugs.reduce((s,d)=>s+(d.produced||0),0);
 
 const STATUS_META: Record<LineStatus, { label: string; color: string; dot: string }> = {
   running:     { label: "در حال تولید",  color: "#10b981", dot: "#10b981" },
@@ -54,28 +60,29 @@ const thStyle: React.CSSProperties = { padding: "10px 10px", textAlign: "right",
 const thStyleNum: React.CSSProperties = { ...thStyle, textAlign: "center", direction: "ltr" };
 const tdStyle: React.CSSProperties = { padding: "8px 10px", textAlign: "right", fontSize: "0.79rem", color: "#1e293b", whiteSpace: "nowrap" };
 const tdStyleNum: React.CSSProperties = { ...tdStyle, textAlign: "center", direction: "ltr", fontVariantNumeric: "tabular-nums" };
+const inputStyle: React.CSSProperties = { width: 90, padding: "4px 6px", border: "1px solid #0ea5e9", borderRadius: 8, fontSize: "0.78rem", textAlign: "center" };
+const nameInputStyle: React.CSSProperties = { width: 140, padding: "4px 8px", border: "1px solid #0ea5e9", borderRadius: 8, fontSize: "0.78rem" };
 
-/** ۱۳ خط واقعی کارخانه روناک */
+/** ۱۳ خط واقعی — هر خط الان ۱ دارو دارد، در ویرایش می‌تواند چند دارو شود */
 const DEMO_LINES: ProductionLine[] = [
-  { id: "L01", name: "خط ۱ ویال",                product: "ویال 10ml",            group: "vials_lyo",         company: "ronak_internal", status: "running",    planned: 60000, produced: 58200, nominalSpeed: 1200, actualSpeed: 1150, stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:43" },
-  { id: "L02", name: "خط ۲ ویال",                product: "ویال 5ml",             group: "vials_lyo",         company: "ronak_internal", status: "running",    planned: 45000, produced: 38200, nominalSpeed: 900,  actualSpeed: 840,  stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:40" },
-  { id: "L03", name: "خط ۳ ویال",                product: "ویال لیوفیلیزه",       group: "vials_lyo",         company: "ronak_internal", status: "changeover", planned: 40000, produced: 24800, nominalSpeed: 800,  actualSpeed: 620,  stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:25" },
-  { id: "L04", name: "خط آمپول",                 product: "آمپول 2ml",            group: "syringes_ampoules", company: "ronak_internal", status: "running",    planned: 50000, produced: 47500, nominalSpeed: 1000, actualSpeed: 950,  stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:42" },
-  { id: "L05", name: "خط جامدات - تولید",        product: "قرص 500mg",            group: "tablets_capsules",  company: "ronak_internal", status: "running",    planned: 80000, produced: 79200, nominalSpeed: 1200, actualSpeed: 1180, stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:44" },
-  { id: "L06", name: "خط جامدات - بسته‌بندی",    product: "کپسول 250mg",          group: "tablets_capsules",  company: "ronak_internal", status: "stopped",    planned: 55000, produced: 31000, nominalSpeed: 1000, actualSpeed: 0,    stopMinutes: null, wastePct: null, oeePct: null, shift: 1, lastUpdated: "11:05" },
-  { id: "L07", name: "خط سافت ژل",               product: "سافت‌ژل 500mg",        group: "softgel",           company: "ronak_internal", status: "running",    planned: 35000, produced: 31200, nominalSpeed: 700,  actualSpeed: 660,  stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:45" },
-  { id: "L08", name: "خط جامدات آنتی‌کنسر",      product: "قرص آنتی‌کنسر",       group: "tablets_capsules",  company: "ronak_internal", status: "running",    planned: 18000, produced: 14200, nominalSpeed: 360,  actualSpeed: 340,  stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "13:50" },
-  { id: "L09", name: "خط تزریقی آنتی‌کنسر",      product: "ویال تزریقی آنتی‌کنسر",group: "syringes_ampoules", company: "ronak_internal", status: "running",    planned: 22000, produced: 19500, nominalSpeed: 440,  actualSpeed: 410,  stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:10" },
-  { id: "L10", name: "خط بوتاکس",                product: "ویال بوتاکس",          group: "vials_lyo",         company: "ronak_internal", status: "maintenance",planned: 12000, produced: 7400,  nominalSpeed: 240,  actualSpeed: 0,    stopMinutes: null, wastePct: null, oeePct: null, shift: 1, lastUpdated: "11:30" },
-  { id: "L11", name: "خط ریزدیپلام",             product: "پودر ریزدیپلام",       group: "powder_filling",    company: "ronak_internal", status: "running",    planned: 15000, produced: 13800, nominalSpeed: 300,  actualSpeed: 290,  stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:38" },
-  { id: "L12", name: "خط سرنگ (داخل خط ۱ ویال)",  product: "سرنگ 5ml",             group: "syringes_ampoules", company: "ronak_internal", status: "running",    planned: 30000, produced: 27600, nominalSpeed: 600,  actualSpeed: 570,  stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:41" },
-  { id: "L13", name: "خط سرنگ (داخل خط ۳ ویال)",  product: "سرنگ 2ml",             group: "syringes_ampoules", company: "ronak_internal", status: "maintenance",planned: 25000, produced: 10100, nominalSpeed: 500,  actualSpeed: 0,    stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "11:35" },
+  { id: "L01", name: "خط ۱ ویال", group: "vials_lyo", company: "ronak_internal", status: "running", drugs: [{ id:"L01-D1", name:"ویال 10ml", planned:60000, produced:58200 }], nominalSpeed: 1200, actualSpeed: 1150, stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:43" },
+  { id: "L02", name: "خط ۲ ویال", group: "vials_lyo", company: "ronak_internal", status: "running", drugs: [{ id:"L02-D1", name:"ویال 5ml", planned:45000, produced:38200 }], nominalSpeed: 900,  actualSpeed: 840,  stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:40" },
+  { id: "L03", name: "خط ۳ ویال", group: "vials_lyo", company: "ronak_internal", status: "changeover", drugs: [{ id:"L03-D1", name:"ویال لیوفیلیزه", planned:40000, produced:24800 }], nominalSpeed: 800,  actualSpeed: 620,  stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:25" },
+  { id: "L04", name: "خط آمپول", group: "syringes_ampoules", company: "ronak_internal", status: "running", drugs: [{ id:"L04-D1", name:"آمپول 2ml", planned:50000, produced:47500 }], nominalSpeed: 1000, actualSpeed: 950,  stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:42" },
+  { id: "L05", name: "خط جامدات - تولید", group: "tablets_capsules", company: "ronak_internal", status: "running", drugs: [{ id:"L05-D1", name:"قرص 500mg", planned:80000, produced:79200 }], nominalSpeed: 1200, actualSpeed: 1180, stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:44" },
+  { id: "L06", name: "خط جامدات - بسته‌بندی", group: "tablets_capsules", company: "ronak_internal", status: "stopped", drugs: [{ id:"L06-D1", name:"کپسول 250mg", planned:55000, produced:31000 }], nominalSpeed: 1000, actualSpeed: 0,    stopMinutes: null, wastePct: null, oeePct: null, shift: 1, lastUpdated: "11:05" },
+  { id: "L07", name: "خط سافت ژل", group: "softgel", company: "ronak_internal", status: "running", drugs: [{ id:"L07-D1", name:"سافت‌ژل 500mg", planned:35000, produced:31200 }], nominalSpeed: 700,  actualSpeed: 660,  stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:45" },
+  { id: "L08", name: "خط جامدات آنتی‌کنسر", group: "tablets_capsules", company: "ronak_internal", status: "running", drugs: [{ id:"L08-D1", name:"قرص آنتی‌کنسر", planned:18000, produced:14200 }], nominalSpeed: 360,  actualSpeed: 340,  stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "13:50" },
+  { id: "L09", name: "خط تزریقی آنتی‌کنسر", group: "syringes_ampoules", company: "ronak_internal", status: "running", drugs: [{ id:"L09-D1", name:"ویال تزریقی آنتی‌کنسر", planned:22000, produced:19500 }], nominalSpeed: 440,  actualSpeed: 410,  stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:10" },
+  { id: "L10", name: "خط بوتاکس", group: "vials_lyo", company: "ronak_internal", status: "maintenance",drugs: [{ id:"L10-D1", name:"ویال بوتاکس", planned:12000, produced:7400 }], nominalSpeed: 240,  actualSpeed: 0,    stopMinutes: null, wastePct: null, oeePct: null, shift: 1, lastUpdated: "11:30" },
+  { id: "L11", name: "خط ریزدیپلام", group: "powder_filling", company: "ronak_internal", status: "running", drugs: [{ id:"L11-D1", name:"پودر ریزدیپلام", planned:15000, produced:13800 }], nominalSpeed: 300,  actualSpeed: 290,  stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:38" },
+  { id: "L12", name: "خط سرنگ (داخل خط ۱ ویال)", group: "syringes_ampoules", company: "ronak_internal", status: "running", drugs: [{ id:"L12-D1", name:"سرنگ 5ml", planned:30000, produced:27600 }], nominalSpeed: 600,  actualSpeed: 570,  stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:41" },
+  { id: "L13", name: "خط سرنگ (داخل خط ۳ ویال)", group: "syringes_ampoules", company: "ronak_internal", status: "maintenance",drugs: [{ id:"L13-D1", name:"سرنگ 2ml", planned:25000, produced:10100 }], nominalSpeed: 500,  actualSpeed: 0,    stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "11:35" },
 ];
 
 interface GroupTotals { key: ProductGroup; label: string; color: string; icon: GroupMeta["icon"]; planned: number; produced: number; achievement: number; lineCount: number; runningCount: number; issueCount: number; }
 interface CompanyTotals { key: CompanyCode; label: string; color: string; icon: CompanyMeta["icon"]; isContract: boolean; planned: number; produced: number; achievement: number; shareOfTotal: number; lineCount: number; lines: ProductionLine[]; }
 
-/* ---------- Compact Group Card ---------- */
 function GroupCard({ g, onJump }: { g: GroupTotals; onJump?: (group: ProductGroup) => void }): JSX.Element {
   const achColor = g.achievement >= 95 ? "#10b981" : g.achievement >= 80 ? "#f59e0b" : "#ef4444";
   return (
@@ -109,7 +116,6 @@ function GroupCard({ g, onJump }: { g: GroupTotals; onJump?: (group: ProductGrou
   );
 }
 
-/* ---------- Compact Company Card with scroll ---------- */
 function CompanyCard({ c, totalProduced }: { c: CompanyTotals; totalProduced: number }): JSX.Element {
   const achColor = c.achievement >= 95 ? "#10b981" : c.achievement >= 80 ? "#f59e0b" : "#ef4444";
   const shareTotal = totalProduced > 0 ? (c.produced / totalProduced) * 100 : 0;
@@ -152,32 +158,30 @@ function CompanyCard({ c, totalProduced }: { c: CompanyTotals; totalProduced: nu
         <div style={{ height:5, background:"#f1f5f9", borderRadius:99, overflow:"hidden"}}><div style={{ width:`${Math.min(c.achievement,100)}%`, height:"100%", background: achColor, borderRadius:99 }} /></div>
       </div>
       <div style={{ flex:1, borderTop:"1px solid #f1f5f9", display:"flex", flexDirection:"column", minHeight:0 }}>
-        <div style={{ fontSize:"0.72rem", fontWeight:700, color:"#334155", padding:"8px 12px 6px"}}>محصولات</div>
+        <div style={{ fontSize:"0.72rem", fontWeight:700, color:"#334155", padding:"8px 12px 6px"}}>داروها</div>
         <div style={{ flex:1, overflowY:"auto", padding:"0 8px 8px", display:"flex", flexDirection:"column", gap:5, maxHeight: 150, scrollbarWidth:"thin" }}>
-          {c.lines.map((l) => {
+          {c.lines.flatMap((l) => l.drugs.map(d=>{
             const gm = GROUPS.find((g) => g.key === l.group)!;
-            const pct = c.produced>0 ? (l.produced/c.produced)*100 : 0;
             return (
-              <div key={l.id} style={{ display:"flex", alignItems:"center", gap:7, background:"#f8fafc", border:"1px solid #f1f5f9", borderRadius:8, padding:"6px 7px"}}>
+              <div key={l.id+"-"+d.id} style={{ display:"flex", alignItems:"center", gap:7, background:"#f8fafc", border:"1px solid #f1f5f9", borderRadius:8, padding:"6px 7px"}}>
                 <span style={{ width:7, height:7, borderRadius:3, background:gm.color, flexShrink:0 }} />
                 <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:"0.74rem", fontWeight:600, color:"#1e293b", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{l.product}</div>
-                  <div style={{ fontSize:"0.67rem", color:"#64748b", display:"flex", gap:4, alignItems:"center"}}><span style={{ background: gm.color+"12", color: gm.color, padding:"1px 5px", borderRadius:6, fontSize:"0.65rem", fontWeight:600}}>{gm.label}</span>{STATUS_META[l.status].label}</div>
+                  <div style={{ fontSize:"0.74rem", fontWeight:600, color:"#1e293b", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{d.name}</div>
+                  <div style={{ fontSize:"0.67rem", color:"#64748b", display:"flex", gap:4, alignItems:"center"}}><span style={{ background: gm.color+"12", color: gm.color, padding:"1px 5px", borderRadius:6, fontSize:"0.65rem", fontWeight:600}}>{l.name}</span>{STATUS_META[l.status].label}</div>
                 </div>
                 <div style={{ textAlign:"left", flexShrink:0 }}>
-                  <div style={{ fontSize:"0.75rem", fontWeight:700, color:"#0f172a", direction:"ltr"}}>{fmtNum(l.produced)}</div>
-                  <div style={{ fontSize:"0.66rem", color:c.color, fontWeight:600, direction:"ltr"}}>{fmtPct(pct)}</div>
+                  <div style={{ fontSize:"0.75rem", fontWeight:700, color:"#0f172a", direction:"ltr"}}>{fmtNum(d.produced)}</div>
+                  <div style={{ fontSize:"0.66rem", color:c.color, fontWeight:600, direction:"ltr"}}>{d.planned>0?fmtPct(d.produced/d.planned*100):"—"}</div>
                 </div>
               </div>
             );
-          })}
+          }))}
         </div>
       </div>
     </div>
   );
 }
 
-/* ---------- Compact Overview ---------- */
 function CompactOverview({ totalPlanned, totalProduced, contractProduced, internalPlanned, internalProduced }: any): JSX.Element {
   const contractPct = totalProduced>0 ? (contractProduced/totalProduced)*100 : 0;
   const internalPct = totalProduced>0 ? (internalProduced/totalProduced)*100 : 0;
@@ -267,24 +271,35 @@ export function ProductionPlanningDashboardPage(): JSX.Element {
   const [groupFilter, setGroupFilter]=useState<ProductGroup|"all">("all");
   const [statusFilter, setStatusFilter]=useState<LineStatus|"all">("all");
   const [editMode, setEditMode]=useState(false);
-  const [draftPlanned, setDraftPlanned]=useState<Record<string,number>>({});
   const { has, permissions }=usePermissions(); const { session }=useAuth();
   const canManage= useMemo(()=>{ if(!session) return false; if(session.user.role==="Superadmin") return true; if(permissions.includes("*")) return true; if(has("production.manage")) return true; if(has(["settings.manage","tenant.manage","user.manage","role.manage"])) return true; return false; },[session, permissions, has]);
   const [lines, setLines]=useState<ProductionLine[]>(DEMO_LINES);
 
+  // helpers for drug editing
+  const updateDrug = (lineId: string, drugId: string, patch: Partial<DrugItem>) => {
+    setLines(cur=>cur.map(l=> l.id!==lineId ? l : { ...l, drugs: l.drugs.map(d=> d.id!==drugId ? d : { ...d, ...patch }) }));
+  };
+  const addDrug = (lineId: string) => {
+    const newId = lineId + "-D" + Date.now().toString().slice(-6);
+    setLines(cur=>cur.map(l=> l.id!==lineId ? l : { ...l, drugs: [...l.drugs, { id:newId, name:"داروی جدید", planned:0, produced:0 }] }));
+  };
+  const removeDrug = (lineId: string, drugId: string) => {
+    setLines(cur=>cur.map(l=> l.id!==lineId ? l : { ...l, drugs: l.drugs.length<=1 ? l.drugs : l.drugs.filter(d=>d.id!==drugId) }));
+  };
+
   const groupTotals: GroupTotals[]= useMemo(()=> GROUPS.map(gm=>{
     const gl=lines.filter(l=>l.group===gm.key);
-    const planned=gl.reduce((s,l)=>s+l.planned,0); const produced=gl.reduce((s,l)=>s+l.produced,0);
+    const planned=gl.reduce((s,l)=>s+linePlanned(l),0); const produced=gl.reduce((s,l)=>s+lineProduced(l),0);
     const achievement= planned>0 ? (produced/planned)*100 : 0;
     const runningCount=gl.filter(l=>l.status==="running").length; const issueCount=gl.filter(l=>l.status==="stopped"||l.status==="maintenance").length;
     return { key:gm.key, label:gm.label, color:gm.color, icon:gm.icon, planned, produced, achievement, lineCount:gl.length, runningCount, issueCount };
   }),[lines]);
 
   const companyTotals: CompanyTotals[]= useMemo(()=>{
-    const totalProduced=lines.reduce((s,l)=>s+l.produced,0);
+    const totalProduced=lines.reduce((s,l)=>s+lineProduced(l),0);
     return COMPANIES.map(cm=>{
       const cl=lines.filter(l=>l.company===cm.key);
-      const planned=cl.reduce((s,l)=>s+l.planned,0); const produced=cl.reduce((s,l)=>s+l.produced,0);
+      const planned=cl.reduce((s,l)=>s+linePlanned(l),0); const produced=cl.reduce((s,l)=>s+lineProduced(l),0);
       const achievement= planned>0 ? (produced/planned)*100 : 0;
       const shareOfTotal= totalProduced>0 ? (produced/totalProduced)*100 : 0;
       return { key:cm.key, label:(cm as any).label, color:cm.color, icon:cm.icon, isContract:cm.isContract, planned, produced, achievement, shareOfTotal, lineCount:cl.length, lines:cl };
@@ -292,17 +307,41 @@ export function ProductionPlanningDashboardPage(): JSX.Element {
   },[lines]);
 
   const overall= useMemo(()=>{
-    const totalPlanned=lines.reduce((s,l)=>s+l.planned,0); const totalProduced=lines.reduce((s,l)=>s+l.produced,0);
+    const totalPlanned=lines.reduce((s,l)=>s+linePlanned(l),0); const totalProduced=lines.reduce((s,l)=>s+lineProduced(l),0);
     const contractLines=lines.filter(l=>l.company!=="ronak_internal");
-    const contractPlanned=contractLines.reduce((s,l)=>s+l.planned,0); const contractProduced=contractLines.reduce((s,l)=>s+l.produced,0);
+    const contractPlanned=contractLines.reduce((s,l)=>s+linePlanned(l),0); const contractProduced=contractLines.reduce((s,l)=>s+lineProduced(l),0);
     const internalLines=lines.filter(l=>l.company==="ronak_internal");
-    const internalPlanned=internalLines.reduce((s,l)=>s+l.planned,0); const internalProduced=internalLines.reduce((s,l)=>s+l.produced,0);
+    const internalPlanned=internalLines.reduce((s,l)=>s+linePlanned(l),0); const internalProduced=internalLines.reduce((s,l)=>s+lineProduced(l),0);
     return { totalPlanned, totalProduced, contractPlanned, contractProduced, internalPlanned, internalProduced };
   },[lines]);
 
   const visible= useMemo(()=>{ let v=lines; if(companyFilter!=="all") v=v.filter(l=>l.company===companyFilter); if(groupFilter!=="all") v=v.filter(l=>l.group===groupFilter); if(statusFilter!=="all") v=v.filter(l=>l.status===statusFilter); return v; },[lines, companyFilter, groupFilter, statusFilter]);
-  const visibleTotals= useMemo(()=>{ const planned=visible.reduce((s,l)=>s+l.planned,0); const produced=visible.reduce((s,l)=>s+l.produced,0); const achievement=planned>0 ? (produced/planned)*100 : 0; return { planned, produced, achievement }; },[visible]);
+  // flattened drug rows for table & donuts
+  const visibleDrugRows = useMemo(()=>{
+    const rows: { line: ProductionLine; drug: DrugItem }[] = [];
+    visible.forEach(l=> l.drugs.forEach(d=> rows.push({ line:l, drug:d })));
+    return rows;
+  },[visible]);
+  const visibleTotals= useMemo(()=>{
+    const planned=visibleDrugRows.reduce((s,r)=>s+r.drug.planned,0);
+    const produced=visibleDrugRows.reduce((s,r)=>s+r.drug.produced,0);
+    const achievement=planned>0 ? (produced/planned)*100 : 0;
+    return { planned, produced, achievement };
+  },[visibleDrugRows]);
   const statusFilters: {key:"all"|LineStatus; label:string}[]=[{key:"all",label:"همه"},{key:"running",label:"در حال تولید"},{key:"changeover",label:"تعویض"},{key:"maintenance",label:"تعمیرات"},{key:"stopped",label:"متوقف"}];
+
+  // donuts by drug name (aggregate same drug name across lines)
+  const drugAggregated = useMemo(()=>{
+    const map = new Map<string,{ planned:number; produced:number; lineCount:number; color:string }>();
+    visibleDrugRows.forEach(r=>{
+      const key = r.drug.name.trim() || "بدون نام";
+      const gm = GROUPS.find(g=>g.key===r.line.group)!;
+      const cur = map.get(key) ?? { planned:0, produced:0, lineCount:0, color: gm.color };
+      cur.planned += r.drug.planned; cur.produced += r.drug.produced; cur.lineCount += 1;
+      map.set(key, cur);
+    });
+    return Array.from(map.entries()).map(([name, v])=>({ key:name, label:name, valuePlanned:v.planned, valueProduced:v.produced, color:v.color, subLabel: toPersianDigits(v.lineCount.toString())+" ردیف" }));
+  },[visibleDrugRows]);
 
   return (
     <div className="page" style={{ background:"#f8fafc", minHeight:"100vh", paddingBottom:24 }}>
@@ -315,10 +354,10 @@ export function ProductionPlanningDashboardPage(): JSX.Element {
 
       <SectionHeader
         title="داشبورد برنامه‌ریزی تولید"
-        subtitle={canManage ? `نمای لحظه‌ای ۱۳ خط تولید • ${session?.user.role ?? "?"}` : `فقط مشاهده — ${session?.user.role ?? "?"}`}
+        subtitle={canManage ? `نمای لحظه‌ای ۱۳ خط • ${session?.user.role ?? "?"}` : `فقط مشاهده — ${session?.user.role ?? "?"}`}
         actions={
           <div style={{ display:"flex", gap:8, alignItems:"center"}}>
-            {canManage ? <Button variant={editMode ? "primary" : "secondary"} icon={editMode ? "check" : "edit"} onClick={()=>{ if(editMode){ setLines(cur=>cur.map(l=> draftPlanned[l.id]!=null && draftPlanned[l.id]>=0 ? {...l, planned: Math.round(draftPlanned[l.id])} : l)); setDraftPlanned({});} setEditMode(!editMode); }}>{editMode ? "ذخیره برنامه" : "ویرایش برنامه"}</Button> : <span style={{ fontSize:"0.76rem", color:"#64748b", background:"#fff", border:"1px solid #e2e8f0", padding:"6px 12px", borderRadius:8, display:"inline-flex", alignItems:"center", gap:6}}><Icon name="lock" size={13}/> فقط مشاهده</span>}
+            {canManage ? <Button variant={editMode ? "primary" : "secondary"} icon={editMode ? "check" : "edit"} onClick={()=> setEditMode(!editMode)}>{editMode ? "ذخیره برنامه" : "ویرایش برنامه"}</Button> : <span style={{ fontSize:"0.76rem", color:"#64748b", background:"#fff", border:"1px solid #e2e8f0", padding:"6px 12px", borderRadius:8, display:"inline-flex", alignItems:"center", gap:6}}><Icon name="lock" size={13}/> فقط مشاهده</span>}
             <Button variant="ghost" icon="refresh" onClick={()=>window.location.reload()}>به‌روزرسانی</Button>
           </div>
         }
@@ -327,7 +366,6 @@ export function ProductionPlanningDashboardPage(): JSX.Element {
       <div style={{ padding:"0 16px", maxWidth:1400, margin:"0 auto", display:"flex", flexDirection:"column", gap:12 }}>
         <CompactOverview {...overall} />
 
-        {/* Group cards - compact scroll */}
         <div>
           <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8}}>
             <span style={{ width:4, height:18, background:"#0f172a", borderRadius:99}}/>
@@ -339,7 +377,6 @@ export function ProductionPlanningDashboardPage(): JSX.Element {
           </div>
         </div>
 
-        {/* Company cards - horizontal scroll compact */}
         <div>
           <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8}}>
             <span style={{ width:4, height:18, background:"#6366f1", borderRadius:99}}/>
@@ -351,7 +388,6 @@ export function ProductionPlanningDashboardPage(): JSX.Element {
           </div>
         </div>
 
-        {/* Filters - compact pill */}
         <div style={{ background:"#fff", border:"1px solid #eef2f7", borderRadius:12, padding:"10px 12px", boxShadow:"0 1px 2px rgba(15,23,42,0.04)", display:"flex", flexDirection:"column", gap:8}}>
           <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center"}}>
             <span style={{ fontSize:"0.72rem", fontWeight:600, color:"#334155", minWidth:60}}>شرکت:</span>
@@ -379,33 +415,34 @@ export function ProductionPlanningDashboardPage(): JSX.Element {
           </div>
         </div>
 
-        {/* Table - polished */}
+        {/* Table - by drug */}
         <div style={{ background:"#fff", border:"1px solid #eef2f7", borderRadius:14, overflow:"hidden", boxShadow:"0 1px 3px rgba(15,23,42,0.04), 0 4px 16px rgba(15,23,42,0.04)"}} id="comparison-table">
           <div style={{ padding:"12px 14px", borderBottom:"1px solid #f1f5f9", display:"flex", justifyContent:"space-between", alignItems:"center"}}>
-            <div style={{ fontSize:"0.86rem", fontWeight:700, color:"#0f172a", display:"flex", alignItems:"center", gap:8}}><Icon name="table" size={16}/> جدول مقایسه خطوط <span style={{ background:"#f1f5f9", color:"#475569", padding:"2px 8px", borderRadius:20, fontSize:"0.72rem"}}>{toPersianDigits(visible.length.toString())} ردیف</span></div>
-            <div style={{ fontSize:"0.70rem", color:"#94a3b8"}}>ویرایش برنامه با دکمه بالا</div>
+            <div style={{ fontSize:"0.86rem", fontWeight:700, color:"#0f172a", display:"flex", alignItems:"center", gap:8}}><Icon name="table" size={16}/> جدول برنامه و تولید به تفکیک دارو <span style={{ background:"#f1f5f9", color:"#475569", padding:"2px 8px", borderRadius:20, fontSize:"0.72rem"}}>{toPersianDigits(visibleDrugRows.length.toString())} ردیف دارو</span></div>
+            <div style={{ fontSize:"0.70rem", color:"#94a3b8"}}>{editMode ? "نام دارو را تایپ کن + افزودن دارو" : "ویرایش با دکمه بالا"}</div>
           </div>
           <div style={{ overflowX:"auto"}}>
-            <table style={{ width:"100%", borderCollapse:"collapse", minWidth:1000 }}>
+            <table style={{ width:"100%", borderCollapse:"collapse", minWidth:1100 }}>
               <thead><tr style={{ background:"#f8fafc"}}>
-                <th style={thStyle}>شرکت</th><th style={thStyle}>گروه</th><th style={thStyle}>خط تولید</th><th style={thStyle}>محصول</th><th style={thStyle}>وضعیت</th><th style={thStyleNum}>برنامه</th><th style={thStyleNum}>تولید</th><th style={thStyleNum}>تحقق</th><th style={thStyleNum}>سهم</th><th style={thStyleNum}>سرعت</th><th style={thStyleNum}>توقف</th><th style={thStyleNum}>ضایعات</th><th style={thStyleNum}>OEE</th><th style={thStyleNum}>شیفت</th>
+                <th style={thStyle}>شرکت</th><th style={thStyle}>گروه</th><th style={thStyle}>خط تولید</th><th style={thStyle}>نام دارو</th><th style={thStyle}>وضعیت</th><th style={thStyleNum}>برنامه</th><th style={thStyleNum}>تولید</th><th style={thStyleNum}>تحقق</th><th style={thStyleNum}>سهم</th><th style={thStyleNum}>سرعت</th><th style={thStyleNum}>توقف</th><th style={thStyleNum}>ضایعات</th><th style={thStyleNum}>OEE</th><th style={thStyleNum}>شیفت</th>{editMode && <th style={thStyleNum}>حذف</th>}
               </tr></thead>
               <tbody>
-                {visible.map((line, idx)=>{
+                {visibleDrugRows.map((row, idx)=>{
+                  const { line, drug } = row;
                   const meta=STATUS_META[line.status]; const gm=GROUPS.find(g=>g.key===line.group)!; const cm=(COMPANIES as any).find((c:any)=>c.key===line.company)!;
-                  const ach= line.planned>0 ? (line.produced/line.planned)*100 : 0;
-                  const share= overall.totalProduced>0 ? (line.produced/overall.totalProduced)*100 : 0;
+                  const ach= drug.planned>0 ? (drug.produced/drug.planned)*100 : 0;
+                  const share= overall.totalProduced>0 ? (drug.produced/overall.totalProduced)*100 : 0;
                   const achColor= ach>=95 ? "#10b981" : ach>=80 ? "#f59e0b" : "#ef4444";
                   const speedRatio= line.nominalSpeed>0 ? line.actualSpeed/line.nominalSpeed : 0;
                   return (
-                    <tr key={line.id} style={{ background: idx%2===0 ? "#fff" : "#f8fafc", borderBottom:"1px solid #f1f5f9"}}>
+                    <tr key={row.drug.id} style={{ background: idx%2===0 ? "#fff" : "#f8fafc", borderBottom:"1px solid #f1f5f9"}}>
                       <td style={tdStyle}><span style={{ display:"inline-flex", alignItems:"center", gap:5, padding:"3px 8px", borderRadius:20, background: cm.color+"10", color: cm.color, fontSize:"0.72rem", fontWeight:700, border:`1px solid ${cm.color}18`}}><span style={{ width:6, height:6, borderRadius:"50%", background:cm.color}}/>{cm.label}</span></td>
                       <td style={tdStyle}><span style={{ display:"inline-flex", padding:"3px 8px", borderRadius:20, background: gm.color+"10", color: gm.color, fontSize:"0.72rem", fontWeight:600, border:`1px solid ${gm.color}14`}}>{gm.label}</span></td>
                       <td style={tdStyle}><strong style={{ color:"#0f172a", fontSize:"0.80rem"}}>{line.name}</strong></td>
-                      <td style={tdStyle}>{line.product}</td>
+                      <td style={tdStyle}>{editMode && canManage ? <input value={drug.name} onChange={e=>updateDrug(line.id, drug.id, { name: e.target.value })} style={nameInputStyle} placeholder="نام دارو" /> : drug.name}</td>
                       <td style={tdStyle}><span style={{ display:"inline-flex", alignItems:"center", gap:5, color:meta.color, fontWeight:600, fontSize:"0.76rem"}}><span style={{ width:7, height:7, borderRadius:"50%", background:meta.dot, boxShadow: line.status==="running" ? `0 0 0 3px ${meta.dot}20` : "none"}}/>{meta.label}</span></td>
-                      <td style={tdStyleNum}>{editMode && canManage ? <input type="number" min={0} defaultValue={line.planned} onChange={e=>setDraftPlanned(cur=>({...cur, [line.id]: Number(e.target.value)||0}))} style={{ width:80, padding:"4px 6px", border:"1px solid #0ea5e9", borderRadius:8, fontSize:"0.78rem", textAlign:"center"}}/> : fmtNum(line.planned)}</td>
-                      <td style={tdStyleNum}><span style={{ fontWeight:600}}>{fmtNum(line.produced)}</span></td>
+                      <td style={tdStyleNum}>{editMode && canManage ? <input type="number" min={0} value={drug.planned} onChange={e=>updateDrug(line.id, drug.id, { planned: Number(e.target.value)||0 })} style={inputStyle}/> : fmtNum(drug.planned)}</td>
+                      <td style={tdStyleNum}>{editMode && canManage ? <input type="number" min={0} value={drug.produced} onChange={e=>updateDrug(line.id, drug.id, { produced: Number(e.target.value)||0 })} style={inputStyle}/> : <span style={{ fontWeight:600}}>{fmtNum(drug.produced)}</span>}</td>
                       <td style={tdStyleNum}><span style={{ color: achColor, fontWeight:700, background: achColor+"10", padding:"2px 6px", borderRadius:20, fontSize:"0.76rem"}}>{fmtPct(ach)}</span></td>
                       <td style={tdStyleNum}><span style={{ color: cm.color, fontWeight:600, fontSize:"0.76rem"}}>{fmtPct(share)}</span></td>
                       <td style={tdStyleNum}><span style={{ color: speedRatio>=0.95 ? "#10b981" : speedRatio>=0.8 ? "#f59e0b" : "#ef4444", fontWeight:600}}>{fmtNum(line.actualSpeed)}</span><span style={{ color:"#94a3b8", fontSize:"0.70rem"}}>/{fmtNum(line.nominalSpeed)}</span></td>
@@ -413,37 +450,47 @@ export function ProductionPlanningDashboardPage(): JSX.Element {
                       <td style={tdStyleNum}><span style={{ color: line.wastePct==null ? "#cbd5e1" : "#64748b"}}>{fmtOptPct(line.wastePct)}</span></td>
                       <td style={tdStyleNum}><span style={{ color: line.oeePct==null ? "#cbd5e1" : "#0f172a", fontWeight: line.oeePct==null ? 400 : 600}}>{fmtOptPct(line.oeePct)}</span></td>
                       <td style={tdStyleNum}>{toPersianDigits(line.shift.toString())}</td>
+                      {editMode && <td style={tdStyleNum}><button onClick={()=>removeDrug(line.id, drug.id)} disabled={line.drugs.length<=1} style={{ padding:"2px 8px", borderRadius:20, border:"1px solid #fecaca", background: line.drugs.length<=1 ? "#f8fafc":"#fff1f2", color:"#ef4444", cursor: line.drugs.length<=1?"not-allowed":"pointer", fontSize:"0.72rem"}}>حذف</button></td>}
                     </tr>
                   );
                 })}
               </tbody>
-              {visible.length>0 && (
+              {visibleDrugRows.length>0 && (
                 <tfoot><tr style={{ background:"#f0f9ff", borderTop:"2px solid #bae6fd"}}>
                   <td style={{ ...tdStyle, fontWeight:700, color:"#0c4a6e"}} colSpan={5}>جمع فیلتر شده</td>
                   <td style={{ ...tdStyleNum, fontWeight:700}}>{fmtNum(visibleTotals.planned)}</td>
                   <td style={{ ...tdStyleNum, fontWeight:700}}>{fmtNum(visibleTotals.produced)}</td>
                   <td style={{ ...tdStyleNum}}><span style={{ background:"#fff", border:"1px solid #bae6fd", padding:"2px 6px", borderRadius:20, fontWeight:700, color: visibleTotals.achievement>=90 ? "#10b981" : "#f59e0b"}}>{fmtPct(visibleTotals.achievement)}</span></td>
                   <td style={{ ...tdStyleNum, color:"#6366f1", fontWeight:600}}>{fmtPct(overall.totalProduced>0 ? (visibleTotals.produced/overall.totalProduced)*100 : 0)}</td>
-                  <td style={tdStyleNum}>—</td><td style={tdStyleNum}>—</td><td style={tdStyleNum}>—</td><td style={tdStyleNum}>—</td><td style={tdStyleNum}>—</td>
+                  <td style={tdStyleNum}>—</td><td style={tdStyleNum}>—</td><td style={tdStyleNum}>—</td><td style={tdStyleNum}>—</td><td style={tdStyleNum}>—</td>{editMode && <td style={tdStyleNum}>—</td>}
                 </tr></tfoot>
               )}
             </table>
           </div>
+          {editMode && canManage && (
+            <div style={{ padding:"10px 14px", borderTop:"1px solid #f1f5f9", display:"flex", gap:8, flexWrap:"wrap", background:"#f8fafc"}}>
+              <span style={{ fontSize:"0.73rem", fontWeight:600, color:"#334155", alignSelf:"center"}}>افزودن دارو به خط:</span>
+              {lines.map(l=>(
+                <button key={l.id} onClick={()=>addDrug(l.id)} style={{ padding:"4px 10px", borderRadius:20, border:"1px solid #e2e8f0", background:"#fff", color:"#0f172a", cursor:"pointer", fontSize:"0.73rem", display:"inline-flex", alignItems:"center", gap:5}}>
+                  <span style={{ background:"#0ea5e9", color:"#fff", width:16, height:16, borderRadius:99, display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:"0.70rem"}}>+</span>{l.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Donuts - compact */}
         <div>
           <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8}}>
             <span style={{ width:4, height:18, background:"#0f172a", borderRadius:99}}/>
             <h3 style={{ margin:0, fontSize:"0.90rem", fontWeight:700, color:"#0f172a"}}>سهم تولید</h3>
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(340px,1fr))", gap:10}}>
-            <InteractiveDonutCard title="سهم شرکت‌ها از تولید" subtitle="بر اساس فیلتر فعلی" data={visible.length>0 ? (()=>{ const m=new Map<CompanyCode,number>(); visible.forEach(l=> m.set(l.company, (m.get(l.company)??0)+l.produced)); return Array.from(m.entries()).map(([k,v])=>{ const cm=(COMPANIES as any).find((c:any)=>c.key===k)!; return { key:k, label:cm.label, subLabel: `${toPersianDigits(visible.filter(l=>l.company===k).length.toString())} خط`, value:v, color:cm.color }; }); })() : (COMPANIES as any).map((cm:any)=>({ key:cm.key, label:cm.label, value:0, color:cm.color }))} totalLabel="عدد" />
-            <InteractiveDonutCard title="سهم گروه‌ها از تولید" subtitle="قرص، ویال، سرنگ..." data={visible.length>0 ? (()=>{ const m=new Map<ProductGroup,number>(); visible.forEach(l=> m.set(l.group, (m.get(l.group)??0)+l.produced)); return Array.from(m.entries()).map(([k,v])=>{ const gm=GROUPS.find(g=>g.key===k)!; return { key:k, label:gm.label, value:v, color:gm.color }; }); })() : GROUPS.map(g=>({ key:g.key, label:g.label, value:0, color:g.color }))} totalLabel="عدد" />
+            <InteractiveDonutCard title="سهم شرکت‌ها از تولید" subtitle="بر اساس فیلتر فعلی" data={visible.length>0 ? (()=>{ const m=new Map<CompanyCode,number>(); visibleDrugRows.forEach(r=> m.set(r.line.company, (m.get(r.line.company)??0)+r.drug.produced)); return Array.from(m.entries()).map(([k,v])=>{ const cm=(COMPANIES as any).find((c:any)=>c.key===k)!; return { key:k, label:cm.label, subLabel: `${toPersianDigits(visible.filter(l=>l.company===k).length.toString())} خط`, value:v, color:cm.color }; }); })() : (COMPANIES as any).map((cm:any)=>({ key:cm.key, label:cm.label, value:0, color:cm.color }))} totalLabel="عدد" />
+            <InteractiveDonutCard title="سهم گروه‌ها از تولید" subtitle="قرص، ویال، سرنگ..." data={visible.length>0 ? (()=>{ const m=new Map<ProductGroup,number>(); visibleDrugRows.forEach(r=> m.set(r.line.group, (m.get(r.line.group)??0)+r.drug.produced)); return Array.from(m.entries()).map(([k,v])=>{ const gm=GROUPS.find(g=>g.key===k)!; return { key:k, label:gm.label, value:v, color:gm.color }; }); })() : GROUPS.map(g=>({ key:g.key, label:g.label, value:0, color:g.color }))} totalLabel="عدد" />
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(340px,1fr))", gap:10, marginTop:10}}>
-            <InteractiveDonutCard title="تولید به تفکیک محصول" subtitle="هر خط = یک برش" data={visible.map(l=> ({ key:l.id, label:l.product, subLabel: `${l.name}`, value:l.produced, color: GROUPS.find(g=>g.key===l.group)!.color }))} totalLabel="عدد" />
-            <InteractiveDonutCard title="برنامه به تفکیک محصول" subtitle="سهم برنامه هر محصول" data={visible.map(l=> ({ key:l.id, label:l.product, subLabel:l.name, value:l.planned, color: GROUPS.find(g=>g.key===l.group)!.color }))} totalLabel="عدد" />
+            <InteractiveDonutCard title="تولید به تفکیک دارو" subtitle="بر اساس اسم دارو — مجموع همه خطوط" data={drugAggregated.map(d=> ({ key:d.key, label:d.label, subLabel: d.subLabel, value:d.valueProduced, color:d.color }))} totalLabel="عدد" />
+            <InteractiveDonutCard title="برنامه به تفکیک دارو" subtitle="بر اساس اسم دارو — سهم برنامه" data={drugAggregated.map(d=> ({ key:d.key, label:d.label, subLabel: d.subLabel, value:d.valuePlanned, color:d.color }))} totalLabel="عدد" />
           </div>
         </div>
       </div>

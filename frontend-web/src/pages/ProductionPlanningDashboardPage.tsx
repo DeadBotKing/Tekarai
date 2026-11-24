@@ -19,8 +19,8 @@ interface ProductionLine {
   stopMinutes?: number | null; wastePct?: number | null; oeePct?: number | null; shift: number; lastUpdated: string;
 }
 
-const linePlanned = (l: ProductionLine) => l.drugs.reduce((s,d)=>s+(d.planned||0),0);
-const lineProduced = (l: ProductionLine) => l.drugs.reduce((s,d)=>s+(d.produced||0),0);
+const linePlanned = (l: ProductionLine) => (l as any)?.drugs?.reduce((s: number,d: DrugItem)=>s+(d.planned||0),0) ?? 0;
+const lineProduced = (l: ProductionLine) => (l as any)?.drugs?.reduce((s: number,d: DrugItem)=>s+(d.produced||0),0) ?? 0;
 const getDrugCompany = (d: DrugItem, line: ProductionLine): CompanyCode => d.company || line.company;
 
 const STATUS_META: Record<LineStatus, { label: string; color: string; dot: string }> = {
@@ -65,22 +65,8 @@ const tdStyleNum: React.CSSProperties = { ...tdStyle, textAlign: "center", direc
 const inputStyle: React.CSSProperties = { width: 90, padding: "4px 6px", border: "1px solid #0ea5e9", borderRadius: 8, fontSize: "0.78rem", textAlign: "center" };
 const nameInputStyle: React.CSSProperties = { width: 140, padding: "4px 8px", border: "1px solid #0ea5e9", borderRadius: 8, fontSize: "0.78rem" };
 
-/** ۱۳ خط — حالا هر دارو شرکت جدا دارد؛ نمونه: سرنگ‌ها اشتراکی روناک/آرنگ */
-const DEMO_LINES: ProductionLine[] = [
-  { id: "L01", name: "خط ۱ ویال", group: "vials_lyo", company: "ronak_internal", status: "running", drugs: [{ id:"L01-D1", name:"ویال 10ml", planned:60000, produced:58200, company:"ronak_internal" }], nominalSpeed: 1200, actualSpeed: 1150, stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:43" },
-  { id: "L02", name: "خط ۲ ویال", group: "vials_lyo", company: "ronak_internal", status: "running", drugs: [{ id:"L02-D1", name:"ویال 5ml", planned:45000, produced:38200, company:"ronak_internal" }], nominalSpeed: 900,  actualSpeed: 840,  stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:40" },
-  { id: "L03", name: "خط ۳ ویال", group: "vials_lyo", company: "ronak_internal", status: "changeover", drugs: [{ id:"L03-D1", name:"ویال لیوفیلیزه", planned:40000, produced:24800, company:"ronak_internal" }], nominalSpeed: 800,  actualSpeed: 620,  stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:25" },
-  { id: "L04", name: "خط آمپول", group: "syringes_ampoules", company: "ronak_internal", status: "running", drugs: [{ id:"L04-D1", name:"آمپول 2ml", planned:30000, produced:28000, company:"ronak_internal" }, { id:"L04-D2", name:"آمپول 2ml", planned:12000, produced:11500, company:"arang" }, { id:"L04-D3", name:"آمپول 2ml", planned:8000, produced:7200, company:"ronapharmed" }], nominalSpeed: 1000, actualSpeed: 950,  stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:42" },
-  { id: "L05", name: "خط جامدات - تولید", group: "tablets_capsules", company: "ronak_internal", status: "running", drugs: [{ id:"L05-D1", name:"قرص 500mg", planned:80000, produced:79200, company:"ronak_internal" }], nominalSpeed: 1200, actualSpeed: 1180, stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:44" },
-  { id: "L06", name: "خط جامدات - بسته‌بندی", group: "tablets_capsules", company: "ronak_internal", status: "stopped", drugs: [{ id:"L06-D1", name:"کپسول 250mg", planned:55000, produced:31000, company:"ronak_internal" }], nominalSpeed: 1000, actualSpeed: 0,    stopMinutes: null, wastePct: null, oeePct: null, shift: 1, lastUpdated: "11:05" },
-  { id: "L07", name: "خط سافت ژل", group: "softgel", company: "ronak_internal", status: "running", drugs: [{ id:"L07-D1", name:"سافت‌ژل 500mg", planned:23000, produced:20700, company:"ronak_internal" }, { id:"L07-D2", name:"سافت‌ژل 500mg", planned:12000, produced:10500, company:"zistdaru" }], nominalSpeed: 700,  actualSpeed: 660,  stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:45" },
-  { id: "L08", name: "خط جامدات آنتی‌کنسر", group: "tablets_capsules", company: "ronak_internal", status: "running", drugs: [{ id:"L08-D1", name:"قرص آنتی‌کنسر", planned:18000, produced:14200, company:"ronak_internal" }], nominalSpeed: 360,  actualSpeed: 340,  stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "13:50" },
-  { id: "L09", name: "خط تزریقی آنتی‌کنسر", group: "syringes_ampoules", company: "ronak_internal", status: "running", drugs: [{ id:"L09-D1", name:"ویال تزریقی آنتی‌کنسر", planned:22000, produced:19500, company:"ronak_internal" }], nominalSpeed: 440,  actualSpeed: 410,  stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:10" },
-  { id: "L10", name: "خط بوتاکس", group: "vials_lyo", company: "ronak_internal", status: "maintenance",drugs: [{ id:"L10-D1", name:"ویال بوتاکس", planned:12000, produced:7400, company:"ronak_internal" }], nominalSpeed: 240,  actualSpeed: 0,    stopMinutes: null, wastePct: null, oeePct: null, shift: 1, lastUpdated: "11:30" },
-  { id: "L11", name: "خط ریزدیپلام", group: "powder_filling", company: "ronak_internal", status: "running", drugs: [{ id:"L11-D1", name:"پودر ریزدیپلام", planned:15000, produced:13800, company:"ronak_internal" }], nominalSpeed: 300,  actualSpeed: 290,  stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:38" },
-  { id: "L12", name: "خط سرنگ (داخل خط ۱ ویال)", group: "syringes_ampoules", company: "ronak_internal", status: "running", drugs: [{ id:"L12-D1", name:"سرنگ 5ml", planned:20000, produced:18600, company:"ronak_internal" }, { id:"L12-D2", name:"سرنگ 5ml", planned:10000, produced:9000, company:"arang" }], nominalSpeed: 600,  actualSpeed: 570,  stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "14:41" },
-  { id: "L13", name: "خط سرنگ (داخل خط ۳ ویال)", group: "syringes_ampoules", company: "ronak_internal", status: "maintenance",drugs: [{ id:"L13-D1", name:"سرنگ 2ml", planned:15000, produced:6000, company:"ronak_internal" }, { id:"L13-D2", name:"سرنگ 2ml", planned:10000, produced:4100, company:"hakiman" }], nominalSpeed: 500,  actualSpeed: 0,    stopMinutes: null, wastePct: null, oeePct: null, shift: 2, lastUpdated: "11:35" },
-];
+/** صفر شد — آمنه از اول با دیتای واقعی پر می‌کند */
+const DEMO_LINES: ProductionLine[] = [];
 
 interface GroupTotals { key: ProductGroup; label: string; color: string; icon: GroupMeta["icon"]; planned: number; produced: number; achievement: number; lineCount: number; runningCount: number; issueCount: number; }
 interface CompanyTotals { key: CompanyCode; label: string; color: string; icon: CompanyMeta["icon"]; isContract: boolean; planned: number; produced: number; achievement: number; shareOfTotal: number; drugCount: number; drugs: { line: ProductionLine; drug: DrugItem }[]; }
@@ -293,6 +279,12 @@ export function ProductionPlanningDashboardPage(): JSX.Element {
   const removeDrug = (lineId: string, drugId: string) => {
     setLines(cur=>cur.map(l=> l.id!==lineId ? l : { ...l, drugs: l.drugs.filter(d=>d.id!==drugId) }));
   };
+  const addLine = () => {
+    const id = "L" + Date.now().toString().slice(-5);
+    const newLine: ProductionLine = { id, name: "خط جدید", group: "vials_lyo", company: "ronak_internal", status: "running", drugs: [{ id: id+"-D1", name: "داروی جدید", planned: 0, produced: 0, company: "ronak_internal" }], nominalSpeed: 0, actualSpeed: 0, shift: 1, lastUpdated: new Date().toLocaleTimeString("fa-IR") };
+    setLines(cur=>[...cur, newLine]);
+  };
+  // const removeLine = (lineId: string) => setLines(cur=>cur.filter(l=>l.id!==lineId));
 
   const groupTotals: GroupTotals[]= useMemo(()=> GROUPS.map(gm=>{
     const gl=lines.filter(l=>l.group===gm.key);
@@ -394,10 +386,11 @@ export function ProductionPlanningDashboardPage(): JSX.Element {
             <span style={{ fontSize:"0.70rem", color:"#94a3b8" }}>سبز ≥۹۵٪ • نارنجی ۸۰-۹۵٪ • قرمز &lt;۸۰٪</span>
           </div>
           {(() => {
+            if (lines.length===0) return <div style={{ padding:"18px", textAlign:"center", color:"#94a3b8", background:"#f8fafc", border:"1px dashed #e2e8f0", borderRadius:10 }}>هنوز هیچ خطی ثبت نشده — با «ویرایش برنامه» اولین خط را اضافه کن</div>;
             const sorted = [...lines].sort((a,b)=> (lineProduced(a)/Math.max(linePlanned(a),1)) - (lineProduced(b)/Math.max(linePlanned(b),1)) );
             const worst = sorted[0]; const best = sorted[sorted.length-1];
             const producedData = lines.map(l=> lineProduced(l));
-            const plannedData = lines.map(l=> linePlanned(l));
+            // const plannedData = lines.map(l=> linePlanned(l));
             const labels = lines.map(l=> l.name.replace("خط ",""));
             const barColors = lines.map(l=>{ const ach= linePlanned(l)>0 ? lineProduced(l)/linePlanned(l)*100 : 0; return ach>=95 ? "#10b981" : ach>=80 ? "#f59e0b" : "#ef4444"; });
             const worstAch = linePlanned(worst)>0 ? lineProduced(worst)/linePlanned(worst)*100 : 0;
@@ -536,13 +529,21 @@ export function ProductionPlanningDashboardPage(): JSX.Element {
             </table>
           </div>
           {editMode && canManage && (
-            <div style={{ padding:"10px 14px", borderTop:"1px solid #f1f5f9", display:"flex", gap:8, flexWrap:"wrap", background:"#f8fafc"}}>
-              <span style={{ fontSize:"0.73rem", fontWeight:600, color:"#334155", alignSelf:"center"}}>افزودن دارو به خط:</span>
-              {lines.map(l=>(
+            <div style={{ padding:"10px 14px", borderTop:"1px solid #f1f5f9", display:"flex", gap:8, flexWrap:"wrap", background:"#f8fafc", alignItems:"center"}}>
+              <button onClick={addLine} style={{ padding:"6px 14px", borderRadius:20, border:"none", background:"#0f172a", color:"#fff", cursor:"pointer", fontSize:"0.78rem", fontWeight:700 }}>+ افزودن خط جدید</button>
+              <span style={{ fontSize:"0.73rem", fontWeight:600, color:"#334155"}}>افزودن دارو به خط:</span>
+              {lines.length===0 ? <span style={{ fontSize:"0.72rem", color:"#94a3b8" }}>اول یک خط اضافه کن</span> : lines.map(l=>(
                 <button key={l.id} onClick={()=>addDrug(l.id)} style={{ padding:"4px 10px", borderRadius:20, border:"1px solid #e2e8f0", background:"#fff", color:"#0f172a", cursor:"pointer", fontSize:"0.73rem", display:"inline-flex", alignItems:"center", gap:5}}>
                   <span style={{ background:"#0ea5e9", color:"#fff", width:16, height:16, borderRadius:99, display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:"0.70rem"}}>+</span>{l.name}
                 </button>
               ))}
+              {lines.length>0 && <span style={{ fontSize:"0.70rem", color:"#94a3b8" }}>حذف خط: در ویرایش، نام خط را خالی بگذار و ذخیره کن یا ردیف‌هایش را حذف کن</span>}
+            </div>
+          )}
+          {lines.length===0 && !editMode && (
+            <div style={{ padding:"24px", textAlign:"center", color:"#64748b" }}>
+              <div style={{ fontSize:"0.90rem", fontWeight:700 }}>هنوز هیچ برنامه‌ای ثبت نشده</div>
+              <div style={{ fontSize:"0.78rem", marginTop:4 }}>با دکمه «ویرایش برنامه» خط و دارو اضافه کن و با دیتای واقعی شروع کن.</div>
             </div>
           )}
         </div>

@@ -133,6 +133,8 @@ class WorkOrderRepositoryDjango:
             return WorkOrderPage(items=[], totalCount=0)
         if filters.scopeDepartmentIds is not None:
             queryset = queryset.filter(orgDepartmentId__in=filters.scopeDepartmentIds)
+        if filters.scopeExcludedDepartmentIds:
+            queryset = queryset.exclude(orgDepartmentId__in=filters.scopeExcludedDepartmentIds)
         if filters.scopeUserIds is not None:
             queryset = queryset.filter(
                 Q(requestedByUserId__in=filters.scopeUserIds)

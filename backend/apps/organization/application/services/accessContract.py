@@ -43,6 +43,33 @@ def _repository():
     return orgRepository
 
 
+PROTECTED_DEPARTMENT_CODE = "ENG_FREEZE"
+PROTECTED_DEPARTMENT_OWNER_USERNAME = "09129432012"  # Mehdi Yarmohammadi
+
+
+def restrictedDepartmentIdsForUser(tenantId: uuid.UUID, userId: uuid.UUID) -> tuple[str, ...]:
+    """Department ids hidden from everyone except Mehdi and platform admins.
+
+    This is a narrow, explicit exception for the requested ENG_FREEZE unit.
+    Tenant administrators other than Mehdi do not bypass it; platform admins do.
+    """
+    from apps.identity.application.services.principalDirectory import isPlatformAdministrator
+    from apps.identity.infrastructure.models import UserModel
+    from apps.organization.infrastructure.models import OrganizationDepartmentModel
+
+    if isPlatformAdministrator(tenantId, userId):
+        return ()
+    if UserModel.objects.filter(
+        id=userId, tenantId=tenantId, username=PROTECTED_DEPARTMENT_OWNER_USERNAME,
+        status="active", deletedAt__isnull=True,
+    ).exists():
+        return ()
+    rows = OrganizationDepartmentModel.objects.filter(
+        tenantId=tenantId, code=PROTECTED_DEPARTMENT_CODE,
+    ).values_list("id", flat=True)
+    return tuple(str(value) for value in rows)
+
+
 def accessProfileFor(tenantId: uuid.UUID, userId: uuid.UUID) -> AccessProfile:
     """Resolve everything one user may do, from their postings and the matrix."""
     repository = _repository()
@@ -83,20 +110,21 @@ def scopeForUser(tenantId: uuid.UUID, userId: uuid.UUID, actionCode: str) -> str
 
 
 def scopeFilterForUser(tenantId: uuid.UUID, userId: uuid.UUID, actionCode: str) -> ScopeFilter:
-    """How a list endpoint should narrow its query for this user.
-
-    The team roster is fetched here rather than inside the domain because
-    "who reports to me" is a database question.
-    """
+    """Resolve ordinary org scope plus the ENG_FREEZE confidentiality rule."""
+    from dataclasses import replace
     from apps.identity.application.services.principalDirectory import isTenantAdministratorForAction
 
+    excluded = restrictedDepartmentIdsForUser(tenantId, userId)
     if isTenantAdministratorForAction(tenantId, userId, actionCode):
-        return ScopeFilter(unrestricted=True, scope="all")
+        return ScopeFilter(
+            unrestricted=True, scope="all", excludedDepartmentIds=excluded
+        )
     profile = accessProfileFor(tenantId, userId)
     teamUserIds: tuple[str, ...] = ()
     if profile.scopeFor(actionCode) == "team":
         teamUserIds = tuple(_repository().teamMemberIdsFor(tenantId, userId))
-    return scopeFilterFor(profile, actionCode, teamUserIds=teamUserIds)
+    resolved = scopeFilterFor(profile, actionCode, teamUserIds=teamUserIds)
+    return replace(resolved, excludedDepartmentIds=excluded)
 
 
 def userCanActOnRecord(
@@ -110,6 +138,9 @@ def userCanActOnRecord(
     """Per-record check — the other half of ``scopeFilterForUser``."""
     from apps.identity.application.services.principalDirectory import isTenantAdministratorForAction
 
+    restricted = restrictedDepartmentIdsForUser(tenantId, userId)
+    if departmentId and str(departmentId) in restricted:
+        return False
     if isTenantAdministratorForAction(tenantId, userId, actionCode):
         return True
     profile = accessProfileFor(tenantId, userId)

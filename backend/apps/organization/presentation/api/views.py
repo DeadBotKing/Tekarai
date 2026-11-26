@@ -21,7 +21,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.organization.application.services import orgService
-from apps.organization.application.services.accessContract import accessProfileFor
+from apps.organization.application.services.accessContract import accessProfileFor, scopeFilterForUser
 from apps.organization.application.services.orgService import (
     Actor,
     OrganizationRuleViolation,
@@ -66,6 +66,56 @@ def actor() -> Actor:
         or ""
     )
     return Actor(id=actorId, name=str(name)[:160])
+
+
+def _teamUserIdsFor(request, tenantId, actionCode):
+    """Team roster for non-admin leads, based on actual reportsTo links.
+
+    Matrix scope remains the fallback for team-scoped users without direct
+    reports. Using the roster first prevents one mismatched matrix cell from
+    silently turning a manager's unit list into the tenant-wide catalogue.
+    Explicit tenant/platform administrators keep their configured all scope.
+    """
+    try:
+        context = currentContext()
+        userId = uuid.UUID(str(context.actorId))
+    except Exception:
+        return ()
+    try:
+        from apps.identity.application.services.principalDirectory import isTenantAdministratorForAction
+        if isTenantAdministratorForAction(tenantId, userId, actionCode):
+            return None
+    except Exception:
+        # Admin lookup failure is not a reason to expose every unit.
+        pass
+    try:
+        roster = orgRepository.teamMemberIdsFor(tenantId, userId)
+        if roster:
+            return tuple(dict.fromkeys((str(userId), *(str(x) for x in roster))))
+    except Exception:
+        return ()
+    try:
+        scope = scopeFilterForUser(tenantId, userId, actionCode)
+        if scope.scope == "team":
+            return tuple(str(x) for x in scope.userIds)
+    except Exception:
+        return ()
+    return None
+
+
+def _restrictedDepartmentIdsForCurrentUser(tenantId):
+    context = currentContext()
+    try:
+        userId = uuid.UUID(str(context.actorId))
+        from apps.organization.application.services.accessContract import restrictedDepartmentIdsForUser
+        return set(restrictedDepartmentIdsForUser(tenantId, userId))
+    except Exception:
+        # Fail closed for the protected unit if visibility cannot be resolved.
+        from apps.organization.application.services.accessContract import PROTECTED_DEPARTMENT_CODE
+        return {
+            str(row.id) for row in orgRepository.listDepartments(tenantId)
+            if row.code == PROTECTED_DEPARTMENT_CODE
+        }
 
 
 def departmentRow(row, *, memberCount: int | None = None) -> dict:
@@ -204,9 +254,50 @@ class DepartmentListView(Base):
     def get(self, request):
         tenantId = tenant()
         departments = orgRepository.listDepartments(tenantId)
-        counts = {
-            str(x.id): orgRepository.departmentAssignmentCount(tenantId, x.id) for x in departments
-        }
+        teamIds = _teamUserIdsFor(request, tenantId, "organization.department.view")
+        restrictedDepartmentIds = _restrictedDepartmentIdsForCurrentUser(tenantId)
+        departments = [x for x in departments if str(x.id) not in restrictedDepartmentIds]
+        if teamIds is None:
+            counts = {
+                str(x.id): orgRepository.departmentAssignmentCount(tenantId, x.id)
+                for x in departments
+            }
+        else:
+            # The owning unit is the signed-in manager's own assignment.
+            # Do not union every report's department: reportsTo links may span
+            # legacy/misassigned departments and would reveal the whole plant.
+            actorId = uuid.UUID(str(currentContext().actorId))
+            deptIds = {
+                str(x) for x in orgRepository.departmentIdsForUser(tenantId, actorId)
+            }
+            departments = [x for x in departments if str(x.id) in deptIds]
+            teamSet = set(teamIds)
+            counts = {str(x.id): 0 for x in departments}
+            for assignment in orgRepository.listAssignments(tenantId):
+                if (str(assignment.userId) in teamSet
+                        and str(assignment.departmentId) in deptIds
+                        and str(assignment.departmentId) in counts):
+                    counts[str(assignment.departmentId)] += 1
+        try:
+            import json as _json
+            context = currentContext()
+            from apps.identity.infrastructure.models import UserModel as _UserModel
+            actorInfo = _UserModel.objects.filter(
+                id=context.actorId, tenantId=tenantId
+            ).values("username", "displayName").first() or {}
+            print(
+                "ENG_FREEZE_TRACE " + _json.dumps({
+                    "actorId": str(context.actorId),
+                    "actorUsername": actorInfo.get("username", ""),
+                    "actorName": actorInfo.get("displayName", ""),
+                    "restrictedCodes": [x.code for x in orgRepository.listDepartments(tenantId)
+                                        if str(x.id) in restrictedDepartmentIds],
+                    "returnedCodes": [x.code for x in departments],
+                }, ensure_ascii=False),
+                flush=True,
+            )
+        except Exception as traceError:
+            print("ENG_FREEZE_TRACE_ERROR " + repr(traceError), flush=True)
         return Response(
             successEnvelope(
                 {
@@ -235,6 +326,11 @@ class DepartmentDetailView(Base):
     def get(self, request, departmentId):
         tenantId = tenant()
         department = orgRepository.getDepartment(tenantId, departmentId)
+        if str(department.id) in _restrictedDepartmentIdsForCurrentUser(tenantId):
+            return Response(
+                {"success": False, "error": {"code": "organization.departmentNotFound", "message": "مورد یافت نشد."}},
+                status=status.HTTP_404_NOT_FOUND,
+            )
         return Response(
             successEnvelope(
                 departmentRow(
@@ -245,6 +341,8 @@ class DepartmentDetailView(Base):
         )
 
     def patch(self, request, departmentId):
+        if str(departmentId) in _restrictedDepartmentIdsForCurrentUser(tenant()):
+            return Response({"success": False, "error": {"code": "organization.departmentNotFound", "message": "مورد یافت نشد."}}, status=status.HTTP_404_NOT_FOUND)
         serializer = DepartmentSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         department = orgService.updateDepartment(
@@ -253,6 +351,8 @@ class DepartmentDetailView(Base):
         return Response(successEnvelope(departmentRow(department)))
 
     def delete(self, request, departmentId):
+        if str(departmentId) in _restrictedDepartmentIdsForCurrentUser(tenant()):
+            return Response({"success": False, "error": {"code": "organization.departmentNotFound", "message": "مورد یافت نشد."}}, status=status.HTTP_404_NOT_FOUND)
         orgService.deleteDepartment(tenant(), departmentId, actor=actor())
         return Response(successEnvelope({"deleted": True}))
 
@@ -277,15 +377,48 @@ class PositionListView(Base):
     def get(self, request):
         tenantId = tenant()
         positions = orgRepository.listPositions(tenantId)
+        teamIds = _teamUserIdsFor(request, tenantId, "organization.assignment.view")
+        if teamIds is None:
+            # Users with all/department/own scope retain the existing catalogue.
+            counts = {
+                str(position.id): orgRepository.positionAssignmentCount(tenantId, position.id)
+                for position in positions
+            }
+        else:
+            # For team scope, show only titles used in the signed-in lead's
+            # own department, not titles from reports' other department rows.
+            actorId = uuid.UUID(str(currentContext().actorId))
+            deptIds = {
+                str(x) for x in orgRepository.departmentIdsForUser(tenantId, actorId)
+            }
+            teamSet = set(teamIds)
+            teamAssignments = [
+                assignment for assignment in orgRepository.listAssignments(tenantId)
+                if str(assignment.userId) in teamSet
+                and str(assignment.departmentId) in deptIds
+            ]
+            counts = {}
+            for assignment in teamAssignments:
+                positionId = str(assignment.positionId)
+                counts[positionId] = counts.get(positionId, 0) + 1
+            positions = [position for position in positions if str(position.id) in counts]
+        restrictedDepartmentIds = _restrictedDepartmentIdsForCurrentUser(tenantId)
+        if restrictedDepartmentIds and teamIds is None:
+            visibleAssignments = [
+                assignment for assignment in orgRepository.listAssignments(tenantId)
+                if str(assignment.departmentId) not in restrictedDepartmentIds
+            ]
+            visibleCounts = {}
+            for assignment in visibleAssignments:
+                positionId = str(assignment.positionId)
+                visibleCounts[positionId] = visibleCounts.get(positionId, 0) + 1
+            positions = [position for position in positions if str(position.id) in visibleCounts]
+            counts = visibleCounts
         return Response(
             successEnvelope(
                 {
                     "items": [
-                        positionRow(
-                            x,
-                            memberCount=orgRepository.positionAssignmentCount(tenantId, x.id),
-                        )
-                        for x in positions
+                        positionRow(x, memberCount=counts[str(x.id)]) for x in positions
                     ]
                 }
             )
@@ -351,6 +484,19 @@ class AssignmentListView(Base):
             userId=request.query_params.get("userId") or None,
             includeInactive=request.query_params.get("includeInactive") == "true",
         )
+        teamIds = _teamUserIdsFor(request, tenantId, "organization.assignment.view")
+        if teamIds is not None:
+            actorId = uuid.UUID(str(currentContext().actorId))
+            deptIds = {
+                str(x) for x in orgRepository.departmentIdsForUser(tenantId, actorId)
+            }
+            rows = [
+                x for x in rows
+                if str(x.userId) in set(teamIds) and str(x.departmentId) in deptIds
+            ]
+        restrictedDepartmentIds = _restrictedDepartmentIdsForCurrentUser(tenantId)
+        if restrictedDepartmentIds:
+            rows = [x for x in rows if str(x.departmentId) not in restrictedDepartmentIds]
         departments = {str(x.id): x for x in orgRepository.listDepartments(tenantId)}
         positions = {str(x.id): x for x in orgRepository.listPositions(tenantId)}
         return Response(
@@ -382,7 +528,16 @@ class AssignmentDetailView(Base):
     readAction = "organization.assignment.view"
     writeAction = "organization.assignment.manage"
 
+    def _denyProtectedAssignment(self, tenantId, assignmentId):
+        assignment = orgRepository.getAssignment(tenantId, assignmentId)
+        if str(assignment.departmentId) in _restrictedDepartmentIdsForCurrentUser(tenantId):
+            return Response({"success": False, "error": {"code": "organization.assignmentNotFound", "message": "مورد یافت نشد."}}, status=status.HTTP_404_NOT_FOUND)
+        return None
+
     def patch(self, request, assignmentId):
+        denied = self._denyProtectedAssignment(tenant(), assignmentId)
+        if denied:
+            return denied
         serializer = AssignmentPatchSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         tenantId = tenant()
@@ -396,6 +551,9 @@ class AssignmentDetailView(Base):
         )
 
     def delete(self, request, assignmentId):
+        denied = self._denyProtectedAssignment(tenant(), assignmentId)
+        if denied:
+            return denied
         orgService.removeAssignment(tenant(), assignmentId, actor=actor())
         return Response(successEnvelope({"deleted": True}))
 
@@ -421,6 +579,8 @@ class AccessMatrixView(Base):
     def get(self, request):
         tenantId = tenant()
         departmentId = request.query_params.get("departmentId") or None
+        if departmentId and str(departmentId) in _restrictedDepartmentIdsForCurrentUser(tenantId):
+            return Response({"success": False, "error": {"code": "organization.departmentNotFound", "message": "مورد یافت نشد."}}, status=status.HTTP_404_NOT_FOUND)
         return Response(
             successEnvelope(
                 {
@@ -442,6 +602,9 @@ class AccessMatrixView(Base):
         data = dict(serializer.validated_data)
         granted = data.pop("granted", True)
         tenantId = tenant()
+        requestedDepartmentId = data.get("departmentId")
+        if requestedDepartmentId and str(requestedDepartmentId) in _restrictedDepartmentIdsForCurrentUser(tenantId):
+            return Response({"success": False, "error": {"code": "organization.departmentNotFound", "message": "مورد یافت نشد."}}, status=status.HTTP_404_NOT_FOUND)
         if granted:
             orgService.setAccessCell(tenantId, actor=actor(), **data)
         else:
@@ -473,6 +636,7 @@ class MyAccessView(APIView):
         context = currentContext()
         userId = uuid.UUID(str(context.actorId))
         profile = accessProfileFor(tenantId, userId)
+        restrictedDepartmentIds = _restrictedDepartmentIdsForCurrentUser(tenantId)
 
         departments = {str(x.id): x for x in orgRepository.listDepartments(tenantId)}
         positions = {str(x.id): x for x in orgRepository.listPositions(tenantId)}
@@ -493,6 +657,7 @@ class MyAccessView(APIView):
                             "positionName": getattr(positions.get(x.positionId), "name", ""),
                         }
                         for x in profile.assignments
+                        if x.departmentId not in restrictedDepartmentIds
                     ],
                     "capabilities": byCapability,
                     "actionCodes": sorted({x.actionCode for x in profile.grants}),

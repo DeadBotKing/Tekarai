@@ -74,6 +74,7 @@ class WorkOrderFilters:
     scopeDenied: bool = False
     scopeDepartmentIds: tuple[str, ...] | None = None
     scopeUserIds: tuple[str, ...] | None = None
+    scopeExcludedDepartmentIds: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

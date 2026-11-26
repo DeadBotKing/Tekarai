@@ -239,6 +239,7 @@ class WorkOrderRouteView(IdempotencyMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request: Request, workOrderId: str) -> Response:
+        assertRecordInScope(str(workOrderId), "maintenance.workorder.view")
         serializer = RouteWorkOrderSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         dto = container.routeWorkOrderUseCase().execute(
@@ -255,6 +256,7 @@ class WorkOrderAssignView(IdempotencyMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request: Request, workOrderId: str) -> Response:
+        assertRecordInScope(str(workOrderId), "maintenance.workorder.view")
         serializer = AssignWorkOrderSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         command = AssignWorkOrderCommand(
@@ -274,6 +276,7 @@ class WorkOrderApproveView(IdempotencyMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request: Request, workOrderId: str) -> Response:
+        assertRecordInScope(str(workOrderId), "maintenance.workorder.approve")
         serializer = ApproveWorkOrderSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         dto = container.approveWorkOrderUseCase().execute(
@@ -315,6 +318,7 @@ class WorkOrderRejectView(IdempotencyMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request: Request, workOrderId: str) -> Response:
+        assertRecordInScope(str(workOrderId), "maintenance.workorder.approve")
         serializer = RejectWorkOrderSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         dto = container.rejectWorkOrderUseCase().execute(
@@ -331,6 +335,7 @@ class WorkOrderHistoryView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request: Request, workOrderId: str) -> Response:
+        assertRecordInScope(str(workOrderId), "maintenance.workorder.view")
         dto = container.listWorkOrderHistoryUseCase().execute(
             ListWorkOrderHistoryQuery(workOrderId=str(workOrderId))
         )
@@ -342,6 +347,7 @@ class WorkOrderStatusView(IdempotencyMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request: Request, workOrderId: str) -> Response:
+        assertRecordInScope(str(workOrderId), "maintenance.workorder.update")
         serializer = ChangeWorkOrderStatusSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         dto = container.changeWorkOrderStatusUseCase().execute(

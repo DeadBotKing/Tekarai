@@ -237,6 +237,8 @@ class ScopeFilter:
     userIds: tuple[str, ...] = ()
     #: Restrict to records belonging to these departments.
     departmentIds: tuple[str, ...] = ()
+    #: Exclude protected departments even when the user's ordinary scope is all.
+    excludedDepartmentIds: tuple[str, ...] = ()
     scope: str = ""
 
 

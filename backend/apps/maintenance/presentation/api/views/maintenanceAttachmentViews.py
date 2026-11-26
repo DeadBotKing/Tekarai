@@ -76,9 +76,13 @@ class WorkOrderAttachmentView(IdempotencyMixin, APIView):
     parser_classes = [MultiPartParser, FormParser]
 
     def get(self, request: Request, workOrderId: str) -> Response:  # noqa: ARG002
+        from apps.maintenance.presentation.api.views.workOrderViews import assertRecordInScope
+        assertRecordInScope(str(workOrderId), "maintenance.workorder.view")
         return _list("workOrder", str(workOrderId))
 
     def post(self, request: Request, workOrderId: str) -> Response:
+        from apps.maintenance.presentation.api.views.workOrderViews import assertRecordInScope
+        assertRecordInScope(str(workOrderId), "maintenance.workorder.update")
         return _upload(request, "workOrder", str(workOrderId))
 
 
@@ -87,6 +91,12 @@ class MaintenanceAttachmentDownloadView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request: Request, attachmentId: str) -> FileResponse:  # noqa: ARG002
+        attachment = MaintenanceAttachmentModel.objects.filter(
+            id=attachmentId, tenantId=resolveTenantId("")
+        ).values("targetType", "targetId").first()
+        if attachment and attachment["targetType"] == "workOrder":
+            from apps.maintenance.presentation.api.views.workOrderViews import assertRecordInScope
+            assertRecordInScope(str(attachment["targetId"]), "maintenance.workorder.view")
         if DocumentModel.objects.filter(id=attachmentId, tenantId=resolveTenantId(""), legacyDeviceDocument=True).exists():
             result = documentsContainer.downloadDocumentUseCase().execute(DownloadDocumentQuery(documentId=str(attachmentId)))
             response = FileResponse(result.stream, content_type=result.contentType)
@@ -114,6 +124,12 @@ class MaintenanceAttachmentDetailView(IdempotencyMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def delete(self, request: Request, attachmentId: str) -> Response:  # noqa: ARG002
+        attachment = MaintenanceAttachmentModel.objects.filter(
+            id=attachmentId, tenantId=resolveTenantId("")
+        ).values("targetType", "targetId").first()
+        if attachment and attachment["targetType"] == "workOrder":
+            from apps.maintenance.presentation.api.views.workOrderViews import assertRecordInScope
+            assertRecordInScope(str(attachment["targetId"]), "maintenance.workorder.update")
         if MaintenanceAttachmentModel.objects.filter(id=attachmentId, tenantId=resolveTenantId(""), targetType="device").exists():
             raise MethodNotAllowed("DELETE", detail="مدیریت مدارک دستگاه فقط از بخش اسناد انجام می‌شود.")
         container.deleteMaintenanceAttachmentUseCase().execute(

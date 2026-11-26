@@ -89,7 +89,7 @@ from apps.sharedKernel.application.useCase import (
     AUDIT_UPDATE,
     UseCase,
 )
-from apps.sharedKernel.domain.errors import EntityNotFoundError, ValidationFailedError
+from apps.sharedKernel.domain.errors import EntityNotFoundError, PermissionDeniedError, ValidationFailedError
 
 LIST_ACTION = "maintenance.workorder.list"
 
@@ -123,11 +123,16 @@ def organizationScopeFilters(tenantId: uuid.UUID, actorUserId: str) -> dict:
 
     if scope.denied:
         return {"scopeDenied": True}
+    filters = {}
     if scope.unrestricted:
-        return {}
-    if scope.scope == "department":
-        return {"scopeDepartmentIds": scope.departmentIds}
-    return {"scopeUserIds": scope.userIds}
+        pass
+    elif scope.scope == "department":
+        filters["scopeDepartmentIds"] = scope.departmentIds
+    else:
+        filters["scopeUserIds"] = scope.userIds
+    if scope.excludedDepartmentIds:
+        filters["scopeExcludedDepartmentIds"] = scope.excludedDepartmentIds
+    return filters
 
 
 def resolveActorUserId(command) -> uuid.UUID | None:
@@ -221,6 +226,17 @@ class SubmitWorkOrderUseCase(UseCase):
         # later from a name would be guesswork, and a work order that
         # belongs to no unit cannot be scoped to one.
         requesterId = resolveActorUserId(command)
+        orgDepartmentId = primaryUnitOf(tenantId, requesterId)
+        if requesterId and orgDepartmentId:
+            from apps.organization.application.services.accessContract import userCanActOnRecord
+            if not userCanActOnRecord(
+                tenantId,
+                requesterId,
+                "maintenance.workorder.create",
+                ownerUserId=str(requesterId),
+                departmentId=str(orgDepartmentId),
+            ):
+                raise PermissionDeniedError(action="maintenance.workorder.create")
         order = WorkOrder.submit(
             tenantId=tenantId,
             deviceId=deviceId,
@@ -232,7 +248,7 @@ class SubmitWorkOrderUseCase(UseCase):
             requestedByName=command.requestedByName,
             now=now,
             requestedByUserId=requesterId,
-            orgDepartmentId=primaryUnitOf(tenantId, requesterId),
+            orgDepartmentId=orgDepartmentId,
         )
         self.repository.create(order)
         recordHistory(

@@ -97,3 +97,23 @@ def isTenantAdministratorForAction(tenantId: uuid.UUID, userId: uuid.UUID, actio
     return PermissionGateDjango().hasPermission(
         userId, actionCode, tenantId=tenantId, targetTenantId=tenantId,
     )
+
+
+def isPlatformAdministrator(tenantId: uuid.UUID, userId: uuid.UUID) -> bool:
+    """True only for the explicit global platformAdmin role.
+
+    Unlike ``isTenantAdministratorForAction``, this does not include tenantAdmin;
+    protected-unit exceptions can therefore preserve platform support access
+    without granting every tenant administrator visibility.
+    """
+    from django.db import models
+    from apps.identity.infrastructure.models import RoleModel, UserRoleModel
+
+    roleIds = RoleModel.objects.filter(code="platformAdmin", isActive=True).values_list("id", flat=True)
+    return UserRoleModel.objects.filter(
+        userId=userId,
+        roleId__in=roleIds,
+    ).filter(
+        models.Q(scopeType="GLOBAL", scopeRef="")
+        | models.Q(scopeType="TENANT", tenantId=tenantId, scopeRef__in=("", str(tenantId)))
+    ).exists()

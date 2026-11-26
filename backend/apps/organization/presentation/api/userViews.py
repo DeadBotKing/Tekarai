@@ -1,0 +1,167 @@
+"""User management + /me endpoints (§12 views; §17 permissions)."""
+
+from __future__ import annotations
+
+import dataclasses
+
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from apps.identity.application.commands.identityCommands import (
+    AssignUserToTenantCommand,
+)
+from apps.identity.application.queries.identityQueries import (
+    GetCurrentAccountQuery,
+    GetUserQuery,
+    ListUsersQuery,
+)
+from apps.identity.infrastructure import container
+from apps.identity.presentation.api.serializers.identitySerializers import (
+    AssignMembershipSerializer,
+)
+from apps.sharedKernel.presentation.api.idempotency import IdempotencyMixin
+from apps.sharedKernel.presentation.api.openapi import EndpointSpec, registerEndpoint
+from apps.sharedKernel.presentation.api.permissions import IsAuthenticated
+from apps.sharedKernel.presentation.api.response import successEnvelope
+
+USER_ERRORS = [
+    "PERM_PERMISSION_DENIED",
+    "TENANT_ACCESS_DENIED",
+    "DUP_IDENTIFIER",
+    "DUP_ACTIVE_MEMBERSHIP",
+    "SYS_VALIDATION_FAILED",
+    "SYS_RECORD_NOT_FOUND",
+]
+
+
+class UserListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request: Request) -> Response:
+        query = ListUsersQuery(
+            status=str(request.query_params.get("status", "")).strip(),
+            search=str(request.query_params.get("search", "")).strip(),
+            ordering=str(request.query_params.get("ordering", "-createdAt")).strip(),
+            page=int(request.query_params.get("page", 1) or 1),
+            pageSize=int(request.query_params.get("pageSize", 50) or 50),
+            tenantId=str(request.query_params.get("tenantId", "")).strip(),
+        )
+        pageDto = container.listUsersUseCase().execute(query)
+        # Team filter: bosses (team scope) only see their own team in people list
+        try:
+            import uuid as _uuid
+            from apps.sharedKernel.application.requestContext import currentContext as _ctx
+            from apps.organization.application.services.accessContract import scopeFilterForUser as _scopeFor
+            _c = _ctx()
+            _uid = _uuid.UUID(str(_c.actorId))
+            _tid = _uuid.UUID(str(_c.tenantId or _c.actorTenantId))
+            _scope = _scopeFor(_tid, _uid, "organization.assignment.view")
+            if _scope.scope == "team" and _scope.userIds:
+                _team = set(str(x).replace("-", "") for x in _scope.userIds)
+                _items = [it for it in pageDto.items if str(it.id).replace("-", "") in _team]
+                pageDto.items = _items
+                pageDto.totalCount = len(_items)
+        except Exception:
+            pass
+        return Response(
+            successEnvelope(
+                [dataclasses.asdict(item) for item in pageDto.items],
+                meta=pageDto.asMeta(),
+            )
+        )
+
+    def post(self, request: Request) -> Response:
+        from apps.identity.presentation.api.views.mobileViews import createAccountResponse
+        return createAccountResponse(request)
+
+
+class UserDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request: Request, userId: str) -> Response:
+        dto = container.getUserUseCase().execute(GetUserQuery(userId=userId))
+        return Response(successEnvelope(dataclasses.asdict(dto)))
+
+
+class UserMembershipView(IdempotencyMixin, APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Request, userId: str) -> Response:
+        serializer = AssignMembershipSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        dto = container.assignUserToTenantUseCase().execute(
+            AssignUserToTenantCommand(
+                userId=userId,
+                targetTenantId=str(serializer.validated_data["tenantId"]),
+            )
+        )
+        return Response(successEnvelope(dataclasses.asdict(dto)), status=201)
+
+
+class MeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request: Request) -> Response:
+        account = container.getCurrentAccountUseCase().execute(GetCurrentAccountQuery())
+        payload = {
+            "user": dataclasses.asdict(account.user),
+            "permissions": account.permissions,
+        }
+        return Response(successEnvelope(payload))
+
+
+def registerUserEndpoints() -> None:
+    registerEndpoint(
+        EndpointSpec(
+            method="GET",
+            path="api/v1/users",
+            summary="List users (tenant scoped; platform may pass tenantId).",
+            permission="user.list",
+            errorCodes=USER_ERRORS,
+            paginated=True,
+            filterable=("status", "tenantId"),
+            sortable=("createdAt", "username", "status"),
+            searchable=True,
+        )
+    )
+    registerEndpoint(
+        EndpointSpec(
+            method="POST",
+            path="api/v1/users",
+            summary="Create a mobile account; generated temporary credential is returned once.",
+            permission="user.create",
+            requestExample={"phone": "09123456789", "displayName": "Sara", "email": "sara@acme.com"},
+            errorCodes=USER_ERRORS,
+            idempotent=False,
+        )
+    )
+    registerEndpoint(
+        EndpointSpec(
+            method="GET",
+            path="api/v1/users/{userId}",
+            summary="Get a user (own tenant; GLOBAL grant crosses tenants).",
+            permission="user.view",
+            errorCodes=USER_ERRORS,
+        )
+    )
+    registerEndpoint(
+        EndpointSpec(
+            method="POST",
+            path="api/v1/users/{userId}/memberships",
+            summary="Assign a user to a tenant.",
+            permission="user.assignTenant",
+            requestExample={"tenantId": "00000000-0000-0000-0000-000000000000"},
+            errorCodes=USER_ERRORS,
+            idempotent=True,
+        )
+    )
+    registerEndpoint(
+        EndpointSpec(
+            method="GET",
+            path="api/v1/me",
+            summary="Current account + effective permissions.",
+            permission="authenticated",
+            errorCodes=USER_ERRORS[:1],
+        )
+    )
